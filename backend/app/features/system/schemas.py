@@ -9,6 +9,10 @@ CheckStatus = str
 
 
 class CheckResult(BaseModel):
+    """One backing-service check's outcome; `service.py`'s `check_*`
+    functions return these, and `run_health_checks` flattens them into
+    `HealthReport.checks`'s pinned `dict[str, str]` shape."""
+
     name: str
     status: CheckStatus
 

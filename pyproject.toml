@@ -45,8 +45,11 @@ ignore = ["B008"]
 [tool.mypy]
 python_version = "3.12"
 mypy_path = "backend"
-packages = ["app"]
 disallow_untyped_defs = true
+# `make lint` passes explicit paths (backend/app backend/conftest.py
+# backend/tests backend/scripts) rather than using `packages`/`files` here,
+# so this config applies uniformly to production code, fixtures, tests and
+# scripts alike.
 
 [[tool.mypy.overrides]]
 module = ["boto3.*", "botocore.*"]

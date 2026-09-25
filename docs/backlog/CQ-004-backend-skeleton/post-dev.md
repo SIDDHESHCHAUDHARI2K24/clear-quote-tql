@@ -8,11 +8,12 @@ Built the FastAPI app factory (`backend/app/main.py`), settings (`core/config.py
 
 | Spec said | Built | Why |
 | --- | --- | --- |
-| (implicit) `/health` lives only unprefixed | `/health` (root) and `/api/v1/health` (via registry) both resolve to the same handler | The pinned `registry.py`/`register_routers` code mounts every `FEATURE_ROUTERS` entry (which includes `"app.features.system.router"`, as pinned) under `/api/v1`; `main.py` *also* does a direct unprefixed `include_router` for the `/health` contract. Implementing the pinned registry code literally produces this harmless duplicate route rather than a spec deviation — see plan.md decision 1. |
+| Original build: (mis-stated as "implicit") `/health` lives only unprefixed | `/health` (root) and `/api/v1/health` (via registry) both resolved to the same handler | **Corrected after review.** The spec's own pins explicitly contradicted each other: `FEATURE_ROUTERS` was pinned to contain `"app.features.system.router"`, which the pinned `register_routers` mounts under `/api/v1`, while the same section explicitly says `/health` is "not under `/api/v1`". The first pass resolved this unilaterally by keeping both mounts (a real, explicit-pin violation, not an implicit assumption as originally logged here) — code review correctly flagged this as a major finding. Fixed per orchestrator decision: `FEATURE_ROUTERS` now starts empty; `/health` is mounted only via `main.py`'s direct, unprefixed `include_router`. `spec.md` was updated to match (orchestrator-authorized). See plan.md decision 1. |
 | No test-infra guidance for `list[str]` env vars | Added `NoDecode` annotation + `mode="before"` validator on `cors_origins` | pydantic-settings v2 eagerly JSON-decodes complex-typed env vars before validators run, which throws on a raw comma string — see plan.md decision 10. |
-| — | Added `ignore = ["B008"]` to ruff, `[[tool.mypy.overrides]]` for `boto3.*`/`botocore.*`, and `asyncio_default_fixture_loop_scope`/`asyncio_default_test_loop_scope = "session"` to pytest config | Tooling fallout from real deps (FastAPI's `Depends(...)` idiom, boto3 lacking stubs, and pytest-asyncio's per-test-loop default breaking a session-scoped async engine fixture — asyncpg raised "Future attached to a different loop"). See plan.md decisions 8–9. |
+| `schemas.py` pins `CheckResult` alongside `HealthReport` | Original build defined `CheckResult` but never used it (dead code, flagged in review) | Now each `check_*` function returns a `CheckResult`; `run_health_checks` flattens them into `HealthReport.checks`'s pinned flat shape. Response JSON is unchanged. See plan.md decision 11. |
+| — | Added `ignore = ["B008"]` to ruff, `[[tool.mypy.overrides]]` for `boto3.*`/`botocore.*`, `asyncio_default_fixture_loop_scope`/`asyncio_default_test_loop_scope = "session"` to pytest config, and widened the Makefile's mypy step to all of `backend/` | Tooling fallout from real deps (FastAPI's `Depends(...)` idiom, boto3 lacking stubs, pytest-asyncio's per-test-loop default breaking a session-scoped async engine fixture, and a lint-gate coverage gap flagged in review). See plan.md decisions 8, 9, 12. |
 
-None of these change any pinned module name, field name, JSON shape, or endpoint path.
+None of these change any pinned module name, field name, or response JSON shape; the routing fix removes a path that should never have existed.
 
 ## Acceptance evidence (stage 7)
 
@@ -20,24 +21,39 @@ None of these change any pinned module name, field name, JSON shape, or endpoint
 | --- | --- | --- |
 | AC1 | Pass | `uv run pytest backend` → 16 passed, including `test_health.py` against the real `make up` stack (Postgres, Valkey, MinIO, Temporal all `"ok"`) and the whole suite runs against `TEST_DATABASE_URL` (`cq_test`), never `DATABASE_URL`. |
 | AC2 | Pass | `test_health_ok` asserts the exact pinned JSON body and HTTP 200; `test_health_degraded` monkeypatches `service.check_valkey` to fail and asserts HTTP 503, `status: "degraded"`, and the other three checks still `"ok"`. |
-| AC3 | Pass | Manual: `uv run uvicorn app.main:app --port 8000` against the running `make up` stack booted with no errors (log: "Application startup complete"); `curl localhost:8000/health` → `{"status":"ok","checks":{"database":"ok","valkey":"ok","minio":"ok","temporal":"ok"}}`, HTTP 200. Server stopped afterward (`pkill -f "uvicorn app.main:app"`), confirmed via a failed follow-up curl. |
+| AC3 | Pass | Manual: `uv run uvicorn app.main:app --port 8000` against the running `make up` stack booted with no errors (log: "Application startup complete"); `curl localhost:8000/health` → `{"status":"ok","checks":{"database":"ok","valkey":"ok","minio":"ok","temporal":"ok"}}`, HTTP 200; `curl localhost:8000/api/v1/health` → 404 (fix round, confirms the duplicate route is gone). Server stopped afterward (`pkill -f "uvicorn app.main:app"`), confirmed via a failed follow-up curl. |
 | AC4 | Pass | `backend/tests/test_errors.py::test_each_apperror_subclass` (parametrized over all 5 subclasses) asserts each documented status code + `code`; `test_unhandled_exception_returns_internal_error` covers the generic-`Exception` → 500/`INTERNAL_ERROR` handler; `test_apperror_status_and_code_can_be_overridden_per_instance` proves the CQ-009-style per-instance override. |
-| AC5 | Pass | `backend/tests/test_registry.py::test_dummy_router_registers` monkeypatches `FEATURE_ROUTERS` to append `"tests._dummy_feature_router"`, calls `create_app()` (no `main.py` edits), and asserts `/api/v1/dummy` is in `app.openapi()["paths"]`. |
-| AC6 | Pass | `uv run python backend/scripts/export_openapi.py` → wrote to `packages/api-client/openapi.json`; manually verified `openapi: "3.1.0"`, `paths: ["/api/v1/health", "/health"]`, and the `HealthReport` schema matches the pinned shape exactly. `backend/tests/test_openapi_export.py::test_output_is_valid_json` round-trips through `json.load` against a `tmp_path` destination (kept out of the real path so `pytest` never writes into `packages/`). The real generated file was deleted before commit per this item's parallel-work instructions (CQ-005 owns a hand-written stub there until the orchestrator runs `make api-client` post-merge). |
+| AC5 | Pass | `backend/tests/test_registry.py::test_dummy_router_registers` monkeypatches `FEATURE_ROUTERS` to append `"tests._dummy_feature_router"`, calls `create_app()` (no `main.py` edits), and asserts `/api/v1/dummy` is in `app.openapi()["paths"]`. `FEATURE_ROUTERS` itself starts empty (fix round); `system` is never in it. |
+| AC6 | Pass | `uv run python backend/scripts/export_openapi.py` → wrote to `packages/api-client/openapi.json`; manually verified `openapi: "3.1.0"`, `paths: ["/health"]` (single path, fixed from the earlier duplicate), and the `HealthReport` schema matches the pinned shape exactly. `backend/tests/test_openapi_export.py::test_output_is_valid_json` round-trips through `json.load` against a `tmp_path` destination (kept out of the real path so `pytest` never writes into `packages/`). The real generated file was deleted before commit per this item's parallel-work instructions (CQ-005 owns a hand-written stub there until the orchestrator runs `make api-client` post-merge). |
 | AC7 | Pass | `backend/tests/test_db_isolation.py::test_rows_do_not_leak_across_tests` opens two independent connection+transaction+session flows against the same `_isolation_probe_cq004` table and proves the second sees none of the first's committed-then-rolled-back row; `test_db_session_fixture_itself_rolls_back`/`test_previous_fixture_test_left_no_trace` prove the same for the actual `db_session` fixture across two real, separate pytest tests. |
 
 ## Test log (stage 5)
+
+Initial build:
 
 | Check | Command | Result |
 | --- | --- | --- |
 | Backend tests | `uv run pytest backend` | 16 passed (run twice back-to-back for determinism) |
 | Backend lint | `uv run ruff check backend` | All checks passed |
 | Backend format | `uv run ruff format --check backend` | 23 files already formatted |
-| Backend types | `uv run mypy backend/app` (Makefile scope) and `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` (full) | Success: no issues found |
+| Backend types | `uv run mypy backend/app` (Makefile scope, pre-fix) | Success: no issues found |
 | Full repo lint | `make lint` | ruff/mypy/eslint/tsc/prettier all green (required `pnpm install` first — `node_modules` wasn't present in this fresh worktree; gitignored, no repo changes) |
 | Full repo test | `make test` | pytest 16 passed; `pnpm -r run test` — 4 workspace test files passed (pre-existing CQ-002/CQ-005-scaffold placeholder tests) |
 | Manual boot | `uv run uvicorn app.main:app --port 8000` + `curl localhost:8000/health` | 200, all four checks `"ok"`; server stopped after |
 | OpenAPI export | `uv run python backend/scripts/export_openapi.py` | Valid JSON written and inspected, then deleted (not committed, per parallel-work rules) |
+
+Fix round (review findings #1–4, commit after `240ce24`):
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Stack | `make up` | All 6 services healthy |
+| Backend tests | `uv run pytest backend -q` | 16 passed |
+| Backend types (widened scope) | `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` | Success: no issues found in 23 source files |
+| Full repo lint | `make lint` | ruff/ruff-format/mypy (now full `backend/` tree via the widened Makefile line)/eslint/tsc/prettier all green |
+| Full repo test | `make test` | pytest 16 passed; `pnpm -r run test` 4 files passed |
+| Manual boot | `uv run uvicorn app.main:app --port 8000` | `curl localhost:8000/health` → 200 all-ok; `curl localhost:8000/api/v1/health` → 404 (`{"detail":"Not Found"}`); `curl localhost:8000/openapi.json` → `paths: ["/health"]` only. Server stopped after. |
+| OpenAPI export | `uv run python backend/scripts/export_openapi.py` | `paths: ["/health"]` (single path, no `/api/v1/health`); `HealthReport` schema unchanged; file inspected then deleted, not committed |
+| Stack teardown | `make down` (no `-v`) | Ran at end; `kaneo-evaluation-*` containers untouched |
 
 ## Review findings (stage 6)
 
@@ -68,6 +84,15 @@ Reviewed by a fresh subagent (did not write this code) against `spec.md`, `plan.
 | 4 | Nit | `docs/backlog/CQ-004-backend-skeleton/post-dev.md` "Deviations from spec" table | The `/api/v1/health` duplicate is described as "(implicit)" and "not a spec deviation" — but the spec's wording ("not under `/api/v1`") is explicit, not implicit. Understates finding #1 for a future auditor skimming this table. | Reword to acknowledge the explicit pin is contradicted, not just an implicit assumption. |
 
 No critical findings. AC1–AC7 are each backed by a real, meaningful test and all pass; error-handler 500 path never leaks exception text; CORS parsing (`NoDecode` + `mode="before"` validator) works correctly for the comma-separated env var; DB test isolation genuinely rolls back (proven with three sequential probes plus two real separate pytest tests); no secrets committed (`.env` untracked, `.env.example` holds only local-mock placeholder values); no real provider calls (health checks hit only the `make up` mocks).
+
+### Findings resolution (fix round)
+
+| # | Severity | Resolution |
+| --- | --- | --- |
+| 1 | Major | Fixed per orchestrator decision: `FEATURE_ROUTERS` starts empty; `/health` mounted only via `main.py`'s direct unprefixed `include_router`. `spec.md` updated (orchestrator-authorized). `test_system_router_is_mounted_unprefixed_and_registered` replaced with `test_health_is_unprefixed_only_not_also_under_api_v1`, asserting `/health` exists and `/api/v1/health` does not — live (404) and in `app.openapi()["paths"]`. Verified live via `curl`. |
+| 2 | Minor | Fixed: `CheckResult` is now used by every `check_*` function in `service.py`; `run_health_checks` flattens the results into `HealthReport.checks`. Response JSON shape unchanged (verified via `export_openapi.py`). |
+| 3 | Minor | Fixed: Makefile's mypy step now covers `backend/app backend/conftest.py backend/tests backend/scripts`; removed the now-redundant `packages = ["app"]` from `[tool.mypy]`. Clean — no new errors. |
+| 4 | Nit | Fixed: "Deviations from spec" table reworded to state the pin was explicitly, not implicitly, contradicted, and that it's now corrected rather than accepted. |
 
 ## How to test manually
 

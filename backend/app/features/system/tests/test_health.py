@@ -4,6 +4,7 @@ import pytest
 from httpx import AsyncClient
 
 from app.features.system import service
+from app.features.system.schemas import CheckResult
 
 
 async def test_health_ok(client: AsyncClient) -> None:
@@ -23,8 +24,8 @@ async def test_health_ok(client: AsyncClient) -> None:
 
 
 async def test_health_degraded(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _failing_valkey_check(valkey_url: str) -> str:
-        return "error: connection refused"
+    async def _failing_valkey_check(valkey_url: str) -> CheckResult:
+        return CheckResult(name="valkey", status="error: connection refused")
 
     monkeypatch.setattr(service, "check_valkey", _failing_valkey_check)
 

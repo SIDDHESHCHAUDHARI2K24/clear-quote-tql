@@ -15,7 +15,7 @@ logs:
 lint:
 	uv run ruff check backend
 	uv run ruff format --check backend
-	uv run mypy backend/app
+	uv run mypy backend/app backend/conftest.py backend/tests backend/scripts
 	pnpm -r run lint
 	pnpm -r run typecheck
 	pnpm exec prettier --check .
