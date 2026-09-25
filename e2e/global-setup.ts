@@ -1,9 +1,12 @@
 import path from "node:path";
 import fs from "node:fs";
+import { execFileSync } from "node:child_process";
 
 import { chromium, type FullConfig } from "@playwright/test";
 
 import { borrowerLogin } from "./helpers/borrowerLogin";
+
+const REPO_ROOT = path.resolve(__dirname, "..");
 
 // CQ-022: signs each borrower persona the report specs need in **once**,
 // here, and saves the resulting session cookie (Playwright `storageState`)
@@ -27,10 +30,19 @@ const AUTH_DIR = path.join(__dirname, ".auth");
 
 export const LUIS_ROMERO_STORAGE_STATE = path.join(AUTH_DIR, "luis-romero.json");
 export const GRACE_KIM_STORAGE_STATE = path.join(AUTH_DIR, "grace-kim.json");
+// CQ-023: Kathleen McReynolds is the one TBD persona (buy-box FL/[Davenport,
+// Orlando]) -- `report-matches.spec.ts` needs her signed in the same
+// once-per-suite way, after `backend/scripts/freeze_version.py
+// --persona kathleen_mcreynolds` has given her a real sent version.
+export const KATHLEEN_MCREYNOLDS_STORAGE_STATE = path.join(AUTH_DIR, "kathleen-mcreynolds.json");
 
 const PERSONAS: Array<{ email: string; storageStatePath: string }> = [
   { email: "luis.romero@clearquote-demo.test", storageStatePath: LUIS_ROMERO_STORAGE_STATE },
   { email: "grace.kim@clearquote-demo.test", storageStatePath: GRACE_KIM_STORAGE_STATE },
+  {
+    email: "kathleen.mcreynolds@clearquote-demo.test",
+    storageStatePath: KATHLEEN_MCREYNOLDS_STORAGE_STATE,
+  },
 ];
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
@@ -47,6 +59,17 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
 
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 
+  // CQ-023: Kathleen McReynolds has no `fixture_layer` in her seed YAML
+  // (she's `pipeline_end_status: priced`, not `sent` -- see
+  // `report-matches.spec.ts`'s own comment), so `make demo-reset` alone
+  // never gives her a sent version to load a `/report/{token}` page
+  // against. Freeze one here, before she signs in below, instead of
+  // requiring a manual `uv run python backend/scripts/freeze_version.py`
+  // step before every run. The script itself is idempotent (reuses an
+  // existing unexpired, not-superseded version instead of freezing a new
+  // one each run), so calling it on every `globalSetup` is cheap and safe.
+  freezeKathleenMcReynoldsVersion();
+
   const browser = await chromium.launch();
   try {
     for (const persona of PERSONAS) {
@@ -54,6 +77,23 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     }
   } finally {
     await browser.close();
+  }
+}
+
+function freezeKathleenMcReynoldsVersion(): void {
+  try {
+    const output = execFileSync(
+      "uv",
+      ["run", "python", "backend/scripts/freeze_version.py", "--persona", "kathleen_mcreynolds"],
+      { cwd: REPO_ROOT, encoding: "utf-8" },
+    );
+    console.log(output.trim());
+  } catch (error) {
+    throw new Error(
+      "e2e/global-setup.ts: freeze_version.py --persona kathleen_mcreynolds failed -- " +
+        "is the stack seeded (`make demo-reset`) and does Kathleen McReynolds have priced " +
+        `scenarios/quotes? Original error: ${error}`,
+    );
   }
 }
 

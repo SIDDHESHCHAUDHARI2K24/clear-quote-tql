@@ -226,6 +226,17 @@ def _build_match(match: ReportMatchInput) -> ReportMatch:
         deal_grade_badge=match.deal_grade_badge,
         property_tagline=match.property_tagline,
         price=_money(match.price),
+        total_monthly_payment=_money(match.total_monthly_payment),
+        rent_estimate=_money(match.rent_estimate) if match.rent_estimate is not None else None,
+        rent_label=match.rent_label,
+        monthly_cashflow=(
+            _money(match.monthly_cashflow) if match.monthly_cashflow is not None else None
+        ),
+        cash_to_close=_money(match.cash_to_close),
+        cap_rate_pct=str(match.cap_rate_pct) if match.cap_rate_pct is not None else None,
+        year1_tax_savings=(
+            _money(match.year1_tax_savings) if match.year1_tax_savings is not None else None
+        ),
     )
 
 

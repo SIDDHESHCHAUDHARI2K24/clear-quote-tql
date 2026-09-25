@@ -26,7 +26,7 @@ from pathlib import Path
 from app.features.pricing.engine.quote_engine import compute_quote
 from app.features.pricing.engine.types import ConfigSnapshot, ScenarioInputs, StrategyType
 from app.features.quotes.report.builder import build_report_view_model
-from app.features.quotes.report.inputs import ReportInputs, ReportOptionInput
+from app.features.quotes.report.inputs import ReportInputs, ReportMatchInput, ReportOptionInput
 from app.features.quotes.report.schemas import ReportViewModel
 
 OUTPUT_DIR = (
@@ -125,6 +125,85 @@ def _marcus_hale_inputs(*, expired: bool = False) -> ReportInputs:
     )
 
 
+def _kathleen_mcreynolds_matches(config: ConfigSnapshot) -> list[ReportMatchInput]:
+    """CQ-023: 3 Davenport, FL listings (seed/providers/listings.yaml,
+    all zip 33896 -- same county/rent-comp data as Kathleen's own subject
+    market), run through her recommended (Par) option's terms: 25% down,
+    7.250% note rate, 0% points, FICO 720. Same `compute_quote` call this
+    whole script already makes for her own options -- no hand-typed money."""
+    down_payment_pct = Decimal("0.25")
+    tax_rate = Decimal("0.0089")  # Polk county
+    insurance_rate = Decimal("0.005")  # FL default (Steadily)
+    market_rent = Decimal("2250")  # seed/providers/rents.yaml, zip 33896
+
+    listings = [
+        (
+            "102 Sample St, Davenport, FL 33896",
+            "4 bd · 2 ba · 1,650 sqft",
+            "good_buy",
+            "Turnkey Davenport investment opportunity",
+            "https://picsum.photos/seed/kathleen_mcreynolds/640/480",
+            Decimal("255000.00"),
+        ),
+        (
+            "112 Grove Ave, Davenport, FL 33896",
+            "4 bd · 2 ba · 1,700 sqft",
+            "good_buy",
+            "Spacious Davenport rental near the theme-park corridor",
+            "https://picsum.photos/seed/cq023_davenport_2/640/480",
+            Decimal("280000.00"),
+        ),
+        (
+            "111 Grove Ave, Davenport, FL 33896",
+            "3 bd · 2 ba · 1,550 sqft",
+            "great_buy",
+            "Move-in ready Davenport rental",
+            "https://picsum.photos/seed/cq023_davenport_1/640/480",
+            Decimal("220000.00"),
+        ),
+    ]
+
+    matches = []
+    for address, bed_bath_sqft, deal_grade, tagline, image_url, price in listings:
+        inputs = ScenarioInputs(
+            purchase_price=price,
+            down_payment_pct=down_payment_pct,
+            note_rate=Decimal("0.0725"),
+            strategy=StrategyType.LTR,
+            fico=720,
+            property_tax_annual_rate=tax_rate,
+            insurance_annual_rate=insurance_rate,
+            market_rent_ltr=market_rent,
+        )
+        computation = compute_quote(inputs, config)
+        assert computation.qualifying_rent is not None
+        assert computation.monthly_cashflow is not None
+        assert computation.cap_rate_pct is not None
+        assert computation.year_one_tax_savings is not None
+        matches.append(
+            ReportMatchInput(
+                matched_property_id=address,
+                property_image_url=image_url,
+                property_address=address,
+                bed_bath_sqft=bed_bath_sqft,
+                deal_grade_badge=deal_grade,
+                property_tagline=tagline,
+                price=price,
+                total_monthly_payment=computation.total_monthly_payment,
+                rent_estimate=computation.qualifying_rent,
+                rent_label="Market rent (LTR)",
+                monthly_cashflow=computation.monthly_cashflow,
+                cash_to_close=computation.cash_to_close,
+                cap_rate_pct=computation.cap_rate_pct,
+                year1_tax_savings=computation.year_one_tax_savings,
+            )
+        )
+
+    # Spec.md: sorted by monthly cashflow descending.
+    matches.sort(key=lambda m: m.monthly_cashflow or Decimal("-Infinity"), reverse=True)
+    return matches
+
+
 def _kathleen_mcreynolds_inputs() -> ReportInputs:
     """LTR, Davenport FL, subject property TBD (`property_address_status:
     TBD` in the persona YAML) -- renders "Property to be determined"."""
@@ -194,6 +273,7 @@ def _kathleen_mcreynolds_inputs() -> ReportInputs:
         lo_nmls=_LO_NMLS,
         lo_phone=_LO_PHONE,
         lo_email=_LO_EMAIL,
+        matches=_kathleen_mcreynolds_matches(config),
     )
 
 

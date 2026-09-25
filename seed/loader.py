@@ -293,6 +293,7 @@ async def seed_providers(db: AsyncSession) -> None:
                 city=row["city"],
                 state=row["state"],
                 zip=row["zip"],
+                county=row["county"],
                 metro=row["metro"],
                 list_price=Decimal(str(row["list_price"])),
                 beds=row["beds"],
@@ -302,6 +303,7 @@ async def seed_providers(db: AsyncSession) -> None:
                 image_url=row["image_url"],
                 deal_grade=DealGrade(row["deal_grade"]),
                 tagline=row.get("tagline"),
+                str_permitted=bool(row.get("str_permitted", False)),
             )
         )
     for row in load_provider_fixture("insurance_factors.yaml"):

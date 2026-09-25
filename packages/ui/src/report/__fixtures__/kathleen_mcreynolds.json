@@ -196,7 +196,56 @@
     "text": "We recommend the par option for the strongest long-term cashflow.",
     "lo_note": null
   },
-  "matches": [],
+  "matches": [
+    {
+      "matched_property_id": "111 Grove Ave, Davenport, FL 33896",
+      "property_image_url": "https://picsum.photos/seed/cq023_davenport_1/640/480",
+      "property_address": "111 Grove Ave, Davenport, FL 33896",
+      "bed_bath_sqft": "3 bd \u00b7 2 ba \u00b7 1,550 sqft",
+      "deal_grade_badge": "great_buy",
+      "property_tagline": "Move-in ready Davenport rental",
+      "price": "220000.00",
+      "total_monthly_payment": "1380.42",
+      "rent_estimate": "2250.00",
+      "rent_label": "Market rent (LTR)",
+      "monthly_cashflow": "869.58",
+      "cash_to_close": "60665.63",
+      "cap_rate_pct": "9.20",
+      "year1_tax_savings": "15616.00"
+    },
+    {
+      "matched_property_id": "102 Sample St, Davenport, FL 33896",
+      "property_image_url": "https://picsum.photos/seed/kathleen_mcreynolds/640/480",
+      "property_address": "102 Sample St, Davenport, FL 33896",
+      "bed_bath_sqft": "4 bd \u00b7 2 ba \u00b7 1,650 sqft",
+      "deal_grade_badge": "good_buy",
+      "property_tagline": "Turnkey Davenport investment opportunity",
+      "price": "255000.00",
+      "total_monthly_payment": "1600.04",
+      "rent_estimate": "2250.00",
+      "rent_label": "Market rent (LTR)",
+      "monthly_cashflow": "649.96",
+      "cash_to_close": "70032.21",
+      "cap_rate_pct": "7.94",
+      "year1_tax_savings": "18100.36"
+    },
+    {
+      "matched_property_id": "112 Grove Ave, Davenport, FL 33896",
+      "property_image_url": "https://picsum.photos/seed/cq023_davenport_2/640/480",
+      "property_address": "112 Grove Ave, Davenport, FL 33896",
+      "bed_bath_sqft": "4 bd \u00b7 2 ba \u00b7 1,700 sqft",
+      "deal_grade_badge": "good_buy",
+      "property_tagline": "Spacious Davenport rental near the theme-park corridor",
+      "price": "280000.00",
+      "total_monthly_payment": "1756.90",
+      "rent_estimate": "2250.00",
+      "rent_label": "Market rent (LTR)",
+      "monthly_cashflow": "493.10",
+      "cash_to_close": "76722.62",
+      "cap_rate_pct": "7.23",
+      "year1_tax_savings": "19874.91"
+    }
+  ],
   "disclosures": {
     "core": "This is not a commitment to lend. Rates, payments and closing costs are estimates based on the information available today and are subject to change once your file is fully underwritten. This is not a Loan Estimate.",
     "investment": "Rental income and cashflow figures are estimates based on third-party market data (RentCast/AirDNA) and are not a guarantee of actual performance.",

@@ -53,12 +53,15 @@ class ReportOptionInput:
 
 @dataclass(frozen=True)
 class ReportMatchInput:
-    """Placeholder shape for CQ-023's property-match cards (data-field-catalog
-    §11). CQ-021 always passes an empty `matches` list (spec.md: "matches[]:
-    empty here; filled by CQ-023") -- this type exists so `ReportInputs`'
-    field has a concrete element type today instead of `list[Any]`, which
-    CQ-023 can widen/adjust without touching `ReportViewModel`'s top-level
-    shape."""
+    """CQ-023's property-match card shape (data-field-catalog §11 + spec.md
+    "Returns the top 3 with..."). CQ-021 originally passed an empty
+    `matches` list always; CQ-023 (`app.features.matches.service.
+    compute_matches_for_package`) is the only producer of these today.
+
+    Every money field here is an already-engine-computed `Decimal` (this
+    module's caller runs `quote_engine.compute_quote` per candidate listing
+    -- see `matches/service.py`); `builder.py`'s `_build_match` only
+    formats/labels them, exactly like it does for `ReportOptionInput`."""
 
     matched_property_id: str
     property_image_url: str
@@ -67,6 +70,20 @@ class ReportMatchInput:
     deal_grade_badge: str
     property_tagline: str
     price: Decimal
+    total_monthly_payment: Decimal
+    rent_estimate: Decimal | None
+    """The pre-expense-ratio gross monthly figure -- market rent (LTR) or
+    gross STR revenue -- same convention as `CashflowTable.gross_amount`
+    (builder.py's `_gross_rent_monthly`). `None` for primary."""
+    rent_label: str | None
+    """"Market rent (LTR)" or "Gross STR revenue"; `None` for primary."""
+    monthly_cashflow: Decimal | None
+    """`None` for primary. May be negative."""
+    cash_to_close: Decimal
+    cap_rate_pct: Decimal | None
+    """`None` for primary."""
+    year1_tax_savings: Decimal | None
+    """`None` for primary."""
 
 
 @dataclass(frozen=True)

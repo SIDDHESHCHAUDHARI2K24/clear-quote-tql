@@ -39,6 +39,53 @@ class LtvOutOfRangeError(ValueError):
     which is a pure lookup with no notion of a program maximum."""
 
 
+# --- Insurance rate conversion (shared with CQ-017) -------------------------
+# Copied verbatim from CQ-017 (pricing panel)'s
+# `backend/app/features/pricing/engine/quote_engine.py` (origin/cq-017-pricing-panel
+# @ 12cefaf) -- both items independently needed "insurance $/yr -> rate"
+# conversion done inside `quote_engine`, not by a caller (AGENTS.md: "money
+# math lives only in quote_engine"), and coordinated on this exact name/
+# signature/behavior so the merge keeps a single copy instead of a rename.
+
+
+class NonPositivePriceError(ValueError):
+    """Raised by `down_payment_pct_from_amount`/`insurance_annual_rate_from_amount`
+    when `purchase_price` is not strictly positive -- dividing by a zero or
+    negative price would otherwise produce a divide-by-zero or a
+    nonsensical inverted/negative rate. A plain `ValueError` subclass so a
+    Pydantic `model_validator` that calls these functions (CQ-017
+    `QuotePreviewRequest`) has it turned into a normal 422, not a 500."""
+
+
+def insurance_annual_rate_from_amount(purchase_price: Decimal, annual_premium: Decimal) -> Decimal:
+    """`annual_premium / purchase_price`, unrounded -- the same
+    0-1-fraction scale `ScenarioInputs.insurance_annual_rate` uses
+    everywhere else (matches `pricing.scenarios.service._gather_base_
+    scenario_inputs`'s own unrounded formula for the same conversion, and
+    CQ-023's `features/matches/` usage of this same function -- signature
+    coordinated with that item so both branches merge without a rename).
+
+    CQ-017: the pricing panel only ever shows/edits the dollar amount
+    (`homeowners_ins_annual`'s `field_values` row); it must not divide that
+    by `purchase_price` itself to get the rate `/quotes/preview` needs
+    (AGENTS.md: money math lives only in `quote_engine`).
+
+    Raises `NonPositivePriceError` (a `ValueError` subclass, so a plain
+    `except ValueError` still catches it) when `purchase_price` isn't
+    strictly positive. Deliberately unrounded, matching every other
+    engine-internal rate value (`compute_quote` rounds once, only at
+    output) -- round at the call site's own display boundary if needed.
+    """
+    if purchase_price <= 0:
+        raise NonPositivePriceError(
+            f"purchase_price must be positive to derive an insurance rate, got {purchase_price}"
+        )
+    return annual_premium / purchase_price
+
+
+# --- end shared block --------------------------------------------------------
+
+
 def _round_currency(value: Decimal) -> Decimal:
     return value.quantize(_CENT, rounding=ROUND_HALF_UP)
 
@@ -247,6 +294,32 @@ def cost_segregation(
 
 def monthly_cashflow_incl_tax(monthly_cashflow: Decimal, year_one_tax_savings: Decimal) -> Decimal:
     return monthly_cashflow + year_one_tax_savings / Decimal("12")
+
+
+# --- Property matches (CQ-023) --------------------------------------------------
+# Kept in its own block, at the end of the file, on purpose: CQ-017 (pricing
+# panel) also adds a public quote_engine function in this same PR window and
+# both items were told to expect an easy merge conflict here -- a dedicated
+# section, appended rather than interleaved among the existing ones, keeps
+# each item's diff a clean append instead of touching shared lines.
+
+_MATCH_FLOOR_MULTIPLIER = Decimal("0.70")
+_MATCH_CEILING_MULTIPLIER = Decimal("1.00")
+
+
+def match_floor_price(approved_purchase_price: Decimal) -> Decimal:
+    """data-field-catalog.md §11 `match_floor_price`: `approved_purchase_price
+    x 0.70`, rounded to cents like every other money value this module
+    produces. **Hard floor** -- a listing priced below this is never a
+    match, whatever else about it fits (buy-box, strategy)."""
+    return _round_currency(approved_purchase_price * _MATCH_FLOOR_MULTIPLIER)
+
+
+def match_ceiling_price(approved_purchase_price: Decimal) -> Decimal:
+    """data-field-catalog.md §11 `match_ceiling_price`: `approved_purchase_price
+    x 1.00`. **Hard ceiling** -- never show the borrower a home priced above
+    what they're approved for."""
+    return _round_currency(approved_purchase_price * _MATCH_CEILING_MULTIPLIER)
 
 
 # --- Orchestration -------------------------------------------------------------
