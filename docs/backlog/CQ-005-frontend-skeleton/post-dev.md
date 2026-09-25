@@ -89,3 +89,32 @@ Spot-checked contracts: `ApplicationStatus` (12 values) and `SourceBadgeSource`/
 - Overlay uses a custom backdrop+panel modal rather than the native `<dialog>` element (react-doctor `prefer-html-dialog`, warning-level only). Revisit when CQ-018 builds the real Add/Edit quote overlay on top of this primitive — watch for jsdom `HTMLDialogElement.showModal()` support before converting.
 - CQ-004 must overwrite `packages/api-client/openapi.json` with the real `app.openapi()` export (its own scope); once that lands, `make api-client`'s existence-check branch simply stops triggering — no code change needed here.
 - CQ-007 must keep `ApplicationStatus`/`SourceBadgeSource` string values in `packages/ui/src/types.ts` in sync with its Postgres enum values (already pinned identically in this item).
+
+## Follow-up: api-client sync
+
+Small follow-up done after CQ-004 merged (worktree `cq-005-api-client-sync`, branch `cq-005-api-client-sync`), addressing review finding #4 above and switching `make api-client` off the hand-written stub now that CQ-004's `backend/scripts/export_openapi.py` exists.
+
+**1. Generate api-client from the real backend export.**
+
+- `cp .env.example .env` (once per worktree, gitignored — `Settings()` needs the local-mock values to construct).
+- `make api-client` now runs cleanly against the real FastAPI app: `packages/api-client/openapi.json` is the real `app.openapi()` export (`info.title` is now `"Clear Quote API"`, not the CQ-005 stub's `"Clear Quote API (CQ-005 stub)"`; `HealthReport.checks` is `dict[str, str]` rather than the stub's four named properties, since the real Pydantic schema doesn't enumerate check names), and `packages/api-client/src/schema.d.ts` was regenerated from it with the `// GENERATED FILE` banner intact. Neither file was hand-edited.
+- Removed the Makefile's `if [ -f backend/scripts/export_openapi.py ]` fallback branch: it is now dead code (the script is permanently committed as of CQ-004, so the `else` branch — echoing a "not found yet" message and reusing the stub — can never execute again in this repo). It also isn't needed for CI: CQ-006's `frontend` job (`docs/backlog/CQ-006-ci/spec.md`) never runs `make api-client`; it lints/typechecks/tests against whatever `packages/api-client/openapi.json`/`schema.d.ts` are already committed. `make api-client` now unconditionally runs `uv run python backend/scripts/export_openapi.py` then the `openapi-typescript` generate step.
+
+**2. Fix: show three /health states, not two.**
+
+Review finding #4: both home pages' `.then()` ran on any *resolved* promise from `api.GET("/health")`, and openapi-fetch resolves (never rejects) on a non-2xx HTTP status — so a `503` "degraded" response rendered "API reachable." Root cause confirmed: the `/health` OpenAPI contract only documents a `200` response (`backend/app/features/system/router.py` has no explicit non-2xx `responses=`), so on a `503` openapi-fetch puts the parsed body under `error` (untyped), not `data`, and the old code never looked at `error` at all.
+
+TDD: added a failing test first to both `apps/lo-console/src/app/page.test.tsx` and `apps/borrower-portal/src/app/page.test.tsx` — `"renders a degraded state listing the failing checks by name on a 503 response"` — mocking `@cq/api-client`'s `GET` to resolve with `{ data: undefined, error: { status: "degraded", checks: {...} }, response: new Response(null, { status: 503 }) }`. Confirmed RED (`pnpm --filter lo-console test` / `pnpm --filter borrower-portal test`): both rendered "API reachable" instead of "API degraded". Then fixed `apps/*/src/app/page.tsx`: `HealthState` is now a discriminated union (`loading` | `ok` | `degraded` with `failingChecks: string[]` | `unreachable`); a small `isHealthReport` type guard reads the report from whichever of `data`/`error` openapi-fetch populated, and only a rejected promise (real network failure) sets `unreachable`. Degraded state renders `"API degraded — failing checks: <name>, <name>"`, listing only checks whose value isn't `"ok"`. Confirmed GREEN: both apps' `page.test.tsx` now pass all 3 cases (ok / degraded / unreachable).
+
+No money math added to either page (frontends never compute money, per `AGENTS.md`); the checks list is just a string filter/join over the response body.
+
+**3. Full verification (both apps + repo root).**
+
+| Command | Result |
+| --- | --- |
+| `make lint` | Exit 0 (ruff, ruff format --check, mypy, eslint, tsc, prettier --check all pass — one round of `pnpm exec prettier --write` needed on the 4 touched files before this was clean) |
+| `make test` | Exit 0 — `uv run pytest backend` (16 passed); `pnpm -r run test` (4 workspace test scripts, all green, including the two new degraded-state tests) |
+| `npx react-doctor -y --blocking error` (in `apps/lo-console`) | Score 100/100, no issues |
+| `npx react-doctor -y --blocking error` (in `apps/borrower-portal`) | Score 100/100, no issues |
+
+Files touched: `Makefile`; `packages/api-client/openapi.json`, `packages/api-client/src/schema.d.ts` (regenerated, not hand-edited); `apps/lo-console/src/app/page.tsx`, `apps/lo-console/src/app/page.test.tsx`; `apps/borrower-portal/src/app/page.tsx`, `apps/borrower-portal/src/app/page.test.tsx`.
