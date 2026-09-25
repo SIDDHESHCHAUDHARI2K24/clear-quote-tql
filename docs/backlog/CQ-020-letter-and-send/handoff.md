@@ -41,3 +41,11 @@ Append one entry per handoff, newest at the bottom. A new session reads spec.md,
   - LO app: `pnpm --filter @cq/lo-console exec next dev -p 3110`.
   - Send Marcus Hale's package from the Send tab and check Mailpit at http://localhost:8025.
   - The known asyncpg "another operation is in progress" flake may appear in one full run; rerun it.
+
+## Handoff 2 — 2026-09-25 — PR #30 review-fix worker (Opus)
+
+- **Branch:** `cq-020-letter-and-send` (pushed from local `cq-020-fix`). PR #30 → `phase-p3-p4`, not merged.
+- **Done:** both majors and minors a–f from the fresh review, TDD; see post-dev.md "Review findings" and plan.md Decisions 22–23.
+- **Verify state:** `scripts/worktree-env.sh 10`; `make lint`; `make test` (no worker running); `make demo-reset`, then API :8110, `make worker`, LO :3110, portal :3210 and `pnpm exec playwright test e2e/p3-milestone-send-to-report.spec.ts e2e/lo-console/send-tab-draft.spec.ts --workers 1` with `SEED_*_PASSWORD` exported (e.g. `uv run --no-sync --env-file .env pnpm exec playwright ...`).
+- **Test note:** `test_concurrent_posts_send_once` commits real data (a real lock race needs two connections) and removes it afterwards: it empties every table that was empty before the test, with FK triggers off. Never use `TRUNCATE ... CASCADE` there: `settings` references `users` and would be wiped. That breaks every later test with "Missing required setting"; the fix is to recreate `cq_test_s10`.
+- **Next:** the orchestrator re-reviews and merges.

@@ -2070,8 +2070,8 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-020-letter-and-send/post-dev.md": {
-    "mtime": 1790371275.799877,
-    "ast_hash": "f9202c1acdddb45f9e0c4b21bf5011c4",
+    "mtime": 1790371755.9969115,
+    "ast_hash": "9f2eb0a706147e47a18df5f44b6d6bf2",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-020-letter-and-send/spec.md": {
@@ -3095,8 +3095,8 @@
     "semantic_hash": ""
   },
   "playwright.config.ts": {
-    "mtime": 1790370548.2340033,
-    "ast_hash": "294ad9d9c96a816e7e275c3c5584c06b",
+    "mtime": 1790371452.0863738,
+    "ast_hash": "9bde2cca48dbabca4a72efdd87624e66",
     "semantic_hash": ""
   },
   "scripts/worktree-env.sh": {
@@ -3545,12 +3545,12 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/evidence/header-1280.png": {
-    "mtime": 1790371079.6458004,
+    "mtime": 1790371649.916087,
     "ast_hash": "388d2bdd48a0fe30d59f24b67c2f281b",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/evidence/header-1440.png": {
-    "mtime": 1790371079.6469219,
+    "mtime": 1790371649.9166772,
     "ast_hash": "b25898e63566d649ab1de59f56593b1a",
     "semantic_hash": ""
   },
@@ -3705,7 +3705,7 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-017-pricing-panel/evidence/pricing-panel-priya.png": {
-    "mtime": 1790371079.6484015,
+    "mtime": 1790371649.9171553,
     "ast_hash": "439a6067e2c42f6b7210fa70033db433",
     "semantic_hash": ""
   },
@@ -3990,32 +3990,32 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-024-borrower-actions/evidence/ask-other-sent.png": {
-    "mtime": 1790371079.6597025,
+    "mtime": 1790371649.929792,
     "ast_hash": "fc10fa596ebaee0964a341012856def5",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-024-borrower-actions/evidence/expired-ask-updated-button.png": {
-    "mtime": 1790371079.661052,
+    "mtime": 1790371649.9302952,
     "ast_hash": "fa1d13b736ea6c45b2b70e5cb606ad2b",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-024-borrower-actions/evidence/expired-ask-updated-sent.png": {
-    "mtime": 1790371079.6623037,
+    "mtime": 1790371649.9307592,
     "ast_hash": "5ee61824b71bba3c8eae0b8cdea6e779",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-024-borrower-actions/evidence/lo-console-after-option-selected.png": {
-    "mtime": 1790371079.6630123,
+    "mtime": 1790371649.9311647,
     "ast_hash": "b7d2bd90b15359a7024039b53f7a6b7b",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-024-borrower-actions/evidence/lo-console-before-sent.png": {
-    "mtime": 1790371079.6638064,
+    "mtime": 1790371649.931619,
     "ast_hash": "67ef62c18985225fc3ccd810c33129f6",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-024-borrower-actions/evidence/move-forward-confirmed.png": {
-    "mtime": 1790371079.6652138,
+    "mtime": 1790371649.9321592,
     "ast_hash": "43dbc9ffc0c323e64c73e8e7805c7f7c",
     "semantic_hash": ""
   },
@@ -4250,42 +4250,42 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac1-marcus-groups.png": {
-    "mtime": 1790370993.774956,
+    "mtime": 1790371649.917756,
     "ast_hash": "aa80e91ff5d61d685fae95e596b69c15",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac3-marcus-25-down.png": {
-    "mtime": 1790370997.660921,
+    "mtime": 1790371649.9184568,
     "ast_hash": "14b35a029673e33c05295a4ab2d5c2df",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac4-manual-grid.png": {
-    "mtime": 1790370999.7058446,
+    "mtime": 1790371649.9190323,
     "ast_hash": "58c49be4899f6e1ff2a057060e360069",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac6-aisha-missing-occupancy.png": {
-    "mtime": 1790371002.2546518,
+    "mtime": 1790371649.9198282,
     "ast_hash": "86be824f2c5ac584072605b509c0e53f",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac7-priya-primary.png": {
-    "mtime": 1790371003.346546,
+    "mtime": 1790371649.9204319,
     "ast_hash": "318983bd0cb025ac73c7bc13d50686b5",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac8-after-reprice.png": {
-    "mtime": 1790371079.6494198,
+    "mtime": 1790371649.920711,
     "ast_hash": "78f299f8c27beac7cdde309fc5ff11b6",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac8-stale-banner.png": {
-    "mtime": 1790371008.0356064,
+    "mtime": 1790371649.9214337,
     "ast_hash": "957df3e6295649f9cb2b2097b8a35cfe",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/compare-marcus.png": {
-    "mtime": 1790371004.9454327,
+    "mtime": 1790371649.9222286,
     "ast_hash": "66060025631cd6712c36ed79f1863055",
     "semantic_hash": ""
   },
@@ -4480,37 +4480,37 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-019-send-tab/evidence/ac1-marcus-send-tab.png": {
-    "mtime": 1790371079.6512027,
+    "mtime": 1790371649.9228725,
     "ast_hash": "96c236d8047b60b808078fb62e734967",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-019-send-tab/evidence/ac3-kathleen-letter.png": {
-    "mtime": 1790371079.6526856,
+    "mtime": 1790371649.9240193,
     "ast_hash": "82b06e4da01b1345a258afdc9a859fa0",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-019-send-tab/evidence/ac4-sam-reed-letter.png": {
-    "mtime": 1790371029.021211,
+    "mtime": 1790371649.925188,
     "ast_hash": "b646345ec2872786ff454428cf310baf",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-019-send-tab/evidence/ac5-aisha-blocked.png": {
-    "mtime": 1790371020.574372,
+    "mtime": 1790371649.9260306,
     "ast_hash": "d1c8f66cbfb2c09a60295ae29baae3fd",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-019-send-tab/evidence/ac5-grace-blocked.png": {
-    "mtime": 1790371079.6552393,
+    "mtime": 1790371649.9272578,
     "ast_hash": "1216ce77070015771d18b798de322a2a",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-019-send-tab/evidence/ac6-sam-after-reload.png": {
-    "mtime": 1790371079.6568806,
+    "mtime": 1790371649.9288316,
     "ast_hash": "bf616d4a09eb9512149885e4030eafba",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-019-send-tab/evidence/ac7-marcus-letter.png": {
-    "mtime": 1790371079.6585402,
+    "mtime": 1790371649.9294493,
     "ast_hash": "60a1535d64a67d846690de819033b3b8",
     "semantic_hash": ""
   },
@@ -4615,8 +4615,8 @@
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/send/SendFlow.test.tsx": {
-    "mtime": 1790370817.6217585,
-    "ast_hash": "ba91f9f027d27c8eb2da642d903b74c5",
+    "mtime": 1790371357.6412444,
+    "ast_hash": "b8fc04ec4afdff0632606758b33649ad",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/send/SendProgress.tsx": {
@@ -4635,8 +4635,8 @@
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/send/useSendFlow.ts": {
-    "mtime": 1790370358.2803364,
-    "ast_hash": "db86bd5d669c5da9abfa5fe15fe4e6ac",
+    "mtime": 1790371336.548918,
+    "ast_hash": "3f146bf44c6cf33fe97d94da55d14462",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/send/versions.ts": {
@@ -4654,14 +4654,9 @@
     "ast_hash": "e07a7c8083a9c24280f7b6189f651a69",
     "semantic_hash": ""
   },
-  "e2e/lo-console/send-flow.spec.ts": {
-    "mtime": 1790370793.9452646,
-    "ast_hash": "d178b8ccaca72cdc5ecb2adfec51d921",
-    "semantic_hash": ""
-  },
   "e2e/p3-milestone-send-to-report.spec.ts": {
-    "mtime": 1790370806.9333124,
-    "ast_hash": "5e18253815fba4f71b873065b82e084d",
+    "mtime": 1790371447.6359272,
+    "ast_hash": "b281892c0d5a3cfce9cb9053be93009c",
     "semantic_hash": ""
   },
   "docs/backlog/p34-test-flake-fix.md": {
@@ -4670,28 +4665,28 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-020-letter-and-send/evidence/p3-1-send-tab-ready-1280.png": {
-    "mtime": 1790371059.9118948,
-    "ast_hash": "889dee5d1e059fd29d29cc42926a152f",
+    "mtime": 1790371633.3325725,
+    "ast_hash": "3d9194ef967d1b451ed6726f502fdc3b",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-020-letter-and-send/evidence/p3-2-sent-toast-1280.png": {
-    "mtime": 1790371060.8127594,
-    "ast_hash": "7fca076a4bed2b178a6a1b2c8a932a2b",
+    "mtime": 1790371634.7324219,
+    "ast_hash": "adee8e8f818a8fea8cdea879c6269785",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-020-letter-and-send/evidence/p3-3-marcus-report-1280.png": {
-    "mtime": 1790371062.1766653,
+    "mtime": 1790371636.118931,
     "ast_hash": "561dd33c739a54e88aa187a67a135766",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-020-letter-and-send/evidence/send-dialog-done-1280.png": {
-    "mtime": 1790371015.979371,
-    "ast_hash": "22ef32663b8ce0a3cbcfcf44aa7dbe8c",
+    "mtime": 1790371638.548414,
+    "ast_hash": "62fffb483c04cc1c6e57ec4125340c79",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-020-letter-and-send/evidence/sent-versions-1280.png": {
-    "mtime": 1790371017.8123455,
-    "ast_hash": "3aaeb01e156f1e9fc9dc389fbcfd2e5a",
+    "mtime": 1790371640.9158792,
+    "ast_hash": "4a6433e7fac4f901cee54022fe89c792",
     "semantic_hash": ""
   }
 }
