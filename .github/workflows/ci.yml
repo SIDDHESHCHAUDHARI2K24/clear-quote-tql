@@ -44,9 +44,12 @@ jobs:
       # vars alone (no command needed, unlike the now-unpullable official
       # image), so it works as an ordinary service container here, and
       # `MINIO_DEFAULT_BUCKETS` creates both buckets at startup -- no
-      # separate init step needed.
+      # separate init step needed. Pinned to the exact tag `latest` resolved
+      # to at the time of the CQ-003 follow-up fix, and kept identical to
+      # infra/docker-compose.yml's `minio` service so CI and local can never
+      # diverge (orchestrator decision, CQ-006 Decision #17 follow-up).
       minio:
-        image: bitnamilegacy/minio:latest
+        image: bitnamilegacy/minio:2025.5.24-debian-12-r5
         env:
           MINIO_ROOT_USER: cq-minio
           MINIO_ROOT_PASSWORD: cq-minio-secret
