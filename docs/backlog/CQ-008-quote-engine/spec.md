@@ -68,7 +68,9 @@ def mi_factor(ltv_pct: Decimal, fico: int, config: ConfigSnapshot) -> Decimal | 
 | `reserves_months_investment` | `6` |
 | `mi_matrix` | see below |
 
-**MI matrix (Decision — no source values given; realistic conventional annual-premium bands).** Annual MI rate applied to `loan_amount`, financed monthly as `loan_amount × factor / 12`. Only applies when `strategy==PRIMARY` and `ltv_pct > 80`.
+**MI matrix (Decision — no source values given; realistic conventional annual-premium bands).** Annual MI rate applied to `loan_amount`, financed monthly as `loan_amount × factor / 12`. Only applies when `strategy==PRIMARY` and `ltv_pct > 0.80`.
+
+`ltv_pct` (Decision, revised) is a **0–1 fraction**, like every other `*_pct` field on `ScenarioInputs`/`ConfigSnapshot` (e.g. `0.95` for 95% LTV, not `95`) — `QuoteComputation.ltv_pct` and `mi_factor`'s `ltv_pct` parameter share this scale. The table below is still written on a 0–100 percentage scale for readability; `mi_factor` converts its `ltv_pct` argument to that scale internally before the band lookup.
 
 | LTV band | FICO < 680 | 680–719 | 720–759 | ≥ 760 |
 | --- | --- | --- | --- | --- |
@@ -77,7 +79,7 @@ def mi_factor(ltv_pct: Decimal, fico: int, config: ConfigSnapshot) -> Decimal | 
 | 90.01–95.00% | 1.13% | 0.83% | 0.59% | 0.39% |
 | 95.01–97.00% | 1.86% | 1.35% | 0.96% | 0.63% |
 
-Bands are inclusive of their upper bound. `mi_factor` returns `None` (no MI) when `ltv_pct <= 80` or `strategy != PRIMARY`.
+Bands are inclusive of their upper bound. `mi_factor` returns `None` (no MI) when `ltv_pct <= 0.80` or `strategy != PRIMARY`. Conventional financing caps at 97% LTV: `compute_quote` raises `LtvOutOfRangeError` (a `ValueError` subclass defined in `quote_engine.py`) when `strategy == PRIMARY` and `ltv_pct > 0.97`, rather than silently treating an out-of-range LTV as "no MI required".
 
 **DSCR buckets (Decision, evidenced by persona 5 "DSCR > 1.25 bucket" and the catalog's "Targets ≥ 1.00 or ≥ 1.25"):** `BELOW_1_00` (< 1.00), `ONE_TO_1_25` (1.00 ≤ dscr < 1.25), `GE_1_25` (≥ 1.25). `bucket_for_dscr` classifies the **unrounded** DSCR value, not the 2dp display value.
 
@@ -88,7 +90,7 @@ Bands are inclusive of their upper bound. `mi_factor` returns `None` (no MI) whe
 - `CTC = down_payment + lender_fees + discount_points_pct × L + title_fees + total_prepaids − seller_credits` (negative `discount_points_pct` is a credit). `title_fees = P × title_rate_pct`. `total_prepaids = P&I/30 × prepaid_interest_days + monthly_insurance × prepaid_insurance_months + monthly_tax × prepaid_tax_months`.
 - Qualifying rent: LTR = `market_rent_ltr`; STR = `underwritten_str_rent = str_gross_annual_revenue/12 × (1 − str_expense_ratio)`.
 - `dscr_ratio = qualifying_rent / total_monthly_payment`; `monthly_cashflow = qualifying_rent − total_monthly_payment`; `annual_cashflow = monthly_cashflow × 12`.
-- `break_even_rent_ltr = total_monthly_payment × target_dscr`; `str_annual_rent_target = total_monthly_payment × 12 / 0.80`.
+- `break_even_rent_ltr = total_monthly_payment × target_dscr`; `str_annual_rent_target = total_monthly_payment × 12 / (1 − str_expense_ratio)` (Decision, revised: derived from `config.str_expense_ratio` rather than a hardcoded `0.80`, so a reconfigured expense ratio moves this formula too; the default `str_expense_ratio = 0.20` still gives `/ 0.80` and the same golden value).
 - `cap_rate_pct = qualifying_rent × 12 × cap_rate_multiplier / purchase_price`.
 - Cost seg: `B = land_allocation... ` — precisely `B = (1 − land_allocation_pct) × P` (depreciable building basis), `A = accelerated_property_pct × B`, `Ded_1 = A × bonus_depreciation_pct + (B − A) / 27.5`, `year_one_tax_savings = Ded_1 × investor_marginal_tax_rate`, `monthly_cashflow_incl_tax = monthly_cashflow + year_one_tax_savings / 12`.
 
