@@ -120,4 +120,31 @@ describe("EnrichedPercentField -- no-edit-no-override (CQ-017 review)", () => {
 
     expect(onOverride).not.toHaveBeenCalled();
   });
+
+  it("retyping the same rate without the display's trailing zero does not override (PR #9 regression)", async () => {
+    // Second review pass: the first fix compared `draft` to
+    // `fractionToPercentInputValue(field.value)` (a *display* string).
+    // field.value "0.0064" displays as "0.640" -- an LO who selects the
+    // text and retypes "0.64" (dropping the trailing zero, a completely
+    // natural way to type the same rate) produced a different string,
+    // which fired a spurious override even though the value is identical.
+    const onOverride = vi.fn();
+    const onRevert = vi.fn();
+    render(
+      <EnrichedPercentField
+        label="Property tax rate"
+        ariaLabel="Property tax rate"
+        field={field("0.0064")}
+        onOverride={onOverride}
+        onRevert={onRevert}
+      />,
+    );
+
+    const input = screen.getByLabelText("Property tax rate");
+    await userEvent.clear(input);
+    await userEvent.type(input, "0.64");
+    await userEvent.tab();
+
+    expect(onOverride).not.toHaveBeenCalled();
+  });
 });

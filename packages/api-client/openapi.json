@@ -776,6 +776,65 @@
         }
       }
     },
+    "/api/v1/applications/{application_id}/matches": {
+      "get": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Get Matches",
+        "operationId": "get_matches_api_v1_applications__application_id__matches_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/staff/login": {
       "post": {
         "tags": [
@@ -2318,6 +2377,142 @@
           "label"
         ],
         "title": "ManualQuoteCreateRequest"
+      },
+      "MatchListResponse": {
+        "properties": {
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/MatchOut"
+            },
+            "type": "array",
+            "title": "Matches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matches"
+        ],
+        "title": "MatchListResponse"
+      },
+      "MatchOut": {
+        "properties": {
+          "matched_property_id": {
+            "type": "string",
+            "title": "Matched Property Id"
+          },
+          "property_image_url": {
+            "type": "string",
+            "title": "Property Image Url"
+          },
+          "property_address": {
+            "type": "string",
+            "title": "Property Address"
+          },
+          "bed_bath_sqft": {
+            "type": "string",
+            "title": "Bed Bath Sqft"
+          },
+          "deal_grade_badge": {
+            "type": "string",
+            "title": "Deal Grade Badge"
+          },
+          "property_tagline": {
+            "type": "string",
+            "title": "Property Tagline"
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Price"
+          },
+          "total_monthly_payment": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Monthly Payment"
+          },
+          "rent_estimate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Estimate"
+          },
+          "rent_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Label"
+          },
+          "monthly_cashflow": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow"
+          },
+          "cash_to_close": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cash To Close"
+          },
+          "cap_rate_pct": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Rate Pct"
+          },
+          "year1_tax_savings": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year1 Tax Savings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matched_property_id",
+          "property_image_url",
+          "property_address",
+          "bed_bath_sqft",
+          "deal_grade_badge",
+          "property_tagline",
+          "price",
+          "total_monthly_payment",
+          "rent_estimate",
+          "rent_label",
+          "monthly_cashflow",
+          "cash_to_close",
+          "cap_rate_pct",
+          "year1_tax_savings"
+        ],
+        "title": "MatchOut"
       },
       "Occupancy": {
         "type": "string",
@@ -3942,7 +4137,7 @@
         "type": "object"
       },
       "ReportMatch": {
-        "description": "Placeholder shape for CQ-023's match cards (data-field-catalog \u00a711).\nAlways `[]` in CQ-021's own fixtures/tests.",
+        "description": "CQ-023's match cards (data-field-catalog \u00a711). Every money/rate field\nis a decimal string, same convention as every other `ReportViewModel`\nfield (module docstring) -- `packages/ui/src/report/MatchCard.tsx` never\ndoes arithmetic on these. Investment-only fields (`rent_estimate`,\n`rent_label`, `monthly_cashflow`, `cap_rate_pct`, `year1_tax_savings`)\nare `None` for primary matches (spec.md: \"Primary matches omit rent,\ncashflow, cap rate and tax savings\").",
         "properties": {
           "matched_property_id": {
             "title": "Matched Property Id",
@@ -3971,6 +4166,69 @@
           "price": {
             "title": "Price",
             "type": "string"
+          },
+          "total_monthly_payment": {
+            "title": "Total Monthly Payment",
+            "type": "string"
+          },
+          "rent_estimate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Estimate"
+          },
+          "rent_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Label"
+          },
+          "monthly_cashflow": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow"
+          },
+          "cash_to_close": {
+            "title": "Cash To Close",
+            "type": "string"
+          },
+          "cap_rate_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Rate Pct"
+          },
+          "year1_tax_savings": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year1 Tax Savings"
           }
         },
         "required": [
@@ -3980,7 +4238,14 @@
           "bed_bath_sqft",
           "deal_grade_badge",
           "property_tagline",
-          "price"
+          "price",
+          "total_monthly_payment",
+          "rent_estimate",
+          "rent_label",
+          "monthly_cashflow",
+          "cash_to_close",
+          "cap_rate_pct",
+          "year1_tax_savings"
         ],
         "title": "ReportMatch",
         "type": "object"

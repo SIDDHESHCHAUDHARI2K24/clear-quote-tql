@@ -218,6 +218,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/applications/{application_id}/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Matches */
+        get: operations["get_matches_api_v1_applications__application_id__matches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/staff/login": {
         parameters: {
             query?: never;
@@ -883,6 +900,42 @@ export interface components {
             /** Label */
             label: string;
         };
+        /** MatchListResponse */
+        MatchListResponse: {
+            /** Matches */
+            matches: components["schemas"]["MatchOut"][];
+        };
+        /** MatchOut */
+        MatchOut: {
+            /** Matched Property Id */
+            matched_property_id: string;
+            /** Property Image Url */
+            property_image_url: string;
+            /** Property Address */
+            property_address: string;
+            /** Bed Bath Sqft */
+            bed_bath_sqft: string;
+            /** Deal Grade Badge */
+            deal_grade_badge: string;
+            /** Property Tagline */
+            property_tagline: string;
+            /** Price */
+            price: string;
+            /** Total Monthly Payment */
+            total_monthly_payment: string;
+            /** Rent Estimate */
+            rent_estimate: string | null;
+            /** Rent Label */
+            rent_label: string | null;
+            /** Monthly Cashflow */
+            monthly_cashflow: string | null;
+            /** Cash To Close */
+            cash_to_close: string;
+            /** Cap Rate Pct */
+            cap_rate_pct: string | null;
+            /** Year1 Tax Savings */
+            year1_tax_savings: string | null;
+        };
         /**
          * Occupancy
          * @description Per override O2: Primary, LTR or STR only — no `second_home`.
@@ -1366,8 +1419,13 @@ export interface components {
         };
         /**
          * ReportMatch
-         * @description Placeholder shape for CQ-023's match cards (data-field-catalog §11).
-         *     Always `[]` in CQ-021's own fixtures/tests.
+         * @description CQ-023's match cards (data-field-catalog §11). Every money/rate field
+         *     is a decimal string, same convention as every other `ReportViewModel`
+         *     field (module docstring) -- `packages/ui/src/report/MatchCard.tsx` never
+         *     does arithmetic on these. Investment-only fields (`rent_estimate`,
+         *     `rent_label`, `monthly_cashflow`, `cap_rate_pct`, `year1_tax_savings`)
+         *     are `None` for primary matches (spec.md: "Primary matches omit rent,
+         *     cashflow, cap rate and tax savings").
          */
         ReportMatch: {
             /** Matched Property Id */
@@ -1384,6 +1442,20 @@ export interface components {
             property_tagline: string;
             /** Price */
             price: string;
+            /** Total Monthly Payment */
+            total_monthly_payment: string;
+            /** Rent Estimate */
+            rent_estimate: string | null;
+            /** Rent Label */
+            rent_label: string | null;
+            /** Monthly Cashflow */
+            monthly_cashflow: string | null;
+            /** Cash To Close */
+            cash_to_close: string;
+            /** Cap Rate Pct */
+            cap_rate_pct: string | null;
+            /** Year1 Tax Savings */
+            year1_tax_savings: string | null;
         };
         /** ReportOption */
         ReportOption: {
@@ -1979,6 +2051,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PricingViewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_matches_api_v1_applications__application_id__matches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchListResponse"];
                 };
             };
             /** @description Validation Error */

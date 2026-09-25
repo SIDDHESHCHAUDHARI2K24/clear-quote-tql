@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
 import { PercentInput } from "@cq/ui";
 import type { SourceBadgeSource } from "@cq/ui";
 
 import { fractionToPercentInputValue, percentInputValueToFraction } from "./format";
 import type { PricingField } from "./api";
+import { useTouchedDraft } from "./useTouchedDraft";
 
 export interface EnrichedPercentFieldProps {
   label: string;
@@ -15,6 +14,14 @@ export interface EnrichedPercentFieldProps {
   onOverride: (value: string) => void;
   onRevert: () => void;
   disabled?: boolean;
+}
+
+// A committable draft resolves through the same percent<->fraction
+// conversion `format.ts` documents; `""` (an empty/unparseable draft) is
+// "not committable" for `useTouchedDraft.commit`.
+function percentToWire(draftValue: string): string | null {
+  const fraction = percentInputValueToFraction(draftValue);
+  return fraction === "" ? null : fraction;
 }
 
 // Same shape as `EnrichedMoneyField`, for the one badge-carrying pricing
@@ -31,38 +38,24 @@ export function EnrichedPercentField({
   onRevert,
   disabled = false,
 }: EnrichedPercentFieldProps) {
-  const [draft, setDraft] = useState(() => fractionToPercentInputValue(field?.value ?? null));
-  // PR review round (fresh stage-6, CRITICAL): the old `handleBlur` fired
-  // `onOverride` whenever the round-tripped display value didn't strictly
-  // equal `field.value` -- but `fractionToPercentInputValue` (x100,
-  // .toFixed(3)) then `percentInputValueToFraction` (/100, .toFixed(4)) is
-  // lossy for small rates ("0.000089" -> "0.0001"), so a plain focus+blur
-  // with no edit silently overrode the field. `touched` is set only by the
-  // input's own `onChange`, so a no-edit blur is a true no-op regardless of
-  // any display rounding. A `ref`, not `useState`: it's read only inside
-  // `handleBlur`, so it never needs to trigger a render.
-  const touched = useRef(false);
-
-  useEffect(() => {
-    setDraft(fractionToPercentInputValue(field?.value ?? null));
-    touched.current = false;
-  }, [field?.value]);
-
-  const handleChange = (value: string) => {
-    setDraft(value);
-    touched.current = true;
-  };
+  // PR review round (fresh stage-6, CRITICAL, then a second pass): the
+  // original `handleBlur` fired `onOverride` whenever the round-tripped
+  // display value didn't strictly equal `field.value` -- lossy for small
+  // rates ("0.000089" -> "0.0001"), so a plain focus+blur with no edit
+  // silently overrode the field. `useTouchedDraft` only ever commits after
+  // a real edit (its `touched` ref, set only by `handleChange`), and
+  // `commit`'s numeric (not string) comparison against `field.value`
+  // means retyping the same rate in a different-looking format (e.g.
+  // "0.64" over a field displaying "0.640") is correctly a no-op too --
+  // see `useTouchedDraft.ts` and this fix's tests for both cases.
+  const { draft, handleChange, commit } = useTouchedDraft(
+    field?.value,
+    fractionToPercentInputValue,
+  );
 
   const handleBlur = () => {
-    if (!touched.current || !field || draft === "") return;
-    touched.current = false;
-    // Compare the user's typed text to what this field's current value
-    // would itself display -- not the round-tripped fraction -- so a typed
-    // value that merely re-displays the same rate (e.g. re-typing "0.640"
-    // over "0.0064") is correctly treated as no change either.
-    if (draft === fractionToPercentInputValue(field.value)) return;
-    const fraction = percentInputValueToFraction(draft);
-    if (fraction !== "") {
+    const fraction = commit(percentToWire);
+    if (fraction !== null) {
       onOverride(fraction);
     }
   };

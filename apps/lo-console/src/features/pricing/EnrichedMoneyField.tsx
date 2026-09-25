@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
 import { MoneyInput } from "@cq/ui";
 import type { SourceBadgeSource } from "@cq/ui";
 
 import type { PricingField } from "./api";
+import { useTouchedDraft } from "./useTouchedDraft";
 
 export interface EnrichedMoneyFieldProps {
   label: string;
@@ -16,12 +15,28 @@ export interface EnrichedMoneyFieldProps {
   disabled?: boolean;
 }
 
+// `MoneyInput`'s value/onChange are already the wire value's own display
+// text (no unit conversion) -- a stable, module-level reference so
+// `useTouchedDraft`'s reset effect doesn't re-run every render.
+function moneyDisplay(value: string | null): string {
+  return value ?? "";
+}
+
+// A committable draft is just itself -- money has no display-unit
+// conversion to invert (unlike `EnrichedPercentField`'s percent<->fraction
+// scale).
+function moneyToWire(draftValue: string): string {
+  return draftValue;
+}
+
 // One badge-carrying enriched money field (taxes-as-dollars isn't shown
 // this way, but insurance/HOA/LTR-rent/STR-revenue are): a `MoneyInput`
 // that's always editable (spec.md's "click -> inline edit" -- plan.md
 // Decision 10) with its `SourceBadge` inline, showing "LO override" plus a
 // revert affordance once overridden. Commits an override on blur, only
-// when the typed value actually changed.
+// when the typed value actually changed (`useTouchedDraft` -- PR #9
+// review: no-edit-no-override, applied here for consistency with
+// `EnrichedPercentField`).
 export function EnrichedMoneyField({
   label,
   ariaLabel,
@@ -30,30 +45,12 @@ export function EnrichedMoneyField({
   onRevert,
   disabled = false,
 }: EnrichedMoneyFieldProps) {
-  const [draft, setDraft] = useState(field?.value ?? "");
-  // PR review round (fresh stage-6): same no-edit-no-override rule as
-  // `EnrichedPercentField`, for consistency -- `touched` is set only by
-  // the input's own `onChange`. A `ref`, not `useState`: it's read only
-  // inside `handleBlur`, so it never needs to trigger a render, and using
-  // `useState` here made react-doctor flag it as "state only used in
-  // handlers" / "state adjusted after a prop change".
-  const touched = useRef(false);
-
-  useEffect(() => {
-    setDraft(field?.value ?? "");
-    touched.current = false;
-  }, [field?.value]);
-
-  const handleChange = (value: string) => {
-    setDraft(value);
-    touched.current = true;
-  };
+  const { draft, handleChange, commit } = useTouchedDraft(field?.value, moneyDisplay);
 
   const handleBlur = () => {
-    if (!touched.current || !field) return;
-    touched.current = false;
-    if (draft !== "" && draft !== field.value) {
-      onOverride(draft);
+    const wire = commit(moneyToWire);
+    if (wire !== null) {
+      onOverride(wire);
     }
   };
 
