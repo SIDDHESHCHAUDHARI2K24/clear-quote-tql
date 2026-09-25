@@ -69,7 +69,7 @@ Items in the same wave have no dependency on each other and can run in parallel 
 | [CQ-012](backlog/CQ-012-verification-rules/spec.md) | Verification rules | P1 | CQ-007 | Rule tests pass; personas 7 and 8 raise their flags. |
 | [CQ-013](backlog/CQ-013-pricing-service/spec.md) | Pricing service & API | P1 | CQ-008, CQ-009 | API tests pass; /quotes/preview responds in under 300 ms. |
 | [CQ-014](backlog/CQ-014-staff-auth/spec.md) | Staff auth | P2 | CQ-004, CQ-007 | Auth tests pass; OTP email arrives in Mailpit. |
-| [CQ-015](backlog/CQ-015-borrower-auth/spec.md) | Borrower auth | P2 | CQ-014 | The link in a quote email opens the right report. |
+| [CQ-015](backlog/CQ-015-borrower-auth/spec.md) | Borrower auth | P2 | CQ-014 | A borrower signs up with a seeded client's email, verifies the OTP from Mailpit and is signed in as that client. |
 | [CQ-016](backlog/CQ-016-application-workspace/spec.md) | Application workspace shell | P3 | CQ-014, CQ-011 | Header matches engine output for all personas. |
 | [CQ-017](backlog/CQ-017-pricing-panel/spec.md) | Pricing panel | P3 | CQ-016, CQ-013 | Editing price updates the breakdown instantly; revert restores the source value. |
 | [CQ-018](backlog/CQ-018-quote-builder/spec.md) | Quote builder | P3 | CQ-017 | Marcus Hale gets 4 quotes; a manual pick replaces one. |

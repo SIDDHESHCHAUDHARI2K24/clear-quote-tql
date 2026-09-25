@@ -128,13 +128,13 @@ The console has three menus (Dashboard, Clients, Applications) plus an Outbox an
 
 The Add/Edit overlay holds every pricing input. **Save & AutoQuote** picks the best product at par and the best buydown (lowest rate for ≤ 1.00 point). **Choose manually** shows the full mock OB result grid (investor, product, rate, price, points, lock days) to pick from. Cards can be compared side by side.
 
-**Send (tab 7).** Checkboxes on quotes, a "Recommended" radio, and an optional LO note (the "What we recommend" text is pre-drafted from the scenario). The preview renders the exact borrower report and the pre-approval PDF in a side panel. Send blocks when any quote is stale or any required flag is open. Sending generates the PDF, stores it, creates the borrower portal link, emails the borrower and logs to the timeline and mock CRM. The letter shows the par quote only and points the borrower to the portal report for all options. The assigned LO always signs the letter.
+**Send (tab 7).** Checkboxes on quotes, a "Recommended" radio, and an optional LO note (the "What we recommend" text is pre-drafted from the scenario). The preview renders the exact borrower report and the pre-approval PDF in a side panel. Send blocks when any quote is stale or any required flag is open. Sending generates the PDF, stores it, creates the borrower portal report link, emails the borrower and logs to the timeline and mock CRM. The letter shows the par quote only and points the borrower to the portal report for all options. The assigned LO always signs the letter.
 
 **Outbox.** Every email the system sent, with recipients, body preview and attachments. It makes the demo independent of real email delivery.
 
 ## Borrower Portal
 
-The portal is public-facing. The quote email's link logs the borrower straight into their report via a signed magic link (7-day expiry); after that, email OTP.
+The portal is public-facing. Borrowers sign in with email + password, then a 6-digit email OTP (same limits as staff). They create their own account on the portal: when the email matches an existing client the account links to it, otherwise a new client is created. The quote email links to the portal report, which asks the borrower to sign in (or create an account) first. There is no magic link (human decision, 2026-09-25).
 
 **Home.** The current application's status as a progress bar (Applied → In review → Pre-approved → Option selected), the next action for the borrower, and "Start a new application" when none exists.
 
@@ -310,7 +310,7 @@ The core is Client → Application → Scenario → Quote, with every enriched v
 | `flags` | application_id, tab, field_key, rule, severity, resolved_at | Verification output |
 | `scenarios` | application_id, inputs (JSONB), config_snapshot (JSONB), dscr_bucket | One per Add/Edit |
 | `quotes` | scenario_id, investor, product, rate, points, lock_days, computed (JSONB), label (Par/Buydown/…), priced_at | `computed` = full engine output |
-| `quote_packages` | application_id, quote_ids[], recommended_quote_id, lo_note, letter_key, report_token, sent_at, expires_at, viewed_at, borrower_action | What the borrower sees |
+| `quote_packages` | application_id, quote_ids[], recommended_quote_id, lo_note, letter_key, report_token (opaque id in the report URL; not a credential), sent_at, expires_at, viewed_at, borrower_action | What the borrower sees |
 | `consents` | application_id, type, text_hash, ip, at | Hard-pull authorization |
 | `activity_events` | application_id, actor, type, payload, at | Timeline + CRM log |
 | `outbox_emails` | to, subject, html, attachment_keys[], status | Demo outbox |
@@ -348,7 +348,7 @@ Each persona has a seeded LOS record, provider rows for its market, and uploaded
 | 6 | Borrower application wizard has 4 tabs: you, property & goal, income & assets, consent |
 | 7 | Temporal runs the application pipeline; Valkey handles OTP limits and caching |
 | 8 | Letter PDF via WeasyPrint; borrower report uses a print stylesheet |
-| 9 | Staff: password + email OTP. Borrowers: magic link + email OTP. No external auth provider |
+| 9 | Staff: password + email OTP. Borrowers: self sign-up, then password + email OTP (magic link dropped, 2026-09-25). No external auth provider |
 | 10 | Backlog lives in the repo (`docs/backlog/`) and is mirrored in Kaneo project "Clear Quote TQL" |
 | 11 | Each backlog item carries its spec, plan, handoff notes and post-development notes |
 | 12 | `make demo-reset` rebuilds the database and seed; Mailpit captures email locally |
