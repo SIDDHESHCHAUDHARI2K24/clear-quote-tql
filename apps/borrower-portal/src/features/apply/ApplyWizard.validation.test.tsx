@@ -209,4 +209,205 @@ describe("ApplyWizard", () => {
     expect(screen.getByRole("heading", { name: "Application submitted" })).toBeInTheDocument();
     expect(screen.getByText(/Lena LO/)).toBeInTheDocument();
   });
+
+  // CQ-032b review round 1 (stage-6 major): switching tabs used to remount
+  // `ActiveTabPane` (`key={activeTab}`) without flushing whatever edit was
+  // still mid-debounce, so a quick "type, then leave the tab within 1 s"
+  // silently dropped it. `onBack`/`goToTab` now await the active pane's
+  // own `saveNow()` (via `registerSaveNow`) before switching, the same
+  // flush "Next" already did locally.
+  it("Back within 1s flushes the pending edit before switching tabs", async () => {
+    postMock.mockResolvedValueOnce({
+      data: draft({
+        current_tab: "income",
+        data: {
+          you: { first_name: "Tina", last_name: "Tampa" },
+          property: { occupancy: "primary" },
+          income: { liquid_assets: "1000" },
+        },
+      }),
+    });
+    getMock.mockResolvedValueOnce({ data: METROS });
+    patchMock.mockResolvedValueOnce({
+      data: {
+        draft: draft({ current_tab: "income" }),
+        tab: "income",
+        tab_valid: false,
+        field_errors: {},
+      },
+    });
+
+    render(<ApplyWizard />);
+    await mountReady();
+
+    expect(screen.getByRole("heading", { name: "Income" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Liquid assets"), { target: { value: "5000" } });
+    // Click Back well before the 1 s autosave debounce would have fired on
+    // its own.
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(patchMock).toHaveBeenCalledTimes(1);
+    const [, patchInit] = patchMock.mock.calls[0] as [
+      unknown,
+      { body: { tab: string; data: unknown } },
+    ];
+    expect(patchInit.body).toMatchObject({ tab: "income", data: { liquid_assets: "5000" } });
+    // The flush resolved, so Back actually switched tabs.
+    expect(screen.getByLabelText("What's this loan for?")).toBeInTheDocument();
+  });
+
+  it("a Stepper click within 1s flushes the pending edit before switching tabs", async () => {
+    postMock.mockResolvedValueOnce({
+      data: draft({
+        current_tab: "income",
+        data: {
+          you: { first_name: "Tina", last_name: "Tampa" },
+          property: { occupancy: "primary" },
+          income: { liquid_assets: "1000" },
+        },
+      }),
+    });
+    getMock.mockResolvedValueOnce({ data: METROS });
+    patchMock.mockResolvedValueOnce({
+      data: {
+        draft: draft({ current_tab: "income" }),
+        tab: "income",
+        tab_valid: false,
+        field_errors: {},
+      },
+    });
+
+    render(<ApplyWizard />);
+    await mountReady();
+
+    fireEvent.change(screen.getByLabelText("Liquid assets"), { target: { value: "7500" } });
+    // "You" (tab 1) is unlocked (current_tab is "income", tab 3) -- click
+    // it well before the 1 s debounce would have fired on its own.
+    fireEvent.click(screen.getByRole("button", { name: "You" }));
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(patchMock).toHaveBeenCalledTimes(1);
+    const [, patchInit] = patchMock.mock.calls[0] as [
+      unknown,
+      { body: { tab: string; data: unknown } },
+    ];
+    expect(patchInit.body).toMatchObject({ tab: "income", data: { liquid_assets: "7500" } });
+    expect(screen.getByRole("heading", { name: "You" })).toBeInTheDocument();
+  });
+
+  // CQ-032b review round 1 (minor): a double-click on Next/Submit used to
+  // be able to fire `saveNow()`/submit twice.
+  it("disables Next while its own saveNow/advance round trip is in flight", async () => {
+    postMock.mockResolvedValueOnce({ data: draft() });
+    getMock.mockResolvedValueOnce({ data: METROS });
+    patchMock.mockResolvedValueOnce({
+      data: {
+        draft: draft({ current_tab: "property" }),
+        tab: "you",
+        tab_valid: true,
+        field_errors: {},
+      },
+    });
+
+    render(<ApplyWizard />);
+    await mountReady();
+
+    const nextButton = screen.getByRole("button", { name: "Next" });
+    fireEvent.click(nextButton);
+    // Fired back-to-back, before the first click's save round trip
+    // resolves: the button should already be disabled.
+    fireEvent.click(nextButton);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(patchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // CQ-032b review round 1 (code review on the first fix): the Next/Submit
+  // guard above didn't cover Back or the Stepper, which also flush via the
+  // newly-async `onBack`/`goToTab` -- a double-click on either could fire
+  // two concurrent saves. Fixed two ways: `ApplyWizard` disables Back/the
+  // Stepper for the duration of its own flush, and `useTabAutosave`'s
+  // `saveNow` is re-entrant-safe (a second call while one's in flight gets
+  // the same in-flight promise). This test would catch a regression in
+  // either.
+  it("disables Back while flushing, so a double-click can't fire two saves", async () => {
+    postMock.mockResolvedValueOnce({
+      data: draft({ current_tab: "income", data: { property: { occupancy: "primary" } } }),
+    });
+    getMock.mockResolvedValueOnce({ data: METROS });
+    patchMock.mockResolvedValueOnce({
+      data: {
+        draft: draft({ current_tab: "income" }),
+        tab: "income",
+        tab_valid: false,
+        field_errors: {},
+      },
+    });
+
+    render(<ApplyWizard />);
+    await mountReady();
+
+    const backButton = screen.getByRole("button", { name: "Back" });
+    fireEvent.click(backButton);
+    // Fired before the first click's flush resolves: Back should already
+    // be disabled.
+    fireEvent.click(backButton);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(patchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText("What's this loan for?")).toBeInTheDocument();
+  });
+
+  it("disables the Stepper while flushing, so a double-click can't fire two saves", async () => {
+    postMock.mockResolvedValueOnce({
+      data: draft({ current_tab: "income", data: { you: { first_name: "T" } } }),
+    });
+    getMock.mockResolvedValueOnce({ data: METROS });
+    patchMock.mockResolvedValueOnce({
+      data: {
+        draft: draft({ current_tab: "income" }),
+        tab: "income",
+        tab_valid: false,
+        field_errors: {},
+      },
+    });
+
+    render(<ApplyWizard />);
+    await mountReady();
+
+    const youButton = screen.getByRole("button", { name: "You" });
+    fireEvent.click(youButton);
+    fireEvent.click(youButton);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(patchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("heading", { name: "You" })).toBeInTheDocument();
+  });
 });

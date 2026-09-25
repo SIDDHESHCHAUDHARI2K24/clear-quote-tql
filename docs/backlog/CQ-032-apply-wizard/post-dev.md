@@ -196,4 +196,23 @@ No other findings. Backend follow-ups (`_plain_ssn`'s `InvalidToken` handling, t
 
 - CQ-028b: mask the SSN in the LO console (AC4's other half; out of this item's owned files).
 - CQ-028: the LO's document checklist UI (AC7's other half).
-- A stepper click that jumps to an already-unlocked *earlier* tab does not flush the currently-active tab's pending (< 1 s) autosave first (Next/Back do, via `saveNow()`). Low-impact -- at most 1 s of the tab being left, not lost data on the tab being entered -- and not something either code review pass flagged; worth a follow-up if it ever surfaces in practice.
+- ~~A stepper click that jumps to an already-unlocked *earlier* tab does not flush the currently-active tab's pending (< 1 s) autosave first (Next/Back do, via `saveNow()`).~~ **Corrected in review round 1**: this was wrong on both counts. Neither the Stepper *nor* Back flushed a pending autosave before switching tabs -- `onBack` called straight through to `setActiveTab` with no `saveNow()`, and `key={activeTab}`'s remount cleared the pending debounce timer out from under it before it ever fired, so a "type, then Back/Stepper within 1 s" silently dropped the edit. Only "Next"/"Submit" flushed, via `handlePrimaryAction`. Fixed -- see "Review round 1" below.
+
+### Review round 1 (post-merge fix, stage-6 major)
+
+A fresh reviewer (not the original author) caught the follow-up above understating a real bug: Back dropped a pending edit outright, not just "at most 1 s" of one, and the note that Back already flushed was incorrect.
+
+| Severity | Finding | Resolution |
+| --- | --- | --- |
+| Major | Switching tabs via Back or the Stepper did not flush the active pane's pending (< 1 s) autosave -- `ActiveTabPane`'s `key={activeTab}` remount cleared the debounce timer before it fired, silently dropping the edit; only "Next"/"Submit" flushed (`handlePrimaryAction`'s own `saveNow()`) | `ActiveTabPane` exposes `saveNow` to `ApplyWizard` via `ref` + `useImperativeHandle` (React 19 ref-as-prop; avoids the `no-pass-live-state-to-parent` anti-pattern an effect-based registration callback would've hit). `ApplyWizard`'s `onBack` and `goToTab` (the Stepper's `onSelect`) now `await` a `flushActiveTab()` helper that calls it before `setActiveTab`; a failed flush (network error, `saveNow` resolves `null`) keeps `activeTab` where it is and the still-mounted pane's own `saveStatus` shows the error. `useTabAutosave`'s unmount cleanup also now fires any still-pending debounce's PATCH best-effort as a safety net (not the primary defense) for a switch that somehow bypasses the awaited flush. |
+| Minor | Next/Submit had no in-flight guard, so a double-click could fire two saves (or two submits) | `ActiveTabPane` tracks `actionInFlight` around the whole save-then-advance-or-submit round trip in `handlePrimaryAction` and disables Next/Submit (and shows the loading spinner) while it's true |
+
+A second pass (`code-review` skill, low effort, against the fix above) caught that the new Next/Submit guard didn't cover the two new async callers of the flush path:
+
+| Severity | Finding | Resolution |
+| --- | --- | --- |
+| Major | Back's `onClick={() => void onBack()}` and the Stepper's `onClick={() => void onSelect(tab)}` (→ `goToTab`) both now trigger an async flush with no in-flight guard, so a double-click on either could fire two concurrent `saveNow()`/`patchTab` calls and two `setActiveTab` calls -- the same race just fixed for Next/Submit, left open for Back/Stepper | Fixed at the root, not per-button: `useTabAutosave`'s `runSave` is now re-entrant-safe -- a second call while one is already in flight (any caller: Next, Submit, Back, Stepper) returns the *same* in-flight promise instead of firing a second PATCH. `ApplyWizard` additionally tracks a `switchingTab` flag for the duration of `flushActiveTab`, passed down as `Stepper`'s `disabled` and `ActiveTabPane`'s `switching` (folded into the same `disabled` used for Back and Next/Submit) so the buttons are visibly disabled too, not just functionally deduped. |
+
+Tests: `ApplyWizard.validation.test.tsx` -- "disables Back while flushing, so a double-click can't fire two saves", "disables the Stepper while flushing, so a double-click can't fire two saves" (both assert `patchMock` called exactly once after two rapid clicks).
+
+Tests: `ApplyWizard.validation.test.tsx` -- "Back within 1s flushes the pending edit before switching tabs", "a Stepper click within 1s flushes the pending edit before switching tabs", "disables Next while its own saveNow/advance round trip is in flight". `e2e/borrower-portal/apply-wizard-resume.spec.ts` extended with a quick-Back-then-forward case in the same test (type into tab 3, click Back immediately, come forward again, assert the value survived).

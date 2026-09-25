@@ -1,5 +1,8 @@
 "use client";
 
+import { useImperativeHandle, useState } from "react";
+import type { Ref } from "react";
+
 import { Button } from "@cq/ui";
 
 import type { DraftPatchResponse, MetrosOut, Tab } from "./api";
@@ -31,6 +34,27 @@ export interface ActiveTabPaneProps {
   onSubmit: () => Promise<void>;
   submitting: boolean;
   submitError: string | null;
+  /** True while `ApplyWizard` is mid-flush of this pane's pending autosave
+   * from a Back or Stepper click (CQ-032b review round 1): disables Back
+   * and Next/Submit for that window too, on top of `actionInFlight`
+   * below (which covers Next/Submit's own round trip) -- `saveNow` itself
+   * is also re-entrant-safe, so this is belt-and-suspenders UI feedback,
+   * not the only thing preventing a double PATCH. */
+  switching?: boolean;
+  ref?: Ref<ActiveTabPaneHandle>;
+}
+
+/** Exposes this pane's own `saveNow` to `ApplyWizard` via `ref` (React 19
+ * ref-as-prop + `useImperativeHandle` -- no `forwardRef` needed) so
+ * `onBack` and the Stepper's `goToTab` can await a flush of whatever's
+ * still mid-debounce before switching tabs, the same flush "Next" already
+ * does locally via `handlePrimaryAction` (CQ-032b review round 1:
+ * switching tabs used to drop a pending < 1 s edit silently). `key={tab}`
+ * on the caller's side means React nulls out the ref on unmount and sets
+ * it fresh on the next pane's mount, so `ApplyWizard`'s ref always points
+ * at the currently-active pane, never a stale one. */
+export interface ActiveTabPaneHandle {
+  saveNow: () => Promise<DraftPatchResponse | null>;
 }
 
 function renderTabBody(
@@ -93,11 +117,19 @@ export function ActiveTabPane({
   onSubmit,
   submitting,
   submitError,
+  switching = false,
+  ref,
 }: ActiveTabPaneProps) {
   const { data, set, errorFor, saveStatus, saveNow } = useTabAutosave(tab, initialData, patchTab);
   const index = TAB_ORDER.indexOf(tab);
   const isLast = tab === "consent";
-  const disabled = isLast && submitting;
+  // Guards Next/Submit against a double-click firing two saves/submits at
+  // once (CQ-032b review round 1, minor): true for the whole
+  // save-then-advance-or-submit round trip, not just the save.
+  const [actionInFlight, setActionInFlight] = useState(false);
+  const disabled = (isLast && submitting) || actionInFlight || switching;
+
+  useImperativeHandle(ref, () => ({ saveNow }), [saveNow]);
 
   // Tab 4's typed-name check compares against tab 1's *saved* name; while
   // tab 1 is the active tab, that's this pane's own (still-saving) data.
@@ -107,12 +139,18 @@ export function ActiveTabPane({
       : youFullName;
 
   async function handlePrimaryAction() {
-    const response = await saveNow();
-    if (!response || !response.tab_valid) return;
-    if (isLast) {
-      await onSubmit();
-    } else {
-      onAdvance();
+    if (actionInFlight) return;
+    setActionInFlight(true);
+    try {
+      const response = await saveNow();
+      if (!response || !response.tab_valid) return;
+      if (isLast) {
+        await onSubmit();
+      } else {
+        onAdvance();
+      }
+    } finally {
+      setActionInFlight(false);
     }
   }
 
@@ -149,14 +187,19 @@ export function ActiveTabPane({
         )}
         <div className="flex gap-3">
           {index > 0 && (
-            <Button type="button" variant="secondary" disabled={disabled} onClick={onBack}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={disabled}
+              onClick={() => void onBack()}
+            >
               Back
             </Button>
           )}
           <Button
             type="button"
             disabled={disabled}
-            isLoading={isLast && submitting}
+            isLoading={(isLast && submitting) || actionInFlight}
             onClick={() => void handlePrimaryAction()}
           >
             {isLast ? "Submit application" : "Next"}

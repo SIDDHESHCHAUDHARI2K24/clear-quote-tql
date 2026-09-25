@@ -55,21 +55,36 @@ export function useTabAutosave(
   }, [data]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const runSave = useCallback(async (): Promise<DraftPatchResponse | null> => {
+  // Re-entrant-safe (CQ-032b review round 1): `saveNow` now has several
+  // callers that can race each other -- "Next"/"Submit" locally, and
+  // `ApplyWizard`'s `onBack`/`goToTab` (the Stepper) via the `ref` handle.
+  // A second call while one is already in flight (e.g. a double-click, or
+  // Back clicked the instant Next's own save started) gets the SAME
+  // in-flight promise instead of firing a second concurrent PATCH.
+  const savePromiseRef = useRef<Promise<DraftPatchResponse | null> | null>(null);
+
+  const runSave = useCallback((): Promise<DraftPatchResponse | null> => {
+    if (savePromiseRef.current) return savePromiseRef.current;
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
     setSaveStatus("pending");
-    try {
-      const response = await patchTab(tab, dataRef.current);
-      setFieldErrors(response.field_errors);
-      setSaveStatus("saved");
-      return response;
-    } catch {
-      setSaveStatus("error");
-      return null;
-    }
+    const promise = (async (): Promise<DraftPatchResponse | null> => {
+      try {
+        const response = await patchTab(tab, dataRef.current);
+        setFieldErrors(response.field_errors);
+        setSaveStatus("saved");
+        return response;
+      } catch {
+        setSaveStatus("error");
+        return null;
+      } finally {
+        savePromiseRef.current = null;
+      }
+    })();
+    savePromiseRef.current = promise;
+    return promise;
   }, [patchTab, tab]);
 
   const set = useCallback(
@@ -86,10 +101,22 @@ export function useTabAutosave(
     [runSave],
   );
 
+  // Safety net, not the primary defense: `ApplyWizard`'s `onBack`/`goToTab`
+  // await `saveNow()` before switching tabs, which is what actually stops
+  // edits from being lost (CQ-032b review round 1). This unmount cleanup
+  // only covers a switch that somehow bypasses that awaited flush (e.g. a
+  // browser navigation away from `/apply`): if a debounce is still
+  // pending, fire its PATCH best-effort. There's no mounted UI left to
+  // show a failure to, so errors are swallowed here.
   useEffect(() => {
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+        void patchTab(tab, dataRef.current).catch(() => {});
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveNow = useCallback(async () => {

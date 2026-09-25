@@ -11,9 +11,14 @@ export interface StepperProps {
    * validates; any completed tab can be revisited." */
   unlockedTab: Tab;
   onSelect: (tab: Tab) => void;
+  /** True while `ApplyWizard` is mid-flush of the active tab's pending
+   * autosave (CQ-032b review round 1): disables every step button so a
+   * rapid double-click can't fire two concurrent `saveNow()`/`patchTab`
+   * calls before `activeTab` changes. */
+  disabled?: boolean;
 }
 
-export function Stepper({ activeTab, unlockedTab, onSelect }: StepperProps) {
+export function Stepper({ activeTab, unlockedTab, onSelect, disabled = false }: StepperProps) {
   const unlockedIndex = TAB_ORDER.indexOf(unlockedTab);
 
   return (
@@ -26,9 +31,9 @@ export function Stepper({ activeTab, unlockedTab, onSelect }: StepperProps) {
             <li key={tab}>
               <button
                 type="button"
-                disabled={!isUnlocked}
+                disabled={!isUnlocked || disabled}
                 aria-current={isActive ? "step" : undefined}
-                onClick={() => onSelect(tab)}
+                onClick={() => void onSelect(tab)}
                 className={
                   isActive
                     ? "flex items-center gap-2 rounded-full border border-navy-500 bg-navy-500 px-3 py-1.5 text-sm font-medium text-neutral-0"

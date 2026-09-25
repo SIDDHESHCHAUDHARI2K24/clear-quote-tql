@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { extractErrorMessage } from "@cq/ui";
 
 import { ActiveTabPane } from "./ActiveTabPane";
+import type { ActiveTabPaneHandle } from "./ActiveTabPane";
 import type { DraftPatchResponse, MetrosOut, SubmitResponse, Tab } from "./api";
 import {
   TAB_ORDER,
@@ -51,6 +52,26 @@ export function ApplyWizard() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<SubmitResponse | null>(null);
 
+  // Imperative handle onto the active `ActiveTabPane`'s own `saveNow`
+  // (CQ-032b review round 1: Back and the Stepper used to switch tabs
+  // without flushing a still-pending < 1 s autosave, so a quick "type then
+  // click Back/Stepper" silently lost the edit -- the save timer got
+  // cleared out from under it by `ActiveTabPane`'s `key={activeTab}`
+  // remount before it ever fired). `onBack`/`goToTab` await it before
+  // changing `activeTab`, the same way "Next" already flushes locally via
+  // `handlePrimaryAction`. A failed flush (network error; `saveNow`
+  // resolves `null`) keeps `activeTab` where it is -- the still-mounted
+  // pane's own `saveStatus` shows the error.
+  const paneRef = useRef<ActiveTabPaneHandle>(null);
+
+  // Disables Back and the Stepper for the duration of `flushActiveTab`
+  // (CQ-032b review round 1, code review: `runSave` is now re-entrant-safe
+  // against a double-click firing two concurrent saves, but Back/Stepper
+  // still looked clickable the whole time a flush was in flight -- this
+  // keeps them visibly disabled too, and blocks Next/Submit for the same
+  // window via the `switching` prop below).
+  const [switchingTab, setSwitchingTab] = useState(false);
+
   const load = useCallback(async () => {
     setLoadState({ kind: "loading" });
     const [draftResult, metrosResult] = await Promise.all([createOrGetDraft(), listMetros()]);
@@ -89,8 +110,25 @@ export function ApplyWizard() {
     [draftId],
   );
 
-  function goToTab(tab: Tab) {
-    if (TAB_ORDER.indexOf(tab) <= TAB_ORDER.indexOf(unlockedTab)) setActiveTab(tab);
+  /** Awaits the active pane's own `saveNow` (if a pane is mounted) and
+   * reports whether it's safe to switch tabs now. `null` back from
+   * `saveNow` means the PATCH failed -- don't switch. */
+  async function flushActiveTab(): Promise<boolean> {
+    if (!paneRef.current) return true;
+    const response = await paneRef.current.saveNow();
+    return response !== null;
+  }
+
+  async function goToTab(tab: Tab) {
+    if (switchingTab || tab === activeTab) return;
+    if (TAB_ORDER.indexOf(tab) > TAB_ORDER.indexOf(unlockedTab)) return;
+    setSwitchingTab(true);
+    try {
+      if (!(await flushActiveTab())) return;
+      setActiveTab(tab);
+    } finally {
+      setSwitchingTab(false);
+    }
   }
 
   function onAdvance() {
@@ -98,9 +136,17 @@ export function ApplyWizard() {
     if (next) setActiveTab(next);
   }
 
-  function onBack() {
+  async function onBack() {
+    if (switchingTab) return;
     const prev = TAB_ORDER[TAB_ORDER.indexOf(activeTab) - 1];
-    if (prev) setActiveTab(prev);
+    if (!prev) return;
+    setSwitchingTab(true);
+    try {
+      if (!(await flushActiveTab())) return;
+      setActiveTab(prev);
+    } finally {
+      setSwitchingTab(false);
+    }
   }
 
   async function handleSubmit() {
@@ -166,7 +212,12 @@ export function ApplyWizard() {
   return (
     <main className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold text-navy-900">Apply</h1>
-      <Stepper activeTab={activeTab} unlockedTab={unlockedTab} onSelect={goToTab} />
+      <Stepper
+        activeTab={activeTab}
+        unlockedTab={unlockedTab}
+        onSelect={goToTab}
+        disabled={switchingTab}
+      />
       <ActiveTabPane
         key={activeTab}
         tab={activeTab}
@@ -175,6 +226,7 @@ export function ApplyWizard() {
         draftId={draftId}
         email={email}
         metros={metros}
+        switching={switchingTab}
         youFullName={youFullName}
         propertyOccupancy={propertyOccupancy}
         consentVersion={consentVersion}
@@ -184,6 +236,7 @@ export function ApplyWizard() {
         onSubmit={handleSubmit}
         submitting={submitting}
         submitError={submitError}
+        ref={paneRef}
       />
     </main>
   );

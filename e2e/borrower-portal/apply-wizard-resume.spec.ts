@@ -52,6 +52,18 @@ test("refreshing mid-tab-3 resumes at tab 3 with the entered values restored", a
   await page.getByLabel("Down payment").selectOption("0.20");
   await page.getByRole("button", { name: "Next", exact: true }).click();
 
+  // -- Tab 3: a quick Back within the 1 s debounce must not drop the
+  // pending edit (CQ-032b review round 1). Type something, click Back
+  // immediately -- well before the debounce would fire on its own -- then
+  // come forward again and confirm it actually reached the server.
+  await expect(page.getByRole("heading", { name: "Income" })).toBeVisible();
+  await page.getByLabel("Employer", { exact: true }).fill("Quick Co");
+  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(page.getByLabel("What's this loan for?")).toBeVisible();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Income" })).toBeVisible();
+  await expect(page.getByLabel("Employer", { exact: true })).toHaveValue("Quick Co");
+
   // -- Tab 3: type, let the 1s autosave commit, then refresh mid-tab -----
   // `monthly_income` is left blank on purpose: income is required for a
   // primary residence (spec.md AC2), so the tab stays incomplete and
