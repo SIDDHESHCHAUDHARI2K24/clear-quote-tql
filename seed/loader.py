@@ -117,9 +117,9 @@ class MissingStaffPasswordError(RuntimeError):
 def _staff_password() -> str:
     # Read via `get_settings()` (pydantic-settings), not a raw
     # `os.environ.get` -- `Settings.model_config` loads `.env` itself, which
-    # is how every other seed/dev knob (`DEV_LO_ID`, `S3_*`, ...) already
-    # reaches this process; a bare `os.environ` read would miss a value set
-    # only in `.env` and never exported into the shell.
+    # is how every other seed/dev knob (`S3_*`, `SEED_BORROWER_PASSWORD`,
+    # ...) already reaches this process; a bare `os.environ` read would miss
+    # a value set only in `.env` and never exported into the shell.
     password = get_settings().seed_staff_password
     if not password:
         raise MissingStaffPasswordError(

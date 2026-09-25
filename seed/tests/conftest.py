@@ -16,10 +16,6 @@ from cryptography.fernet import Fernet
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("FIELD_ENCRYPTION_KEY", Fernet.generate_key().decode())
 os.environ.setdefault("INTEGRATION_LATENCY_ENABLED", "false")
-# CQ-013: pricing routes' stub auth 401s when unset -- this item's own tests
-# never hit those routes directly, but `seed_persona` now runs the real
-# pricing stage, and some transitive CQ-013 helper may read it too.
-os.environ.setdefault("DEV_LO_ID", "00000000-0000-0000-0000-000000000001")
 # Review round 1, finding #3: no plaintext staff password is committed
 # anywhere -- tests provide their own throwaway value via this env var,
 # same as a developer would via .env (see .env.example).

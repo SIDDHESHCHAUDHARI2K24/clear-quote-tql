@@ -35,15 +35,20 @@ final for the whole test session:
   exercise encryption (`app/core/tests/test_encryption.py`) work the same
   whether or not a developer's local `.env` happens to define one — CI
   (CQ-006) isn't guaranteed to load `.env` at all.
-- `DEV_LO_ID` (CQ-013): same reasoning as `FIELD_ENCRYPTION_KEY` above —
-  every pricing route depends on `deps.get_current_lo_stub()`, which 401s
-  when this is unset (AC11's own point), so the *rest* of the suite (routes
-  that aren't specifically testing the unset-401 case) needs a real default
-  regardless of whether `.env`/the CI workflow happen to define one.
+
+`make_staff_session` (phase-p2 merge, H3): a factory fixture that creates a
+real staff `User` row plus a real Valkey session for it (via
+`app.features.auth.sessions.service.create_session` — the same helper the
+staff login flow uses, not a duplicate), and sets the resulting token as the
+`client` fixture's `cq_staff_session` cookie. Every pricing/pipeline route
+test that used to rely on CQ-013's `DEV_LO_ID` stub now authenticates
+through this instead. Calling it again on the same test overwrites the
+cookie (i.e. "log out, log in as someone else"), which is exactly what the
+LO/Manager scoping tests need.
 """
 
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
@@ -54,12 +59,10 @@ os.environ.setdefault("FIELD_ENCRYPTION_KEY", Fernet.generate_key().decode())
 # CQ-009: keep the full suite fast; integrations/common/tests/test_latency.py
 # monkeypatches this back on for its one enabled-path test.
 os.environ.setdefault("INTEGRATION_LATENCY_ENABLED", "false")
-# CQ-013: fixed dev LO id `pricing.scenarios.deps.get_current_lo_stub()`
-# returns; `test_auth_stub.py`'s unset-DEV_LO_ID tests monkeypatch
-# `get_settings` directly rather than unsetting this env var.
-os.environ.setdefault("DEV_LO_ID", "00000000-0000-0000-0000-000000000001")
 
 import asyncio  # noqa: E402
+import uuid  # noqa: E402
+from dataclasses import dataclass  # noqa: E402
 
 import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
@@ -74,7 +77,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 
 from app.core.config import get_settings  # noqa: E402
 from app.core.db import get_db  # noqa: E402
+from app.core.enums import UserRole  # noqa: E402
 from app.core.valkey import get_valkey  # noqa: E402
+from app.features.auth.models import User  # noqa: E402
+from app.features.auth.sessions.service import COOKIE_NAMES, create_session  # noqa: E402
 from app.integrations.common import failure_toggle  # noqa: E402
 from app.integrations.common.models import IntegrationCall  # noqa: E402
 from app.main import app as fastapi_app  # noqa: E402
@@ -190,3 +196,44 @@ async def client(
     finally:
         app.dependency_overrides.pop(get_db, None)
         app.dependency_overrides.pop(get_valkey, None)
+
+
+@dataclass(frozen=True)
+class StaffSession:
+    """`make_staff_session`'s return value: the `User` row it created plus
+    the raw session token (rarely needed directly -- it's already set as the
+    `client` fixture's cookie)."""
+
+    user: User
+    token: str
+
+
+@pytest_asyncio.fixture
+async def make_staff_session(
+    db_session: AsyncSession, valkey: Redis, client: AsyncClient
+) -> Callable[..., Awaitable[StaffSession]]:
+    """Factory fixture (phase-p2 merge, H3): creates a real staff `User` row
+    with the given `role` and a real Valkey session for it (via
+    `auth.sessions.service.create_session`, the same helper the staff login
+    flow uses), and sets the resulting token as the `client` fixture's
+    `cq_staff_session` cookie so the next request `client` makes is
+    authenticated as that user. Calling it again overwrites the cookie --
+    useful for "log in as the owner, then log in as someone else" scoping
+    tests.
+    """
+
+    async def _make(role: UserRole = UserRole.LO, email: str | None = None) -> StaffSession:
+        user = User(
+            email=email or f"staff-{uuid.uuid4()}@clearquote-demo.test",
+            password_hash="not-a-real-hash",
+            role=role,
+            full_name="Test Staff",
+        )
+        db_session.add(user)
+        await db_session.flush()
+
+        token = await create_session(valkey, principal="staff", subject_id=str(user.id))
+        client.cookies.set(COOKIE_NAMES["staff"], token)
+        return StaffSession(user=user, token=token)
+
+    return _make

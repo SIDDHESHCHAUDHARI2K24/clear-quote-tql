@@ -15,7 +15,7 @@ from typing import Annotated, Any
 
 from fastapi import Cookie, Depends
 from redis.asyncio import Redis
-from sqlalchemy import Select
+from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
@@ -123,3 +123,27 @@ def scope_applications(stmt: Select, user: User, lo_id: uuid.UUID | None = None)
     if lo_id is not None:
         return stmt.where(Application.lo_id == lo_id)
     return stmt
+
+
+async def get_scoped_application(
+    application_id: uuid.UUID,
+    user: CurrentStaff,
+    db: AsyncSession = Depends(get_db),
+) -> Application:
+    """FastAPI dependency (phase-p2 merge, H3): resolves `application_id`
+    only when it's in `user`'s `scope_applications` scope, else raises
+    `NotFoundError` (404, never 403 -- Decision #11's style) so an LO can't
+    use the response to confirm another LO's application id exists.
+
+    Every pricing/pipeline route keyed directly by `application_id` (CQ-011's
+    pipeline start/resume, CQ-013's scenario-create and field-value override/
+    revert) depends on this instead of the old `get_current_lo_stub`.
+    `pricing.scenarios.deps.ensure_scenario_in_scope` does the equivalent for
+    routes keyed by `scenario_id` (scenarios have no owner of their own --
+    scope is enforced through the application they belong to).
+    """
+    stmt = scope_applications(select(Application).where(Application.id == application_id), user)
+    application = (await db.execute(stmt)).scalar_one_or_none()
+    if application is None:
+        raise NotFoundError(f"Application not found: {application_id}")
+    return application

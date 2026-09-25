@@ -28,6 +28,7 @@ from app.features.pricing.enrichment.service import (
 )
 from app.integrations.common.errors import PricingValidationError
 from app.integrations.tax.models import ProviderTaxRate
+from conftest import StaffSession
 
 
 async def _seed_tax(db_session: AsyncSession) -> None:
@@ -110,14 +111,16 @@ async def test_scenario_create_route_propagates_pricing_validation_error(
     db_session: AsyncSession,
     make_application: Callable[..., Awaitable[Application]],
     set_field_value: Callable[..., Awaitable[object]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
 ) -> None:
     """spec.md: every route that prices lets `PricingValidationError`
     propagate to CQ-004's `AppError` handler as a 422. `create_scenario`
     only reaches OB for LTR/STR (the two-pass DSCR loop); FICO/tax/
     insurance/rent are all present here so it's specifically the property's
     missing zip code (an OB-required field) that fails."""
+    staff = await make_staff_session()
     application = await make_application(
-        occupancy=Occupancy.INVESTMENT, strategy=Strategy.LTR, zip_code=None
+        occupancy=Occupancy.INVESTMENT, strategy=Strategy.LTR, zip_code=None, lo=staff.user
     )
     await set_field_value(application.id, "representative_fico", Decimal("740"))
     await set_field_value(application.id, "property_tax_annual_rate", Decimal("0.01"))

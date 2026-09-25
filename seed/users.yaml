@@ -9,11 +9,11 @@
 # `make demo-reset` fails with a clear message if that env var is unset,
 # rather than silently seeding an unusable/guessable password.
 #
-# Jordan Lee's `id` is pinned to match `DEV_LO_ID`'s default
-# (backend/conftest.py, .env.example) -- CQ-013's pricing routes' stub auth
-# (`pricing.scenarios.deps.get_current_lo_stub`) returns this id, so a
-# developer running the API locally against a freshly-`demo-reset` database
-# has a real `users` row behind it.
+# Jordan Lee's `id` is pinned to a fixed value (rather than a generated
+# uuid4 like the other seeded users) so fixtures, docs and manual testing
+# scripts that reference "the demo LO" by id stay stable across
+# `make demo-reset` runs -- phase-p2 merge, H3: pricing/pipeline routes now
+# require a real staff session (CurrentStaff), not a fixed dev id.
 - key: lo_jordan
   id: "00000000-0000-0000-0000-000000000001"
   email: jordan.lee@clearquote-demo.test

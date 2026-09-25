@@ -15,6 +15,7 @@ from app.features.pricing.engine.types import ConfigSnapshot, ScenarioInputs, St
 from app.features.pricing.scenarios.dscr_loop import inputs_with_priced_product
 from app.features.pricing.scenarios.service import create_scenario
 from app.integrations.pricing.schemas import PricedProductDTO
+from conftest import StaffSession
 
 _PRODUCT = {
     "investor_name": "Rocket Pro",
@@ -34,9 +35,11 @@ async def test_manual_quote_computed_matches_compute_quote(
     db_session: AsyncSession,
     make_application: Callable[..., Awaitable[Application]],
     set_field_value: Callable[..., Awaitable[object]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
 ) -> None:
+    staff = await make_staff_session()
     application = await make_application(
-        occupancy=Occupancy.PRIMARY, requested_price=Decimal("300000.00")
+        occupancy=Occupancy.PRIMARY, requested_price=Decimal("300000.00"), lo=staff.user
     )
     await set_field_value(application.id, "representative_fico", Decimal("760"))
     await set_field_value(application.id, "property_tax_annual_rate", Decimal("0.01"))

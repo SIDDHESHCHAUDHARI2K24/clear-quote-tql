@@ -69,11 +69,6 @@ class Settings(BaseSettings):
     integration_latency_max_ms: int = 1200
     integration_latency_enabled: bool = True
 
-    # CQ-013: fixed dev LO id `deps.get_current_lo_stub()` returns until
-    # CQ-014 replaces it with real staff auth. Unset -> every pricing route
-    # raises `AuthenticationError` (401).
-    dev_lo_id: str | None = None
-
     # CQ-010 (review round 1, finding #3): shared demo password
     # `seed/loader.py::seed_users` bcrypt-hashes for the seeded staff users.
     # No default -- deliberately never committed as a literal anywhere in

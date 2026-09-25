@@ -1,20 +1,41 @@
-"""Auth stub -- CQ-014 not built yet (spec.md Decision).
+"""Scope-check dependency for pricing routes keyed by `scenario_id` rather
+than `application_id` directly (phase-p2 merge, H3: real staff auth replaces
+CQ-013's `get_current_lo_stub`).
 
-`get_current_lo_stub` returns the fixed dev LO id from env `DEV_LO_ID`
-(seeded in CQ-010) and does no real authentication. CQ-014 replaces this
-dependency's *implementation* only; every route in `pricing.enrichment` and
-`pricing.scenarios` depends on it, and their signatures/tests must not
-change when that happens.
+`application_id`-keyed pricing routes (`post_scenario`, and
+`pricing.enrichment`'s override/revert routes) use
+`app.core.auth.get_scoped_application` directly instead -- this module only
+covers the `scenario_id`-keyed ones (`GET /scenarios/{id}/products`,
+`POST /scenarios/{id}/autoquote`, `POST /scenarios/{id}/quotes`), since a
+scenario has no owner of its own (spec.md): scope is enforced through the
+application it belongs to.
 """
 
 import uuid
 
-from app.core.config import get_settings
-from app.core.errors import AuthenticationError
+from fastapi import Depends
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.auth import CurrentStaff, scope_applications
+from app.core.db import get_db
+from app.core.errors import NotFoundError
+from app.features.applications.models import Application
+from app.features.pricing.scenarios.models import Scenario
 
 
-def get_current_lo_stub() -> uuid.UUID:
-    dev_lo_id = get_settings().dev_lo_id
-    if not dev_lo_id:
-        raise AuthenticationError("DEV_LO_ID is not set.")
-    return uuid.UUID(dev_lo_id)
+async def ensure_scenario_in_scope(
+    scenario_id: uuid.UUID,
+    user: CurrentStaff,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """404s (never 403 -- Decision #11's style) unless `scenario_id`'s
+    application is in `user`'s `scope_applications` scope."""
+    stmt = scope_applications(
+        select(Application.id)
+        .join(Scenario, Scenario.application_id == Application.id)
+        .where(Scenario.id == scenario_id),
+        user,
+    )
+    if (await db.execute(stmt)).scalar_one_or_none() is None:
+        raise NotFoundError(f"Scenario not found: {scenario_id}")

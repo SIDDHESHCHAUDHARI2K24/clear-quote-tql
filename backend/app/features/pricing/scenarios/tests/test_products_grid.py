@@ -12,6 +12,7 @@ from app.features.applications.models import Application
 from app.features.pricing.engine.types import StrategyType
 from app.features.pricing.scenarios.service import create_scenario
 from app.integrations.pricing.models import ProviderRateSheet, RateSheetProgram
+from conftest import StaffSession
 
 _RATE_PRICE_PAIRS = [
     (Decimal("6.500"), Decimal("96.500")),
@@ -50,8 +51,12 @@ async def test_products_grid_returns_8_to_15_rows(
     db_session: AsyncSession,
     make_application: Callable[..., Awaitable[Application]],
     set_field_value: Callable[..., Awaitable[object]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
 ) -> None:
-    application = await make_application(occupancy=Occupancy.INVESTMENT, strategy=Strategy.LTR)
+    staff = await make_staff_session()
+    application = await make_application(
+        occupancy=Occupancy.INVESTMENT, strategy=Strategy.LTR, lo=staff.user
+    )
     await set_field_value(application.id, "representative_fico", Decimal("740"))
     await set_field_value(application.id, "property_tax_annual_rate", Decimal("0.01"))
     await set_field_value(application.id, "homeowners_ins_annual", Decimal("1500.00"))

@@ -14,7 +14,6 @@ from decimal import Decimal
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
 from app.core.enums import FieldSource, Occupancy, Strategy, UserRole
 from app.features.applications.models import Application
 from app.features.applications.property.models import Property, PropertyAddressStatus, PropertyType
@@ -36,20 +35,16 @@ async def make_application(
         county: str | None = "Buncombe",
         zip_code: str | None = "28803",
         property_type: PropertyType = PropertyType.SINGLE_FAMILY,
+        lo: User | None = None,
         **overrides: object,
     ) -> Application:
         # `field_values.overridden_by` FKs to `users.id`, and the override
-        # routes stamp it with `deps.get_current_lo_stub()`'s DEV_LO_ID --
-        # reuse (or create once) a fixture LO with that exact id (when set)
-        # so override/revert tests satisfy the FK, and so calling
-        # `make_application` more than once per test doesn't collide on it.
-        dev_lo_id = get_settings().dev_lo_id
-        lo: User | None = None
-        if dev_lo_id:
-            lo = await db_session.get(User, uuid.UUID(dev_lo_id))
+        # routes now stamp it with the real signed-in staff user's id
+        # (phase-p2 merge, H3) -- pass `lo=` (e.g. a `make_staff_session`
+        # result's `.user`) to own the application as a specific staff user
+        # for auth/scoping tests; a fresh throwaway LO is created otherwise.
         if lo is None:
             lo = User(
-                id=uuid.UUID(dev_lo_id) if dev_lo_id else uuid.uuid4(),
                 email=f"lo-{uuid.uuid4()}@clearquote-demo.test",
                 password_hash="not-a-real-hash",
                 role=UserRole.LO,
