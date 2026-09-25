@@ -71,6 +71,13 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # CQ-020: test_send_email_arrives_with_pdf (AC1) sends a real email
+      # over SMTP and reads it back through Mailpit's API.
+      mailpit:
+        image: axllent/mailpit:latest # same image as infra/docker-compose.yml
+        ports:
+          - 1025:1025
+          - 8025:8025
     env:
       APP_ENV: test
       # CQ-007's FIELD_ENCRYPTION_KEY startup check is skipped under
@@ -119,6 +126,11 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - run: uv sync --frozen
+
+      # CQ-020: WeasyPrint renders the pre-approval letter PDF through
+      # Pango/HarfBuzz (plan.md Decision 14; the Railway image gets the same
+      # libraries in CQ-035).
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libharfbuzz-subset0
 
       - run: uv run ruff check backend
 

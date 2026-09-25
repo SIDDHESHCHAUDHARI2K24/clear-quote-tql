@@ -1375,6 +1375,262 @@
         }
       }
     },
+    "/api/v1/packages/{package_id}/send": {
+      "post": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Post Send",
+        "operationId": "post_send_api_v1_packages__package_id__send_post",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendStarted"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "PACKAGE_NOT_READY; `details.blockers` lists why"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/send-status": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Send Status",
+        "operationId": "get_send_status_api_v1_packages__package_id__send_status_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/versions": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Versions",
+        "operationId": "get_versions_api_v1_packages__package_id__versions_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SentVersion"
+                  },
+                  "title": "Response Get Versions Api V1 Packages  Package Id  Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/letter.pdf": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Letter Pdf",
+        "operationId": "get_letter_pdf_api_v1_packages__package_id__letter_pdf_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/pdf": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/applications/{application_id}/matches": {
       "get": {
         "tags": [
@@ -5834,6 +6090,237 @@
         ],
         "title": "ScenarioUpdateRequest",
         "description": "`PUT /scenarios/{id}` -- the LO-owned inputs the overlay edits.\nEnrichment-owned inputs (FICO, tax, insurance, HOA, rent) are always\nre-read from `field_values` server-side."
+      },
+      "SendStarted": {
+        "properties": {
+          "package_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Package Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "queued",
+              "rendering",
+              "emailing",
+              "done",
+              "failed"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package_id",
+          "workflow_id",
+          "status"
+        ],
+        "title": "SendStarted",
+        "description": "`POST /packages/{id}/send` 202. A double click while a send is in\nflight returns the running send's `workflow_id` (nothing new starts)."
+      },
+      "SendStatus": {
+        "properties": {
+          "package_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Package Id"
+          },
+          "workflow_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "queued",
+              "rendering",
+              "emailing",
+              "done",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "recipient_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Email"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package_id",
+          "workflow_id",
+          "status",
+          "error",
+          "version",
+          "recipient_email",
+          "sent_at"
+        ],
+        "title": "SendStatus",
+        "description": "`GET /packages/{id}/send-status`, poll until `done` or `failed`."
+      },
+      "SentVersion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "superseded": {
+            "type": "boolean",
+            "title": "Superseded"
+          },
+          "viewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewed At"
+          },
+          "report_url": {
+            "type": "string",
+            "title": "Report Url"
+          },
+          "letter_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Letter Url"
+          },
+          "outbox_email_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outbox Email Id"
+          },
+          "email_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "sent",
+                  "failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Status"
+          },
+          "recipient_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "sent_at",
+          "expires_at",
+          "superseded",
+          "viewed_at",
+          "report_url",
+          "letter_url",
+          "outbox_email_id",
+          "email_status",
+          "recipient_email"
+        ],
+        "title": "SentVersion",
+        "description": "One row of the Send tab's \"Sent versions\" list (newest first)."
       },
       "StaffLoginRequest": {
         "properties": {
