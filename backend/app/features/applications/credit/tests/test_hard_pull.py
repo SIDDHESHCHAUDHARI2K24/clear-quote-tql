@@ -198,8 +198,9 @@ async def test_fico_bucket_change_marks_stale(db_session: AsyncSession) -> None:
 
 
 async def test_tradelines_keep_manual_rows_and_add_new(db_session: AsyncSession) -> None:
-    """Plan.md decision 4: LO-added rows untouched; a new tradeline is added;
-    a matching imported row takes the bureau's amounts."""
+    """Plan.md decision 4: LO-added rows untouched; a new tradeline with a
+    payment is added, one without amounts is not; a matching imported row
+    takes the bureau's amounts."""
     from app.features.applications.sections import provenance
 
     app = await _seed_brandt(db_session)
@@ -224,6 +225,7 @@ async def test_tradelines_keep_manual_rows_and_add_new(db_session: AsyncSession)
                 {"creditor": "Wells Fargo", "type": "Auto Loan", "monthly_payment": "425.00"},
                 {"creditor": "Chase", "type": "Credit Card", "monthly_payment": "999.00"},
                 {"creditor": "Discover", "type": "Credit Card", "monthly_payment": "35.00"},
+                {"creditor": "Capital One", "type": "Auto Loan"},
             ]
         )
     )
@@ -245,3 +247,4 @@ async def test_tradelines_keep_manual_rows_and_add_new(db_session: AsyncSession)
     assert str(rows["Wells Fargo"].monthly_payment) == "425.00"
     assert str(rows["Chase"].monthly_payment) == "50.00"
     assert str(rows["Discover"].monthly_payment) == "35.00"
+    assert "Capital One" not in rows  # no amounts: no phantom $0 debt

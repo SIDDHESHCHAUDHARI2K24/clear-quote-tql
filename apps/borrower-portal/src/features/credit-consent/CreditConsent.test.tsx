@@ -169,6 +169,17 @@ describe("CreditConsent", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
+  it("sends an expired session to login and back to this request (401)", async () => {
+    getMock.mockResolvedValueOnce(fail(401));
+    postMock.mockResolvedValueOnce(ok(null));
+    render(<CreditConsent consentId={CONSENT_ID} />);
+    await vi.waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith(
+        `/login?next=${encodeURIComponent(`/tasks/credit-check/${CONSENT_ID}`)}`,
+      ),
+    );
+  });
+
   it("shows not found for another borrower's request (404)", async () => {
     getMock.mockResolvedValueOnce(fail(404));
     render(<CreditConsent consentId={CONSENT_ID} />);

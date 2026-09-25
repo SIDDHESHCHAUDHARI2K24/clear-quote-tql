@@ -196,14 +196,17 @@ async def _refresh_liabilities(
                 changed = True
             updated += int(changed)
             continue
-        if key in protected_keys:
-            # The LO already maintains this account by hand; leave it.
+        if key in protected_keys or payment is None:
+            # The LO already maintains this account by hand, or the bureau
+            # line has no payment to add: never invent a $0 debt (review
+            # finding 1 -- a renamed LO row or a seed creditor mismatch
+            # would otherwise gain a phantom liability).
             continue
         new_row = Liability(
             application_id=application_id,
             creditor_name=str(creditor),
             account_type=str(account_type),
-            monthly_payment=payment if payment is not None else _ZERO,
+            monthly_payment=payment,
             balance=balance if balance is not None else _ZERO,
         )
         db.add(new_row)

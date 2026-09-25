@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { api } from "../../lib/api-client";
+import { loginUrlFor } from "../shell";
 
 import { ConsentForm } from "./ConsentForm";
 import { ConsentLoadError, ConsentNotFound, ConsentOutcome } from "./ConsentStates";
@@ -40,12 +41,13 @@ export function CreditConsent({ consentId }: { consentId: string }) {
         }
         if (response.status === 401) {
           // Clear the stale cookie first, or the middleware bounces /login
-          // straight back here (same pattern as `HomeView`).
+          // straight back here (same pattern as `HomeView`); `next` brings the
+          // borrower back to this request after signing in.
           api
             .POST("/api/v1/auth/borrower/logout")
             .catch(() => {})
             .finally(() => {
-              router.replace("/login");
+              router.replace(loginUrlFor(`/tasks/credit-check/${consentId}`));
             });
           return;
         }
