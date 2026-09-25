@@ -40,10 +40,24 @@ describe("Primary loans never show investment content (AC2, system-design.md pri
     const heroTiles = container.querySelectorAll('[data-testid="hero-numbers"] > div');
     expect(heroTiles).toHaveLength(3);
 
-    // Expand both collapsibles so their contents are in the DOM too.
+    // Collapsible.tsx (CQ-022 AC6/print) mounts each section's content
+    // unconditionally and only CSS-hides it (Tailwind's `.hidden` class)
+    // while collapsed -- a DOM-presence check alone can no longer tell
+    // collapsed from expanded, since both mount the same nodes. jsdom
+    // doesn't apply the compiled Tailwind stylesheet (jest-dom's
+    // `toBeVisible()` would see the class-hidden element as visible), so
+    // this asserts the actual mechanism our component controls -- the
+    // `.hidden` class itself -- toggling off on expand.
+    const breakdownToggle = screen.getByRole("button", { name: /full breakdown/i });
+    const breakdownContent = breakdownToggle.nextElementSibling as HTMLElement;
+    expect(breakdownContent.classList.contains("hidden")).toBe(true);
+
+    // Expand both collapsibles so their (already-mounted) content becomes
+    // visible, then scan the whole page for anything investment-only.
     for (const button of screen.getAllByRole("button", { name: /see/i })) {
       fireEvent.click(button);
     }
+    expect(breakdownContent.classList.contains("hidden")).toBe(false);
 
     for (const pattern of FORBIDDEN_ON_PRIMARY) {
       expect(container.textContent).not.toMatch(pattern);

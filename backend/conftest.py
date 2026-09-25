@@ -79,8 +79,9 @@ from app.core.config import get_settings  # noqa: E402
 from app.core.db import get_db  # noqa: E402
 from app.core.enums import UserRole  # noqa: E402
 from app.core.valkey import get_valkey  # noqa: E402
-from app.features.auth.models import User  # noqa: E402
+from app.features.auth.models import BorrowerAccount, User  # noqa: E402
 from app.features.auth.sessions.service import COOKIE_NAMES, create_session  # noqa: E402
+from app.features.clients.models import Client  # noqa: E402
 from app.integrations.common import failure_toggle  # noqa: E402
 from app.integrations.common.models import IntegrationCall  # noqa: E402
 from app.main import app as fastapi_app  # noqa: E402
@@ -235,5 +236,59 @@ async def make_staff_session(
         token = await create_session(valkey, principal="staff", subject_id=str(user.id))
         client.cookies.set(COOKIE_NAMES["staff"], token)
         return StaffSession(user=user, token=token)
+
+    return _make
+
+
+@dataclass(frozen=True)
+class BorrowerSession:
+    """`make_borrower_session`'s return value (CQ-022): the `BorrowerAccount`
+    and `Client` rows it created (or was given) plus the raw session token
+    (already set as the `client` fixture's cookie)."""
+
+    account: BorrowerAccount
+    client: Client
+    token: str
+
+
+@pytest_asyncio.fixture
+async def make_borrower_session(
+    db_session: AsyncSession, valkey: Redis, client: AsyncClient
+) -> Callable[..., Awaitable[BorrowerSession]]:
+    """Factory fixture (CQ-022, mirrors `make_staff_session`): creates a real
+    `BorrowerAccount` row (linked to `client_row`, or a fresh `Client` when
+    none is given) and a real Valkey session for it (via
+    `auth.sessions.service.create_session`, the same helper the borrower
+    login flow uses), and sets the resulting token as the `client` fixture's
+    `cq_borrower_session` cookie. Calling it again overwrites the cookie --
+    useful for "sign in as the report's owner, then as a different
+    borrower" isolation tests (spec.md AC5).
+    """
+
+    async def _make(client_row: Client | None = None) -> BorrowerSession:
+        if client_row is None:
+            lo = User(
+                email=f"lo-{uuid.uuid4()}@clearquote-demo.test",
+                password_hash="not-a-real-hash",
+                role=UserRole.LO,
+                full_name="Test LO",
+            )
+            db_session.add(lo)
+            await db_session.flush()
+            client_row = Client(
+                full_name="Test Borrower",
+                email=f"borrower-{uuid.uuid4()}@example.com",
+                assigned_lo_id=lo.id,
+            )
+            db_session.add(client_row)
+            await db_session.flush()
+
+        account = BorrowerAccount(client_id=client_row.id, email=client_row.email)
+        db_session.add(account)
+        await db_session.flush()
+
+        token = await create_session(valkey, principal="borrower", subject_id=str(account.id))
+        client.cookies.set(COOKIE_NAMES["borrower"], token)
+        return BorrowerSession(account=account, client=client_row, token=token)
 
     return _make

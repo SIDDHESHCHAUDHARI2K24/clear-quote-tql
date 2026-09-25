@@ -1030,6 +1030,64 @@
         }
       }
     },
+    "/api/v1/portal/reports/{token}": {
+      "get": {
+        "tags": [
+          "portal-reports"
+        ],
+        "summary": "Get Report",
+        "operationId": "get_report_api_v1_portal_reports__token__get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          },
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -1360,6 +1418,123 @@
         ],
         "title": "BorrowerSignupRequest"
       },
+      "Breakdown": {
+        "properties": {
+          "payment_lines": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownLine"
+            },
+            "title": "Payment Lines",
+            "type": "array"
+          },
+          "payment_total": {
+            "title": "Payment Total",
+            "type": "string"
+          },
+          "cash_to_close_lines": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownLine"
+            },
+            "title": "Cash To Close Lines",
+            "type": "array"
+          },
+          "cash_to_close_total": {
+            "title": "Cash To Close Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_lines",
+          "payment_total",
+          "cash_to_close_lines",
+          "cash_to_close_total"
+        ],
+        "title": "Breakdown",
+        "type": "object"
+      },
+      "BreakdownLine": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "amount"
+        ],
+        "title": "BreakdownLine",
+        "type": "object"
+      },
+      "CashflowTable": {
+        "properties": {
+          "rent_label": {
+            "title": "Rent Label",
+            "type": "string"
+          },
+          "gross_amount": {
+            "title": "Gross Amount",
+            "type": "string"
+          },
+          "expense_ratio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expense Ratio"
+          },
+          "qualifying_rent": {
+            "title": "Qualifying Rent",
+            "type": "string"
+          },
+          "pitia": {
+            "title": "Pitia",
+            "type": "string"
+          },
+          "monthly_cashflow": {
+            "title": "Monthly Cashflow",
+            "type": "string"
+          },
+          "annual_cashflow": {
+            "title": "Annual Cashflow",
+            "type": "string"
+          },
+          "dscr": {
+            "title": "Dscr",
+            "type": "string"
+          },
+          "cap_rate_pct": {
+            "title": "Cap Rate Pct",
+            "type": "string"
+          },
+          "monthly_cashflow_incl_tax": {
+            "title": "Monthly Cashflow Incl Tax",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rent_label",
+          "gross_amount",
+          "expense_ratio",
+          "qualifying_rent",
+          "pitia",
+          "monthly_cashflow",
+          "annual_cashflow",
+          "dscr",
+          "cap_rate_pct",
+          "monthly_cashflow_incl_tax"
+        ],
+        "title": "CashflowTable",
+        "type": "object"
+      },
       "ChallengeResponse": {
         "properties": {
           "challenge_id": {
@@ -1604,6 +1779,64 @@
         "title": "ConfigSnapshot",
         "description": "Pricing configuration, snapshotted per-quote so old quotes never change\nwhen defaults change later (`scenarios.config_snapshot` stores one of\nthese as JSON per CQ-007)."
       },
+      "CostSegTable": {
+        "properties": {
+          "purchase_price": {
+            "title": "Purchase Price",
+            "type": "string"
+          },
+          "land_allocation_pct": {
+            "title": "Land Allocation Pct",
+            "type": "string"
+          },
+          "land_value_allocation": {
+            "title": "Land Value Allocation",
+            "type": "string"
+          },
+          "depreciable_building_basis": {
+            "title": "Depreciable Building Basis",
+            "type": "string"
+          },
+          "accelerated_property_pct": {
+            "title": "Accelerated Property Pct",
+            "type": "string"
+          },
+          "accelerated_basis_amount": {
+            "title": "Accelerated Basis Amount",
+            "type": "string"
+          },
+          "bonus_depreciation_pct": {
+            "title": "Bonus Depreciation Pct",
+            "type": "string"
+          },
+          "year_one_tax_deduction": {
+            "title": "Year One Tax Deduction",
+            "type": "string"
+          },
+          "investor_marginal_tax_rate": {
+            "title": "Investor Marginal Tax Rate",
+            "type": "string"
+          },
+          "year_one_tax_savings": {
+            "title": "Year One Tax Savings",
+            "type": "string"
+          }
+        },
+        "required": [
+          "purchase_price",
+          "land_allocation_pct",
+          "land_value_allocation",
+          "depreciable_building_basis",
+          "accelerated_property_pct",
+          "accelerated_basis_amount",
+          "bonus_depreciation_pct",
+          "year_one_tax_deduction",
+          "investor_marginal_tax_rate",
+          "year_one_tax_savings"
+        ],
+        "title": "CostSegTable",
+        "type": "object"
+      },
       "DSCRBucket": {
         "type": "string",
         "enum": [
@@ -1786,6 +2019,72 @@
         ],
         "title": "HealthReport"
       },
+      "HeroNumbers": {
+        "properties": {
+          "monthly_payment": {
+            "title": "Monthly Payment",
+            "type": "string"
+          },
+          "cash_to_close": {
+            "title": "Cash To Close",
+            "type": "string"
+          },
+          "loan_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Amount"
+          },
+          "monthly_cashflow": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow"
+          },
+          "year1_tax_savings": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year1 Tax Savings"
+          },
+          "year1_tax_savings_monthly": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year1 Tax Savings Monthly"
+          }
+        },
+        "required": [
+          "monthly_payment",
+          "cash_to_close",
+          "loan_amount",
+          "monthly_cashflow",
+          "year1_tax_savings",
+          "year1_tax_savings_monthly"
+        ],
+        "title": "HeroNumbers",
+        "type": "object"
+      },
       "LatestApplicationOut": {
         "properties": {
           "id": {
@@ -1930,6 +2229,74 @@
           "started"
         ],
         "title": "PipelineStartResponse"
+      },
+      "PortalReportResponse": {
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/ReportHeader"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/ReportStrategy"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ReportOption"
+            },
+            "type": "array",
+            "title": "Options"
+          },
+          "recommendation": {
+            "$ref": "#/components/schemas/ReportRecommendation"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/ReportMatch"
+            },
+            "type": "array",
+            "title": "Matches"
+          },
+          "disclosures": {
+            "$ref": "#/components/schemas/ReportDisclosures"
+          },
+          "lo": {
+            "$ref": "#/components/schemas/ReportLo"
+          },
+          "borrower_action": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Borrower Action"
+          },
+          "newest_report_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newest Report Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "header",
+          "strategy",
+          "options",
+          "recommendation",
+          "matches",
+          "disclosures",
+          "lo"
+        ],
+        "title": "PortalReportResponse",
+        "description": "`ReportViewModel` plus the two fields only a live request can answer:\n`borrower_action` (from `QuotePackageVersion.borrower_action`, `None`\nuntil CQ-024) and `newest_report_token` (set only when this version is\nsuperseded, per spec.md's \"SupersededBanner ... a link to the newest\nversion\")."
       },
       "PricedProductRow-Input": {
         "properties": {
@@ -2687,6 +3054,288 @@
         ],
         "title": "QuoteRead"
       },
+      "ReportDisclosures": {
+        "properties": {
+          "core": {
+            "title": "Core",
+            "type": "string"
+          },
+          "investment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment"
+          },
+          "tax": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax"
+          }
+        },
+        "required": [
+          "core",
+          "investment",
+          "tax"
+        ],
+        "title": "ReportDisclosures",
+        "type": "object"
+      },
+      "ReportHeader": {
+        "properties": {
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "property_label": {
+            "title": "Property Label",
+            "type": "string"
+          },
+          "purchase_price": {
+            "title": "Purchase Price",
+            "type": "string"
+          },
+          "prepared_at": {
+            "title": "Prepared At",
+            "type": "string"
+          },
+          "rates_as_of": {
+            "title": "Rates As Of",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "expired": {
+            "title": "Expired",
+            "type": "boolean"
+          },
+          "superseded": {
+            "title": "Superseded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "first_name",
+          "property_label",
+          "purchase_price",
+          "prepared_at",
+          "rates_as_of",
+          "expires_at",
+          "expired",
+          "superseded"
+        ],
+        "title": "ReportHeader",
+        "type": "object"
+      },
+      "ReportLo": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "nmls": {
+            "title": "Nmls",
+            "type": "string"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "title",
+          "nmls",
+          "phone",
+          "email"
+        ],
+        "title": "ReportLo",
+        "type": "object"
+      },
+      "ReportMatch": {
+        "description": "Placeholder shape for CQ-023's match cards (data-field-catalog \u00a711).\nAlways `[]` in CQ-021's own fixtures/tests.",
+        "properties": {
+          "matched_property_id": {
+            "title": "Matched Property Id",
+            "type": "string"
+          },
+          "property_image_url": {
+            "title": "Property Image Url",
+            "type": "string"
+          },
+          "property_address": {
+            "title": "Property Address",
+            "type": "string"
+          },
+          "bed_bath_sqft": {
+            "title": "Bed Bath Sqft",
+            "type": "string"
+          },
+          "deal_grade_badge": {
+            "title": "Deal Grade Badge",
+            "type": "string"
+          },
+          "property_tagline": {
+            "title": "Property Tagline",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "string"
+          }
+        },
+        "required": [
+          "matched_property_id",
+          "property_image_url",
+          "property_address",
+          "bed_bath_sqft",
+          "deal_grade_badge",
+          "property_tagline",
+          "price"
+        ],
+        "title": "ReportMatch",
+        "type": "object"
+      },
+      "ReportOption": {
+        "properties": {
+          "quote_id": {
+            "title": "Quote Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "recommended": {
+            "title": "Recommended",
+            "type": "boolean"
+          },
+          "rate": {
+            "title": "Rate",
+            "type": "string"
+          },
+          "points_pct": {
+            "title": "Points Pct",
+            "type": "string"
+          },
+          "points_amount": {
+            "title": "Points Amount",
+            "type": "string"
+          },
+          "down_payment_pct": {
+            "title": "Down Payment Pct",
+            "type": "string"
+          },
+          "prepay_label": {
+            "title": "Prepay Label",
+            "type": "string"
+          },
+          "hero": {
+            "$ref": "#/components/schemas/HeroNumbers"
+          },
+          "breakdown": {
+            "$ref": "#/components/schemas/Breakdown"
+          },
+          "cashflow": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CashflowTable"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cost_seg": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostSegTable"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "quote_id",
+          "label",
+          "recommended",
+          "rate",
+          "points_pct",
+          "points_amount",
+          "down_payment_pct",
+          "prepay_label",
+          "hero",
+          "breakdown",
+          "cashflow",
+          "cost_seg"
+        ],
+        "title": "ReportOption",
+        "type": "object"
+      },
+      "ReportRecommendation": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "lo_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lo Note"
+          }
+        },
+        "required": [
+          "text",
+          "lo_note"
+        ],
+        "title": "ReportRecommendation",
+        "type": "object"
+      },
+      "ReportStrategy": {
+        "description": "Lowercase mirror of `pricing.engine.types.StrategyType`, per spec.md's\nbinding `strategy`: `primary` | `ltr` | `str` (the engine's own enum is\nuppercase `PRIMARY`/`LTR`/`STR` -- this is a presentation-layer rename,\nnot a new business concept).",
+        "enum": [
+          "primary",
+          "ltr",
+          "str"
+        ],
+        "title": "ReportStrategy",
+        "type": "string"
+      },
       "ScenarioCreateRequest": {
         "properties": {
           "purchase_price": {
@@ -3047,529 +3696,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "Breakdown": {
-        "properties": {
-          "payment_lines": {
-            "items": {
-              "$ref": "#/components/schemas/BreakdownLine"
-            },
-            "title": "Payment Lines",
-            "type": "array"
-          },
-          "payment_total": {
-            "title": "Payment Total",
-            "type": "string"
-          },
-          "cash_to_close_lines": {
-            "items": {
-              "$ref": "#/components/schemas/BreakdownLine"
-            },
-            "title": "Cash To Close Lines",
-            "type": "array"
-          },
-          "cash_to_close_total": {
-            "title": "Cash To Close Total",
-            "type": "string"
-          }
-        },
-        "required": [
-          "payment_lines",
-          "payment_total",
-          "cash_to_close_lines",
-          "cash_to_close_total"
-        ],
-        "title": "Breakdown",
-        "type": "object"
-      },
-      "BreakdownLine": {
-        "properties": {
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "amount": {
-            "title": "Amount",
-            "type": "string"
-          }
-        },
-        "required": [
-          "label",
-          "amount"
-        ],
-        "title": "BreakdownLine",
-        "type": "object"
-      },
-      "CashflowTable": {
-        "properties": {
-          "rent_label": {
-            "title": "Rent Label",
-            "type": "string"
-          },
-          "gross_amount": {
-            "title": "Gross Amount",
-            "type": "string"
-          },
-          "expense_ratio": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expense Ratio"
-          },
-          "qualifying_rent": {
-            "title": "Qualifying Rent",
-            "type": "string"
-          },
-          "pitia": {
-            "title": "Pitia",
-            "type": "string"
-          },
-          "monthly_cashflow": {
-            "title": "Monthly Cashflow",
-            "type": "string"
-          },
-          "annual_cashflow": {
-            "title": "Annual Cashflow",
-            "type": "string"
-          },
-          "dscr": {
-            "title": "Dscr",
-            "type": "string"
-          },
-          "cap_rate_pct": {
-            "title": "Cap Rate Pct",
-            "type": "string"
-          },
-          "monthly_cashflow_incl_tax": {
-            "title": "Monthly Cashflow Incl Tax",
-            "type": "string"
-          }
-        },
-        "required": [
-          "rent_label",
-          "gross_amount",
-          "expense_ratio",
-          "qualifying_rent",
-          "pitia",
-          "monthly_cashflow",
-          "annual_cashflow",
-          "dscr",
-          "cap_rate_pct",
-          "monthly_cashflow_incl_tax"
-        ],
-        "title": "CashflowTable",
-        "type": "object"
-      },
-      "CostSegTable": {
-        "properties": {
-          "purchase_price": {
-            "title": "Purchase Price",
-            "type": "string"
-          },
-          "land_allocation_pct": {
-            "title": "Land Allocation Pct",
-            "type": "string"
-          },
-          "land_value_allocation": {
-            "title": "Land Value Allocation",
-            "type": "string"
-          },
-          "depreciable_building_basis": {
-            "title": "Depreciable Building Basis",
-            "type": "string"
-          },
-          "accelerated_property_pct": {
-            "title": "Accelerated Property Pct",
-            "type": "string"
-          },
-          "accelerated_basis_amount": {
-            "title": "Accelerated Basis Amount",
-            "type": "string"
-          },
-          "bonus_depreciation_pct": {
-            "title": "Bonus Depreciation Pct",
-            "type": "string"
-          },
-          "year_one_tax_deduction": {
-            "title": "Year One Tax Deduction",
-            "type": "string"
-          },
-          "investor_marginal_tax_rate": {
-            "title": "Investor Marginal Tax Rate",
-            "type": "string"
-          },
-          "year_one_tax_savings": {
-            "title": "Year One Tax Savings",
-            "type": "string"
-          }
-        },
-        "required": [
-          "purchase_price",
-          "land_allocation_pct",
-          "land_value_allocation",
-          "depreciable_building_basis",
-          "accelerated_property_pct",
-          "accelerated_basis_amount",
-          "bonus_depreciation_pct",
-          "year_one_tax_deduction",
-          "investor_marginal_tax_rate",
-          "year_one_tax_savings"
-        ],
-        "title": "CostSegTable",
-        "type": "object"
-      },
-      "HeroNumbers": {
-        "properties": {
-          "monthly_payment": {
-            "title": "Monthly Payment",
-            "type": "string"
-          },
-          "cash_to_close": {
-            "title": "Cash To Close",
-            "type": "string"
-          },
-          "loan_amount": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Loan Amount"
-          },
-          "monthly_cashflow": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Monthly Cashflow"
-          },
-          "year1_tax_savings": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Year1 Tax Savings"
-          },
-          "year1_tax_savings_monthly": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Year1 Tax Savings Monthly"
-          }
-        },
-        "required": [
-          "monthly_payment",
-          "cash_to_close",
-          "loan_amount",
-          "monthly_cashflow",
-          "year1_tax_savings",
-          "year1_tax_savings_monthly"
-        ],
-        "title": "HeroNumbers",
-        "type": "object"
-      },
-      "ReportDisclosures": {
-        "properties": {
-          "core": {
-            "title": "Core",
-            "type": "string"
-          },
-          "investment": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Investment"
-          },
-          "tax": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tax"
-          }
-        },
-        "required": [
-          "core",
-          "investment",
-          "tax"
-        ],
-        "title": "ReportDisclosures",
-        "type": "object"
-      },
-      "ReportHeader": {
-        "properties": {
-          "first_name": {
-            "title": "First Name",
-            "type": "string"
-          },
-          "property_label": {
-            "title": "Property Label",
-            "type": "string"
-          },
-          "purchase_price": {
-            "title": "Purchase Price",
-            "type": "string"
-          },
-          "prepared_at": {
-            "title": "Prepared At",
-            "type": "string"
-          },
-          "rates_as_of": {
-            "title": "Rates As Of",
-            "type": "string"
-          },
-          "expires_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expires At"
-          },
-          "expired": {
-            "title": "Expired",
-            "type": "boolean"
-          },
-          "superseded": {
-            "title": "Superseded",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "first_name",
-          "property_label",
-          "purchase_price",
-          "prepared_at",
-          "rates_as_of",
-          "expires_at",
-          "expired",
-          "superseded"
-        ],
-        "title": "ReportHeader",
-        "type": "object"
-      },
-      "ReportLo": {
-        "properties": {
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          },
-          "nmls": {
-            "title": "Nmls",
-            "type": "string"
-          },
-          "phone": {
-            "title": "Phone",
-            "type": "string"
-          },
-          "email": {
-            "title": "Email",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "title",
-          "nmls",
-          "phone",
-          "email"
-        ],
-        "title": "ReportLo",
-        "type": "object"
-      },
-      "ReportMatch": {
-        "description": "Placeholder shape for CQ-023's match cards (data-field-catalog \u00a711).\nAlways `[]` in CQ-021's own fixtures/tests.",
-        "properties": {
-          "matched_property_id": {
-            "title": "Matched Property Id",
-            "type": "string"
-          },
-          "property_image_url": {
-            "title": "Property Image Url",
-            "type": "string"
-          },
-          "property_address": {
-            "title": "Property Address",
-            "type": "string"
-          },
-          "bed_bath_sqft": {
-            "title": "Bed Bath Sqft",
-            "type": "string"
-          },
-          "deal_grade_badge": {
-            "title": "Deal Grade Badge",
-            "type": "string"
-          },
-          "property_tagline": {
-            "title": "Property Tagline",
-            "type": "string"
-          },
-          "price": {
-            "title": "Price",
-            "type": "string"
-          }
-        },
-        "required": [
-          "matched_property_id",
-          "property_image_url",
-          "property_address",
-          "bed_bath_sqft",
-          "deal_grade_badge",
-          "property_tagline",
-          "price"
-        ],
-        "title": "ReportMatch",
-        "type": "object"
-      },
-      "ReportOption": {
-        "properties": {
-          "quote_id": {
-            "title": "Quote Id",
-            "type": "string"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "recommended": {
-            "title": "Recommended",
-            "type": "boolean"
-          },
-          "rate": {
-            "title": "Rate",
-            "type": "string"
-          },
-          "points_pct": {
-            "title": "Points Pct",
-            "type": "string"
-          },
-          "points_amount": {
-            "title": "Points Amount",
-            "type": "string"
-          },
-          "down_payment_pct": {
-            "title": "Down Payment Pct",
-            "type": "string"
-          },
-          "prepay_label": {
-            "title": "Prepay Label",
-            "type": "string"
-          },
-          "hero": {
-            "$ref": "#/components/schemas/HeroNumbers"
-          },
-          "breakdown": {
-            "$ref": "#/components/schemas/Breakdown"
-          },
-          "cashflow": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CashflowTable"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "cost_seg": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CostSegTable"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "quote_id",
-          "label",
-          "recommended",
-          "rate",
-          "points_pct",
-          "points_amount",
-          "down_payment_pct",
-          "prepay_label",
-          "hero",
-          "breakdown",
-          "cashflow",
-          "cost_seg"
-        ],
-        "title": "ReportOption",
-        "type": "object"
-      },
-      "ReportRecommendation": {
-        "properties": {
-          "text": {
-            "title": "Text",
-            "type": "string"
-          },
-          "lo_note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lo Note"
-          }
-        },
-        "required": [
-          "text",
-          "lo_note"
-        ],
-        "title": "ReportRecommendation",
-        "type": "object"
-      },
-      "ReportStrategy": {
-        "description": "Lowercase mirror of `pricing.engine.types.StrategyType`, per spec.md's\nbinding `strategy`: `primary` | `ltr` | `str` (the engine's own enum is\nuppercase `PRIMARY`/`LTR`/`STR` -- this is a presentation-layer rename,\nnot a new business concept).",
-        "enum": [
-          "primary",
-          "ltr",
-          "str"
-        ],
-        "title": "ReportStrategy",
-        "type": "string"
       },
       "ReportViewModel": {
         "description": "The one contract. See module docstring.",

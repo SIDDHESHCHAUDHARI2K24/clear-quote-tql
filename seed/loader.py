@@ -54,6 +54,7 @@ from app.features.auth.models import BorrowerAccount, User
 from app.features.auth.users.service import normalize_email
 from app.features.clients.models import Client
 from app.features.notifications.outbox.models import EmailStatus, OutboxEmail
+from app.features.portal.reports.versions import freeze_package_version
 from app.features.quotes.send.models import BorrowerAction, QuotePackage
 from app.integrations.credit.models import CreditPullType, ProviderCreditReport
 from app.integrations.insurance.models import ProviderInsuranceFactor
@@ -594,6 +595,20 @@ async def apply_send_fixture(
         await _add_activity_event(
             db, application_id, "quote.option_selected", {"quote_id": str(recommended_quote_id)}
         )
+
+    # CQ-022: the demo report page reads `quote_package_versions`, not
+    # `quote_packages` (D2) -- freeze a real version through the same
+    # factory CQ-020's send workflow will use, so `/report/{token}` works
+    # for these personas after `make demo-reset` (spec.md "Seed" scope).
+    version = await freeze_package_version(db, package=package, sent_at=sent_at)
+    if viewed_at is not None:
+        version.viewed_at = viewed_at
+    if borrower_action is not None:
+        version.borrower_action = {
+            "type": borrower_action.value,
+            "quote_id": str(recommended_quote_id),
+        }
+    await db.flush()
 
     await db.commit()
     return package

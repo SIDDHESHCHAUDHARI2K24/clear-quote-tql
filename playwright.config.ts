@@ -17,6 +17,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: [["list"]],
+  // CQ-022: signs the shared borrower personas in once (see its own
+  // comment) instead of once per report-*.spec.ts file, so a full run
+  // stays well under the borrower login rate limit.
+  globalSetup: "./e2e/global-setup.ts",
   use: {
     trace: "on-first-retry",
   },

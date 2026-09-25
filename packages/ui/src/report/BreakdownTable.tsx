@@ -8,7 +8,7 @@ export interface BreakdownTableProps {
 /** Payment and cash-to-close lines for the selected option (spec.md). */
 export function BreakdownTable({ breakdown }: BreakdownTableProps) {
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
+    <div className="grid gap-6 sm:grid-cols-2 print:break-inside-avoid">
       <div>
         <h3 className="text-sm font-semibold text-navy-900">Monthly payment</h3>
         <dl className="mt-2 space-y-1.5 text-sm">

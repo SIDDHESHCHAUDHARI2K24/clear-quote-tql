@@ -12,3 +12,25 @@ body {
   background-color: var(--color-neutral-50);
   color: var(--color-navy-900);
 }
+
+/* CQ-022 AC6: the report's Save-as-PDF button (`window.print()`,
+   packages/ui/src/report/ReportHeader.tsx) and Playwright's `page.pdf()`
+   (the AC6 test) both render with this stylesheet applied. Component-level
+   `print:hidden`/`print:!block`/`print:break-inside-avoid` classes (the
+   switcher, action buttons, collapsibles, and the individual table blocks)
+   handle the layout; these two rules are page-level, not any one
+   component's job: background colors are stripped by the browser's print
+   defaults unless explicitly opted back in, which would otherwise drop
+   `ReportHeader`'s navy background and the recommended-option highlight in
+   `ComparisonTable`/`OptionSwitcher`; `@page` gives the printed report
+   sane margins instead of the browser's own default. */
+@media print {
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  @page {
+    margin: 0.5in;
+  }
+}
