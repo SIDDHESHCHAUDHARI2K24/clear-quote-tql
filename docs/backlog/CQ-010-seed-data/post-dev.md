@@ -104,6 +104,45 @@ demo-reset`, run twice): `elapsed: 1.3s` / `1.3s` (well under 60s).
 tom_lisa_brandt → priced`, `aisha_coleman/ben_ford → needs_attention`,
 `grace_kim → sent`, `luis_romero → option_selected` — identical both runs.
 
+## Review — Round 2 (fresh reviewer, did not write this code or the round-1 fix)
+
+Verified round 1's three major findings live against the shared stack, by
+running things, not by reading this file. `make up` (never `make down`);
+worktree at commit `471775b`.
+
+### Commands re-run
+
+| Command | Result |
+| --- | --- |
+| `make up` | shared stack already healthy; `postgres` container was recreated by compose (config drift from a parallel branch) but the named volume was untouched — `cq_dev`, `cq_dev_p2`, `cq_test`, `cq_test_cq011`, `cq_test_p2`, `temporal*` all still present via `psql -U cq -l` |
+| `SEED_STAFF_PASSWORD=TestPass123 make demo-reset` (x2) | `elapsed: 1.3-1.9s` both runs; all 10 personas at spec.md's exact end status both times |
+| `psql cq_dev` — Aisha (persona 7) | `occupancy` IS NULL, `status=needs_attention`; `flags`: `tab=pricing, field_key=occupancy_type, rule=ob_required_field, severity=blocking`; `activity_events.payload={'reason': 'Cannot price: missing Occupancy'}` (type `pipeline.pricing_blocked`) — exact match to finding #1's required text |
+| `psql cq_dev` — `field_values` | 5+ `representative_fico` rows, `source=credit_bureau` on every row (`FieldSource.CREDIT_BUREAU`) — finding #2 confirmed live, not just by reading the diff |
+| Scratch-DB migration cycle (`cq_scratch_review`, dropped after) | `alembic upgrade head` → `alembic check` ("No new upgrade operations detected") → `alembic downgrade -1` → `alembic upgrade head`: all clean. Separately, inserted a row with `occupancy=NULL` (FKs dropped for isolation) and re-ran `downgrade -1`: fails loudly with `NotNullViolationError: column "occupancy" ... contains null values`, transaction rolled back, `alembic current` still reports `e7b20ff388a7 (head)` afterward — no partial/corrupt state. This is the migration's documented intent ("deliberately not automatic... picking a value here would be a silent data change"); a loud failure instead of a silently-wrong backfill is the sensible choice here. |
+| `git grep -n "ClearQuoteDemo"` (working tree) | clean — only a prose mention of the grep command itself in this file, no credential |
+| `git log -p --all -- seed/users.yaml \| grep "password:"` | **the plaintext `ClearQuoteDemo!2026` does exist in past commits** — introduced in `ea72560` (Phase A), still present through `a036651`, removed in `89bcf5f`. `git branch -vv` shows `cq-010-seed-data` tracks `origin/cq-010-seed-data`, i.e. `ea72560`/`a036651` are already pushed to the public GitHub remote. The current working tree and HEAD are clean, but the secret is permanently visible in this branch's public history unless it is rewritten (rebase/force-push), which is outside a review's scope and wasn't requested. Recorded here as a disclosure, not a blocker to merging HEAD as-is; flag to the human before this repo (or its history) is ever made more widely public, and reuse `ClearQuoteDemo!2026` nowhere else. |
+| `SEED_STAFF_PASSWORD` unset, `uv run python -m seed.reset` | exits 1 immediately with a clear message before touching the DB; `select count(*) from applications` on `cq_dev` unchanged (210) after the failed run, confirming no partial reset |
+| `grep -rn "\.occupancy\b"` across `backend`, `seed` (non-test) | every call site compares `is Occupancy.PRIMARY` / `is Occupancy.INVESTMENT` (safe on `None`) or reads/copies the value; no `.value`/dict-key access on a possibly-`None` occupancy found. `ob_request.py`'s three-way `if/elif/else` and `enrichment/service.py`'s field-key override are the only two edits to CQ-013-owned files, both minimal and additive |
+| `uv run pytest backend seed -q` | 237 passed |
+| `make lint` | ruff, ruff format, mypy, eslint (4 pkgs), tsc (4 pkgs), prettier — all clean |
+| `make test` | 214 backend + 23 seed + 27+4+4+1 frontend — all green |
+| `git merge-tree $(git merge-base HEAD origin/phase-p0-p1) HEAD origin/phase-p0-p1` | 0 conflict markers; only content-level diff is both branches independently editing the same row of `docs/backlog/phase-p0-p1-merge-plan.md` (non-conflicting text) |
+| `git merge-base HEAD cq-011-temporal-pipeline` | equals `cq-011-temporal-pipeline`'s own HEAD (`85e0462`) — that branch has no commits beyond what `cq-010-seed-data` already contains, so there is nothing to conflict with today (its in-progress uncommitted work, per the brief, is not this review's concern) |
+
+### Findings
+
+| # | Severity | file:line | Finding | Suggested fix |
+| --- | --- | --- | --- | --- |
+| 1 | — (verified fixed) | `backend/app/features/applications/service.py:206`, `pricing/scenarios/ob_request.py:99-115`, `pricing/enrichment/service.py:44-56` | Round-1 finding #1 confirmed fixed live: Aisha Coleman's `occupancy` is `NULL`, flag `field_key=occupancy_type`, message exactly "Cannot price: missing Occupancy". | None — closed. |
+| 2 | — (verified fixed) | `backend/app/features/applications/service.py:208-219` | Round-1 finding #2 confirmed fixed live: `import_from_los` performs a real `CreditPullType.SOFT_PULL`, writes `field_values.representative_fico` with `source=credit_bureau`; `seed/loader.py::_seed_representative_fico` is gone. | None — closed. |
+| 3 | — (verified fixed in HEAD; disclosure) | `seed/users.yaml`, git history (`ea72560`, `a036651`) | Round-1 finding #3 confirmed fixed in the working tree and at HEAD — no plaintext password remains, `demo-reset` fails fast when `SEED_STAFF_PASSWORD` is unset. However, `ClearQuoteDemo!2026` is permanently present in this branch's history, already pushed to the public GitHub remote (`origin/cq-010-seed-data`). Not a code defect to fix here, but a disclosure the human should weigh (history rewrite is destructive and out of a review's scope). | Human call: either accept the exposure (it is a throwaway demo password with no other use) or rewrite/squash this branch's history before merge to scrub it. Do not reuse `ClearQuoteDemo!2026` as a real credential anywhere. |
+| 4 | minor | `backend/app/features/applications/verification/service.py:170-173` | `reserves_key = "reserves_months_primary" if application.occupancy is Occupancy.PRIMARY else "reserves_months_investment"` treats a `None` occupancy as investment via the catch-all `else`. Harmless today (Aisha, the only persona with `None` occupancy, actually is an investment/LTR persona per spec.md, so the accidental default happens to match), but it's an implicit default rather than an explicit one — a future primary-loan persona with a transient `NULL` occupancy would silently get the investment reserves setting instead of failing loudly or being excluded, unlike every other occupancy branch in this codebase which either checks `is Occupancy.INVESTMENT` explicitly or returns `[]`/skips when occupancy is unknown (e.g. `verification/rules.py:229`, `pricing/scenarios/service.py:599`). | Change to `"reserves_months_investment" if application.occupancy is Occupancy.INVESTMENT else "reserves_months_primary"`, or explicitly guard the `None` case, so a future `None`-occupancy persona doesn't silently inherit investment behavior. |
+
+No new major/critical findings. Round-1 findings #1 and #2 are fully closed
+by code + live behavior + tests. Round-1 finding #3 is fixed in the
+working tree/HEAD; its git-history exposure is a disclosure for the human,
+not a code defect. One new minor finding (#4 above) — not blocking.
+
 ## How to test manually
 
 1. `make up` (if the shared stack is down).
