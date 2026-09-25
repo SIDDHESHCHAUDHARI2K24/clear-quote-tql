@@ -1055,6 +1055,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Clients */
+        get: operations["get_clients_api_v1_clients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clients/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Client */
+        get: operations["get_client_api_v1_clients__client_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1438,6 +1472,118 @@ export interface components {
         ChallengeResponse: {
             /** Challenge Id */
             challenge_id: string;
+        };
+        /**
+         * ClientDetail
+         * @description `GET /clients/{id}` response (spec.md "Backend").
+         */
+        ClientDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone: string | null;
+            /**
+             * Lo Id
+             * Format: uuid
+             */
+            lo_id: string;
+            /** Lo Name */
+            lo_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Applications */
+            applications: components["schemas"]["ApplicationRow"][];
+            /** Sent Versions */
+            sent_versions: components["schemas"]["ClientSentVersion"][];
+            /** Activity */
+            activity: components["schemas"]["ActivityEventOut"][];
+        };
+        /**
+         * ClientListResponse
+         * @description `GET /clients` response: `core/pagination.Page[ClientRow]`.
+         */
+        ClientListResponse: {
+            /** Items */
+            items: components["schemas"]["ClientRow"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * ClientRow
+         * @description One row of `GET /clients` (spec.md "Rows").
+         */
+        ClientRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone: string | null;
+            /**
+             * Lo Id
+             * Format: uuid
+             */
+            lo_id: string;
+            /** Lo Name */
+            lo_name: string;
+            /** Application Count */
+            application_count: number;
+            active_status: components["schemas"]["ApplicationStatus"] | null;
+            /** Last Activity */
+            last_activity: string | null;
+        };
+        /**
+         * ClientSentVersion
+         * @description One row of a client's "Quotes sent" section (spec.md "Backend"):
+         *     one `quote_package_versions` row, across every application the client
+         *     has.
+         */
+        ClientSentVersion: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Version */
+            version: number;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /** Recommended Option Label */
+            recommended_option_label: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "sent" | "viewed" | "expired" | "superseded" | "option_selected" | "move_forward" | "ask_other" | "ask_updated" | "inquiry";
+            /** Report Link */
+            report_link: string;
         };
         /**
          * ConfigSnapshot
@@ -5245,6 +5391,81 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaleCheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_clients_api_v1_clients_get: {
+        parameters: {
+            query?: {
+                /** @description Name or email, partial, case-insensitive */
+                q?: string | null;
+                /** @description Manager/Admin only; ignored for an LO's own request */
+                lo_id?: string | null;
+                created_from?: string | null;
+                created_to?: string | null;
+                has_active?: boolean | null;
+                sort?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_client_api_v1_clients__client_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDetail"];
                 };
             };
             /** @description Validation Error */

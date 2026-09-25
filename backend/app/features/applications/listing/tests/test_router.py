@@ -287,6 +287,30 @@ async def test_q_filter_matches_name_and_email(
     }
 
 
+async def test_q_filter_escapes_like_wildcards(
+    client: AsyncClient,
+    make_staff_session: Any,
+    make_application: MakeApplication,
+) -> None:
+    """Logged small necessity, review round 1 (CQ-026): `q` had the same
+    unescaped-LIKE bug as `clients/service.py`'s search and the outbox's --
+    a literal `%`/`_` in the search text matched everything instead of
+    matching literally."""
+    await make_staff_session(UserRole.MANAGER)
+
+    foo_bar = await make_application(client_name="foo_bar Client")
+    await make_application(client_name="fooXbar Client")
+    percent = await make_application(client_name="100% Client")
+
+    # A literal "_" must not act as a single-character wildcard.
+    body = await _get(client, q="foo_bar")
+    assert {uuid.UUID(item["id"]) for item in body["items"]} == {foo_bar.application.id}
+
+    # A literal "%" must not act as a wildcard matching every row.
+    body = await _get(client, q="100%")
+    assert {uuid.UUID(item["id"]) for item in body["items"]} == {percent.application.id}
+
+
 async def test_combined_filters(
     client: AsyncClient,
     make_staff_session: Any,

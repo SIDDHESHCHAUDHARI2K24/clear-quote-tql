@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import UserRole
 from app.core.errors import NotFoundError
 from app.core.pagination import Page, paginate
+from app.core.sql import LIKE_ESCAPE_CHAR, escape_like
 from app.features.applications.models import Application
 from app.features.auth.models import User
 from app.features.clients.models import Client
@@ -64,14 +65,9 @@ _LIST_COLUMNS = (
     Client.full_name.label("client_name"),
 )
 
-_LIKE_ESCAPE = "\\"
-
-
-def _escape_like(value: str) -> str:
-    """Escapes `%`/`_`/the escape char itself so a free-text search matches
-    literally (code review finding: an unescaped `q` let `%`/`_` act as SQL
-    LIKE wildcards, e.g. `100%` matching any subject starting with `100`)."""
-    return value.replace(_LIKE_ESCAPE, _LIKE_ESCAPE * 2).replace("%", r"\%").replace("_", r"\_")
+# `escape_like`/`LIKE_ESCAPE_CHAR` moved to `core.sql` (review round 1,
+# CQ-026): shared with `clients/service.py` and
+# `applications/listing/service.py` instead of each defining its own copy.
 
 
 def infer_email_type(subject: str) -> str:
@@ -151,11 +147,11 @@ async def list_outbox(
     stmt = _scope_outbox(stmt, user)
 
     if q:
-        pattern = f"%{_escape_like(q)}%"
+        pattern = f"%{escape_like(q)}%"
         stmt = stmt.where(
             or_(
-                OutboxEmail.to_email.ilike(pattern, escape=_LIKE_ESCAPE),
-                OutboxEmail.subject.ilike(pattern, escape=_LIKE_ESCAPE),
+                OutboxEmail.to_email.ilike(pattern, escape=LIKE_ESCAPE_CHAR),
+                OutboxEmail.subject.ilike(pattern, escape=LIKE_ESCAPE_CHAR),
             )
         )
     if type:
