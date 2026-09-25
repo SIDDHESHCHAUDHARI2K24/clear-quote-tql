@@ -82,6 +82,11 @@ ignore_missing_imports = true
 module = ["yaml.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# CQ-020: WeasyPrint (letter PDF) ships no type stubs/py.typed.
+module = ["weasyprint.*", "weasyprint"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["backend"]
 # `.` (repo root) so `seed/tests/*` (CQ-010) can `import seed...` /

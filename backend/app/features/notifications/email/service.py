@@ -13,6 +13,8 @@ that must still return (e.g. the OTP-issue endpoint).
 import logging
 import re
 import uuid
+from collections.abc import Sequence
+from dataclasses import dataclass
 from email.message import EmailMessage
 
 import aiosmtplib
@@ -32,21 +34,58 @@ def _strip_tags(html: str) -> str:
     return _WHITESPACE_RE.sub(" ", _TAG_RE.sub("", html)).strip()
 
 
-async def smtp_send(*, to: str, subject: str, html: str) -> None:
+@dataclass(frozen=True)
+class EmailAttachment:
+    """CQ-020: a file attached to an email (the pre-approval letter PDF)."""
+
+    filename: str
+    content: bytes
+    maintype: str = "application"
+    subtype: str = "pdf"
+
+
+def build_message(
+    *,
+    to: str,
+    subject: str,
+    html: str,
+    text: str | None = None,
+    attachments: Sequence[EmailAttachment] = (),
+) -> EmailMessage:
+    """text + html alternatives (`text` defaults to the tag-stripped html),
+    plus any attachments (CQ-020)."""
+    settings = get_settings()
+    message = EmailMessage()
+    message["From"] = settings.smtp_from
+    message["To"] = to
+    message["Subject"] = subject
+    message.set_content(text if text is not None else _strip_tags(html))
+    message.add_alternative(html, subtype="html")
+    for attachment in attachments:
+        message.add_attachment(
+            attachment.content,
+            maintype=attachment.maintype,
+            subtype=attachment.subtype,
+            filename=attachment.filename,
+        )
+    return message
+
+
+async def smtp_send(
+    *,
+    to: str,
+    subject: str,
+    html: str,
+    text: str | None = None,
+    attachments: Sequence[EmailAttachment] = (),
+) -> None:
     """Builds a text+html message and sends it via SMTP (Mailpit locally).
 
     No TLS/auth: local and demo delivery target Mailpit, which accepts
     plain SMTP on `settings.smtp_port`.
     """
     settings = get_settings()
-
-    message = EmailMessage()
-    message["From"] = settings.smtp_from
-    message["To"] = to
-    message["Subject"] = subject
-    message.set_content(_strip_tags(html))
-    message.add_alternative(html, subtype="html")
-
+    message = build_message(to=to, subject=subject, html=html, text=text, attachments=attachments)
     await aiosmtplib.send(message, hostname=settings.smtp_host, port=settings.smtp_port)
 
 
@@ -83,3 +122,33 @@ async def send_email(
 
     await db.flush()
     return outbox_email
+
+
+async def deliver_outbox_email(
+    db: AsyncSession,
+    outbox_email: OutboxEmail,
+    *,
+    text: str | None = None,
+    attachments: Sequence[EmailAttachment] = (),
+) -> None:
+    """CQ-020: sends an already-committed `QUEUED` outbox row and marks it
+    `SENT` (flushes; the caller commits). Unlike `send_email`, a delivery
+    failure marks the row `FAILED` and *re-raises*: the send workflow's
+    Email activity wants Temporal to retry, and it commits the `QUEUED` row
+    before calling this so a crash mid-send never loses the outbox record
+    (plan.md Decision 8)."""
+    try:
+        await smtp_send(
+            to=outbox_email.to_email,
+            subject=outbox_email.subject,
+            html=outbox_email.html,
+            text=text,
+            attachments=attachments,
+        )
+    except Exception:
+        logger.exception("Failed to send email to %s", outbox_email.to_email)
+        outbox_email.status = EmailStatus.FAILED
+        await db.flush()
+        raise
+    outbox_email.status = EmailStatus.SENT
+    await db.flush()
