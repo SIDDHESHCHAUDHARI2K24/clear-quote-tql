@@ -60,3 +60,5 @@ Agent tooling verified for Claude Code: codegraph v1.5.0 installed project-level
 - After backend/frontend code is written (CQ-002 onward): re-run `codegraph init` to populate the index
 - Run a full `/graphify` extraction over `docs/` (153 files) once semantic extraction budget/time is available; the current graph only has a hand-picked 3-file doc subset
 - If the git post-commit/checkout hooks and merge driver are wanted later, re-run `graphify hook install` with the `.gitattributes` + merge-driver side effects in mind
+
+- Decision (human, 2026-09-24): removed the graphify PreToolUse hooks (Read/Glob/Bash/Grep reminders) from `.claude/settings.json` to avoid context noise; reworded the graphify section in `CLAUDE.md` to follow the AGENTS.md tool split. The codegraph UserPromptSubmit hook stays.
