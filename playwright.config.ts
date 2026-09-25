@@ -50,7 +50,12 @@ export default defineConfig({
     {
       name: "cross-app",
       testDir: "./e2e",
-      testMatch: "borrower-action-reflects-in-console.spec.ts",
+      // CQ-020: the P3 milestone spec (send in the console, open the
+      // emailed link in the portal) drives both apps too.
+      testMatch: [
+        "borrower-action-reflects-in-console.spec.ts",
+        "p3-milestone-send-to-report.spec.ts",
+      ],
       use: {
         ...devices["Desktop Chrome"],
       },

@@ -177,7 +177,7 @@ describe("Send flow (CQ-020)", () => {
     // The footer's Close (the overlay's own × is also named "Close").
     const closeButtons = within(dialog).getAllByRole("button", { name: "Close" });
     await userEvent.click(closeButtons[closeButtons.length - 1]);
-    expect(await screen.findByRole("button", { name: "Send again" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Send to borrower" })).toBeEnabled();
   });
 
   it("AC4 in the UI: a 409 PACKAGE_NOT_READY shows the blockers and polls nothing", async () => {

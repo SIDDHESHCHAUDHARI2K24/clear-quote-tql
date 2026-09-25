@@ -21,6 +21,12 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+# CQ-020: `quote_package_versions.outbox_email_id` is a foreign key to
+# `outbox_emails`. Importing that model here registers its table wherever
+# this module is loaded on its own (e.g. `backend/scripts/
+# freeze_sent_version.py`), otherwise the first flush raises
+# NoReferencedTableError.
+import app.features.notifications.outbox.models  # noqa: F401
 from app.core.db import Base, pg_enum
 
 

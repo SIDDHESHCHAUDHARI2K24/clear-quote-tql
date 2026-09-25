@@ -26,7 +26,6 @@ export function SendButton({ pkg, readiness, phase, onSend, onReset }: SendButto
   const tooltip = readiness === null ? "Checking readiness…" : readiness.blockers[0]?.message;
   const inFlight = phase.kind === "starting" || phase.kind === "running";
   const finished = phase.kind === "done";
-  const alreadySent = pkg.sent_at !== null;
 
   const close = () => {
     setOpen(false);
@@ -44,7 +43,7 @@ export function SendButton({ pkg, readiness, phase, onSend, onReset }: SendButto
             setOpen(true);
           }}
         >
-          {inFlight ? "Sending…" : alreadySent ? "Send again" : "Send to borrower"}
+          {inFlight ? "Sending…" : "Send to borrower"}
         </Button>
       </span>
       {!ready && tooltip && (
