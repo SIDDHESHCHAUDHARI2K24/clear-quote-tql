@@ -36,6 +36,7 @@ Fix forward on a new branch from `main`, review, and merge through a PR. A rever
 - CQ-005: Overlay focus trap, Escape test, Tabs arrow-key navigation.
 - CQ-005/CQ-004: declare the 503 response on `/health` in the OpenAPI schema.
 - CQ-009: property-match ranking is a price proxy until CQ-023.
+- CQ-013: scenarios snapshot `ConfigSnapshot()` defaults, not the `settings` table (no loader yet); HOA is always $0 until a source exists.
 
 ## Verification record
 
