@@ -10,6 +10,7 @@ caller owns the transaction.
 """
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -18,7 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import UserRole
 from app.core.errors import ConflictError, ValidationAppError
 from app.core.security import hash_password
-from app.features.auth.models import User
+from app.features.auth.models import BorrowerAccount, User
+from app.features.clients.models import Client
 
 MIN_PASSWORD_LENGTH = 8
 
@@ -147,3 +149,87 @@ async def seed_dev_users(db: AsyncSession, *, password: str) -> list[User]:
             )
         )
     return users
+
+
+# CQ-015 Decision #12: the demo borrower's client + account.
+DEMO_BORROWER_EMAIL = "borrower@clearquote.test"
+DEMO_BORROWER_CLIENT_NAME = "Casey Morgan"
+DEMO_BORROWER_LO_EMAIL = "lo@clearquote.test"
+
+
+async def _ensure_demo_borrower_client(db: AsyncSession) -> Client:
+    """Creates the demo borrower's client ("Casey Morgan", assigned to
+    `lo@clearquote.test`) if it doesn't already exist. Does not commit."""
+    client = (
+        await db.execute(select(Client).where(Client.email == DEMO_BORROWER_EMAIL))
+    ).scalar_one_or_none()
+    if client is not None:
+        return client
+
+    lo = (
+        await db.execute(select(User).where(User.email == DEMO_BORROWER_LO_EMAIL))
+    ).scalar_one_or_none()
+    if lo is None:
+        raise ConflictError(
+            f"No {DEMO_BORROWER_LO_EMAIL} user to assign the demo borrower's client to — "
+            "run seed_dev_users first."
+        )
+    client = Client(
+        full_name=DEMO_BORROWER_CLIENT_NAME, email=DEMO_BORROWER_EMAIL, assigned_lo_id=lo.id
+    )
+    db.add(client)
+    await db.flush()
+    return client
+
+
+async def seed_dev_borrowers(db: AsyncSession, *, password: str) -> list[BorrowerAccount]:
+    """CQ-015 Decision #12: ensures the demo borrower's client exists, then
+    creates a `BorrowerAccount` (`password`, `email_verified_at` set to
+    now) for every client — the demo one included — that doesn't already
+    have one.
+
+    Idempotent: a repeat run creates neither a second demo client nor a
+    second account for any client, and never touches an existing account's
+    `password_hash`. Returns only the accounts created by *this* call
+    (empty once every client already has one). Does not commit.
+
+    `clients.email` is not unique (unlike `borrower_accounts.email`), so
+    two clients whose emails normalize to the same value — or a client
+    whose email already belongs to another client's account — would
+    otherwise abort the whole run on the first `IntegrityError`. Each
+    insert runs in its own SAVEPOINT (mirroring `create_user`), and a
+    losing one is skipped rather than crashing the seed for every other
+    client.
+    """
+    await _ensure_demo_borrower_client(db)
+
+    clients_missing_accounts = (
+        (
+            await db.execute(
+                select(Client)
+                .outerjoin(BorrowerAccount, BorrowerAccount.client_id == Client.id)
+                .where(BorrowerAccount.id.is_(None))
+                .order_by(Client.created_at, Client.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    now = datetime.now(UTC)
+    created: list[BorrowerAccount] = []
+    for client in clients_missing_accounts:
+        account = BorrowerAccount(
+            client_id=client.id,
+            email=normalize_email(client.email),
+            password_hash=hash_password(password),
+            email_verified_at=now,
+        )
+        try:
+            async with db.begin_nested():
+                db.add(account)
+                await db.flush()
+        except IntegrityError:
+            continue
+        created.append(account)
+    return created

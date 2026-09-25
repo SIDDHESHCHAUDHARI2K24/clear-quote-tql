@@ -15,7 +15,7 @@ Gap check against the updated `system-design.md` (Borrower Portal intro, Decisio
 | 5 | Decision | Existing account on sign-up | The caller gets the same response as a fresh sign-up: 200 with a random `challenge_id` that is never stored, so verify fails with "Invalid or expired code". The email says "You already have a Clear Quote account — sign in instead". No second account is created. |
 | 6 | Decision | Matching a client | `lower(clients.email) == normalized email`. `clients.email` is not unique, so the oldest client (`created_at`, then `id`) is used. A client that already has an account is handled by Decision #5. |
 | 7 | Decision | New client's LO | `clients.assigned_lo_id` is NOT NULL, so the new client goes to the active `lo`-role user with the fewest assigned clients (ties by `users.created_at`). If there is no LO, 409 `NO_LOAN_OFFICER` is returned via `ConflictError`. |
-| 8 | Decision | Rate limits | Sign-up and login both call `check_login(valkey, principal="borrower", …)`, which uses the per-email and per-IP limits from settings. |
+| 8 | Decision (revised after T1 review) | Rate limits | Login calls `check_login(valkey, principal="borrower", …)`. Sign-up uses its own keys `rl:borrower:signup:email:{email}` / `rl:borrower:signup:ip:{ip}` with the same limits, so a flood of sign-ups for someone's email cannot lock them out of login. |
 | 9 | Decision | Session | Cookie `cq_borrower_session`, TTL `borrower_session_ttl_seconds` (7 days), sliding. `borrower_accounts.last_login_at` is set on every verified login and sign-up. |
 | 10 | Decision | `/me` shape | `{account_id, email, client_id, full_name, first_name, latest_application: {id, status} \| null}`. The latest application is by `created_at` for that client. `first_name` is the first word of `clients.full_name`. |
 | 11 | Decision | Ownership rule | `ensure_borrower_owns_client(account, client_id)` raises `NotFoundError`, which returns 404, never 403, so a borrower cannot confirm that another client id exists. Later portal features call it (or filter by `account.client_id`). |
@@ -69,6 +69,6 @@ The quote email (CQ-020), report (CQ-022), borrower actions (CQ-024) and the who
 
 ## Progress
 
-- [ ] T1
+- [x] T1
 - [ ] T2
 - [ ] T3
