@@ -44,6 +44,7 @@ async def make_application(
         zip_code: str | None = "33896",
         city: str | None = "Davenport",
         lo: User | None = None,
+        recommended_quote_id: uuid.UUID | None = None,
     ) -> Application:
         if lo is None:
             lo = User(
@@ -72,6 +73,7 @@ async def make_application(
             occupancy=occupancy,
             strategy=strategy,
             requested_price=requested_price,
+            recommended_quote_id=recommended_quote_id,
         )
         db_session.add(application)
         await db_session.flush()

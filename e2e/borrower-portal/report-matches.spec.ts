@@ -7,11 +7,13 @@ import { KATHLEEN_MCREYNOLDS_STORAGE_STATE } from "../global-setup";
 // stack (`make demo-reset`), and a real sent version for Kathleen McReynolds
 // -- the one TBD persona (buy-box FL/[Davenport, Orlando]) -- which
 // `make demo-reset` alone doesn't create (she has no `fixture_layer` in her
-// seed YAML, unlike Grace Kim/Luis Romero). Run
+// seed YAML, unlike Grace Kim/Luis Romero). `e2e/global-setup.ts` now runs
 // `uv run python backend/scripts/freeze_version.py --persona
-// kathleen_mcreynolds` first. Signed in once by `e2e/global-setup.ts`
-// (rate-limit friendly -- see its own comment); this file loads that saved
-// session instead of a fresh `borrowerLogin` per test.
+// kathleen_mcreynolds` automatically (idempotent -- reuses her existing
+// version if one hasn't expired) before it signs her in, so no manual step
+// is needed. Signed in once by `e2e/global-setup.ts` (rate-limit friendly --
+// see its own comment); this file loads that saved session instead of a
+// fresh `borrowerLogin` per test.
 const email = "kathleen.mcreynolds@clearquote-demo.test";
 const password = process.env.SEED_BORROWER_PASSWORD;
 

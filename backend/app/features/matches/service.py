@@ -30,6 +30,7 @@ from app.features.applications.models import Application
 from app.features.applications.property.models import Property, PropertyAddressStatus
 from app.features.pricing.engine.quote_engine import (
     compute_quote,
+    insurance_annual_rate_from_amount,
     match_ceiling_price,
     match_floor_price,
 )
@@ -143,6 +144,12 @@ async def _candidate_listings(
         # Decision 2 -- the catalog has no "owner-occupant" listing
         # attribute, so primary uses the full candidate set).
         stmt = stmt.where(ProviderListing.str_permitted.is_(True))
+    # No ORDER BY here on purpose: the final ranking in
+    # `compute_matches_for_package` sorts on `(rank_key, matched_property_id)`,
+    # an explicit total order that doesn't depend on the order these rows
+    # arrive in (Postgres has no guaranteed row order without an ORDER BY).
+    # A second `ORDER BY id` here would just make Postgres sort twice for
+    # no behavior change.
     return list((await db.execute(stmt)).scalars().all())
 
 
@@ -183,7 +190,9 @@ async def _build_candidate(
         strategy=strategy,
         fico=base_fico,
         property_tax_annual_rate=tax.annual_rate_pct / Decimal("100"),
-        insurance_annual_rate=insurance.annual_premium / listing.list_price,
+        insurance_annual_rate=insurance_annual_rate_from_amount(
+            listing.list_price, insurance.annual_premium
+        ),
         discount_points_pct=discount_points_pct,
         market_rent_ltr=market_rent_ltr,
         str_gross_annual_revenue=str_gross_annual_revenue,
@@ -310,9 +319,11 @@ async def compute_matches_for_package(
 
     # Strategy fit (spec.md): LTR by monthly cashflow descending, STR by
     # DSCR descending, primary by total monthly payment ascending (plan.md
-    # Decision 8).
-    reverse = strategy is not StrategyType.PRIMARY
-    candidates.sort(key=lambda c: c.rank_key, reverse=reverse)
+    # Decision 8). Secondary sort on the listing's own id (`matched_
+    # property_id`) makes a rank_key tie deterministic. `sign` flips the
+    # primary key's direction while the id tie-break always stays ascending.
+    sign = Decimal(1) if strategy is StrategyType.PRIMARY else Decimal(-1)
+    candidates.sort(key=lambda c: (sign * c.rank_key, c.match.matched_property_id))
 
     return [c.match for c in candidates[:_MAX_MATCHES]]
 

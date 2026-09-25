@@ -10,6 +10,18 @@ Run via `uv run python backend/scripts/freeze_version.py --persona
 kathleen_mcreynolds` from the repo root, against a worktree that has already
 run `make demo-reset` (needs the persona's `Scenario`/`Quote` rows to
 already exist -- runs `auto_price` itself if they don't).
+
+Idempotent: if the persona's application already has an unexpired,
+not-superseded `quote_package_versions` row whose package was frozen from
+the *same* quote ids the application would resolve to right now, this
+reuses it (prints its existing `report_token`) instead of freezing a new
+one -- `e2e/global-setup.ts` (CQ-023) calls this on every Playwright run,
+and a fresh version (and report_token) each run would be wasteful and
+would leave a growing pile of superseded/expired rows in the dev DB for no
+reason. The quote-id check (not just "any unexpired version exists") means
+a re-price within the 21-day expiry window (a rate sheet change, a
+`quote_engine` change, or a manual re-run of `auto_price`) still freezes a
+fresh version instead of silently serving stale numbers.
 """
 
 from __future__ import annotations
@@ -18,6 +30,7 @@ import argparse
 import asyncio
 import secrets
 import uuid
+from datetime import UTC, datetime
 
 from seed.loader import load_persona_fixtures
 from sqlalchemy import select
@@ -29,7 +42,7 @@ from app.features.portal.reports.versions import freeze_package_version
 from app.features.pricing.scenarios.models import Scenario
 from app.features.pricing.scenarios.service import auto_price
 from app.features.quotes.builder.models import Quote
-from app.features.quotes.send.models import QuotePackage
+from app.features.quotes.send.models import QuotePackage, QuotePackageVersion
 
 
 def _parse_args() -> argparse.Namespace:
@@ -84,6 +97,35 @@ async def _run(persona_key: str) -> None:
             quote_ids = [row.id for row in quotes]
         if not quote_ids:
             raise SystemExit(f"{email!r} has no priced quotes to freeze into a version.")
+
+        # Idempotency check happens *after* resolving the application's
+        # current quote_ids (above), not before: only reuse a version whose
+        # own package was frozen from this exact quote set, so a re-price
+        # since the last freeze (rate sheet change, quote_engine change, a
+        # manual auto_price re-run) always gets a fresh version instead of
+        # silently serving stale numbers.
+        existing = (
+            await db.execute(
+                select(QuotePackageVersion)
+                .join(QuotePackage, QuotePackageVersion.package_id == QuotePackage.id)
+                .where(
+                    QuotePackage.application_id == application.id,
+                    QuotePackage.quote_ids == quote_ids,
+                    QuotePackageVersion.superseded.is_(False),
+                    QuotePackageVersion.expires_at > datetime.now(UTC),
+                )
+                .order_by(QuotePackageVersion.sent_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            print(
+                f"Reusing existing quote_package_versions.id={existing.id} for {email} "
+                "(unexpired, not superseded, same quote_ids as the application resolves to now)"
+            )
+            print(f"report_token={existing.report_token}")
+            print(f"/report/{existing.report_token}")
+            return
 
         package = QuotePackage(
             application_id=application.id,

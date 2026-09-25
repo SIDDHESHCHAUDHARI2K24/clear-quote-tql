@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from seed.loader import seed_providers
@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import Occupancy, Strategy, UserRole
 from app.features.applications.models import Application
-from app.features.applications.property.models import PropertyAddressStatus
+from app.features.applications.property.models import PropertyAddressStatus, PropertyType
 from app.features.auth.models import User
 from app.features.clients.models import Client
 from app.features.matches.service import compute_matches_for_package
@@ -29,6 +29,8 @@ from app.features.pricing.engine.types import ConfigSnapshot, ScenarioInputs, St
 from app.features.pricing.scenarios.models import Scenario
 from app.features.pricing.scenarios.service import auto_price
 from app.features.quotes.builder.models import Quote
+from app.integrations.property_search.models import DealGrade, ProviderListing
+from app.integrations.rent.models import ProviderRent
 from app.integrations.tax.models import ProviderTaxRate
 
 from .conftest import seed_conventional_rate_sheet, seed_dscr_rate_sheet
@@ -388,3 +390,109 @@ async def test_compute_matches_returns_empty_without_a_property(
         db_session, application=application, recommended_quote=quote
     )
     assert matches == []
+
+
+async def test_match_ranking_ties_break_deterministically_by_listing_id(
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    set_field_value: Callable[..., Awaitable[object]],
+) -> None:
+    """Two listings identical on every input the LTR rank_key
+    (`monthly_cashflow`) depends on -- same price, state/county (tax),
+    zip (rent) -- produce a true tie. The result order must still be
+    deterministic (ascending `matched_property_id`/listing id), not
+    whatever order Postgres happens to return rows in."""
+    lo = User(
+        email=f"lo-{uuid.uuid4()}@clearquote-demo.test",
+        password_hash="not-a-real-hash",
+        role=UserRole.LO,
+        full_name="Jordan Blake",
+    )
+    db_session.add(lo)
+    await db_session.flush()
+
+    db_session.add(
+        ProviderTaxRate(
+            county="TieCounty",
+            state="TX",
+            annual_rate_pct=Decimal("2.0000"),
+            source_name="Test",
+            as_of=date(2026, 1, 1),
+        )
+    )
+    db_session.add(
+        ProviderRent(
+            zip="75001",
+            beds=1,
+            market_rent=Decimal("2000.00"),
+            rent_low=Decimal("1800.00"),
+            rent_high=Decimal("2200.00"),
+            comps_count=10,
+            as_of=date(2026, 1, 1),
+        )
+    )
+
+    listing_ids: list[uuid.UUID] = []
+    for i in range(2):
+        listing_id = uuid.uuid4()
+        listing_ids.append(listing_id)
+        db_session.add(
+            ProviderListing(
+                id=listing_id,
+                address=f"{100 + i} Tie St",
+                city="Tie City",
+                state="TX",
+                zip="75001",
+                county="TieCounty",
+                metro="TieMetro",
+                list_price=Decimal("250000.00"),
+                beds=3,
+                baths=Decimal("2.0"),
+                sqft=1500,
+                property_type=PropertyType.SINGLE_FAMILY,
+                image_url="https://example.com/tie.jpg",
+                deal_grade=DealGrade.GOOD_BUY,
+                tagline=None,
+                str_permitted=False,
+            )
+        )
+    # Sort ascending by id up front so the assertion below is independent
+    # of insertion order too.
+    listing_ids.sort()
+    await db_session.flush()
+
+    application = await make_application(
+        occupancy=Occupancy.INVESTMENT,
+        strategy=Strategy.LTR,
+        requested_price=Decimal("300000.00"),
+        address_status=PropertyAddressStatus.TBD,
+        buy_box_states=["TX"],
+        buy_box_metros=["TieMetro"],
+        recommend_matches=True,
+        lo=lo,
+    )
+    # Same subject-property field values as `_kathleen` above -- this keeps
+    # `auto_price`'s DSCR-bucket resolution collapsed to the one seeded
+    # bucket instead of triggering the two-pass re-price loop (which would
+    # need a rate sheet at whatever bucket a different tax/rent input
+    # produces). The *candidate listings*' own tax/rent (TX/TieCounty/75001,
+    # seeded above) are what drives the tie, not these.
+    await set_field_value(application.id, "representative_fico", Decimal("720"))
+    await set_field_value(application.id, "property_tax_annual_rate", Decimal("0.0089"))
+    await set_field_value(application.id, "homeowners_ins_annual", Decimal("1500.00"))
+    await set_field_value(application.id, "market_rent_ltr", Decimal("2250.00"))
+    seed_dscr_rate_sheet(db_session, "ONE_TO_1_25", Decimal("7.250"))
+    await db_session.commit()
+
+    pricing_result = await auto_price(db_session, application.id)
+    recommended_quote = await db_session.get(Quote, pricing_result.quote_ids[0])
+    assert recommended_quote is not None
+
+    matches = await compute_matches_for_package(
+        db_session, application=application, recommended_quote=recommended_quote
+    )
+
+    assert len(matches) == 2
+    # A true tie: both listings produce the exact same rank_key input.
+    assert matches[0].monthly_cashflow == matches[1].monthly_cashflow
+    assert [m.matched_property_id for m in matches] == [str(lid) for lid in listing_ids]
