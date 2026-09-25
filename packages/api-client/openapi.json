@@ -1215,6 +1215,55 @@
         }
       }
     },
+    "/api/v1/portal/me": {
+      "get": {
+        "tags": [
+          "portal-home"
+        ],
+        "summary": "Get Portal Home",
+        "operationId": "get_portal_home_api_v1_portal_me_get",
+        "parameters": [
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalHomeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -2502,6 +2551,167 @@
         ],
         "title": "PipelineStartResponse"
       },
+      "PortalApplicationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/PortalStage"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "next_action": {
+            "$ref": "#/components/schemas/PortalNextAction"
+          },
+          "secondary_report_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secondary Report Token"
+          },
+          "lo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortalLoOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "stage",
+          "label",
+          "next_action"
+        ],
+        "title": "PortalApplicationOut"
+      },
+      "PortalHomeResponse": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "applications": {
+            "items": {
+              "$ref": "#/components/schemas/PortalApplicationOut"
+            },
+            "type": "array",
+            "title": "Applications"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_name",
+          "email",
+          "applications"
+        ],
+        "title": "PortalHomeResponse"
+      },
+      "PortalLoOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "phone",
+          "email"
+        ],
+        "title": "PortalLoOut"
+      },
+      "PortalNextAction": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/PortalNextActionType"
+          },
+          "report_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Token"
+          },
+          "consent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Id"
+          },
+          "draft_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "PortalNextAction"
+      },
+      "PortalNextActionType": {
+        "type": "string",
+        "enum": [
+          "view_report",
+          "continue_application",
+          "authorize_credit_check",
+          "none"
+        ],
+        "title": "PortalNextActionType"
+      },
       "PortalReportActionRequest": {
         "properties": {
           "type": {
@@ -2644,6 +2854,19 @@
         ],
         "title": "PortalReportResponse",
         "description": "`ReportViewModel` plus the two fields only a live request can answer:\n`borrower_action` (from `QuotePackageVersion.borrower_action`, `None`\nuntil CQ-024) and `newest_report_token` (set only when this version is\nsuperseded, per spec.md's \"SupersededBanner ... a link to the newest\nversion\")."
+      },
+      "PortalStage": {
+        "type": "string",
+        "enum": [
+          "applied",
+          "in_review",
+          "preapproved",
+          "option_selected",
+          "closed",
+          "draft"
+        ],
+        "title": "PortalStage",
+        "description": "Borrower-facing stage (spec.md's mapping table), plus `draft` for an\nopen `application_drafts` row (CQ-032a) that has no `Application` yet."
       },
       "PricedProductRow-Input": {
         "properties": {

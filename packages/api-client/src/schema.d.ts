@@ -400,6 +400,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Portal Home */
+        get: operations["get_portal_home_api_v1_portal_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -944,6 +961,54 @@ export interface components {
             /** Started */
             started: boolean;
         };
+        /** PortalApplicationOut */
+        PortalApplicationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            stage: components["schemas"]["PortalStage"];
+            /** Label */
+            label: string;
+            next_action: components["schemas"]["PortalNextAction"];
+            /** Secondary Report Token */
+            secondary_report_token?: string | null;
+            lo?: components["schemas"]["PortalLoOut"] | null;
+        };
+        /** PortalHomeResponse */
+        PortalHomeResponse: {
+            /** First Name */
+            first_name: string;
+            /** Email */
+            email: string;
+            /** Applications */
+            applications: components["schemas"]["PortalApplicationOut"][];
+        };
+        /** PortalLoOut */
+        PortalLoOut: {
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string | null;
+            /** Email */
+            email: string;
+        };
+        /** PortalNextAction */
+        PortalNextAction: {
+            type: components["schemas"]["PortalNextActionType"];
+            /** Report Token */
+            report_token?: string | null;
+            /** Consent Id */
+            consent_id?: string | null;
+            /** Draft Id */
+            draft_id?: string | null;
+        };
+        /**
+         * PortalNextActionType
+         * @enum {string}
+         */
+        PortalNextActionType: "view_report" | "continue_application" | "authorize_credit_check" | "none";
         /** PortalReportActionRequest */
         PortalReportActionRequest: {
             type: components["schemas"]["BorrowerActionType"];
@@ -990,6 +1055,13 @@ export interface components {
             /** Newest Report Token */
             newest_report_token?: string | null;
         };
+        /**
+         * PortalStage
+         * @description Borrower-facing stage (spec.md's mapping table), plus `draft` for an
+         *     open `application_drafts` row (CQ-032a) that has no `Application` yet.
+         * @enum {string}
+         */
+        PortalStage: "applied" | "in_review" | "preapproved" | "option_selected" | "closed" | "draft";
         /** PricedProductRow */
         "PricedProductRow-Input": {
             /** Investor Name */
@@ -2199,6 +2271,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortalReportActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portal_home_api_v1_portal_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalHomeResponse"];
                 };
             };
             /** @description Validation Error */
