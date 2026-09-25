@@ -41,14 +41,14 @@ subject (no `outbox_emails.type` column, no migration — plan.md decision 1).
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Backend tests | `uv run pytest backend` (from repo root) | 515 passed (494 pre-existing + 21 new: 5 timeline, 6 outbox, 5 admin/integrations, 4 admin/settings, 1 Temporal AC4 workflow test) |
+| Backend tests | `uv run pytest backend` (from repo root, after merging `origin/phase-p5-p6`) | 622 passed (515 CQ-029 + CQ-027/CQ-030/CQ-031/CQ-034 merged in) — first full run under heavy concurrent-agent load on shared Postgres flaked 3 (`applications/listing` tests, spurious 401s from a leaked, hour-old `idle in transaction` savepoint on the shared slot-15 DB from a since-exited concurrent session); killed the stuck backend and reran clean twice, confirming pure contention, not a regression |
 | Seed tests | `uv run pytest seed` | 32 passed (unchanged) |
 | Lint / types (backend) | `ruff check backend`, `ruff format --check backend`, `mypy backend/app backend/conftest.py backend/tests backend/scripts` | clean |
-| Frontend (whole repo) | `pnpm -r run test` | ui 163, lo-console 69 (+9: 4 activity, 4 outbox, 3 admin, +1 WorkspaceHeader Activity-button test, −3 retired stub-page assertions), borrower-portal 95 (untouched), api-client 2 — all passed |
+| Frontend (whole repo) | `pnpm -r run test` | ui 163, lo-console 104 (+9 CQ-029: 4 activity, 4 outbox, 3 admin incl. 2 new stale-check tests, +1 WorkspaceHeader Activity-button test, −3 retired stub-page assertions, plus CQ-027/030/031/034's own new tests), borrower-portal 113 (+18, CQ-031/034), api-client 2 — 382 total, all passed |
 | Lint / types (frontend) | `pnpm -r run lint`, `pnpm -r run typecheck`, `pnpm exec tsc --noEmit` (e2e), `pnpm exec eslint e2e/lo-console/{integration-panel,shell}.spec.ts` | clean |
 | Prettier | `pnpm exec prettier --check .` | clean |
 | react-doctor | `npx react-doctor -y --blocking error` (lo-console) | 79/100, 0 errors, 4 warnings (see below); exit code 0 |
-| e2e (slot 15) | `pnpm exec playwright test e2e/lo-console --workers=1` (API 8115, worker on `cq-s15`, LO console 3115) | 18 passed, incl. the 3 new `integration-panel.spec.ts` tests and the edited `shell.spec.ts` |
+| e2e (slot 15, full lo-console suite, re-run after the `phase-p5-p6` merge) | `make demo-reset`; API on 8115, worker on `cq-s15`, LO console 3115, borrower portal 3215 (global-setup signs in shared borrower personas regardless of project scope); `pnpm exec playwright test e2e/lo-console --workers=1` | 24 passed (`applications-list.spec.ts` ×5, `integration-panel.spec.ts` ×4 incl. the new stale-check test, `report-gallery.spec.ts` ×2, `shell.spec.ts` ×4, `smoke.spec.ts` ×1, `staff-login.spec.ts` ×1, `workspace.spec.ts` ×7) in 1.2m; screenshots saved to `evidence/` (`admin-integrations-forced.png`, `admin-integrations-stale-check.png`, `admin-settings.png`) |
 | Manual API check | curl against slot 15 after `make demo-reset` | Marcus Hale's `/activity` returns the exact imported→verified→priced sequence with readable messages; `/outbox?type=quote_sent` returns Grace Kim + Luis Romero; `/admin/settings` returns every documented key with sources |
 
 react-doctor warnings (all non-blocking, exit code 0):
