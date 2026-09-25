@@ -65,15 +65,18 @@ test("the nav links go to the stub pages", async ({ page }) => {
   await staffLogin(page, LO, password!);
   const nav = page.getByRole("navigation", { name: "Main" });
 
+  // CQ-027 (small, logged necessity): `/applications` is no longer a stub
+  // -- it has no "Built in CQ-027" text -- so it carries no `item` here;
+  // its own coverage is `e2e/lo-console/applications-list.spec.ts`.
   for (const [label, path, item] of [
     ["Clients", "/clients", "CQ-026"],
-    ["Applications", "/applications", "CQ-027"],
+    ["Applications", "/applications", null],
     ["Dashboard", "/", "CQ-025"],
   ] as const) {
     await nav.getByRole("link", { name: label }).click();
     await page.waitForURL(path);
     await expect(page.getByRole("heading", { level: 1, name: label })).toBeVisible();
-    await expect(page.getByText(`Built in ${item}`)).toBeVisible();
+    if (item) await expect(page.getByText(`Built in ${item}`)).toBeVisible();
     await expect(nav.getByRole("link", { name: label })).toHaveAttribute("aria-current", "page");
   }
   await page.screenshot({ path: `${EVIDENCE}/lo-dashboard-stub.png` });

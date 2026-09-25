@@ -31,6 +31,8 @@ interface MailpitMessagesResponse {
 interface MailpitMessage {
   Text: string;
   HTML: string;
+  Subject: string;
+  To: { Address: string }[];
 }
 
 async function fetchJson<T>(path: string): Promise<T> {
@@ -67,4 +69,34 @@ export async function readOtpCode(email: string, timeoutMs = 10_000): Promise<st
   }
 
   throw new Error(`No OTP email arrived for ${email} within ${timeoutMs}ms`);
+}
+
+// CQ-034 spec.md AC1: polls Mailpit's search endpoint for messages `to`
+// this address whose subject contains `subjectContains`, until at least
+// `minCount` have arrived (or `timeoutMs` elapses), then fetches each
+// match's full body. Generalizes `readOtpCode`'s poll loop for specs that
+// need more than the newest single message (AC1 wants exactly one
+// support-inbox email and one confirmation email, both by reference).
+export async function waitForEmails(
+  to: string,
+  subjectContains: string,
+  { minCount = 1, timeoutMs = 10_000 }: { minCount?: number; timeoutMs?: number } = {},
+): Promise<MailpitMessage[]> {
+  const deadline = Date.now() + timeoutMs;
+  const normalized = to.toLowerCase();
+  const query = encodeURIComponent(`to:"${normalized}" subject:"${subjectContains}"`);
+
+  while (Date.now() < deadline) {
+    const { messages } = await fetchJson<MailpitMessagesResponse>(
+      `/api/v1/search?query=${query}&limit=20`,
+    );
+    if (messages.length >= minCount) {
+      return Promise.all(messages.map((m) => fetchJson<MailpitMessage>(`/api/v1/message/${m.ID}`)));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+
+  throw new Error(
+    `Fewer than ${minCount} email(s) to ${to} matching "${subjectContains}" arrived within ${timeoutMs}ms`,
+  );
 }

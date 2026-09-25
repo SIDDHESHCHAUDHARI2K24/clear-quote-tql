@@ -1,92 +1,92 @@
-# Graph Report - agent-a30e3c46b2d6ef7c9  (2026-09-25)
+# Graph Report - phase-p5-p6  (2026-09-25)
 
 ## Corpus Check
-- 853 files · ~737,884 words
+- 884 files · ~773,302 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5422 nodes · 12512 edges · 463 communities (386 shown, 77 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 561 edges (avg confidence: 0.63)
+- 5776 nodes · 13565 edges · 465 communities (389 shown, 76 thin omitted)
+- Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 617 edges (avg confidence: 0.63)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `daccfcfc`
+- Built from commit: `9023b078`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - verification/tests/test_service.py
-- compute_quote
-- freeze_package_version
+- ConfigSnapshot
+- test_versions.py
 - enrichment/service.py
 - enums.py
-- outbox/service.py
-- borrower/service.py
-- main.py
-- report/types.ts
-- cx
+- compute_quote
+- core/errors.py
+- system/service.py
+- ui/src/index.ts
+- listing/service.py
 - lo-console/src/app/gallery/page.tsx
-- borrower-portal/src/features/shell/index.ts
-- make_persona_application
+- borrower-portal/src/features/auth/index.ts
+- test_application_pipeline_personas.py
 - scenarios/service.py
 - activities.py
 - applications/tests/test_service.py
 - ReportActionsSlot.tsx
 - db.ts
-- summary/tests/test_service.py
-- ui/src/index.ts
-- test_security.py
+- Application
+- Button
+- seed_providers
 - test_rules.py
 - pricing/mock.py
-- ScenarioInputs
+- home/index.ts
 - matches/tests/test_service.py
-- integrations/service.py
+- MockLosClient
 - actions/service.py
-- StrategyType
+- QuoteComputation
 - devDependencies
-- ReportViewModelData
-- borrower/router.py
-- lo-console/src/features/auth/index.ts
-- core/errors.py
-- verify_challenge
-- test_products_grid_returns_8_to_15_rows
+- stale/service.py
+- stale/tests/test_service.py
+- timedelta
+- borrower-portal/src/features/shell/index.ts
+- test_security.py
+- is_forced_to_fail
 - rent/mock.py
 - storage.py
-- reports/tests/test_router.py
-- test_golden.py
+- _StartedWorkflows
+- staff/router.py
 - test_signup.py
-- common/errors.py
-- property_search/mock.py
+- credit/mock.py
+- test_contract.py
 - lo-console/src/features/shell/index.ts
 - What You Must Do When Invoked
 - Tables by owning module
 - test_rate_limit.py
-- auth.py
-- actions/tests/test_router.py
-- Application
-- sessions/service.py
+- User
+- make_borrower_session
+- make_persona_application
+- make_application
 - insurance/mock.py
 - applications/router.py
-- test_retry_policy.py
-- seed_persona
+- main.py
+- seed/tests/conftest.py
 - devDependencies
 - templates.py
-- test_login_flow.py
+- borrower/service.py
 - workspace/index.ts
-- staff/service.py
-- test_draft_quote_set.py
-- crm/tests/test_mock.py
+- auth.py
+- make_application
+- applications/index.ts
 - CQ-006 — Post-development notes
 - Data Field Catalog
 - dependencies
-- get_settings
-- loader.py
-- str/mock.py
-- is_forced_to_fail
-- OutboxList.tsx
+- test_encryption.py
+- QuotePackageVersion
+- common/errors.py
+- tax/mock.py
+- home/service.py
 - dependencies
 - test_pagination.py
-- test_login.py
+- ApplicationRow.tsx
 - CQ-003 — Post-development notes
 - CQ-004 Backend skeleton
 - devDependencies
@@ -94,7 +94,7 @@
 - @types/react
 - Steps
 - isPublicPath
-- verification/service.py
+- rules.py
 - CQ-001 Agent tooling & process
 - CQ-012 — Post-development notes
 - compilerOptions
@@ -103,16 +103,16 @@
 - test_db_isolation.py
 - CQ-002 Monorepo scaffold
 - compilerOptions
-- Table.tsx
-- matches/service.py
+- record_call
+- ScenarioInputs
 - CQ-009 Mock integrations
 - CQ-011 — Post-development notes
 - CQ-016 Application workspace shell
 - Clear Quote — System Design & Feature Spec
 - api-client/package.json
 - compilerOptions
-- seed_background_applications
-- staff/router.py
+- reset.py
+- borrower/router.py
 - test_scenario_inputs_validation.py
 - scripts
 - CQ-007 — Post-development notes
@@ -121,14 +121,14 @@
 - CQ-013 Pricing service & API — post-dev
 - command
 - report-no-money-math.test.ts
-- timeline/service.py
+- test_activities_are_thin_wrappers.py
 - scripts
 - CQ-004 — Post-development notes
 - CQ-005 Frontend skeleton & design system
 - CQ-009 — Post-development notes
-- test_aisha_coleman_flagged_path_writes_4_events
+- Flag
 - test_p5p6_schema.py
-- select_par_and_buydown
+- insurance_annual_rate_from_amount
 - CQ-003 — Implementation plan
 - CQ-003 Local infrastructure
 - CQ-006 — Implementation plan
@@ -139,7 +139,7 @@
 - CQ-021 — Implementation plan
 - Phase P3 + P4 plan (CQ-016–CQ-024)
 - AGENTS.md — Clear Quote TQL
-- email/tests/test_service.py
+- .start_workflow
 - CQ-005 — Implementation plan
 - CQ-005 — Post-development notes
 - CQ-006 CI
@@ -154,7 +154,7 @@
 - borrower-portal/package.json
 - lo-console/package.json
 - view-model.types.test.ts
-- ActivityTimeline.tsx
+- verify_challenge
 - ob_request.py
 - graphify reference: extra exports and benchmark
 - CQ-001 — Implementation plan
@@ -235,7 +235,7 @@
 - {ID} {TITLE}
 - builder.py
 - worktree-env.sh
-- PrimitivesSection.tsx
+- Toast.tsx
 - postcss
 - tailwindcss
 - @types/react-dom
@@ -244,7 +244,7 @@
 - CQ-011 — Implementation plan
 - @testing-library/jest-dom
 - P5/P6 foundation — Post-development notes
-- summary/router.py
+- postcss
 - kaneo
 - tailwindcss
 - Client
@@ -257,23 +257,23 @@
 - @types/react-dom
 - Setup
 - Overlay
-- (staff)/page.test.tsx
+- _tab_state
 - @vitejs/plugin-react
-- test_assignment.py
-- test_application_status_enum_type_in_db_includes_withdrawn_and_closed
+- reports/tests/test_router.py
+- now
 - G4 whole-phase integration review — `main...phase-p0-p1` (CQ-001…CQ-013)
 - .prettierrc.json
 - vitest
 - 8aa99c7f2577_seed_settings_defaults.py
 - bbd0e3150264_p3p4_foundation.py
-- make_staff_session
-- timeline/tests/test_router.py
-- _dummy_feature_router.py
+- actions/tests/test_router.py
+- test_import_failure_lands_on_a_terminal_stage_not_stuck_importing
+- support/service.py
 - graphify reference: add a URL and watch a folder
 - graphify reference: commit hook and native CLAUDE.md integration
 - graphify reference: incremental update and cluster-only
 - CQ-011 — Handoffs
-- test_auth_deps.py
+- cx
 - borrower-portal/src/app/layout.tsx
 - lo-console/src/app/layout.tsx
 - .claude/CLAUDE.md
@@ -322,12 +322,12 @@
 - lo-console/next.config.mjs
 - lo-console/next-env.d.ts
 - lo-console/postcss.config.mjs
-- verification/models.py
+- test_activity_sessions_hold_the_test_lock
 - Phase P5 + P6 plan (CQ-025–CQ-034)
 - seed_users
-- test_pipeline_stage_writes.py
-- IntegrationsPanel.tsx
-- test_flag_messages.py
+- SupportForm.tsx
+- submit_support_request
+- make_staff_session
 - 3b55187d53d7_p5p6_foundation.py
 - features/__init__.py
 - engine/__init__.py
@@ -337,238 +337,236 @@
 - reference/README.md
 - init-databases.sh
 - seed/__init__.py
-- backend/conftest.py
+- get_settings
 - clear-quote
 - Base
-- make_application
-- settings/router.py
-- mi_factor
-- seed/tests/conftest.py
-- test_status_patch_404_for_other_los_application
-- MultiSelect.tsx
-- eslint-config-next
+- test_users.py
+- stage_and_label
+- (staff)/page.test.tsx
 - test_provider_rows_seeded.py
-- enrichment/tests/test_auth_scope.py
-- scenarios/tests/test_auth_scope.py
-- SettingsPanel.tsx
-- fixture
-- record_call
-- test_settings_match_snapshot
-- application_workflow_id
-- User
-- extractErrorMessage
-- test_matches_empty_with_no_scenario_priced
-- P5/P6 worker guide (shared instructions for every item worker)
+- test_status_patch_404_for_other_los_application
+- applications/page.tsx
 - test_default_scenarios_investment.py
-- test_patch_field_value_sets_override
-- api-client/src/index.ts
-- valkey.py
-- workflows/__init__.py
-- do_run_migrations
-- test_scenario_create_route_propagates_pricing_validation_error
-- eslint-config-next
+- test_default_scenarios_primary.py
+- support/templates.py
+- test_stale_quote_check.py
+- verification/service.py
+- home/router.py
+- fixture
+- test_resume_reprices_ben_ford_without_reimporting
+- submit_support
+- test_portal_application_skips_import_and_reaches_priced
+- test_aisha_coleman_flagged_path_writes_4_events
+- test_application_status_enum_type_in_db_includes_withdrawn_and_closed
+- make_application
+- test_aisha_coleman_ltr_columbus_oh_needs_attention_missing_occupancy
+- test_schedule_registration_failure_does_not_stop_the_worker
+- test_openapi_export.py
+- P5/P6 worker guide (shared instructions for every item worker)
 - eslint
+- run_pricing_stage
+- eslint-config-next
 
 ## God Nodes (most connected - your core abstractions)
-1. `Application` - 324 edges
-2. `Client` - 94 edges
-3. `compute_quote()` - 86 edges
-4. `User` - 85 edges
-5. `ScenarioInputs` - 85 edges
-6. `Occupancy` - 81 edges
-7. `ConfigSnapshot` - 80 edges
-8. `Base` - 76 edges
-9. `UserRole` - 68 edges
-10. `get_settings()` - 62 edges
+1. `Application` - 323 edges
+2. `Client` - 104 edges
+3. `User` - 86 edges
+4. `compute_quote()` - 86 edges
+5. `ScenarioInputs` - 83 edges
+6. `Occupancy` - 79 edges
+7. `ApplicationStatus` - 78 edges
+8. `ConfigSnapshot` - 78 edges
+9. `Base` - 76 edges
+10. `UserRole` - 72 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `BorrowerSeedResult` --uses--> `FlagSeverity`  [INFERRED]
-  seed/loader.py → backend/app/core/enums.py
-- `MissingStaffPasswordError` --uses--> `FlagSeverity`  [INFERRED]
-  seed/loader.py → backend/app/core/enums.py
-- `NoLoanOfficerError` --uses--> `FlagSeverity`  [INFERRED]
-  seed/loader.py → backend/app/core/enums.py
-- `PersonaSeedResult` --uses--> `FlagSeverity`  [INFERRED]
-  seed/loader.py → backend/app/core/enums.py
-- `UserSeedResult` --uses--> `FlagSeverity`  [INFERRED]
-  seed/loader.py → backend/app/core/enums.py
+- `BorrowerSeedResult` --uses--> `AppError`  [INFERRED]
+  seed/loader.py → backend/app/core/errors.py
+- `MissingStaffPasswordError` --uses--> `AppError`  [INFERRED]
+  seed/loader.py → backend/app/core/errors.py
+- `NoLoanOfficerError` --uses--> `AppError`  [INFERRED]
+  seed/loader.py → backend/app/core/errors.py
+- `PersonaSeedResult` --uses--> `AppError`  [INFERRED]
+  seed/loader.py → backend/app/core/errors.py
+- `UserSeedResult` --uses--> `AppError`  [INFERRED]
+  seed/loader.py → backend/app/core/errors.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (463 total, 77 thin omitted)
+## Communities (465 total, 76 thin omitted)
 
 ### Community 0 - "verification/tests/test_service.py"
-Cohesion: 0.13
-Nodes (41): HousingHistory, ApplicationParty, _build_context(), _latest_scenario_snapshot(), AsyncSession, UUID, Resolves (sets `resolved_at`) the existing unresolved `flags` row for…, Assembles the application's `VerificationContext`, evaluates every rule,… (+33 more)
+Cohesion: 0.17
+Nodes (30): ApplicationParty, Assembles the application's `VerificationContext`, evaluates every rule,…, run_and_persist(), make_application(), AsyncSession, fixture, AsyncSession, Ben Ford — Primary, Fort Wayne IN, 14 months at current address, no prior… (+22 more)
 
-### Community 1 - "compute_quote"
-Cohesion: 0.06
-Nodes (62): break_even_rent_ltr(), cap_rate_pct(), cash_to_close(), compute_quote(), cost_segregation(), discount_points_amount(), dscr_ratio(), loan_amount() (+54 more)
+### Community 1 - "ConfigSnapshot"
+Cohesion: 0.08
+Nodes (36): _CurrentScenarioNumbers, _down_payment_amount(), `quote_engine.compute_quote(...).down_payment_amount` for this scenario, or…, _scenario_numbers(), _HasMiMatrix, mi_factor(), Decimal, Protocol (+28 more)
 
-### Community 2 - "freeze_package_version"
-Cohesion: 0.13
-Nodes (32): Local fixtures for `portal/actions/tests`. Re-exports…, make_application(), AsyncSession, Decimal, fixture, Local fixtures for `portal/reports/tests` -- own copy of…, A minimal Conventional curve so `auto_price` has par + buydown candidates for a…, A minimal DSCR curve for an investment (LTR/STR) application, at a single DSCR… (+24 more)
+### Community 2 - "test_versions.py"
+Cohesion: 0.17
+Nodes (23): Local fixtures for `portal/actions/tests`. Re-exports…, AsyncSession, Decimal, fixture, A minimal Conventional curve so `auto_price` has par + buydown candidates for a…, A minimal DSCR curve for an investment (LTR/STR) application, at a single DSCR…, seed_conventional_rate_sheet(), seed_dscr_rate_sheet() (+15 more)
 
 ### Community 3 - "enrichment/service.py"
-Cohesion: 0.09
-Nodes (57): FieldSource, Drives the source badge + "revert to source" UI on `field_values`., Property, FieldValue, patch_field_value(), AsyncSession, CurrentStaff, patch (+49 more)
+Cohesion: 0.12
+Nodes (49): FieldSource, Drives the source badge + "revert to source" UI on `field_values`., Property, FieldValue, patch_field_value(), AsyncSession, CurrentStaff, patch (+41 more)
 
 ### Community 4 - "enums.py"
-Cohesion: 0.06
-Nodes (61): EncryptedString, _fernet(), Any, Encrypts a UTF-8 string to a Fernet token before storing as bytes., ApplicationSource, ApplicationStatus, LoanPurpose, Occupancy (+53 more)
+Cohesion: 0.05
+Nodes (70): EncryptedString, _fernet(), Any, At-rest encryption for sensitive columns (currently just SSN).…, Encrypts a UTF-8 string to a Fernet token before storing as bytes., ApplicationSource, ApplicationStatus, ApplicationTab (+62 more)
 
-### Community 5 - "outbox/service.py"
+### Community 5 - "compute_quote"
+Cohesion: 0.04
+Nodes (97): break_even_rent_ltr(), bucket_for_dscr(), cap_rate_pct(), cash_to_close(), compute_quote(), cost_segregation(), discount_points_amount(), dscr_ratio() (+89 more)
+
+### Community 6 - "core/errors.py"
 Cohesion: 0.12
-Nodes (34): download_attachment(), get_outbox_email(), list_outbox_emails(), AsyncSession, CurrentStaff, get, OutboxEmailDetail, OutboxEmailRow (+26 more)
+Nodes (24): AppError, AuthenticationError, ConflictError, ForbiddenError, Any, Exception, RateLimitedError, Pinned application error shape. Every `AppError` (and subclass) raised anywhere… (+16 more)
 
-### Community 6 - "borrower/service.py"
-Cohesion: 0.09
-Nodes (38): ConflictError, hash_password_async(), `hash_password`, off the event loop: argon2 is deliberately CPU-expensive…, build_me(), _find_or_create_client(), login(), AsyncSession, Redis (+30 more)
+### Community 7 - "system/service.py"
+Cohesion: 0.13
+Nodes (26): get_health(), AsyncSession, Response, System feature routes: `GET /health`. `router` is included twice by…, CheckResult, HealthReport, BaseModel, Pydantic response models for the `/health` endpoint. (+18 more)
 
-### Community 7 - "main.py"
+### Community 8 - "ui/src/index.ts"
 Cohesion: 0.06
-Nodes (52): FastAPI, Feature-router registration. To add a feature (CQ-007 onward): create the sub-…, register_routers(), close_valkey(), Closes the shared client; called from the app's shutdown handler., Any, `components/schemas` entries for `ReportViewModel` and every model it…, report_view_model_openapi_components() (+44 more)
+Nodes (68): BreakdownTable(), BreakdownTableProps, CashflowTable(), CashflowTableProps, ComparisonTable(), ComparisonTableProps, Row, ROWS (+60 more)
 
-### Community 8 - "report/types.ts"
-Cohesion: 0.08
-Nodes (42): BreakdownTable(), BreakdownTableProps, CashflowTable(), CashflowTableProps, CostSegTable(), CostSegTableProps, Disclosures(), DisclosuresProps (+34 more)
-
-### Community 9 - "cx"
-Cohesion: 0.09
-Nodes (25): Card(), CardProps, PADDING_CLASSES, EmptyState(), EmptyStateProps, Pagination(), PaginationProps, Collapsible() (+17 more)
+### Community 9 - "listing/service.py"
+Cohesion: 0.06
+Nodes (68): Page, BaseModel, ApplicationListResponse, ApplicationRow, LoOption, BaseModel, Request/response shapes for `GET /applications` (spec.md CQ-027 "Backend").…, One row of `GET /applications` (spec.md "Row"). Shared with CQ-026 (E9) -- keep… (+60 more)
 
 ### Community 10 - "lo-console/src/app/gallery/page.tsx"
-Cohesion: 0.07
-Nodes (32): GalleryPage(), QuoteRow, tabItems, tableColumns, tableRows, GalleryPage(), QuoteRow, tabItems (+24 more)
+Cohesion: 0.06
+Nodes (40): GalleryPage(), QuoteRow, tabItems, tableColumns, tableRows, GalleryPage(), QuoteRow, tabItems (+32 more)
 
-### Community 11 - "borrower-portal/src/features/shell/index.ts"
-Cohesion: 0.05
-Nodes (46): LoginPageProps, ApplyPage(), HomePage(), BORROWER_ME, { getMock, postMock, replaceMock }, SupportPage(), CreditCheckTaskPage(), SignupPageProps (+38 more)
+### Community 11 - "borrower-portal/src/features/auth/index.ts"
+Cohesion: 0.09
+Nodes (22): LoginPageProps, SignupPageProps, APPLICATION_STATUS_LABELS, applicationStatusLabel(), AuthFlow(), AuthFlowMode, AuthFlowProps, otherModeHref() (+14 more)
 
-### Community 12 - "make_persona_application"
-Cohesion: 0.17
-Nodes (30): make_persona_application(), AsyncSession, A single Conventional 30yr rate curve — matches `pricing/scenarios/…, Seeds the SAME DSCR curve for all three `DSCRBucket` values, so…, seed_conventional_curve(), seed_dscr_curve_all_buckets(), seed_market_rent(), seed_tax_rate() (+22 more)
+### Community 12 - "test_application_pipeline_personas.py"
+Cohesion: 0.26
+Nodes (17): Seeds the SAME DSCR curve for all three `DSCRBucket` values, so…, seed_dscr_curve_all_buckets(), seed_market_rent(), seed_tax_rate(), UUID, AC1: `ApplicationPipelineWorkflow` against each of the 10 persona fixtures from…, CQ-010 advances this persona to `sent` afterward, outside this workflow…, CQ-010 advances this persona to `option_selected` afterward, outside this… (+9 more)
 
 ### Community 13 - "scenarios/service.py"
-Cohesion: 0.10
-Nodes (55): NotFoundError, ValidationAppError, inputs_with_priced_product(), AsyncSession, UUID, `run_two_pass_dscr`: the DSCR pricing loop (system-design.md § Calculation…, run_two_pass_dscr(), TwoPassDscrResult (+47 more)
+Cohesion: 0.09
+Nodes (62): NotFoundError, ValidationAppError, DSCRBucket, StrEnum, DSCR classification bucket. Boundaries are inclusive on the lower edge., inputs_with_priced_product(), ObRequestOverrides, Scenario-specific values known once the LO has priced a scenario; `None`/absent… (+54 more)
 
 ### Community 14 - "activities.py"
-Cohesion: 0.09
-Nodes (47): draft_default_quote_set(), AsyncSession, UUID, QuoteSetResult, `draft_default_quote_set`: the exact function name CQ-011's `draft_quote_ set`…, auto_price_application(), _dataclass_payload(), draft_quote_set() (+39 more)
+Cohesion: 0.08
+Nodes (51): draft_default_quote_set(), AsyncSession, UUID, QuoteSetResult, `draft_default_quote_set`: the exact function name CQ-011's `draft_quote_ set`…, _make_primary_application(), AsyncSession, _seed_conventional_rate_sheet() (+43 more)
 
 ### Community 15 - "applications/tests/test_service.py"
-Cohesion: 0.08
-Nodes (49): Asset, Employment, Liability, _build_borrower_party(), _build_co_borrower_party(), _build_housing_rows(), import_from_los(), ImportResult (+41 more)
+Cohesion: 0.11
+Nodes (41): Asset, Employment, `assets`, `employment` and `documents` tables. **Decision** (spec): the catalog…, Liability, HousingHistory, HousingStatus, _build_borrower_party(), _build_co_borrower_party() (+33 more)
 
 ### Community 16 - "ReportActionsSlot.tsx"
-Cohesion: 0.08
-Nodes (23): ReportPageRouteProps, BorrowerActionRecord, BorrowerActionType, parseBorrowerAction(), PortalReportActionResponse, submitReportAction(), AskOtherDialog(), AskOtherDialogProps (+15 more)
+Cohesion: 0.06
+Nodes (27): ReportGalleryPage(), ReportPageRouteProps, BorrowerActionRecord, BorrowerActionType, parseBorrowerAction(), PortalReportActionResponse, submitReportAction(), AskOtherDialog() (+19 more)
 
 ### Community 17 - "db.ts"
-Cohesion: 0.07
-Nodes (34): EVIDENCE_DIR, REPO_ROOT, EVIDENCE_DIR, FrozenVersion, REPO_ROOT, EVIDENCE_DIR, AUTH_DIR, freezeKathleenMcReynoldsVersion() (+26 more)
+Cohesion: 0.06
+Nodes (41): EVIDENCE_DIR, REPO_ROOT, EVIDENCE_DIR, FrozenVersion, REPO_ROOT, REPO_ROOT, EVIDENCE_DIR, EVIDENCE_DIR (+33 more)
 
-### Community 18 - "summary/tests/test_service.py"
-Cohesion: 0.14
-Nodes (40): build_application_summary(), _current_scenario(), make_application(), make_flag(), make_property(), make_quote(), make_scenario(), AsyncSession (+32 more)
-
-### Community 19 - "ui/src/index.ts"
+### Community 18 - "Application"
 Cohesion: 0.11
-Nodes (22): AuthCard(), AuthCardProps, CredentialsForm(), CredentialsFormProps, CredentialsFormValues, OtpForm(), OtpFormProps, OtpFormValues (+14 more)
+Nodes (54): Application, get_application_summary(), patch_status(), AsyncSession, CurrentStaff, patch, UUID, Workspace summary + status routes (spec.md CQ-016 "Backend"). (+46 more)
 
-### Community 20 - "test_security.py"
+### Community 19 - "Button"
+Cohesion: 0.10
+Nodes (24): CredentialsForm(), CredentialsFormProps, CredentialsFormValues, AppErrorBody, extractErrorMessage(), FastApiValidationBody, FastApiValidationDetail, fieldLabelFromLoc() (+16 more)
+
+### Community 20 - "seed_providers"
 Cohesion: 0.09
-Nodes (36): constant_time_equals(), generate_otp_code(), generate_token(), hash_token(), keyed_hash(), Password hashing, OTP codes and opaque tokens shared by CQ-014 (staff) and…, True iff `plain` matches `hash_`. False (never raises) on mismatch or on a…, `verify_password`, off the event loop — see `hash_password_async`. (+28 more)
+Nodes (43): AsyncSession, test_admin_stale_check_endpoint(), MonkeyPatch, parametrize, AC1 (PR review round 1, MAJOR 1): every header number the summary returns…, test_summary_matches_engine(), client(), AsyncClient (+35 more)
 
 ### Community 21 - "test_rules.py"
 Cohesion: 0.16
 Nodes (33): evaluate_rules(), Runs every rule against `context`, flattening each rule's 0-or-more results (a…, HousingSnapshot, PartySnapshot, BaseModel, One `application_parties` row, trimmed to what the rules need., One `housing_history` row, trimmed to what `housing_history_24mo` needs., The two `quote_engine`-computed numbers the pricing-stage rules read. Field… (+25 more)
 
 ### Community 22 - "pricing/mock.py"
-Cohesion: 0.09
-Nodes (35): PricingValidationError, Raised by `PricingClient` when required OB fields are missing. Overrides…, A fully valid *primary* request -- every always-required field set, no…, _valid_pricing_request(), _is_missing(), _missing_fields(), MockPricingClient, _parse_ppp_years() (+27 more)
+Cohesion: 0.10
+Nodes (33): A fully valid *primary* request -- every always-required field set, no…, _valid_pricing_request(), _is_missing(), _missing_fields(), MockPricingClient, _parse_ppp_years(), Any, AsyncSession (+25 more)
 
-### Community 23 - "ScenarioInputs"
-Cohesion: 0.07
-Nodes (64): _CurrentScenarioNumbers, _down_payment_amount(), Decimal, UUID, Builds the workspace summary (spec.md CQ-016) and applies the Withdrawn/Closed…, `quote_engine.compute_quote(...).down_payment_amount` for this scenario, or…, _scenario_numbers(), (b): `application.recommended_quote_id` is unset and there are several… (+56 more)
+### Community 23 - "home/index.ts"
+Cohesion: 0.09
+Nodes (27): HomePage(), APPLICATION_BASE, EMPTY_HOME, { getMock, postMock, replaceMock, pushMock }, fetchPortalHome(), PortalApplicationOut, PortalHomeResponse, PortalNextAction (+19 more)
 
 ### Community 24 - "matches/tests/test_service.py"
-Cohesion: 0.10
-Nodes (50): PropertyAddressStatus, PropertyType, `properties` table: subject property (or TBD placeholder) + buy-box., compute_matches_for_package(), Returns up to 3 `ReportMatchInput`s for `application`, or `[]` when matches…, make_application(), AsyncSession, Decimal (+42 more)
+Cohesion: 0.12
+Nodes (43): compute_matches_for_package(), Returns up to 3 `ReportMatchInput`s for `application`, or `[]` when matches…, make_application(), AsyncSession, Decimal, fixture, Own copy of `portal/reports/tests/conftest.py`'s helper of the same name -- a…, Own copy of `portal/reports/tests/conftest.py`'s helper of the same name -- a… (+35 more)
 
-### Community 25 - "integrations/service.py"
-Cohesion: 0.06
-Nodes (57): now(), parse_instant(), datetime, Injectable "now" (P5/P6 foundation, phase-p5-p6-plan.md E2). `now()` returns…, Parses an ISO-8601 instant; a naive value is taken as UTC. Accepts a trailing…, The current time as a timezone-aware UTC `datetime`, honouring the `clock_now`…, _override(), MonkeyPatch (+49 more)
+### Community 25 - "MockLosClient"
+Cohesion: 0.10
+Nodes (28): IntegrationCall, _los_call_rows(), AsyncEngine, AsyncSession, MonkeyPatch, AC5: every mock call (success or failure) writes exactly one…, Reproduces `backend/conftest.py`'s `db_session` fixture logic standalone (like…, A caller's pending work must stay pending -- `record_call` writing the audit… (+20 more)
 
 ### Community 26 - "actions/service.py"
 Cohesion: 0.12
-Nodes (24): AsyncSession, CurrentBorrower, PortalReportActionResponse, post, `POST /api/v1/portal/reports/{token}/actions` (CQ-024 spec.md)., submit_report_action(), BorrowerActionType, PortalReportActionRequest (+16 more)
+Nodes (24): ActivityEvent, Append-only: no `updated_at` (matches the spec's convention for append-only…, AsyncSession, CurrentBorrower, PortalReportActionResponse, post, `POST /api/v1/portal/reports/{token}/actions` (CQ-024 spec.md)., submit_report_action() (+16 more)
 
-### Community 27 - "StrategyType"
-Cohesion: 0.17
-Nodes (29): Same mapping as `pricing/scenarios/service.py::_strategy_type` (private to that…, _strategy_type(), QuoteComputation, Types for the pure quote calculation engine. `ScenarioInputs`, `ConfigSnapshot`…, Every money number Clear Quote shows, computed once by `compute_quote`. All…, The engine's single occupancy/strategy field. Mapping from…, StrategyType, get_products() (+21 more)
+### Community 27 - "QuoteComputation"
+Cohesion: 0.21
+Nodes (23): QuoteComputation, Every money number Clear Quote shows, computed once by `compute_quote`. All…, get_products(), post_autoquote(), post_manual_quote(), post_scenario(), preview_quote(), AsyncSession (+15 more)
 
 ### Community 28 - "devDependencies"
 Cohesion: 0.13
-Nodes (15): devDependencies, jsdom, postcss, @tailwindcss/postcss, @testing-library/react, @testing-library/user-event, @types/node, typescript (+7 more)
+Nodes (15): devDependencies, eslint, jsdom, @tailwindcss/postcss, @testing-library/react, @testing-library/user-event, @types/node, typescript (+7 more)
 
-### Community 29 - "ReportViewModelData"
+### Community 29 - "stale/service.py"
+Cohesion: 0.17
+Nodes (21): _application_quote_ids(), clear_stale(), _deciding_quote_priced_at(), get_stale_quote_days(), _latest_versions(), _LatestVersion, mark_application_quotes_stale(), _move_to_stale() (+13 more)
+
+### Community 30 - "stale/tests/test_service.py"
 Cohesion: 0.14
-Nodes (14): ReportGalleryPage(), ReportGalleryPage(), REPORT_FIXTURES, ReportFixture, daniel, FORBIDDEN_ON_PRIMARY, kathleen, marcus (+6 more)
+Nodes (41): What one `mark_stale` run changed. Every count is zero on a second run at the…, StaleResult, mark_stale(), The stale job body (spec.md steps 1-4). Flushes; the caller commits., ApplicationStatus, AsyncClient, AsyncSession, MonkeyPatch (+33 more)
 
-### Community 30 - "borrower/router.py"
-Cohesion: 0.16
-Nodes (21): get_me(), login(), logout(), AsyncSession, CurrentBorrower, get, post, Redis (+13 more)
+### Community 31 - "timedelta"
+Cohesion: 0.12
+Nodes (37): mark_stale_activity(), defn, run, CQ-030 `StaleQuoteCheckWorkflow` and its two activities. The Temporal Schedule…, `core/clock.now()` as ISO-8601 -- the only place the stale job reads the clock,…, Runs `quotes.stale.service.mark_stale` at the injected `now` in its own session…, resolve_clock_now(), StaleQuoteCheckWorkflow (+29 more)
 
-### Community 31 - "lo-console/src/features/auth/index.ts"
-Cohesion: 0.17
-Nodes (11): AuthFlow(), Step, { postMock, replaceMock }, LoginForm(), LoginFormProps, { postMock }, OtpForm(), OtpFormProps (+3 more)
+### Community 32 - "borrower-portal/src/features/shell/index.ts"
+Cohesion: 0.10
+Nodes (23): ApplyPage(), CreditCheckTaskPage(), BorrowerMe, BorrowerSession, BorrowerSessionContext, BorrowerSessionProvider(), LoadState, useBorrowerSession() (+15 more)
 
-### Community 32 - "core/errors.py"
-Cohesion: 0.17
-Nodes (16): AppError, AuthenticationError, ForbiddenError, Any, Exception, RateLimitedError, Pinned application error shape. Every `AppError` (and subclass) raised anywhere…, Base class for all application errors with a stable HTTP+JSON shape. (+8 more)
+### Community 33 - "test_security.py"
+Cohesion: 0.09
+Nodes (38): constant_time_equals(), generate_otp_code(), generate_token(), hash_password_async(), hash_token(), keyed_hash(), Password hashing, OTP codes and opaque tokens shared by CQ-014 (staff) and…, True iff `plain` matches `hash_`. False (never raises) on mismatch or on a… (+30 more)
 
-### Community 33 - "verify_challenge"
-Cohesion: 0.20
-Nodes (23): issue_challenge(), _key(), Principal, Redis, Verifies `code` against the stored challenge; returns the stored fields…, Creates a new OTP challenge; returns `(challenge_id, code)`. `code` is the…, verify_challenge(), MonkeyPatch (+15 more)
-
-### Community 34 - "test_products_grid_returns_8_to_15_rows"
-Cohesion: 0.50
-Nodes (5): AsyncClient, AsyncSession, StaffSession, _seed_dscr_rate_sheet(), test_products_grid_returns_8_to_15_rows()
+### Community 34 - "is_forced_to_fail"
+Cohesion: 0.21
+Nodes (14): _get_client(), is_forced_to_fail(), _key(), Redis, Per-adapter forced-failure toggle, stored in Valkey. **Decision** (spec.md):…, set_forced_failure(), AsyncSession, parametrize (+6 more)
 
 ### Community 35 - "rent/mock.py"
 Cohesion: 0.15
-Nodes (16): Raised by `RentClient` when no seeded rent comp matches., RentDataNotFoundError, MockRentClient, AsyncSession, `MockRentClient`: reads `provider_rents` (seeded mock RentCast comps)., Protocol, `RentClient` Protocol (mock RentCast)., RentClient (+8 more)
+Nodes (17): Raised by `RentClient` when no seeded rent comp matches., RentDataNotFoundError, MockRentClient, AsyncSession, `MockRentClient`: reads `provider_rents` (seeded mock RentCast comps)., ProviderRent, Protocol, `RentClient` Protocol (mock RentCast). (+9 more)
 
 ### Community 36 - "storage.py"
-Cohesion: 0.08
-Nodes (42): astream_object(), _default_client(), delete_object(), ensure_bucket(), _ensure_bucket_sync(), get_client(), get_object(), _get_object_sync() (+34 more)
+Cohesion: 0.09
+Nodes (40): astream_object(), _default_client(), delete_object(), ensure_bucket(), _ensure_bucket_sync(), get_client(), get_object(), _get_object_sync() (+32 more)
 
-### Community 37 - "reports/tests/test_router.py"
-Cohesion: 0.25
-Nodes (22): _make_package(), _priced_package(), Any, AsyncClient, AsyncSession, datetime, MakeBorrowerSession, UUID (+14 more)
+### Community 37 - "_StartedWorkflows"
+Cohesion: 0.18
+Nodes (11): WorkflowEnvironment, Client interceptor recording every workflow id started through…, Teardown: terminates every workflow this test started that is still running…, _RecordStarts, started_workflows(), _StartedWorkflows, temporal_client(), temporal_env() (+3 more)
 
-### Community 38 - "test_golden.py"
-Cohesion: 0.08
-Nodes (38): bucket_for_dscr(), principal_and_interest(), `P&I = L * r(1+r)^n / ((1+r)^n - 1)`, `r = note_rate / 12`, `n = term_months`., Classifies the *unrounded* DSCR value, not the 2dp display value., `total_monthly_payment * 12 / (1 - str_expense_ratio)`. Derived from…, str_annual_rent_target(), Decimal, parametrize (+30 more)
+### Community 38 - "staff/router.py"
+Cohesion: 0.13
+Nodes (28): clear_session_cookie(), create_session(), delete_session(), get_session_subject(), _key(), Principal, Redis, Response (+20 more)
 
 ### Community 39 - "test_signup.py"
+Cohesion: 0.06
+Nodes (73): ensure_borrower_owns_client(), Raises `NotFoundError` (404, never 403 — Decision #11) unless `client_id` is…, hash_password(), Hashes `plain` with argon2 (library defaults)., _make_account(), _make_client(), AsyncSession, AC6: `ensure_borrower_owns_client` returns 404 (never 403) for another client's… (+65 more)
+
+### Community 40 - "credit/mock.py"
 Cohesion: 0.16
-Nodes (27): capture_smtp(), _extract_code(), _make_client(), _make_lo(), AsyncClient, AsyncSession, fixture, MonkeyPatch (+19 more)
+Nodes (19): CreditPullFailedError, Raised by `CreditClient` when no seeded credit report matches., MockCreditClient, AsyncSession, `MockCreditClient`: reads `provider_credit_reports`. Soft pull populates…, CreditPullType, ProviderCreditReport, CreditClient (+11 more)
 
-### Community 40 - "common/errors.py"
-Cohesion: 0.10
-Nodes (27): IntegrationError, CreditPullFailedError, LoanNotFoundError, ProviderUnavailableError, Integration error hierarchy. `IntegrationError` is re-exported (not re-…, Raised by `CreditClient` when no seeded credit report matches., Raised by any adapter on forced failure or a simulated timeout., Raised by `LosClient` when no seeded LOS record matches. (+19 more)
-
-### Community 41 - "property_search/mock.py"
-Cohesion: 0.14
-Nodes (21): _format_baths(), MockPropertySearchClient, AsyncSession, Decimal, `MockPropertySearchClient`: reads `provider_listings`. Filters at 70-100% of…, PropertySearchClient, Protocol, `PropertySearchClient` Protocol (mock property search). (+13 more)
+### Community 41 - "test_contract.py"
+Cohesion: 0.13
+Nodes (23): AC1: contract test, parametrized over all 9 adapters. Forcing failure on any…, _format_baths(), MockPropertySearchClient, AsyncSession, Decimal, `MockPropertySearchClient`: reads `provider_listings`. Filters at 70-100% of…, DealGrade, PropertySearchClient (+15 more)
 
 ### Community 42 - "lo-console/src/features/shell/index.ts"
-Cohesion: 0.12
-Nodes (18): AdminGuard(), STAFF_NAV_ITEMS, LoadState, StaffRole, StaffSession, StaffSessionContext, StaffSessionProvider(), StaffUser (+10 more)
+Cohesion: 0.13
+Nodes (17): AdminGuard(), STAFF_NAV_ITEMS, LoadState, StaffRole, StaffSession, StaffSessionContext, StaffSessionProvider(), StaffUser (+9 more)
 
 ### Community 43 - "What You Must Do When Invoked"
 Cohesion: 0.08
@@ -582,37 +580,37 @@ Nodes (28): Acceptance criteria, `backend/app/features/applications/assets/model
 Cohesion: 0.17
 Nodes (22): _Action, _check_action(), check_login(), check_signup(), hit(), Redis, Fixed-window rate limiting on top of Valkey: `INCR` + self-healing `EXPIRE NX`.…, Increments `key`'s counter, starting its expiry window on the first hit. Raises… (+14 more)
 
-### Community 46 - "auth.py"
-Cohesion: 0.12
-Nodes (24): get_current_borrower(), get_current_staff(), get_scoped_application(), AsyncSession, CurrentStaff, Principal, Redis, Select (+16 more)
+### Community 46 - "User"
+Cohesion: 0.07
+Nodes (40): ADMIN, ApplicationListResponse, Any, A dependency that 403s (`ForbiddenError`) unless the signed-in staff user's…, require_roles(), _build_test_app(), _fake_user(), _make_application() (+32 more)
 
-### Community 47 - "actions/tests/test_router.py"
-Cohesion: 0.34
-Nodes (20): _options(), Any, ApplicationStatus, AsyncClient, AsyncSession, MakeBorrowerSession, parametrize, `POST /api/v1/portal/reports/{token}/actions` (CQ-024 spec.md AC1-AC4). (+12 more)
+### Community 47 - "make_borrower_session"
+Cohesion: 0.14
+Nodes (32): make_pending_consent(), make_sent_version(), AsyncSession, fixture, _make_lo(), ApplicationStatus, AsyncClient, AsyncSession (+24 more)
 
-### Community 48 - "Application"
-Cohesion: 0.25
-Nodes (17): Application, _make_quote(), AsyncSession, P3/P4 foundation (docs/backlog/phase-p3-p4-foundation.md, migration…, `ON DELETE SET NULL`: deleting the recommended quote must not delete (or block…, test_last_pipeline_stage_defaults_to_null(), test_last_pipeline_stage_is_settable(), test_recommended_quote_id_defaults_to_null() (+9 more)
+### Community 48 - "make_persona_application"
+Cohesion: 0.21
+Nodes (14): make_persona_application(), EnrichRetryWorkflow, ImportRetryWorkflow, defn, run, fixture, MonkeyPatch, Worker (+6 more)
 
-### Community 49 - "sessions/service.py"
+### Community 49 - "make_application"
 Cohesion: 0.20
-Nodes (16): The one `Principal` type shared by every principal-agnostic auth module…, clear_session_cookie(), create_session(), delete_session(), get_session_subject(), _key(), Principal, Redis (+8 more)
+Nodes (25): make_application(), AsyncSession, _make_quote(), AsyncSession, P3/P4 foundation (docs/backlog/phase-p3-p4-foundation.md, migration…, `ON DELETE SET NULL`: deleting the recommended quote must not delete (or block…, test_last_pipeline_stage_defaults_to_null(), test_last_pipeline_stage_is_settable() (+17 more)
 
 ### Community 50 - "insurance/mock.py"
 Cohesion: 0.15
-Nodes (16): MockInsuranceClient, AsyncSession, Decimal, `MockInsuranceClient`: reads `provider_insurance_factors`. Never raises a "not…, InsuranceClient, Decimal, Protocol, `InsuranceClient` Protocol (mock Steadily). (+8 more)
+Nodes (17): MockInsuranceClient, AsyncSession, Decimal, `MockInsuranceClient`: reads `provider_insurance_factors`. Never raises a "not…, ProviderInsuranceFactor, InsuranceClient, Decimal, Protocol (+9 more)
 
 ### Community 51 - "applications/router.py"
-Cohesion: 0.24
-Nodes (11): post, UUID, Pipeline start/resume routes (spec.md CQ-011 "API"). `POST .../pipeline/start`…, resume_pipeline(), start_pipeline(), PipelineResumeResponse, PipelineStartResponse, BaseModel (+3 more)
+Cohesion: 0.17
+Nodes (16): post, UUID, Pipeline start/resume routes (spec.md CQ-011 "API"). `POST .../pipeline/start`…, resume_pipeline(), start_pipeline(), PipelineResumeResponse, PipelineStartResponse, BaseModel (+8 more)
 
-### Community 52 - "test_retry_policy.py"
-Cohesion: 0.18
-Nodes (15): install_import_from_los(), Installs `fn` in place of `import_from_los` for the calling test (plan.md #13,…, EnrichRetryWorkflow, ImportRetryWorkflow, defn, run, fixture, MonkeyPatch (+7 more)
+### Community 52 - "main.py"
+Cohesion: 0.14
+Nodes (21): FastAPI, register_exception_handlers(), FastAPI, Feature-router registration. To add a feature (CQ-007 onward): create the sub-…, register_routers(), close_valkey(), Closes the shared client; called from the app's shutdown handler., Any (+13 more)
 
-### Community 53 - "seed_persona"
-Cohesion: 0.09
-Nodes (40): load_seed_config(), Seed-only configuration read from the environment. Kept separate from…, SeedConfig, ensure_demo_docs_bucket(), generate_sample_pdf(), generate_sample_png(), get_s3_client(), UUID (+32 more)
+### Community 53 - "seed/tests/conftest.py"
+Cohesion: 0.21
+Nodes (14): _clean_integration_calls(), db_session(), _fake_valkey(), AsyncEngine, AsyncSession, fixture, MonkeyPatch, Fixtures for `seed/tests/*` -- mirrors `backend/conftest.py`'s… (+6 more)
 
 ### Community 54 - "devDependencies"
 Cohesion: 0.06
@@ -622,25 +620,25 @@ Nodes (34): @axe-core/playwright, @eslint/eslintrc, devDependencies, @axe-core/p
 Cohesion: 0.21
 Nodes (12): _render_email(), ask_other_html(), ask_other_subject(), ask_updated_html(), ask_updated_subject(), move_forward_html(), move_forward_subject(), LO-facing email bodies for the three borrower actions (spec.md). Plain Python… (+4 more)
 
-### Community 56 - "test_login_flow.py"
-Cohesion: 0.18
-Nodes (19): capture_smtp(), _make_staff_user(), AsyncClient, AsyncSession, fixture, MonkeyPatch, AC1-AC5: staff login -> OTP email -> verify -> session cookie -> logout.…, `normalize_email` runs before the rate-limit key is built, so `"LO@X"` and `"… (+11 more)
+### Community 56 - "borrower/service.py"
+Cohesion: 0.11
+Nodes (27): build_me(), _find_or_create_client(), login(), AsyncSession, Redis, Borrower self-service sign-up + login, both gated by an email OTP. Reuses…, Verifies credentials and, on success, issues an OTP challenge and emails the…, Matches an existing client by case-insensitive email (Decision #6, oldest by… (+19 more)
 
 ### Community 57 - "workspace/index.ts"
-Cohesion: 0.07
-Nodes (49): ApplicationSummary, ApplicationTab, fetchApplicationSummary(), patchApplicationStatus(), StatusPatchStatus, TabState, { getMock, patchMock }, DefaultTabRedirect() (+41 more)
+Cohesion: 0.05
+Nodes (60): AuthFlow(), Step, { postMock, replaceMock }, LoginForm(), LoginFormProps, { postMock }, OtpForm(), OtpFormProps (+52 more)
 
-### Community 58 - "staff/service.py"
-Cohesion: 0.11
-Nodes (25): login(), AsyncSession, Redis, Staff login: rate limit -> password check -> OTP issue + email; OTP verify ->…, Verifies credentials and, on success, issues an OTP challenge and emails the…, Verifies the OTP challenge and returns the signed-in `User`., verify_otp(), AsyncSession (+17 more)
+### Community 58 - "auth.py"
+Cohesion: 0.10
+Nodes (27): get_current_borrower(), get_current_staff(), get_scoped_application(), AsyncSession, CurrentStaff, Principal, Redis, Select (+19 more)
 
-### Community 59 - "test_draft_quote_set.py"
-Cohesion: 0.35
-Nodes (9): _make_primary_application(), AsyncSession, `draft_default_quote_set`: confirms every quote id `auto_price`'s…, _seed_conventional_rate_sheet(), test_draft_quote_set_empty_pricing_result_is_a_noop(), test_draft_quote_set_returns_the_priced_quote_ids(), ProviderRateSheet, RateSheetProgram (+1 more)
+### Community 59 - "make_application"
+Cohesion: 0.20
+Nodes (28): make_application(), AsyncClient, AsyncSession, MakeApplication, MakeBorrowerSession, MakeSentVersion, Redis, `POST /api/v1/portal/support` (CQ-034 spec.md AC1-AC5). (+20 more)
 
-### Community 60 - "crm/tests/test_mock.py"
-Cohesion: 0.13
-Nodes (16): MockCrmClient, Any, AsyncSession, CrmEvent, CrmClient, Any, Protocol, `CrmClient` Protocol (mock CRM). (+8 more)
+### Community 60 - "applications/index.ts"
+Cohesion: 0.17
+Nodes (20): ApplicationListQuery, ApplicationsFilterBar(), ApplicationsFilterBarProps, HAS_PROPERTY_OPTIONS, ApplicationFilters, DEFAULT_FILTERS, DEFAULT_PAGE_SIZE, DEFAULT_SORT (+12 more)
 
 ### Community 61 - "CQ-006 — Post-development notes"
 Cohesion: 0.08
@@ -654,25 +652,25 @@ Nodes (20): 10. Borrower "four numbers" & deliverables presentation fields, 11. 
 Cohesion: 0.18
 Nodes (11): dependencies, @cq/api-client, @cq/ui, next, react, react-dom, @cq/api-client, @cq/ui (+3 more)
 
-### Community 64 - "get_settings"
-Cohesion: 0.07
-Nodes (32): get_settings(), field_validator, model_validator, App-wide settings, read once and shared via `get_settings()`. Every module…, AC4: fail fast at startup rather than at first SSN read/write.…, False for `local`/`test` (plain HTTP dev servers, no TLS); the session cookies…, Allow `CORS_ORIGINS` to be a comma-separated string in `.env`. `NoDecode` above…, Settings (+24 more)
+### Community 64 - "test_encryption.py"
+Cohesion: 0.16
+Nodes (14): field_validator, Allow `CORS_ORIGINS` to be a comma-separated string in `.env`. `NoDecode` above…, False for `local`/`test` (plain HTTP dev servers, no TLS); the session cookies…, Settings, _make_application(), AsyncSession, UUID, AC4: SSN ciphertext at rest, and `FIELD_ENCRYPTION_KEY` fail-fast outside… (+6 more)
 
-### Community 65 - "loader.py"
-Cohesion: 0.10
-Nodes (33): `clients` table: one row per borrower identity (person), assigned to an LO.…, datetime, `freeze_package_version` -- the sent-version factory (D2,…, `scenarios` table: one per Add/Edit scenario action. `dscr_bucket` stores one…, Quote, `quotes` table: one priced option within a scenario., _make_scenario(), AsyncSession (+25 more)
+### Community 65 - "QuotePackageVersion"
+Cohesion: 0.36
+Nodes (12): QuotePackageVersion, One frozen, sent snapshot of a `QuotePackage` (P3/P4 foundation, D1/D2).…, _make_package(), AsyncSession, P3/P4 foundation: `quote_package_versions` (migration `bbd0e3150264`). Builds…, The `(package_id, version)` uniqueness is per package, not global -- two…, test_cascade_delete_on_package(), test_create_version() (+4 more)
 
-### Community 66 - "str/mock.py"
-Cohesion: 0.15
-Nodes (16): Raised by `StrClient` when no seeded STR comp matches., StrDataNotFoundError, MockStrClient, AsyncSession, `MockStrClient`: reads `provider_str_revenue` (seeded mock AirDNA comps)., Protocol, `StrClient` Protocol (mock AirDNA)., StrClient (+8 more)
+### Community 66 - "common/errors.py"
+Cohesion: 0.06
+Nodes (37): IntegrationError, LoanNotFoundError, PricingValidationError, ProviderUnavailableError, Integration error hierarchy. `IntegrationError` is re-exported (not re-…, Raised by `TaxClient` when no seeded county tax rate matches., Raised by any adapter on forced failure or a simulated timeout., Raised by `PricingClient` when required OB fields are missing. Overrides… (+29 more)
 
-### Community 67 - "is_forced_to_fail"
-Cohesion: 0.09
-Nodes (30): Raised by `TaxClient` when no seeded county tax rate matches., TaxRateNotFoundError, _get_client(), is_forced_to_fail(), _key(), Redis, Per-adapter forced-failure toggle, stored in Valkey. **Decision** (spec.md):…, set_forced_failure() (+22 more)
+### Community 67 - "tax/mock.py"
+Cohesion: 0.17
+Nodes (15): MockTaxClient, AsyncSession, `MockTaxClient`: reads `provider_tax_rates` (seeded mock county rates)., ProviderTaxRate, Protocol, `TaxClient` Protocol (mock SmartAsset/county)., TaxClient, BaseModel (+7 more)
 
-### Community 68 - "OutboxList.tsx"
-Cohesion: 0.15
-Nodes (18): API_BASE_URL, attachmentDownloadUrl(), fetchOutboxDetail(), fetchOutboxList(), OutboxEmailDetail, OutboxEmailRow, OutboxListParams, LoadState (+10 more)
+### Community 68 - "home/service.py"
+Cohesion: 0.17
+Nodes (24): PortalApplicationOut, PortalHomeResponse, PortalLoOut, PortalNextAction, PortalNextActionType, PortalStage, BaseModel, StrEnum (+16 more)
 
 ### Community 69 - "dependencies"
 Cohesion: 0.18
@@ -680,11 +678,11 @@ Nodes (11): dependencies, @cq/api-client, @cq/ui, next, react, react-dom, @cq/ap
 
 ### Community 70 - "test_pagination.py"
 Cohesion: 0.17
-Nodes (21): clamp_page(), clamp_page_size(), paginate(), Any, AsyncSession, Select, Shared page/offset pagination (P5/P6 foundation, E4). Every P5/P6 list endpoint…, `None` -> 25; otherwise clamped to 1..100. (+13 more)
+Nodes (22): clamp_page(), clamp_page_size(), paginate(), Any, AsyncSession, Select, Shared page/offset pagination (P5/P6 foundation, E4). Every P5/P6 list endpoint…, `None` -> 25; otherwise clamped to 1..100. (+14 more)
 
-### Community 71 - "test_login.py"
-Cohesion: 0.23
-Nodes (19): hash_password(), Hashes `plain` with argon2 (library defaults)., capture_smtp(), _extract_code(), _make_account(), AsyncClient, AsyncSession, fixture (+11 more)
+### Community 71 - "ApplicationRow.tsx"
+Cohesion: 0.14
+Nodes (18): ApplicationRow(), ApplicationRowProps, STRATEGY_LABEL, ROW, ApplicationsTable(), ApplicationsTableProps, HEADERS, nextSort() (+10 more)
 
 ### Community 72 - "CQ-003 — Post-development notes"
 Cohesion: 0.11
@@ -700,7 +698,7 @@ Nodes (42): dependencies, @cq/api-client, devDependencies, eslint, jsdom, react,
 
 ### Community 75 - "devDependencies"
 Cohesion: 0.13
-Nodes (15): devDependencies, eslint, jsdom, @tailwindcss/postcss, @testing-library/react, @testing-library/user-event, @types/node, typescript (+7 more)
+Nodes (15): devDependencies, eslint-config-next, jsdom, @tailwindcss/postcss, @testing-library/react, @testing-library/user-event, @types/node, typescript (+7 more)
 
 ### Community 77 - "Steps"
 Cohesion: 0.12
@@ -710,9 +708,9 @@ Nodes (16): Current state, Human decisions (2026-09-25), If something fails, Int
 Cohesion: 0.18
 Nodes (8): config, middleware(), PUBLIC_PATHS, config, middleware(), PUBLIC_PATHS, isPublicPath(), STATIC_ASSET_PATTERN
 
-### Community 79 - "verification/service.py"
-Cohesion: 0.09
-Nodes (44): ApplicationTab, FlagSeverity, Decision: `blocking` halts pipeline progression (Verifying -> NeedsAttention)…, Matches the 7 workspace tabs., assets_vs_ctc_reserves(), dob_format(), _dob_result(), dti_primary() (+36 more)
+### Community 79 - "rules.py"
+Cohesion: 0.10
+Nodes (32): assets_vs_ctc_reserves(), dob_format(), _dob_result(), dti_primary(), field_label(), flag_message(), housing_history_24mo(), no_co_applicant() (+24 more)
 
 ### Community 80 - "CQ-001 Agent tooling & process"
 Cohesion: 0.12
@@ -746,13 +744,13 @@ Nodes (14): Acceptance criteria, CQ-002 Monorepo scaffold, Directory layout (pin
 Cohesion: 0.09
 Nodes (22): apps, e2e/**/*.ts, ES2022, node, packages, playwright.config.ts, compilerOptions, esModuleInterop (+14 more)
 
-### Community 88 - "Table.tsx"
-Cohesion: 0.27
-Nodes (8): ALIGN_CLASSES, DENSITY_CLASSES, Table(), TableColumn, TableProps, columns, Row, rows
-
-### Community 89 - "matches/service.py"
+### Community 88 - "record_call"
 Cohesion: 0.09
-Nodes (34): get_matches(), AsyncSession, get, UUID, `GET /applications/{id}/matches` (spec.md "Backend"). LO auth…, MatchListResponse, MatchOut, BaseModel (+26 more)
+Nodes (26): async_sessionmaker, _engine_for_session(), Any, AsyncEngine, AsyncSession, UUID, Writes one `integration_calls` row per mock call, success or failure.…, Resolves the real `AsyncEngine` backing `session`, whether it was constructed… (+18 more)
+
+### Community 89 - "ScenarioInputs"
+Cohesion: 0.06
+Nodes (69): get_matches(), AsyncSession, UUID, `GET /applications/{id}/matches` (spec.md "Backend"). LO auth…, MatchListResponse, MatchOut, BaseModel, `GET /applications/{id}/matches` response shape. Decimal fields, not decimal… (+61 more)
 
 ### Community 90 - "CQ-009 Mock integrations"
 Cohesion: 0.14
@@ -778,13 +776,13 @@ Nodes (22): openapi-fetch, openapi-typescript, dependencies, openapi-fetch, devD
 Cohesion: 0.09
 Nodes (22): compilerOptions, esModuleInterop, isolatedModules, jsx, lib, module, moduleResolution, noEmit (+14 more)
 
-### Community 96 - "seed_background_applications"
-Cohesion: 0.25
-Nodes (13): Random, AsyncSession, UUID, `markets` is CQ-010's 10 persona `{city, state, zip, county}` dicts (Decision…, seed_background_applications(), _weighted_choice(), _make_two_los(), AsyncSession (+5 more)
+### Community 96 - "reset.py"
+Cohesion: 0.12
+Nodes (24): Random, load_seed_config(), Seed-only configuration read from the environment. Kept separate from…, SeedConfig, AsyncSession, UUID, `markets` is CQ-010's 10 persona `{city, state, zip, county}` dicts (Decision…, seed_background_applications() (+16 more)
 
-### Community 97 - "staff/router.py"
+### Community 97 - "borrower/router.py"
 Cohesion: 0.13
-Nodes (23): ChallengeResponse, client_ip(), OtpVerifyRequest, BaseModel, Request, Principal-agnostic pieces shared by `auth/staff` and `auth/borrower`: the…, `request.client.host`, or `"unknown"` when no client/connection info is…, get_me() (+15 more)
+Nodes (27): get_me(), login(), logout(), AsyncSession, CurrentBorrower, post, Redis, Request (+19 more)
 
 ### Community 98 - "test_scenario_inputs_validation.py"
 Cohesion: 0.28
@@ -818,9 +816,9 @@ Nodes (12): KANEO_API_URL, command, enabled, environment, type, mcp, kaneo, $sch
 Cohesion: 0.21
 Nodes (12): ALLOWED_FILES, ARITHMETIC_ADJACENT_TO_FIELD, buildArithmeticRegex(), buildFieldAccessPattern(), collectNumericLeafFieldNames(), containsForbiddenArithmetic(), FIELD_NAMES, FIXTURES_DIR (+4 more)
 
-### Community 106 - "timeline/service.py"
-Cohesion: 0.15
-Nodes (22): Page, BaseModel, get_activity(), AsyncSession, get, UUID, `GET /applications/{id}/activity` (spec.md "Timeline"). Staff auth via…, ActivityActor (+14 more)
+### Community 106 - "test_activities_are_thin_wrappers.py"
+Cohesion: 0.23
+Nodes (13): Everything `run_and_persist` did, for the caller to log or act on — it…, VerificationRunResult, MonkeyPatch, parametrize, AC2: every activity calls its wrapped service function exactly once with…, AC2's dedicated test: `passed` is `True` unless any `RuleResult` has `severity…, test_auto_price_application_is_a_thin_wrapper(), test_draft_quote_set_is_a_thin_wrapper() (+5 more)
 
 ### Community 107 - "scripts"
 Cohesion: 0.29
@@ -838,17 +836,17 @@ Nodes (11): Acceptance criteria, api-client generation, Component contracts, CQ-
 Cohesion: 0.17
 Nodes (11): Acceptance evidence (stage 7), CQ-009 — Post-development notes, Deviations from spec, Findings, Fix round 1 (finding #1, resolved), Follow-ups, How to test manually, Review findings (stage 6) (+3 more)
 
-### Community 111 - "test_aisha_coleman_flagged_path_writes_4_events"
-Cohesion: 0.47
-Nodes (6): _event_types(), ApplicationStatus, AsyncSession, UUID, test_aisha_coleman_flagged_path_writes_4_events(), test_marcus_hale_happy_path_writes_6_events()
+### Community 111 - "Flag"
+Cohesion: 0.15
+Nodes (22): Flag, _flag_field_key(), Builds the OB request and calls `PricingClient.get_priced_products` once,…, validate_ob_required_fields(), _occupancy_flag(), AsyncSession, CQ-010 review round 1, finding #1: persona 7 (Aisha Coleman)'s exact "Cannot…, `applications.occupancy is None` (persona 7's exact state after… (+14 more)
 
 ### Community 112 - "test_p5p6_schema.py"
-Cohesion: 0.17
-Nodes (21): Consent, ApplicationDraft, `support_requests` table (P5/P6 foundation, E1; CQ-034 owns the endpoint, the…, Append-only: one row per submitted support form., SupportRequest, _load_migration(), _make_application(), _make_borrower() (+13 more)
+Cohesion: 0.14
+Nodes (23): Consent, ConsentStatus, ConsentType, `consents` table: hard-pull authorization requests and decisions. P5/P6…, ApplicationDraft, Local fixtures for `portal/home/tests`. Re-exports `make_application` from…, Local fixtures for `portal/support/tests`. Re-exports…, _load_migration() (+15 more)
 
-### Community 113 - "select_par_and_buydown"
-Cohesion: 0.27
-Nodes (12): model_validator, Save & AutoQuote's selection (spec.md): best par = `is_par_rate` row, tie-…, select_par_and_buydown(), AC7: `select_par_and_buydown` picks the correct par (closest to 0 points) and…, _row(), test_buydown_at_exactly_one_point_qualifies(), test_no_par_row_raises(), test_no_qualifying_buydown_row_returns_none() (+4 more)
+### Community 113 - "insurance_annual_rate_from_amount"
+Cohesion: 0.16
+Nodes (14): model_validator, AC4: fail fast at startup rather than at first SSN read/write.…, insurance_annual_rate_from_amount(), NonPositivePriceError, Raised by `down_payment_pct_from_amount`/`insurance_annual_rate_from_amount`…, `annual_premium / purchase_price`, unrounded -- the same 0-1-fraction scale…, `insurance_annual_rate_from_amount` -- copied verbatim from CQ-017 (pricing…, test_insurance_annual_rate_from_amount_divides_unrounded() (+6 more)
 
 ### Community 114 - "CQ-003 — Implementation plan"
 Cohesion: 0.18
@@ -890,9 +888,9 @@ Nodes (10): Context, Decisions (logged into each item's plan.md by its worker), 
 Cohesion: 0.20
 Nodes (9): AGENTS.md — Clear Quote TQL, Commands, Definition of done, Handoff protocol, How work is done: the agent loop, Kaneo, Project map, Tool split (codegraph vs graphify) (+1 more)
 
-### Community 124 - "email/tests/test_service.py"
-Cohesion: 0.20
-Nodes (21): AC1: `send_email` writes an `outbox_emails` row and delivers over SMTP.…, EmailStatus, OutboxEmail, `outbox_emails` table: the always-on in-app demo outbox., make_application(), make_outbox_email(), AsyncSession, fixture (+13 more)
+### Community 124 - ".start_workflow"
+Cohesion: 0.50
+Nodes (3): Any, StartWorkflowInput, WorkflowHandle
 
 ### Community 125 - "CQ-005 — Implementation plan"
 Cohesion: 0.20
@@ -950,9 +948,9 @@ Nodes (3): name, private, version
 Cohesion: 0.22
 Nodes (9): assertValidStrategy(), _danielOrtiz, _kathleenMcreynolds, loadFixture(), LooseReportViewModel, _marcusHale, _marcusHaleExpired, _priyaNair (+1 more)
 
-### Community 139 - "ActivityTimeline.tsx"
-Cohesion: 0.22
-Nodes (16): ActivityTimeline(), ActivityTimelineProps, DayGroup, dayLabel(), formatTime(), groupByDay(), LoadState, event() (+8 more)
+### Community 139 - "verify_challenge"
+Cohesion: 0.20
+Nodes (23): issue_challenge(), _key(), Principal, Redis, Verifies `code` against the stored challenge; returns the stored fields…, Creates a new OTP challenge; returns `(challenge_id, code)`. `code` is the…, verify_challenge(), MonkeyPatch (+15 more)
 
 ### Community 140 - "ob_request.py"
 Cohesion: 0.47
@@ -1175,8 +1173,8 @@ Cohesion: 0.22
 Nodes (8): Acceptance → test map, CQ-030 — Implementation plan, Decisions & questions (stage 1), Progress, Tasks, Wave schedule (stage 3), What changes, Why
 
 ### Community 195 - "CQ-030 — Post-development notes"
-Cohesion: 0.22
-Nodes (8): Acceptance evidence (stage 7), CQ-030 — Post-development notes, Deviations from spec, Follow-ups, How to test manually, Review findings (stage 6), Summary, Test log (stage 5)
+Cohesion: 0.18
+Nodes (10): Acceptance evidence (stage 7), CQ-030 — Post-development notes, Deviations from spec, Follow-ups, How to test manually, Review findings (stage 6), Review round 1, Round-1 verification (+2 more)
 
 ### Community 196 - "CQ-030 Stale quote job"
 Cohesion: 0.22
@@ -1223,8 +1221,8 @@ Cohesion: 0.22
 Nodes (8): Acceptance → test map, CQ-034 — Implementation plan, Decisions & questions (stage 1), Progress, Tasks, Wave schedule (stage 3), What changes, Why
 
 ### Community 207 - "CQ-034 — Post-development notes"
-Cohesion: 0.22
-Nodes (8): Acceptance evidence (stage 7), CQ-034 — Post-development notes, Deviations from spec, Follow-ups, How to test manually, Review findings (stage 6), Summary, Test log (stage 5)
+Cohesion: 0.18
+Nodes (10): Acceptance evidence (stage 7), CQ-034 — Post-development notes, Deviations from spec, Fix worker re-run (after merging `phase-p5-p6`, review round 1), Follow-ups, How to test manually, Review findings (stage 6), Review round 1 (+2 more)
 
 ### Community 208 - "CQ-034 Support form"
 Cohesion: 0.22
@@ -1268,15 +1266,15 @@ Nodes (8): Acceptance criteria, Goal, {ID} {TITLE}, Notes for the agent, Out of 
 
 ### Community 218 - "builder.py"
 Cohesion: 0.08
-Nodes (54): get_report(), AsyncSession, CurrentBorrower, get, `GET /api/v1/portal/reports/{token}` (CQ-022 spec.md)., PortalReportResponse, `GET /api/v1/portal/reports/{token}` response shape (CQ-022 spec.md).…, `ReportViewModel` plus the two fields only a live request can answer:… (+46 more)
+Nodes (53): get_report(), AsyncSession, CurrentBorrower, `GET /api/v1/portal/reports/{token}` (CQ-022 spec.md)., PortalReportResponse, `GET /api/v1/portal/reports/{token}` response shape (CQ-022 spec.md).…, `ReportViewModel` plus the two fields only a live request can answer:…, get_report_for_token() (+45 more)
 
 ### Community 219 - "worktree-env.sh"
 Cohesion: 0.31
 Nodes (5): LO_BASE_URL, PORTAL_BASE_URL, set_kv(), set_kv_in(), worktree-env.sh script
 
-### Community 220 - "PrimitivesSection.tsx"
-Cohesion: 0.11
-Nodes (22): PortalLayout(), BORROWER_ME, { getMock, postMock }, ToastTrigger(), LO_OPTIONS, PrimitivesSection(), STATUS_OPTIONS, ToastDemo() (+14 more)
+### Community 220 - "Toast.tsx"
+Cohesion: 0.12
+Nodes (19): PortalLayout(), BORROWER_ME, { getMock, postMock }, ToastTrigger(), ToastDemo(), StaffLayout(), { getMock, postMock }, ToastTrigger() (+11 more)
 
 ### Community 226 - "CQ-011 — Implementation plan"
 Cohesion: 0.25
@@ -1286,17 +1284,13 @@ Nodes (7): Acceptance → test map, CQ-011 — Implementation plan, Decisions & 
 Cohesion: 0.10
 Nodes (19): Acceptance evidence (stage 7), Acceptance → test map, Decisions & questions (stage 1), Deviations from the brief, Follow-ups, How to test manually, P5/P6 foundation — Implementation plan, P5/P6 foundation — Post-development notes (+11 more)
 
-### Community 229 - "summary/router.py"
-Cohesion: 0.13
-Nodes (18): get_application_summary(), patch_status(), AsyncSession, CurrentStaff, get, patch, UUID, Workspace summary + status routes (spec.md CQ-016 "Backend"). (+10 more)
-
 ### Community 230 - "kaneo"
 Cohesion: 0.29
 Nodes (6): KANEO_API_URL, codegraph, npx, codegraph, kaneo, @kaneo/mcp
 
 ### Community 232 - "Client"
-Cohesion: 0.17
-Nodes (17): override_temporal_client_dep(), FastAPI, fixture, WorkflowEnvironment, Local fixtures for `applications/tests/test_pipeline_endpoints.py`: a time-…, temporal_client(), temporal_test_env(), Client (+9 more)
+Cohesion: 0.10
+Nodes (36): least_loaded_lo_id(), AsyncSession, UUID, The id of the LO (role `lo`) with the fewest *active* applications (any status…, override_temporal_client_dep(), FastAPI, fixture, WorkflowEnvironment (+28 more)
 
 ### Community 234 - "graphify reference: query, path, explain"
 Cohesion: 0.33
@@ -1322,17 +1316,17 @@ Nodes (5): Clear Quote TQL, First run, Getting started, Prerequisites, Setup
 Cohesion: 0.18
 Nodes (9): Drawer(), DrawerProps, SIZE_CLASSES, Overlay(), OverlayProps, SIZE_CLASSES, FOCUSABLE_SELECTOR, getFocusableElements() (+1 more)
 
-### Community 242 - "(staff)/page.test.tsx"
-Cohesion: 0.43
-Nodes (4): ApplicationsPage(), ClientsPage(), DashboardPage(), StubPage()
+### Community 242 - "_tab_state"
+Cohesion: 0.50
+Nodes (4): ApplicationStatus, plan.md decision #6: `flagged` whenever a tab has an open flag, else `pending`…, _tab_state(), TabStateValue
 
-### Community 244 - "test_assignment.py"
-Cohesion: 0.31
-Nodes (14): least_loaded_lo_id(), AsyncSession, UUID, The id of the LO (role `lo`) with the fewest *active* applications (any status…, _give_applications(), _make_user(), ApplicationStatus, AsyncSession (+6 more)
+### Community 244 - "reports/tests/test_router.py"
+Cohesion: 0.25
+Nodes (21): _make_package(), _priced_package(), Any, AsyncClient, AsyncSession, datetime, MakeBorrowerSession, UUID (+13 more)
 
-### Community 245 - "test_application_status_enum_type_in_db_includes_withdrawn_and_closed"
-Cohesion: 0.40
-Nodes (5): AsyncEngine, Review finding #2: every FK column must be indexed (spec.md "Conventions (all…, DB-side check (not just the Python enum) for the one enum the spec explicitly…, test_application_status_enum_type_in_db_includes_withdrawn_and_closed(), test_every_fk_column_has_an_index()
+### Community 245 - "now"
+Cohesion: 0.13
+Nodes (22): now(), parse_instant(), datetime, Injectable "now" (P5/P6 foundation, phase-p5-p6-plan.md E2). `now()` returns…, Parses an ISO-8601 instant; a naive value is taken as UTC. Accepts a trailing…, The current time as a timezone-aware UTC `datetime`, honouring the `clock_now`…, _override(), MonkeyPatch (+14 more)
 
 ### Community 246 - "G4 whole-phase integration review — `main...phase-p0-p1` (CQ-001…CQ-013)"
 Cohesion: 0.40
@@ -1342,17 +1336,17 @@ Nodes (4): Commands run (pass/fail), Findings, G4 whole-phase integration review
 Cohesion: 0.40
 Nodes (4): printWidth, semi, singleQuote, trailingComma
 
-### Community 251 - "make_staff_session"
-Cohesion: 0.35
-Nodes (18): make_application(), AsyncSession, AsyncClient, AsyncSession, StaffSession, AC7: `POST /applications/{id}/pipeline/start` is idempotent (a second call…, test_manager_can_resume_pipeline_for_any_los_application(), test_manager_can_start_pipeline_for_any_los_application() (+10 more)
+### Community 251 - "actions/tests/test_router.py"
+Cohesion: 0.34
+Nodes (20): _options(), Any, ApplicationStatus, AsyncClient, AsyncSession, MakeBorrowerSession, parametrize, `POST /api/v1/portal/reports/{token}/actions` (CQ-024 spec.md AC1-AC4). (+12 more)
 
-### Community 252 - "timeline/tests/test_router.py"
-Cohesion: 0.21
-Nodes (18): make_activity_event(), make_application(), ActivityEvent, AsyncSession, fixture, ActivityEvent, AsyncClient, AsyncSession (+10 more)
+### Community 252 - "test_import_failure_lands_on_a_terminal_stage_not_stuck_importing"
+Cohesion: 0.18
+Nodes (15): is_pipeline_stage_terminal(), `True` for `None` (never started) or one of the two terminal status strings…, import_retry_worker(), ApplicationStatus, AsyncSession, fixture, MonkeyPatch, UUID (+7 more)
 
-### Community 253 - "_dummy_feature_router.py"
-Cohesion: 0.50
-Nodes (3): get_dummy(), get, A throwaway feature router used only by…
+### Community 253 - "support/service.py"
+Cohesion: 0.13
+Nodes (17): Email delivery: writes an `outbox_emails` row and sends over SMTP. `send_email`…, _make_application(), UUID, AC1: `send_email` writes an `outbox_emails` row and delivers over SMTP.…, Minimal valid `Application` row so an `application_id` FK resolves., EmailStatus, OutboxEmail, Append-only: one row per submitted support form. (+9 more)
 
 ### Community 254 - "graphify reference: add a URL and watch a folder"
 Cohesion: 0.50
@@ -1370,13 +1364,13 @@ Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphif
 Cohesion: 0.50
 Nodes (3): CQ-011 — Handoffs, Handoff 1 — 2026-09-25 — Claude (implementation agent), Handoff 2 — 2026-09-25 — Claude (implementation agent)
 
-### Community 258 - "test_auth_deps.py"
-Cohesion: 0.19
-Nodes (16): Any, A dependency that 403s (`ForbiddenError`) unless the signed-in staff user's…, require_roles(), FastAPI, register_exception_handlers(), _build_test_app(), _fake_user(), _make_application() (+8 more)
+### Community 258 - "cx"
+Cohesion: 0.08
+Nodes (24): LO_OPTIONS, PrimitivesSection(), STATUS_OPTIONS, Card(), CardProps, PADDING_CLASSES, EmptyState(), EmptyStateProps (+16 more)
 
-### Community 310 - "verification/models.py"
-Cohesion: 0.13
-Nodes (24): Flag, `field_values` and `flags` tables. CQ-012 owns the rule logic that populates…, _occupancy_flag(), AsyncSession, CQ-010 review round 1, finding #1: persona 7 (Aisha Coleman)'s exact "Cannot…, `applications.occupancy is None` (persona 7's exact state after…, test_missing_occupancy_raises_exact_message_and_flags_occupancy_type(), test_setting_occupancy_resolves_the_occupancy_type_flag() (+16 more)
+### Community 310 - "test_activity_sessions_hold_the_test_lock"
+Cohesion: 0.50
+Nodes (4): AsyncSession, Lock, While an activity session is open the test's `db_lock` is held, so test-side…, test_activity_sessions_hold_the_test_lock()
 
 ### Community 311 - "Phase P5 + P6 plan (CQ-025–CQ-034)"
 Cohesion: 0.18
@@ -1386,136 +1380,136 @@ Nodes (10): Context, Decisions (each worker logs the relevant ones in its plan.m
 Cohesion: 0.18
 Nodes (23): load_users_fixture(), AC4: exactly 2 LO, 1 Manager, 1 Admin, each with an argon2 hash…, One signed-up borrower (client + verified borrower account) who has never…, seed_no_application_borrower(), seed_users(), _account_count(), AsyncSession, MonkeyPatch (+15 more)
 
-### Community 313 - "test_pipeline_stage_writes.py"
-Cohesion: 0.21
-Nodes (16): is_pipeline_stage_terminal(), `True` for `None` (never started) or one of the two terminal status strings…, import_retry_worker(), ApplicationStatus, AsyncSession, fixture, MonkeyPatch, UUID (+8 more)
+### Community 313 - "SupportForm.tsx"
+Cohesion: 0.20
+Nodes (10): PreferredContact, submitSupportRequest(), SUPPORT_TOPICS, SupportRequestResponse, SupportTopic, ContactFieldsProps, FormValues, MessageFieldProps (+2 more)
 
-### Community 314 - "IntegrationsPanel.tsx"
-Cohesion: 0.28
-Nodes (8): AdapterStatus, fetchIntegrations(), putIntegrationForceFailure(), STALE_CHECK_JOB_AVAILABLE, formatCalledAt(), IntegrationsPanel(), LoadState, { getMock, putMock }
+### Community 314 - "submit_support_request"
+Cohesion: 0.16
+Nodes (13): PreferredContact, BaseModel, field_validator, model_validator, StrEnum, `POST /api/v1/portal/support` request/response shapes (CQ-034 spec.md). AC3: a…, SupportLoContact, SupportRequestCreate (+5 more)
 
-### Community 315 - "test_flag_messages.py"
-Cohesion: 0.21
-Nodes (16): field_label(), flag_message(), A readable label for a `flags.field_key` (`occupancy_type` -> "Occupancy",…, The default human-readable message for a `flags` row., ApplicationTab, Upserts a `flags` row: reuses the existing *unresolved* row for…, write_flag(), _make_application() (+8 more)
+### Community 315 - "make_staff_session"
+Cohesion: 0.06
+Nodes (87): _get(), Any, AsyncClient, AsyncSession, fixture, MakeApplication, MakeLo, `GET /api/v1/applications` HTTP-layer tests (spec.md CQ-027). AC1's dataset… (+79 more)
 
-### Community 410 - "backend/conftest.py"
-Cohesion: 0.15
-Nodes (22): get_db(), AsyncSession, app(), _clean_integration_calls(), client(), db_session(), _fake_valkey(), AsyncClient (+14 more)
+### Community 410 - "get_settings"
+Cohesion: 0.10
+Nodes (31): get_settings(), App-wide settings, read once and shared via `get_settings()`. Every module…, _get_client(), get_valkey(), Redis, Shared Valkey (Redis-protocol) client, lazily created from…, `POST /api/v1/portal/support` (CQ-034 spec.md)., Shared Temporal client for API routes that start/signal… (+23 more)
 
 ### Community 418 - "Base"
-Cohesion: 0.07
-Nodes (45): Run migrations in 'offline' mode., run_migrations_offline(), Base, pg_enum(), Async SQLAlchemy session plumbing shared by every feature. No tables are…, A native Postgres enum column type storing each member's `.value`. Plain…, `assets`, `employment` and `documents` tables. **Decision** (spec): the catalog…, `liabilities` table. `total_monthly_liabilities` and… (+37 more)
+Cohesion: 0.06
+Nodes (60): do_run_migrations(), Run migrations in 'offline' mode., Run migrations in 'online' mode. `DATABASE_URL` uses the `postgresql+asyncpg`…, run_migrations_offline(), run_migrations_online(), Base, pg_enum(), Async SQLAlchemy session plumbing shared by every feature. No tables are… (+52 more)
 
-### Community 419 - "make_application"
-Cohesion: 0.67
-Nodes (4): make_application(), AsyncSession, fixture, set_field_value()
+### Community 419 - "test_users.py"
+Cohesion: 0.22
+Nodes (15): create_user(), normalize_email(), AsyncSession, Strips surrounding whitespace and lowercases, so lookups and the `users.email`…, Creates and flushes a `User` row. Does not commit. Raises `ConflictError` if a…, AsyncSession, MonkeyPatch, AC8 support: `create_user` — the single entry point `scripts/create_user.py`… (+7 more)
 
-### Community 420 - "settings/router.py"
-Cohesion: 0.21
-Nodes (12): get_settings_page(), AsyncSession, get, `GET /admin/settings` (spec.md "Settings"). Admin only., BaseModel, `GET /admin/settings` shapes (spec.md "Settings", Admin, read-only)., SettingsResponse, SettingValue (+4 more)
+### Community 420 - "stage_and_label"
+Cohesion: 0.17
+Nodes (14): ApplicationStatus, PortalStage, Maps an internal `ApplicationStatus` to the borrower-facing `(stage, label)`…, stage_and_label(), ApplicationStatus, parametrize, PortalStage, `stage_and_label` (CQ-031 spec.md's mapping table) -- pure unit tests, no DB.… (+6 more)
 
-### Community 422 - "mi_factor"
+### Community 422 - "(staff)/page.test.tsx"
 Cohesion: 0.24
-Nodes (8): _HasMiMatrix, mi_factor(), Decimal, Protocol, Conventional mortgage insurance (MI) rate table and lookup. Annual MI rate…, Structural type for the `config` parameter, to avoid importing `ConfigSnapshot`…, Look up the annual MI rate for `ltv_pct` (0-1 fraction, e.g. `0.95`) x `fico`.…, MiMatrix
+Nodes (7): IntegrationsPage(), SettingsPage(), ClientsPage(), OutboxPage(), DashboardPage(), StubPage(), StubPageProps
 
-### Community 424 - "seed/tests/conftest.py"
-Cohesion: 0.19
-Nodes (14): _clean_integration_calls(), db_session(), _fake_valkey(), AsyncEngine, AsyncSession, fixture, MonkeyPatch, Fixtures for `seed/tests/*` -- mirrors `backend/conftest.py`'s… (+6 more)
+### Community 424 - "test_provider_rows_seeded.py"
+Cohesion: 0.21
+Nodes (14): SeededBase, AC2/AC7 -- Phase B: CQ-013 is merged, `seed_persona` runs the real pricing…, CQ-022 spec.md "Seed": `apply_send_fixture` now also freezes a…, test_grace_and_luis_downstream_rows(), test_grace_and_luis_have_quote_package_versions(), test_persona_final_statuses_match_table(), AC3: `provider_tax_rates`, `provider_rents`, `provider_str_revenue`,…, test_credit_adapter_returns_non_empty_for_every_persona() (+6 more)
 
 ### Community 425 - "test_status_patch_404_for_other_los_application"
 Cohesion: 0.52
 Nodes (7): AsyncClient, AsyncSession, StaffSession, test_status_patch_404_for_other_los_application(), test_status_patch_terminal_only(), test_summary_401_without_cookie(), test_summary_access_by_role()
 
-### Community 428 - "MultiSelect.tsx"
-Cohesion: 0.23
-Nodes (8): MultiSelect(), MultiSelectProps, summary(), OPTIONS, Select(), SelectOption, SelectProps, OPTIONS
-
-### Community 434 - "test_provider_rows_seeded.py"
+### Community 428 - "applications/page.tsx"
 Cohesion: 0.22
-Nodes (13): SeededBase, AC2/AC7 -- Phase B: CQ-013 is merged, `seed_persona` runs the real pricing…, CQ-022 spec.md "Seed": `apply_send_fixture` now also freezes a…, test_grace_and_luis_downstream_rows(), test_grace_and_luis_have_quote_package_versions(), test_persona_final_statuses_match_table(), AC3: `provider_tax_rates`, `provider_rents`, `provider_str_revenue`,…, test_credit_adapter_returns_non_empty_for_every_persona() (+5 more)
+Nodes (9): ApplicationsPage(), LoadState, { getMock, pushMock }, LO_USER, MANAGER_USER, ROW, fetchApplications(), fetchLoOptions() (+1 more)
 
-### Community 437 - "enrichment/tests/test_auth_scope.py"
-Cohesion: 0.38
-Nodes (13): AsyncClient, AsyncSession, StaffSession, Auth/scope coverage for `pricing.enrichment` routes (phase-p2 merge, H3): real…, _seed_tax(), test_lo_gets_404_on_other_los_application(), test_manager_gets_200_on_any_los_application(), test_owner_lo_gets_200_on_own_application() (+5 more)
-
-### Community 438 - "scenarios/tests/test_auth_scope.py"
-Cohesion: 0.40
-Nodes (13): _priced_application(), _priced_scenario(), AsyncClient, AsyncSession, StaffSession, Auth/scope coverage for `pricing.scenarios` routes (phase-p2 merge, H3): real…, test_get_products_401_without_cookie(), test_lo_gets_404_on_other_los_application() (+5 more)
-
-### Community 439 - "SettingsPanel.tsx"
-Cohesion: 0.28
-Nodes (7): fetchSettings(), SettingValue, formatValue(), LoadState, SettingsPanel(), SOURCE_LABEL, { getMock }
-
-### Community 440 - "fixture"
-Cohesion: 0.18
-Nodes (12): activities_session_factory(), bind_activities_to_test_session(), ApplicationStatus, fixture, MonkeyPatch, UUID, WorkflowEnvironment, Polls `applications.status` via a Core column select (bypasses the ORM identity… (+4 more)
-
-### Community 441 - "record_call"
-Cohesion: 0.24
-Nodes (10): async_sessionmaker, _engine_for_session(), Any, AsyncEngine, AsyncSession, UUID, Writes one `integration_calls` row per mock call, success or failure.…, Resolves the real `AsyncEngine` backing `session`, whether it was constructed… (+2 more)
-
-### Community 442 - "test_settings_match_snapshot"
-Cohesion: 0.22
-Nodes (11): make_application(), AsyncSession, fixture, AsyncClient, AsyncSession, StaffSession, AC6: builds a scenario the same way `create_scenario`/`auto_price` persist one…, test_settings_401_without_cookie() (+3 more)
-
-### Community 443 - "application_workflow_id"
-Cohesion: 0.25
-Nodes (11): application_workflow_id(), Workflow id convention (spec.md Contracts): one run per application, ever., seed_str_revenue(), ApplicationStatus, AsyncSession, test_forced_pricing_failure_then_recovery(), _los_call_count(), AsyncSession (+3 more)
-
-### Community 444 - "User"
-Cohesion: 0.47
-Nodes (9): ensure_borrower_owns_client(), Raises `NotFoundError` (404, never 403 — Decision #11) unless `client_id` is…, _make_account(), _make_client(), AsyncSession, AC6: `ensure_borrower_owns_client` returns 404 (never 403) for another client's…, test_ensure_borrower_owns_client_404s_for_another_client(), test_ensure_borrower_owns_client_passes_for_own_client() (+1 more)
-
-### Community 445 - "extractErrorMessage"
-Cohesion: 0.31
-Nodes (8): AppErrorBody, extractErrorMessage(), FastApiValidationBody, FastApiValidationDetail, fieldLabelFromLoc(), isAppErrorBody(), isFastApiValidationBody(), messageFromValidationDetail()
-
-### Community 446 - "test_matches_empty_with_no_scenario_priced"
-Cohesion: 0.36
-Nodes (9): AsyncClient, AsyncSession, StaffSession, A TBD application with nothing priced yet has no recommended quote to run…, AC3: a specific-address application (Priya Nair's shape) gets an empty matches…, test_matches_401_without_cookie(), test_matches_404_out_of_scope(), test_matches_empty_with_no_scenario_priced() (+1 more)
-
-### Community 447 - "P5/P6 worker guide (shared instructions for every item worker)"
-Cohesion: 0.22
-Nodes (8): After you finish implementing the change:, Agent loop (AGENTS.md stages 1–8; templates in docs/backlog/_templates/), Context cap (binding), E2E recipe (slot {SLOT}), Overall goal, P5/P6 worker guide (shared instructions for every item worker), Parallel siblings in this wave (do not build their parts), Setup
-
-### Community 448 - "test_default_scenarios_investment.py"
+### Community 430 - "test_default_scenarios_investment.py"
 Cohesion: 0.50
 Nodes (7): _prep_application(), AsyncSession, Decimal, AC5: the investment default scenario set produces the collapsed Group A only…, _seed_curve(), test_collapses_to_one_group_when_actual_bucket_matches_assumption(), test_produces_two_groups_when_actual_bucket_differs()
 
-### Community 449 - "test_patch_field_value_sets_override"
+### Community 434 - "test_default_scenarios_primary.py"
 Cohesion: 0.57
-Nodes (7): AsyncClient, AsyncSession, StaffSession, _seed_tax(), test_patch_field_value_sets_override(), test_revert_not_overridable_field_key_is_422(), test_revert_restores_source_value_and_clears_override()
+Nodes (7): _prep_application(), AsyncSession, AC6: the primary default scenario set produces one group when the chosen down…, _seed_conventional_curve(), test_default_down_payment_is_20_percent_when_not_given(), test_one_group_when_down_payment_at_or_above_20_percent(), test_two_groups_when_down_payment_below_20_percent()
 
-### Community 452 - "valkey.py"
-Cohesion: 0.60
-Nodes (4): _get_client(), get_valkey(), Redis, Shared Valkey (Redis-protocol) client, lazily created from…
+### Community 436 - "support/templates.py"
+Cohesion: 0.16
+Nodes (17): confirmation_html(), confirmation_subject(), _esc(), Email bodies for `POST /api/v1/portal/support` (CQ-034 spec.md): one to the…, A minimal, inline-styled, table-based email body -- one `<table>` for layout…, Code-review finding: every row value here can be borrower- or LO-supplied free…, _shell(), support_inbox_html() (+9 more)
 
-### Community 453 - "workflows/__init__.py"
+### Community 437 - "test_stale_quote_check.py"
+Cohesion: 0.16
+Nodes (17): CQ-030 stale job result. A plain dataclass (not Pydantic) so Temporal's default…, Retry policies shared by `application_pipeline.py` and its tests (plan.md #7) —…, ApplicationStatus, AsyncSession, MonkeyPatch, UUID, Worker, CQ-030: `StaleQuoteCheckWorkflow` runs `mark_stale` through the real worker… (+9 more)
+
+### Community 438 - "verification/service.py"
+Cohesion: 0.12
+Nodes (29): _build_context(), _latest_scenario_snapshot(), ApplicationTab, AsyncSession, UUID, Assembles a `VerificationContext` from the DB, calls `evaluate_rules`, and…, Upserts a `flags` row: reuses the existing *unresolved* row for…, Resolves (sets `resolved_at`) the existing unresolved `flags` row for… (+21 more)
+
+### Community 439 - "home/router.py"
+Cohesion: 0.29
+Nodes (5): get_portal_home(), AsyncSession, CurrentBorrower, PortalHomeResponse, `GET /api/v1/portal/me` (CQ-031 spec.md).
+
+### Community 440 - "fixture"
+Cohesion: 0.15
+Nodes (19): AbstractAsyncContextManager, activities_session_factory(), bind_activities_to_test_session(), bound_default_retries(), db_lock(), ApplicationStatus, AsyncSession, fixture (+11 more)
+
+### Community 441 - "test_resume_reprices_ben_ford_without_reimporting"
+Cohesion: 0.33
+Nodes (7): A single Conventional 30yr rate curve — matches `pricing/scenarios/…, seed_conventional_curve(), ApplicationStatus, AsyncSession, MonkeyPatch, test_resume_reprices_aisha_coleman_after_occupancy_fix(), test_resume_reprices_ben_ford_without_reimporting()
+
+### Community 442 - "submit_support"
+Cohesion: 0.33
+Nodes (6): AsyncSession, CurrentBorrower, post, Redis, SupportRequestResponse, submit_support()
+
+### Community 443 - "test_portal_application_skips_import_and_reaches_priced"
+Cohesion: 0.47
+Nodes (6): seed_str_revenue(), _los_call_count(), AsyncSession, MonkeyPatch, test_los_application_still_imports(), test_portal_application_skips_import_and_reaches_priced()
+
+### Community 444 - "test_aisha_coleman_flagged_path_writes_4_events"
+Cohesion: 0.47
+Nodes (6): _event_types(), ApplicationStatus, AsyncSession, UUID, test_aisha_coleman_flagged_path_writes_4_events(), test_marcus_hale_happy_path_writes_6_events()
+
+### Community 445 - "test_application_status_enum_type_in_db_includes_withdrawn_and_closed"
 Cohesion: 0.40
-Nodes (3): AC6: `python -m app.workflows.worker` starts, connects to Temporal, and logs…, test_build_worker_logs_registration_and_starts(), LogCaptureFixture
+Nodes (5): AsyncEngine, Review finding #2: every FK column must be indexed (spec.md "Conventions (all…, DB-side check (not just the Python enum) for the one enum the spec explicitly…, test_application_status_enum_type_in_db_includes_withdrawn_and_closed(), test_every_fk_column_has_an_index()
 
-### Community 454 - "do_run_migrations"
-Cohesion: 0.50
-Nodes (4): do_run_migrations(), Run migrations in 'online' mode. `DATABASE_URL` uses the `postgresql+asyncpg`…, run_migrations_online(), Connection
+### Community 446 - "make_application"
+Cohesion: 0.67
+Nodes (4): make_application(), AsyncSession, fixture, set_field_value()
 
-### Community 455 - "test_scenario_create_route_propagates_pricing_validation_error"
+### Community 447 - "test_aisha_coleman_ltr_columbus_oh_needs_attention_missing_occupancy"
+Cohesion: 0.67
+Nodes (4): ApplicationStatus, AsyncSession, test_aisha_coleman_ltr_columbus_oh_needs_attention_missing_occupancy(), test_ben_ford_primary_fort_wayne_in_needs_attention_housing_flag()
+
+### Community 448 - "test_schedule_registration_failure_does_not_stop_the_worker"
 Cohesion: 0.50
-Nodes (4): AsyncClient, StaffSession, spec.md: every route that prices lets `PricingValidationError` propagate to…, test_scenario_create_route_propagates_pricing_validation_error()
+Nodes (4): LogCaptureFixture, MonkeyPatch, Review m1: registration failing after connect is logged, and the pipeline…, test_schedule_registration_failure_does_not_stop_the_worker()
+
+### Community 449 - "test_openapi_export.py"
+Cohesion: 0.28
+Nodes (6): export_openapi(), Path, Export the FastAPI app's OpenAPI schema for `@cq/api-client` codegen. Run via…, Path, AC6: `export_openapi.py` writes valid JSON that round-trips through `json.load`., test_output_is_valid_json()
+
+### Community 450 - "P5/P6 worker guide (shared instructions for every item worker)"
+Cohesion: 0.22
+Nodes (8): After you finish implementing the change:, Agent loop (AGENTS.md stages 1–8; templates in docs/backlog/_templates/), Context cap (binding), E2E recipe (slot {SLOT}), Overall goal, P5/P6 worker guide (shared instructions for every item worker), Parallel siblings in this wave (do not build their parts), Setup
+
+### Community 453 - "run_pricing_stage"
+Cohesion: 0.38
+Nodes (6): PricingStageResult, AsyncSession, UUID, Seam onto CQ-013's pricing/enrichment service functions. **Phase B (CQ-013…, Runs enrich -> validate -> auto_price -> draft_default_quote_set, in the order…, run_pricing_stage()
 
 ## Knowledge Gaps
-- **1482 isolated node(s):** `npx`, `@kaneo/mcp`, `KANEO_API_URL`, `codegraph`, `semi` (+1477 more)
+- **1497 isolated node(s):** `npx`, `@kaneo/mcp`, `KANEO_API_URL`, `codegraph`, `semi` (+1492 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **77 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **76 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Application` connect `Application` to `verification/tests/test_service.py`, `test_auth_deps.py`, `freeze_package_version`, `enums.py`, `outbox/service.py`, `borrower/service.py`, `enrichment/service.py`, `ob_request.py`, `scenarios/service.py`, `activities.py`, `applications/tests/test_service.py`, `make_persona_application`, `summary/tests/test_service.py`, `ScenarioInputs`, `matches/tests/test_service.py`, `actions/service.py`, `StrategyType`, `Base`, `make_application`, `test_products_grid_returns_8_to_15_rows`, `reports/tests/test_router.py`, `test_signup.py`, `test_status_patch_404_for_other_los_application`, `auth.py`, `actions/tests/test_router.py`, `applications/router.py`, `test_retry_policy.py`, `enrichment/tests/test_auth_scope.py`, `verification/models.py`, `scenarios/tests/test_auth_scope.py`, `seed_persona`, `test_pipeline_stage_writes.py`, `test_settings_match_snapshot`, `test_flag_messages.py`, `staff/service.py`, `test_draft_quote_set.py`, `test_matches_empty_with_no_scenario_priced`, `application_workflow_id`, `get_settings`, `loader.py`, `test_patch_field_value_sets_override`, `test_default_scenarios_investment.py`, `test_scenario_create_route_propagates_pricing_validation_error`, `verification/service.py`, `matches/service.py`, `builder.py`, `seed_background_applications`, `summary/router.py`, `Client`, `timeline/service.py`, `test_aisha_coleman_flagged_path_writes_4_events`, `email/tests/test_service.py`, `test_p5p6_schema.py`, `test_assignment.py`, `make_staff_session`, `timeline/tests/test_router.py`?**
-  _High betweenness centrality (0.073) - this node is a cross-community bridge._
-- **Why does `User` connect `User` to `test_auth_deps.py`, `freeze_package_version`, `enums.py`, `outbox/service.py`, `borrower/service.py`, `applications/tests/test_service.py`, `matches/tests/test_service.py`, `actions/service.py`, `backend/conftest.py`, `Base`, `test_signup.py`, `auth.py`, `scenarios/tests/test_auth_scope.py`, `test_login_flow.py`, `seed_users`, `staff/service.py`, `test_flag_messages.py`, `test_draft_quote_set.py`, `get_settings`, `loader.py`, `test_pagination.py`, `test_login.py`, `seed_background_applications`, `staff/router.py`, `Client`, `timeline/service.py`, `test_p5p6_schema.py`, `test_assignment.py`, `email/tests/test_service.py`?**
-  _High betweenness centrality (0.014) - this node is a cross-community bridge._
-- **Why does `get_settings()` connect `get_settings` to `verify_challenge`, `Base`, `is_forced_to_fail`, `enums.py`, `storage.py`, `valkey.py`, `main.py`, `common/errors.py`, `Client`, `seed/tests/conftest.py`, `test_rate_limit.py`, `backend/conftest.py`, `sessions/service.py`, `test_security.py`, `seed_persona`, `seed_users`, `integrations/service.py`, `staff/service.py`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+- **Why does `Application` connect `Application` to `verification/tests/test_service.py`, `test_versions.py`, `enrichment/service.py`, `enums.py`, `listing/service.py`, `ob_request.py`, `scenarios/service.py`, `activities.py`, `applications/tests/test_service.py`, `test_application_pipeline_personas.py`, `seed_providers`, `matches/tests/test_service.py`, `actions/service.py`, `QuoteComputation`, `stale/service.py`, `stale/tests/test_service.py`, `Base`, `test_signup.py`, `test_status_patch_404_for_other_los_application`, `User`, `make_borrower_session`, `test_default_scenarios_investment.py`, `make_application`, `test_default_scenarios_primary.py`, `applications/router.py`, `make_persona_application`, `test_stale_quote_check.py`, `verification/service.py`, `borrower/service.py`, `test_resume_reprices_ben_ford_without_reimporting`, `auth.py`, `make_staff_session`, `make_application`, `test_aisha_coleman_flagged_path_writes_4_events`, `make_application`, `test_aisha_coleman_ltr_columbus_oh_needs_attention_missing_occupancy`, `test_encryption.py`, `QuotePackageVersion`, `test_portal_application_skips_import_and_reaches_priced`, `home/service.py`, `ScenarioInputs`, `builder.py`, `reset.py`, `Client`, `test_activities_are_thin_wrappers.py`, `Flag`, `test_p5p6_schema.py`, `reports/tests/test_router.py`, `actions/tests/test_router.py`, `test_import_failure_lands_on_a_terminal_stage_not_stuck_importing`, `support/service.py`?**
+  _High betweenness centrality (0.061) - this node is a cross-community bridge._
+- **Why does `get_settings()` connect `get_settings` to `enums.py`, `system/service.py`, `verify_challenge`, `seed_providers`, `stale/tests/test_service.py`, `timedelta`, `test_security.py`, `Base`, `is_forced_to_fail`, `storage.py`, `staff/router.py`, `test_rate_limit.py`, `main.py`, `test_stale_quote_check.py`, `seed/tests/conftest.py`, `borrower/service.py`, `seed_users`, `submit_support_request`, `test_encryption.py`, `common/errors.py`, `reset.py`, `Client`, `now`, `support/service.py`?**
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Why does `ScenarioInputs` connect `ScenarioInputs` to `ConfigSnapshot`, `Base`, `test_scenario_inputs_validation.py`, `enums.py`, `compute_quote`, `scenarios/service.py`, `insurance_annual_rate_from_amount`, `Application`, `seed_providers`, `verification/service.py`, `matches/tests/test_service.py`, `QuoteComputation`?**
+  _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **Are the 7 inferred relationships involving `Application` (e.g. with `Base` and `EncryptedString`) actually correct?**
   _`Application` has 7 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 2 inferred relationships involving `User` (e.g. with `Base` and `UserRole`) actually correct?**
@@ -1523,4 +1517,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 16 inferred relationships involving `ScenarioInputs` (e.g. with `_CurrentScenarioNumbers` and `_CandidateResult`) actually correct?**
   _`ScenarioInputs` has 16 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `npx`, `@kaneo/mcp`, `KANEO_API_URL` to the rest of the system?**
-  _1482 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1497 weakly-connected nodes found - possible documentation gaps or missing edges._

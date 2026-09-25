@@ -89,6 +89,12 @@ class Settings(BaseSettings):
     stale_check_interval_seconds: int = 3600
     clock_now: str | None = None
 
+    # CQ-034 (plan.md Decision #2): base URL of the LO console, used to
+    # build the `/applications/{id}` deep link in the support-inbox email.
+    # No such setting existed before this item; local dev's LO console runs
+    # on port 3010 (`make lo-console` / `pnpm --filter @cq/lo-console dev`).
+    lo_console_base_url: str = "http://localhost:3010"
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, value: object) -> object:

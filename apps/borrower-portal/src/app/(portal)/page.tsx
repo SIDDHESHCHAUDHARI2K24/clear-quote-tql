@@ -1,23 +1,10 @@
 "use client";
 
-import { applicationStatusLabel } from "../../features/auth";
-import { StubPage, useBorrowerSession } from "../../features/shell";
+import { HomeView } from "../../features/home";
 
-// `/` -- borrower home. P5/P6 foundation keeps the old placeholder's
-// behaviour (greeting + latest application status) inside the portal
-// shell; CQ-031 replaces it with the real home/status page. Session
-// checking and Sign out moved to the `(portal)` layout's
-// `BorrowerSessionProvider` / `PortalShell`.
+// `/` -- borrower home (CQ-031 spec.md). `HomeView` does the actual
+// `GET /api/v1/portal/me` fetch and renders the loading/error/loaded
+// states, same convention as `features/report/ReportView.tsx`.
 export default function HomePage() {
-  const { me } = useBorrowerSession();
-
-  return (
-    <StubPage title={`Hi ${me.first_name}`} item="CQ-031">
-      <p role="status" className="text-navy-900">
-        {me.latest_application
-          ? applicationStatusLabel(me.latest_application.status)
-          : "No application yet"}
-      </p>
-    </StubPage>
-  );
+  return <HomeView />;
 }

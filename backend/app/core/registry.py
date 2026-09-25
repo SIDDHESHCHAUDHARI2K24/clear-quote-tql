@@ -17,6 +17,7 @@ from fastapi import FastAPI
 FEATURE_ROUTERS: list[str] = [
     "app.features.applications.router",
     "app.features.applications.summary.router",
+    "app.features.applications.listing.router",
     "app.features.pricing.enrichment.router",
     "app.features.pricing.scenarios.router",
     "app.features.matches.router",
@@ -28,6 +29,9 @@ FEATURE_ROUTERS: list[str] = [
     "app.features.notifications.outbox.router",
     "app.features.admin.integrations.router",
     "app.features.admin.settings.router",
+    "app.features.portal.support.router",
+    "app.features.portal.home.router",
+    "app.features.admin.jobs.router",
 ]
 
 
