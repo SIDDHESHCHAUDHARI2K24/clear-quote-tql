@@ -162,3 +162,49 @@ async def test_missing_or_invalid_ssn_is_reported_not_stored(
     assert body["field_errors"] == {"ssn": MSG_SSN}
     assert body["draft"]["data"]["you"]["ssn_set"] is False
     assert body["draft"]["tabs"]["you"]["complete"] is False
+
+
+async def test_undecryptable_ssn_is_reported_not_500(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: Callable[..., Awaitable[Any]],
+    tampa_listing: ProviderListing,
+    valid_tabs: Tabs,
+    fake_temporal: FakeTemporal,
+    sent_emails: list[SentEmail],
+) -> None:
+    """CQ-032b review follow-up 1: a stored SSN ciphertext that no longer
+    decrypts (e.g. a rotated `FIELD_ENCRYPTION_KEY`) must not 500 out of
+    `_party()`; it is reported as a field error and the bad ciphertext is
+    dropped so the borrower can re-enter the SSN."""
+    await make_borrower_session()
+    draft_id = (await client.post(BASE)).json()["id"]
+    tabs = valid_tabs()
+    for tab in ("you", "property", "income", "consent"):
+        body = await _patch(client, draft_id, tab, tabs[tab])
+        assert body["tab_valid"] is True, body
+
+    # Corrupt the stored ciphertext directly (simulating a key rotation).
+    await db_session.execute(
+        text(
+            "UPDATE application_drafts SET data = jsonb_set("
+            "data, '{you,ssn_encrypted}', to_jsonb('not-a-valid-fernet-token'::text)"
+            ") WHERE id = :id"
+        ),
+        {"id": draft_id},
+    )
+    await db_session.commit()
+
+    response = await client.post(f"{BASE}/{draft_id}/submit")
+    assert response.status_code == 422, response.json()
+    details = response.json()["error"]["details"]
+    assert details["field_errors"] == {"you": {"ssn": MSG_SSN}}
+    assert details["first_invalid_tab"] == "you"
+    assert fake_temporal.started == []
+    assert sent_emails == []
+
+    # The bad ciphertext is dropped: a re-fetch asks for the SSN again.
+    fetched = (await client.get(f"{BASE}/{draft_id}")).json()
+    assert fetched["data"]["you"]["ssn_set"] is False
+    assert "ssn_last4" not in fetched["data"]["you"]
+    assert fetched["submitted_application_id"] is None

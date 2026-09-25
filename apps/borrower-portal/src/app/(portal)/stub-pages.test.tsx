@@ -1,23 +1,17 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 
 // Moved out of `page.test.tsx` (CQ-031 review round 1 / plan.md Decision
-// 8): `/` stopped being a stub once this item built the real home page,
-// but `/apply` and `/tasks/credit-check/[id]` are still the P5/P6
-// foundation's placeholders for CQ-032/033 respectively. Their coverage
-// moves here unchanged so those items keep a green test without this
-// item's PR touching files it doesn't own.
+// 8): `/` stopped being a stub once this item built the real home page.
 //
-// `/support` is no longer listed here: CQ-034 built the real support form
-// (no longer a stub) -- its own tests live in
-// `src/features/support/SupportForm.test.tsx`. Likewise CQ-033 built
-// `/tasks/credit-check/[id]` (tests in `src/features/credit-consent/`).
-import ApplyPage from "./apply/page";
+// `/support`, `/tasks/credit-check/[id]` and `/apply` are no longer listed
+// here: CQ-034, CQ-033 and CQ-032 built their real forms (no longer
+// stubs) -- their own tests live in `src/features/support/SupportForm.test.tsx`,
+// `src/features/credit-consent/CreditConsent.test.tsx` and
+// `src/features/apply/ApplyWizard.validation.test.tsx`.
 
 describe("(portal) stub pages", () => {
-  it.each([["Apply", ApplyPage, "CQ-032"]])("%s says which item builds it", (title, Page, item) => {
-    render(<Page />);
-    expect(screen.getByRole("heading", { level: 1, name: title })).toBeInTheDocument();
-    expect(screen.getByText(`Built in ${item}`)).toBeInTheDocument();
+  it.skip("no stub pages remain to test", () => {
+    // Placeholder retained so this file stays a valid, discoverable test
+    // suite if a future item introduces another stub page.
   });
 });

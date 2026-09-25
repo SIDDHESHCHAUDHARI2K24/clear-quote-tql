@@ -187,4 +187,8 @@ Any negative number → `"Must be 0 or more."`. Money fields (price, income, deb
 - [x] T6 submit
 - [x] T7 AC1 pipeline test
 - [x] T8 api-client, registry, E2E
-- [ ] T9–T11 (CQ-032b)
+- [x] T9 wizard shell: stepper, tab unlock, autosave 1 s, resume
+- [x] T10 tabs 1–4 forms, uploads, confirmation
+- [x] T11 a11y (labels, `aria-describedby`), react-doctor (100/100)
+
+CQ-032b's own decisions (31–36) and its acceptance/test evidence are appended to `post-dev.md` under "CQ-032b — Apply wizard UI".
