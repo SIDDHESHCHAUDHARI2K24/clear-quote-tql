@@ -287,6 +287,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/applications/{application_id}/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Package */
+        get: operations["get_package_api_v1_applications__application_id__package_get"];
+        /** Put Package */
+        put: operations["put_package_api_v1_applications__application_id__package_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Readiness */
+        get: operations["get_readiness_api_v1_packages__package_id__readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Report */
+        get: operations["get_report_api_v1_packages__package_id__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/letter.html": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Letter Html */
+        get: operations["get_letter_html_api_v1_packages__package_id__letter_html_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/applications/{application_id}/matches": {
         parameters: {
             query?: never;
@@ -1032,6 +1101,54 @@ export interface components {
             /** Code */
             code: string;
         };
+        /** PackageRead */
+        PackageRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Quote Ids */
+            quote_ids: string[];
+            /** Recommended Quote Id */
+            recommended_quote_id: string | null;
+            /** Recommendation Text */
+            recommendation_text: string | null;
+            /** Lo Note */
+            lo_note: string | null;
+            /** Recipient Email */
+            recipient_email: string | null;
+            /** Attachments */
+            attachments: string[];
+            /** Sent At */
+            sent_at: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** PackageReadiness */
+        PackageReadiness: {
+            /** Ready */
+            ready: boolean;
+            /** Blockers */
+            blockers: components["schemas"]["ReadinessBlocker"][];
+        };
+        /** PackageUpdate */
+        PackageUpdate: {
+            /** Quote Ids */
+            quote_ids: string[];
+            /** Recommended Quote Id */
+            recommended_quote_id?: string | null;
+            /** Lo Note */
+            lo_note?: string | null;
+        };
         /** PipelineResumeResponse */
         PipelineResumeResponse: {
             /** Workflow Id */
@@ -1523,6 +1640,15 @@ export interface components {
              */
             updated_at: string;
         };
+        /** ReadinessBlocker */
+        ReadinessBlocker: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Tab */
+            tab: string;
+        };
         /** RecommendResponse */
         RecommendResponse: {
             /**
@@ -1653,6 +1779,21 @@ export interface components {
          * @enum {string}
          */
         ReportStrategy: "primary" | "ltr" | "str";
+        /**
+         * ReportViewModel
+         * @description The one contract. See module docstring.
+         */
+        ReportViewModel: {
+            header: components["schemas"]["ReportHeader"];
+            strategy: components["schemas"]["ReportStrategy"];
+            /** Options */
+            options: components["schemas"]["ReportOption"][];
+            recommendation: components["schemas"]["ReportRecommendation"];
+            /** Matches */
+            matches: components["schemas"]["ReportMatch"][];
+            disclosures: components["schemas"]["ReportDisclosures"];
+            lo: components["schemas"]["ReportLo"];
+        };
         /** RepriceResponse */
         RepriceResponse: {
             /**
@@ -1858,21 +1999,6 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
-        };
-        /**
-         * ReportViewModel
-         * @description The one contract. See module docstring.
-         */
-        ReportViewModel: {
-            header: components["schemas"]["ReportHeader"];
-            strategy: components["schemas"]["ReportStrategy"];
-            /** Options */
-            options: components["schemas"]["ReportOption"][];
-            recommendation: components["schemas"]["ReportRecommendation"];
-            /** Matches */
-            matches: components["schemas"]["ReportMatch"][];
-            disclosures: components["schemas"]["ReportDisclosures"];
-            lo: components["schemas"]["ReportLo"];
         };
     };
     responses: never;
@@ -2453,6 +2579,175 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RepriceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_package_api_v1_applications__application_id__package_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_package_api_v1_applications__application_id__package_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_readiness_api_v1_packages__package_id__readiness_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageReadiness"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_api_v1_packages__package_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportViewModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_letter_html_api_v1_packages__package_id__letter_html_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
                 };
             };
             /** @description Validation Error */

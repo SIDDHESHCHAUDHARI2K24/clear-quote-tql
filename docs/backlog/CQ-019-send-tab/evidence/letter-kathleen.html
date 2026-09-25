@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pre-approval letter — Kathleen McReynolds</title>
+    <style>
+      @page {
+        size: letter;
+        margin: 0.6in 0.7in;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        background: #ffffff;
+      }
+      body {
+        margin: 0;
+        color: #1f2a37;
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 10.5pt;
+        line-height: 1.5;
+      }
+      .page {
+        max-width: 7.1in;
+        margin: 0 auto;
+        padding: 0.3in 0;
+      }
+      @media print {
+        .page {
+          padding: 0;
+        }
+      }
+      .num {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-variant-numeric: tabular-nums;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #1f2a37;
+        padding-bottom: 12pt;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 8pt;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        line-height: 1.1;
+        font-size: 11pt;
+      }
+      .brand .accent {
+        color: #2f6fb3;
+      }
+      .lender {
+        text-align: right;
+        font-size: 8pt;
+        color: #6b7280;
+      }
+      .title-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 14pt 0 10pt;
+        color: #6b7280;
+        font-size: 9pt;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+      }
+      .title-row .date {
+        letter-spacing: 0;
+      }
+      p {
+        margin: 0 0 9pt;
+      }
+      table.terms {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 6pt 0 12pt;
+      }
+      table.terms td {
+        padding: 5pt 0;
+        border-bottom: 1px solid #e5e7eb;
+        width: 25%;
+      }
+      table.terms td.label {
+        color: #6b7280;
+      }
+      table.terms td.value {
+        text-align: right;
+        padding-right: 18pt;
+      }
+      .verification {
+        display: flex;
+        gap: 18pt;
+        margin: 0 0 12pt;
+        font-size: 9.5pt;
+      }
+      .verification h2 {
+        font-size: 9pt;
+        margin: 0 0 4pt;
+        color: #6b7280;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .verification ul {
+        margin: 0;
+        padding-left: 14pt;
+      }
+      .highlights span {
+        display: block;
+        font-weight: 600;
+      }
+      .portal {
+        font-size: 9.5pt;
+        background: #f3f6f9;
+        padding: 6pt 9pt;
+        border-radius: 4pt;
+        word-break: break-all;
+      }
+      .signature {
+        border-top: 1px solid #e5e7eb;
+        margin-top: 12pt;
+        padding-top: 10pt;
+      }
+      .signature .name {
+        font-weight: 700;
+      }
+      .muted {
+        color: #6b7280;
+      }
+      footer {
+        margin-top: 12pt;
+        font-size: 7.5pt;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header>
+        <div class="brand" aria-label="Total Quality Lending">
+          <svg width="34" height="30" viewBox="0 0 34 30" aria-hidden="true">
+            <path d="M3 14 L17 3 L31 14 V28 H3 Z" fill="none" stroke="#1f2a37" stroke-width="3" />
+            <path d="M12 28 V18 H22 V28" fill="none" stroke="#2f6fb3" stroke-width="3" />
+          </svg>
+          <div>
+            <span class="accent">TOTAL<br />QUALITY</span><br />LENDING
+          </div>
+        </div>
+        <div class="lender">
+          630 W Carmel Dr, Suite 160, Carmel, IN 46032<br />
+          <span class="num">NMLS ID #1933377 · (800) 304-1928</span>
+        </div>
+      </header>
+
+      <div class="title-row">
+        <span>Pre-approval letter</span>
+        <span class="date num" data-testid="letter-date">09/25/2026</span>
+      </div>
+
+      <p>To Whom It May Concern:</p>
+      <p>
+        This letter serves as a pre-approval for
+        <strong data-testid="letter-borrower">Kathleen McReynolds</strong>
+        in connection with the purchase of the property located at
+        <strong data-testid="letter-property">- TBD -</strong>, based on the credit,
+        income and asset documentation reviewed by our underwriting team.
+      </p>
+
+      <table class="terms" data-testid="letter-terms">
+        <tr>
+          <td class="label">Purchase Price</td>
+          <td class="value num">$300,000</td>
+          <td class="label">Loan Amount</td>
+          <td class="value num">$225,000</td>
+        </tr>
+        <tr>
+          <td class="label">Loan to Value</td>
+          <td class="value num">75%</td>
+          <td class="label">Loan Type / Term</td>
+          <td class="value num">DSCR 30 YR Fixed</td>
+        </tr>
+        <tr>
+          <td class="label">Occupancy</td>
+          <td class="value">Investment</td>
+          <td class="label">Property Type</td>
+          <td class="value">SFR</td>
+        </tr>
+      </table>
+
+      <div class="verification">
+        <div class="highlights">
+          <h2>Verified</h2>
+          <span data-testid="letter-fico">Credit score 720–739</span>
+           <span data-testid="letter-assets">Verified Assets $80K+</span>
+        </div>
+        <div>
+          <h2>Documents</h2>
+          <ul data-testid="letter-checklist">
+            <li>Bank statements — requested</li>
+            <li>Pay stubs — requested</li>
+          </ul>
+        </div>
+      </div>
+
+      <p>
+        Final approval is subject to an acceptable purchase contract, title, appraisal and
+        underwriter review. <strong>The interest rate is not locked.</strong> Please contact me
+        directly with any questions.
+      </p>
+
+      <p class="portal" data-testid="letter-portal">
+ See every option we priced in your Clear Quote report — the link arrives in your
+        quote email.       </p>
+
+      <div class="signature" data-testid="letter-signature">
+        <div class="muted">Sincerely,</div>
+        <div class="name">Morgan Reyes</div>
+        <div class="muted">Loan Officer · NMLS #<span class="num">1234568</span></div>
+        <div class="muted num">(813) 555-0102 · morgan.reyes@clearquote-demo.test</div>
+      </div>
+
+      <footer>Loan contingency: further investigation of the property or borrower could result in a loan denial. This letter is not a commitment to lend and the interest rate is not locked. Total Quality Lending is an Equal Housing Lender. NMLS ID #1933377.</footer>
+    </main>
+  </body>
+</html>

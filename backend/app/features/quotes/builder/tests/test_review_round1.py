@@ -317,7 +317,17 @@ async def test_every_builder_write_locks_the_application_row(
     application_id = ids["marcus_hale"]
     group = (await _scenarios(client, application_id))["groups"][0]
     buydown = group["quotes"][1]
+    products = (await client.get(f"/api/v1/scenarios/{group['id']}/products")).json()
+    pick = next(p for p in products if p["product_name"] == "DSCR 30yr Fixed Max Credit")
+    new_scenario = {
+        "purchase_price": group["inputs"]["purchase_price"],
+        "down_payment_pct": "0.30",
+        "strategy": group["inputs"]["strategy"],
+    }
     calls: list[tuple[str, str, dict[str, Any] | None]] = [
+        # CQ-019 (CQ-018 review n2/n3): scenario create and manual pick lock too.
+        ("POST", f"/api/v1/applications/{application_id}/scenarios", new_scenario),
+        ("POST", f"/api/v1/scenarios/{group['id']}/quotes", {"product": pick, "label": "Manual"}),
         ("POST", f"/api/v1/applications/{application_id}/reprice", None),
         ("POST", f"/api/v1/scenarios/{group['id']}/autoquote", None),
         ("PUT", f"/api/v1/scenarios/{group['id']}", _put_body(group, lock_days=45)),
@@ -467,3 +477,38 @@ async def test_manual_pick_after_override_uses_fresh_inputs(
     )
     assert response.status_code == 200, response.text
     assert response.json()["computed"]["monthly_tax"] != old_tax
+
+
+# --- CQ-018 review n3 (fixed in CQ-019) --------------------------------------
+
+
+@pytest.mark.parametrize("action", ["recommend", "delete"])
+async def test_write_404s_when_quote_deleted_before_lock(
+    db_session: AsyncSession, make_staff_session: MakeStaff, action: str
+) -> None:
+    """A delete committing between the scope check and the lock leaves a
+    stale ORM object; the write re-reads it under the lock and 404s."""
+    from sqlalchemy import delete as sql_delete
+
+    from app.core.errors import NotFoundError
+    from app.features.quotes.builder.service import delete_quote, recommend_quote
+
+    ids = await _seed(db_session, "marcus_hale")
+    session = await make_staff_session(role=UserRole.MANAGER)
+    quote = (
+        (
+            await db_session.execute(
+                select(Quote)
+                .join(Scenario, Scenario.id == Quote.scenario_id)
+                .where(Scenario.application_id == ids["marcus_hale"])
+            )
+        )
+        .scalars()
+        .first()
+    )
+    assert quote is not None
+    await db_session.execute(sql_delete(Quote).where(Quote.id == quote.id))
+    await db_session.flush()
+    write = recommend_quote if action == "recommend" else delete_quote
+    with pytest.raises(NotFoundError):
+        await write(db_session, quote, session.user)

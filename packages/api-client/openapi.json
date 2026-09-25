@@ -1072,6 +1072,309 @@
         }
       }
     },
+    "/api/v1/applications/{application_id}/package": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Package",
+        "operationId": "get_package_api_v1_applications__application_id__package_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Put Package",
+        "operationId": "put_package_api_v1_applications__application_id__package_put",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/readiness": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Readiness",
+        "operationId": "get_readiness_api_v1_packages__package_id__readiness_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageReadiness"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/report": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Report",
+        "operationId": "get_report_api_v1_packages__package_id__report_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportViewModel"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/letter.html": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Letter Html",
+        "operationId": "get_letter_html_api_v1_packages__package_id__letter_html_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/applications/{application_id}/matches": {
       "get": {
         "tags": [
@@ -2891,6 +3194,174 @@
         ],
         "title": "OtpVerifyRequest"
       },
+      "PackageRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "quote_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Quote Ids"
+          },
+          "recommended_quote_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Quote Id"
+          },
+          "recommendation_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation Text"
+          },
+          "lo_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lo Note"
+          },
+          "recipient_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Email"
+          },
+          "attachments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "application_id",
+          "quote_ids",
+          "recommended_quote_id",
+          "recommendation_text",
+          "lo_note",
+          "recipient_email",
+          "attachments",
+          "sent_at",
+          "updated_at"
+        ],
+        "title": "PackageRead"
+      },
+      "PackageReadiness": {
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "blockers": {
+            "items": {
+              "$ref": "#/components/schemas/ReadinessBlocker"
+            },
+            "type": "array",
+            "title": "Blockers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ready",
+          "blockers"
+        ],
+        "title": "PackageReadiness"
+      },
+      "PackageUpdate": {
+        "properties": {
+          "quote_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Quote Ids"
+          },
+          "recommended_quote_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Quote Id"
+          },
+          "lo_note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lo Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quote_ids"
+        ],
+        "title": "PackageUpdate"
+      },
       "PipelineResumeResponse": {
         "properties": {
           "workflow_id": {
@@ -4551,6 +5022,29 @@
         ],
         "title": "QuoteRead"
       },
+      "ReadinessBlocker": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "tab": {
+            "type": "string",
+            "title": "Tab"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "tab"
+        ],
+        "title": "ReadinessBlocker"
+      },
       "RecommendResponse": {
         "properties": {
           "application_id": {
@@ -4929,6 +5423,51 @@
         ],
         "title": "ReportStrategy",
         "type": "string"
+      },
+      "ReportViewModel": {
+        "description": "The one contract. See module docstring.",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/ReportHeader"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/ReportStrategy"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ReportOption"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "recommendation": {
+            "$ref": "#/components/schemas/ReportRecommendation"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/ReportMatch"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "disclosures": {
+            "$ref": "#/components/schemas/ReportDisclosures"
+          },
+          "lo": {
+            "$ref": "#/components/schemas/ReportLo"
+          }
+        },
+        "required": [
+          "header",
+          "strategy",
+          "options",
+          "recommendation",
+          "matches",
+          "disclosures",
+          "lo"
+        ],
+        "title": "ReportViewModel",
+        "type": "object"
       },
       "RepriceResponse": {
         "properties": {
@@ -5503,51 +6042,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "ReportViewModel": {
-        "description": "The one contract. See module docstring.",
-        "properties": {
-          "header": {
-            "$ref": "#/components/schemas/ReportHeader"
-          },
-          "strategy": {
-            "$ref": "#/components/schemas/ReportStrategy"
-          },
-          "options": {
-            "items": {
-              "$ref": "#/components/schemas/ReportOption"
-            },
-            "title": "Options",
-            "type": "array"
-          },
-          "recommendation": {
-            "$ref": "#/components/schemas/ReportRecommendation"
-          },
-          "matches": {
-            "items": {
-              "$ref": "#/components/schemas/ReportMatch"
-            },
-            "title": "Matches",
-            "type": "array"
-          },
-          "disclosures": {
-            "$ref": "#/components/schemas/ReportDisclosures"
-          },
-          "lo": {
-            "$ref": "#/components/schemas/ReportLo"
-          }
-        },
-        "required": [
-          "header",
-          "strategy",
-          "options",
-          "recommendation",
-          "matches",
-          "disclosures",
-          "lo"
-        ],
-        "title": "ReportViewModel",
-        "type": "object"
       }
     }
   }

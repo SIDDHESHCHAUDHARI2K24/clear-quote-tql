@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -339,6 +340,9 @@ async def test_delete_quote_in_package_is_409(
             application_id=application_id,
             quote_ids=[uuid.UUID(card["id"])],
             report_token=f"t-{uuid.uuid4()}",
+            # CQ-019: only a *sent* package pins its quotes; an unsent
+            # draft drops the quote instead (send/tests/test_package.py).
+            sent_at=datetime.now(UTC),
         )
     )
     await db_session.flush()

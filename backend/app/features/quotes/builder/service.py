@@ -595,11 +595,15 @@ def _apply_product(
 
 
 async def _quote_in_package(db: AsyncSession, quote_id: uuid.UUID) -> bool:
+    """A *sent* package pins its quotes; an unsent draft (the Send tab's,
+    CQ-019) never blocks a delete -- `_delete_quote_row` drops the quote
+    from it instead (CQ-019 code review #2)."""
     stmt = select(QuotePackage.id).where(
+        QuotePackage.sent_at.is_not(None),
         or_(
             QuotePackage.recommended_quote_id == quote_id,
             QuotePackage.quote_ids.contains([quote_id]),
-        )
+        ),
     )
     return (await db.execute(stmt.limit(1))).scalar_one_or_none() is not None
 
@@ -702,6 +706,9 @@ async def _delete_quote_row(db: AsyncSession, quote: Quote) -> bool:
             .where(Scenario.id == quote.scenario_id)
         )
     ).scalar_one()
+    from app.features.quotes.send.service import drop_quote_from_drafts
+
+    await drop_quote_from_drafts(db, quote.id)
     cleared = application.recommended_quote_id == quote.id
     if cleared:
         application.recommended_quote_id = None
@@ -778,13 +785,28 @@ async def reprice_application(
     return RepriceResponse(application_id=application.id, quote_ids=quote_ids, priced_at=priced_at)
 
 
+async def _refetch_after_lock(db: AsyncSession, quote_id: uuid.UUID) -> Quote:
+    """CQ-018 review n3 (fixed in CQ-019): a concurrent delete can commit
+    between the scope check and the application lock, so re-read the quote
+    once the lock is held and 404 when it is gone."""
+    quote = await db.get(Quote, quote_id, populate_existing=True)
+    if quote is None:
+        raise NotFoundError(f"Quote not found: {quote_id}")
+    return quote
+
+
 async def recommend_quote(db: AsyncSession, quote: Quote, user: User) -> Application:
     """`POST /quotes/{id}/recommend`: one recommended quote per application
     (a single column, so setting it un-stars any other)."""
     scenario = await get_scenario(db, quote.scenario_id)
     application = await lock_application(db, scenario.application_id)
+    quote = await _refetch_after_lock(db, quote.id)
     previous = application.recommended_quote_id
     application.recommended_quote_id = quote.id
+    # CQ-019 (code review #4): the Send tab's unsent draft follows the star.
+    from app.features.quotes.send.service import sync_draft_recommendation
+
+    await sync_draft_recommendation(db, application.id, quote.id)
     db.add(
         _event(
             application.id,
@@ -808,6 +830,7 @@ async def delete_quote(db: AsyncSession, quote: Quote, user: User) -> None:
     would break that package's snapshot and its `quotes.id` FK."""
     scenario = await get_scenario(db, quote.scenario_id)
     application = await lock_application(db, scenario.application_id)
+    quote = await _refetch_after_lock(db, quote.id)
     if await _quote_in_package(db, quote.id):
         raise ConflictError("This quote is part of a quote package and can't be deleted.")
     was_recommended = application.recommended_quote_id == quote.id
