@@ -129,4 +129,4 @@ After every `make demo-reset`, restart the API and worker. Their pooled asyncpg 
 4. **Commit and push** — Commit all changes with a clear message, push the branch, and create a PR with `gh pr create`. Use a descriptive title. If `gh` is not available or the push fails, note it in your final message.
 5. **Report** — End with a single line: `PR: <url>` so the coordinator can track it. If no PR was created, end with `PR: none — <reason>`.
 
-The project suite is `make lint` plus `make test`. Create the PR with `gh pr create --base phase-p5-p6 --title "{CQ}: <title>"`. The PR body summarises each AC and its evidence, and ends with "🤖 Generated with [Claude Code](https://claude.com/claude-code)".
+The project suite is `make lint` plus `make test`. For targeted pytest runs on macOS, use `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib uv run python -m pytest …`. Without it, WeasyPrint (the CQ-020 PDF tests) can't load its libraries. Create the PR with `gh pr create --base phase-p5-p6 --title "{CQ}: <title>"`. The PR body summarises each AC and its evidence, and ends with "🤖 Generated with [Claude Code](https://claude.com/claude-code)".
