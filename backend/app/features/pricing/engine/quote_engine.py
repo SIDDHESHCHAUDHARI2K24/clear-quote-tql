@@ -97,24 +97,30 @@ def down_payment_pct_from_amount(purchase_price: Decimal, down_payment_amount: D
     return _round_ltv(down_payment_amount / purchase_price)
 
 
-def insurance_annual_rate_from_amount(
-    purchase_price: Decimal, insurance_annual_amount: Decimal
-) -> Decimal:
-    """`insurance_annual_amount / purchase_price`, unrounded -- the same
+def insurance_annual_rate_from_amount(purchase_price: Decimal, annual_premium: Decimal) -> Decimal:
+    """`annual_premium / purchase_price`, unrounded -- the same
     0-1-fraction scale `ScenarioInputs.insurance_annual_rate` uses
     everywhere else (matches `pricing.scenarios.service._gather_base_
-    scenario_inputs`'s own unrounded formula for the same conversion).
+    scenario_inputs`'s own unrounded formula for the same conversion, and
+    CQ-023's `features/matches/` usage of this same function -- signature
+    coordinated with that item so both branches merge without a rename).
 
     CQ-017: the pricing panel only ever shows/edits the dollar amount
     (`homeowners_ins_annual`'s `field_values` row); it must not divide that
     by `purchase_price` itself to get the rate `/quotes/preview` needs
     (AGENTS.md: money math lives only in `quote_engine`).
+
+    Raises `NonPositivePriceError` (a `ValueError` subclass, so a plain
+    `except ValueError` still catches it) when `purchase_price` isn't
+    strictly positive. Deliberately unrounded, matching every other
+    engine-internal rate value (`compute_quote` rounds once, only at
+    output) -- round at the call site's own display boundary if needed.
     """
     if purchase_price <= 0:
         raise NonPositivePriceError(
             f"purchase_price must be positive to derive an insurance rate, got {purchase_price}"
         )
-    return insurance_annual_amount / purchase_price
+    return annual_premium / purchase_price
 
 
 def principal_and_interest(loan: Decimal, note_rate: Decimal, term_months: int) -> Decimal:
