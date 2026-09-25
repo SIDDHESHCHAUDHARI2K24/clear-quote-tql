@@ -1,7 +1,14 @@
 """Assembles a `VerificationContext` from the DB, calls `evaluate_rules`,
 and persists the outcome — auto-fixes onto `application_parties`, failing
-non-info results as `flags` rows (via `write_flag`), and one
-`activity_events` row per auto-fix and per flag raised.
+non-info results as `flags` rows (via `write_flag`), and resolving any
+previously-raised flag whose rule now passes.
+
+`run_and_persist` does **not** write `activity_events` rows: CQ-011 owns
+exactly one `activity_events` row per completed pipeline stage (its own
+spec.md AC5). It returns a `VerificationRunResult` instead, so the caller
+(CQ-011's `verify_application` activity) can build whatever single
+stage-level row it needs from the rule results, auto-fixes, and flags
+raised/resolved (plan.md decision #11 — see spec.md line ~71, updated).
 
 `write_flag` is the shared helper CQ-013's OB-required-field validation
 stage also calls for persona 7 (Aisha Coleman) — see spec.md.
@@ -10,6 +17,7 @@ stage also calls for persona 7 (Aisha Coleman) — see spec.md.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
@@ -21,7 +29,6 @@ from app.features.applications.assets.models import Asset, Employment
 from app.features.applications.credit.models import Liability
 from app.features.applications.housing.models import HousingHistory
 from app.features.applications.models import Application, ApplicationParty, PartyRole
-from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.models import Flag
 from app.features.applications.verification.rules import evaluate_rules
 from app.features.applications.verification.schemas import (
@@ -42,6 +49,28 @@ _AUTO_FIX_ATTR: dict[str, str] = {
     "phone_copy": "home_phone",
     "no_co_applicant": "no_co_applicant_check",
 }
+
+
+@dataclass
+class VerificationRunResult:
+    """Everything `run_and_persist` did, for the caller to log or act on —
+    it deliberately holds no opinion about `activity_events` (plan.md
+    decision #11): CQ-011 builds its own single stage-level row from this.
+    """
+
+    rule_results: list[RuleResult] = field(default_factory=list)
+    """Every `RuleResult` `evaluate_rules` returned this run (skipped rules
+    are simply absent, per `evaluate_rules`'s own contract)."""
+    auto_fixed: list[RuleResult] = field(default_factory=list)
+    """The subset of `rule_results` that actually changed an
+    `application_parties` column this run (`auto_fixed=True` results where
+    a fix value was applied — not every INFO-severity result, since e.g.
+    `phone_copy` returns `auto_fixed=False` when nothing needed copying)."""
+    flags_raised: list[Flag] = field(default_factory=list)
+    """`flags` rows created or refreshed this run (still unresolved)."""
+    flags_resolved: list[Flag] = field(default_factory=list)
+    """Previously-unresolved `flags` rows whose rule passed this run and
+    were therefore resolved."""
 
 
 async def _setting_int(db: AsyncSession, key: str) -> int:
@@ -198,11 +227,37 @@ async def write_flag(
     return flag
 
 
-async def run_and_persist(application_id: uuid.UUID, db: AsyncSession) -> list[RuleResult]:
+async def resolve_flag(
+    db: AsyncSession, application_id: uuid.UUID, field_key: str, rule: str
+) -> Flag | None:
+    """Resolves (sets `resolved_at`) the existing unresolved `flags` row for
+    `(application_id, field_key, rule)`, if one exists — supports the
+    design's "LO fixes -> resume" loop (`NeedsAttention -> Verifying: LO
+    resolves`, system-design.md) and CQ-028's tab flag counts. Returns
+    `None` (a no-op) if no such row exists. Does not commit."""
+    existing = (
+        await db.execute(
+            select(Flag).where(
+                Flag.application_id == application_id,
+                Flag.field_key == field_key,
+                Flag.rule == rule,
+                Flag.resolved_at.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        return None
+    existing.resolved_at = datetime.now(UTC)
+    await db.flush()
+    return existing
+
+
+async def run_and_persist(application_id: uuid.UUID, db: AsyncSession) -> VerificationRunResult:
     """Assembles the application's `VerificationContext`, evaluates every
     rule, applies auto-fixes back onto `application_parties`, writes failing
-    non-`info` results as `flags` rows, and logs an `activity_events` row
-    per auto-fix and per flag raised. Commits once at the end."""
+    non-`info` results as `flags` rows, and resolves any previously-raised
+    flag whose rule now passes. Commits once at the end. Does not write
+    `activity_events` — see module docstring."""
     application = await db.get(Application, application_id)
     if application is None:
         raise ValueError(f"No application with id {application_id}")
@@ -219,44 +274,30 @@ async def run_and_persist(application_id: uuid.UUID, db: AsyncSession) -> list[R
         )
     ).scalar_one_or_none()
 
-    now = datetime.now(UTC)
+    run_result = VerificationRunResult(rule_results=results)
+
     for result in results:
         if result.auto_fixed:
             attr = _AUTO_FIX_ATTR.get(result.rule_id)
             if attr is not None and primary_party is not None:
                 setattr(primary_party, attr, result.fix_value)
-                db.add(
-                    ActivityEvent(
-                        application_id=application_id,
-                        actor="system",
-                        type="verification.auto_fixed",
-                        payload={
-                            "rule": result.rule_id,
-                            "field_key": result.field_key,
-                            "fix_value": result.fix_value,
-                        },
-                        at=now,
-                    )
+                run_result.auto_fixed.append(result)
+        elif result.severity is not FlagSeverity.INFO:
+            if not result.passed:
+                flag = await write_flag(
+                    db,
+                    application_id,
+                    result.tab,
+                    result.field_key,
+                    result.rule_id,
+                    result.severity,
                 )
-        elif result.severity is not FlagSeverity.INFO and not result.passed:
-            await write_flag(
-                db, application_id, result.tab, result.field_key, result.rule_id, result.severity
-            )
-            db.add(
-                ActivityEvent(
-                    application_id=application_id,
-                    actor="system",
-                    type="verification.flag_raised",
-                    payload={
-                        "rule": result.rule_id,
-                        "field_key": result.field_key,
-                        "severity": result.severity.value,
-                        "message": result.message,
-                    },
-                    at=now,
-                )
-            )
+                run_result.flags_raised.append(flag)
+            else:
+                resolved = await resolve_flag(db, application_id, result.field_key, result.rule_id)
+                if resolved is not None:
+                    run_result.flags_resolved.append(resolved)
 
     await db.flush()
     await db.commit()
-    return results
+    return run_result

@@ -7,14 +7,19 @@ Built the 1003 verification rule engine as three files under
 (`PartySnapshot`, `HousingSnapshot`, `ScenarioSnapshot`, `RuleResult`,
 `VerificationContext`), `rules.py` (7 pure rule functions + `evaluate_rules()`,
 no DB/clock/network), and `service.py` (`_build_context`, `write_flag`,
-`run_and_persist`). `phone_copy` and `no_co_applicant` self-heal silently
-(`info` severity, never a `flags` row); `housing_history_24mo`, `ssn_format`
-and `dob_format` raise `blocking` flags; `assets_vs_ctc_reserves` (`blocking`)
+`resolve_flag`, `run_and_persist`). `phone_copy` and `no_co_applicant`
+self-heal silently (`info` severity, never a `flags` row); `housing_history_24mo`,
+`ssn_format` and `dob_format` (both borrower and co-borrower, distinct
+`field_key`s) raise `blocking` flags; `assets_vs_ctc_reserves` (`blocking`)
 and `dti_primary` (`warning`, primary-only) self-skip until a scenario is
-priced. `write_flag` is a plain upsert on `(application_id, field_key, rule)`
-and is the exact function CQ-013's OB-required-field validation stage will
-call for persona 7. 17 new tests, all passing; `ruff`/`ruff format`/`mypy`
-clean on `backend/`.
+priced. `write_flag`/`resolve_flag` are a plain upsert/resolve pair on
+`(application_id, field_key, rule)`; `write_flag` is the exact function
+CQ-013's OB-required-field validation stage will call for persona 7.
+`run_and_persist` returns a `VerificationRunResult` (rule results, auto-fixes
+applied, flags raised, flags resolved) and writes no `activity_events` itself
+— that's CQ-011's job, one row per pipeline stage. 31 tests total (17
+original + 14 from the review-round-1 fixes below), all passing;
+`ruff`/`ruff format`/`mypy` clean on `backend/`.
 
 ## Deviations from spec
 
@@ -22,7 +27,7 @@ clean on `backend/`.
 | --- | --- | --- |
 | `VerificationContext` schema stub (illustrative) has no clock field | Added `as_of: date` | `dob_format` needs "not in the past"; AC2 requires `evaluate_rules` to be pure (same input → same output, no clock read inside it). `service._build_context` reads `date.today()` once and puts it on the context. See plan.md decision #3. |
 | `ScenarioSnapshot`/`PartySnapshot`/`HousingSnapshot` field shapes not pinned | Defined minimally: `ScenarioSnapshot(total_cash_to_close, total_monthly_payment)`, `PartySnapshot(role, cell_phone, home_phone, ssn, dob)`, `HousingSnapshot(sequence, residence_years, residence_months)` | Spec names these types but doesn't pin their fields (unlike `RuleResult`); each carries exactly what its rules read. |
-| — | `ssn_format`/`dob_format` scoped to the primary (`BORROWER`-role) party only | `write_flag`'s upsert key has no party discriminator, and the catalog treats `borrower_ssn`/`borrower_dob` as primary-borrower-specific fields (distinct from `co_borrower_ssn`; no `co_borrower_dob` exists). See plan.md decision #1. |
+| `run_and_persist(...) -> list[RuleResult]`, "logs an `activity_events` row per auto-fix and per flag raised" | `run_and_persist(...) -> VerificationRunResult`; writes no `activity_events` | Review round 1, finding 1 (MAJOR) — CQ-011 owns one `activity_events` row per pipeline stage; this item's own per-rule rows would break CQ-011 spec.md AC5's exact row count. `spec.md` line ~71 updated (orchestrator-authorised). See plan.md decision #11. |
 
 ## Acceptance evidence (stage 7)
 
@@ -30,7 +35,7 @@ clean on `backend/`.
 | --- | --- | --- |
 | AC1 | Pass | `uv run pytest backend/app/features/applications/verification/tests/test_personas.py::test_persona_8_housing_flag backend/app/features/applications/verification/tests/test_personas.py::test_persona_7_write_flag -v` — both pass. |
 | AC2 | Pass | `uv run pytest backend/app/features/applications/verification/tests/test_rules.py::test_evaluate_rules_is_pure -v` — pass. |
-| AC3 | Pass | `uv run pytest backend/app/features/applications/verification/tests/test_service.py::test_auto_fix_rules -v` — pass (asserts `home_phone == cell_phone`, `no_co_applicant_check is True`, and no `flags` row for either field). |
+| AC3 | Pass | `uv run pytest backend/app/features/applications/verification/tests/test_service.py::test_auto_fix_rules -v` — pass (asserts `home_phone == cell_phone`, `no_co_applicant_check is True`, no `flags` row for either field, and — post review-round-1 — `run_result.auto_fixed` names both rules and `run_result.flags_raised == []`). |
 | AC4 | Pass | `uv run pytest backend/app/features/applications/verification/tests/test_rules.py::test_ssn_dob_format -v` — pass (8-digit SSN and future DOB both fail `blocking`; well-formed input passes). |
 | AC5 | Pass | `uv run pytest backend/app/features/applications/verification/tests/test_rules.py::test_pricing_stage_rules_skip_without_scenario -v` — pass (asserts the rule ids are absent from the result list, not present-and-failing). |
 | AC6 | Pass | `uv run pytest backend/app/features/applications/verification/tests/test_service.py::test_write_flag_upserts -v` — pass (two calls, one unresolved row). |
@@ -39,8 +44,8 @@ clean on `backend/`.
 
 | Check | Command | Result |
 | --- | --- | --- |
-| New tests (isolated) | `uv run pytest backend/app/features/applications/verification -q` | 17 passed |
-| Full backend suite | `uv run pytest backend -q` | 102 passed (85 pre-existing + 17 new), 1 pre-existing deprecation warning unrelated to this item |
+| New tests (isolated) | `uv run pytest backend/app/features/applications/verification -q` | 31 passed (17 original + 14 from review-round-1 fixes) |
+| Full backend suite | `uv run pytest backend -q` | 116 passed (85 pre-existing + 31 verification), 1 pre-existing deprecation warning unrelated to this item |
 | Ruff | `uv run ruff check backend` | All checks passed |
 | Ruff format | `uv run ruff format --check backend` | 118 files already formatted |
 | Mypy | `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` | Success: no issues found in 118 source files |
@@ -79,7 +84,30 @@ All post-dev.md claims verified independently; no discrepancies found between th
 | 5 | minor | `backend/app/features/applications/verification/rules.py:100-119,164-190,193-226` | No test exercises the exact-boundary cases the spec calls out: `housing_history_24mo` at exactly 24 months, `assets_vs_ctc_reserves` at `assets_total == required`, `dti_primary` at exactly `0.45`. Code inspection confirms all three resolve correctly (`>=`/`<=` used, matching the spec's `<`/`>` framing), so this is a coverage gap, not a bug. | Add boundary-value test cases for all three rules. |
 | 6 | minor | `backend/app/features/applications/verification/service.py:88-99` vs. `tests/test_rules.py::test_ssn_dob_format` | The DB-backed path (decrypting `ApplicationParty.ssn_encrypted` in `_build_context`, per plan.md decision #2) is never tested with a malformed SSN/DOB through `run_and_persist`; only the pure-unit test exercises the format logic, using hand-built `PartySnapshot`s. AC4 is technically satisfied, but the encrypted-column round-trip → flag path has no integration coverage. | Add an integration test with a malformed SSN/DOB on a real `ApplicationParty` row, asserting `run_and_persist` raises the expected flag. |
 
-No critical findings. Money math: confirmed Decimal-only throughout `rules.py`/`service.py`; all CTC/PITIA numbers are read from `Quote.computed` (CQ-008 output), never recomputed. `write_flag`/`run_and_persist` signatures match `docs/backlog/CQ-011-temporal-pipeline/spec.md` and `docs/backlog/CQ-013-pricing-service/spec.md`'s usage exactly (positional `db, application_id` then `tab, field_key, rule, severity`; `run_and_persist(application_id, db) -> list[RuleResult]`).
+No critical findings. Money math: confirmed Decimal-only throughout `rules.py`/`service.py`; all CTC/PITIA numbers are read from `Quote.computed` (CQ-008 output), never recomputed. `write_flag`/`run_and_persist` signatures match `docs/backlog/CQ-011-temporal-pipeline/spec.md` and `docs/backlog/CQ-013-pricing-service/spec.md`'s usage exactly (positional `db, application_id` then `tab, field_key, rule, severity`; at the time of this review, `run_and_persist(application_id, db) -> list[RuleResult]` — the signature changed to `-> VerificationRunResult` in the round-1 fix below).
+
+## Review round 1 fixes
+
+All 6 findings addressed; orchestrator decisions and implementation in plan.md decisions #11–#16.
+
+| # | Severity | Fix |
+| --- | --- | --- |
+| 1 | major | `run_and_persist` no longer writes `activity_events`. Added `service.VerificationRunResult` (dataclass: `rule_results`, `auto_fixed`, `flags_raised`, `flags_resolved`) as its new return type. `spec.md` line ~71 updated (orchestrator-authorised). Test: `test_run_and_persist_writes_no_activity_events`. |
+| 2 | minor | Added `service.resolve_flag(db, application_id, field_key, rule) -> Flag \| None`; `run_and_persist` calls it for every non-auto-fixed, non-`info` `RuleResult` that passed. Tests: `test_run_and_persist_resolves_flag_once_rule_passes` (raise → fix → resolve, same row), `test_run_and_persist_leaves_flag_open_when_still_failing` (unchanged failure stays open). Real follow-up recorded in `handoff.md` (Handoff 1) — not just claimed this time. |
+| 3 | minor | `ssn_format`/`dob_format` now validate every `BORROWER`/`CO_BORROWER` party present, with distinct `field_key`s (`borrower_ssn`/`co_borrower_ssn`, `borrower_dob`/`co_borrower_dob`). Tests: `test_ssn_dob_format_validates_co_borrower_with_distinct_field_keys` (pure), `test_ssn_dob_validate_co_borrower_with_distinct_field_keys` (DB-backed, Tom & Lisa Brandt-shaped fixture). |
+| 4 | minor | Added `test_latest_scenario_snapshot_reads_quote_computed` (direct, real `Quote.computed` blob) and `test_run_and_persist_evaluates_pricing_rules_against_real_quote` (through `run_and_persist`). |
+| 5 | minor | Added boundary tests: `test_housing_history_24mo_boundary_exactly_24_months_passes`/`_boundary_23_months_fails`; `test_assets_vs_ctc_reserves_boundary_exactly_equal_passes`/`_boundary_one_cent_short_fails`; `test_dti_primary_boundary_exactly_45_percent_passes`/`_boundary_just_over_45_percent_fails`. |
+| 6 | minor | Added `test_run_and_persist_flags_malformed_ssn_via_db_decrypt_roundtrip`: real `ApplicationParty` row, `db.refresh()` forces the actual `EncryptedString` decrypt, then asserts `run_and_persist` raises the flag. |
+
+### Commands re-run after the fixes
+
+| Command | Result |
+| --- | --- |
+| `uv run pytest backend/app/features/applications/verification -q` | 31 passed |
+| `uv run pytest backend -q` | 116 passed, 1 pre-existing warning |
+| `uv run ruff check backend` | All checks passed |
+| `uv run ruff format --check backend` | All files formatted |
+| `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` | Success: no issues found in 118 source files |
 
 ## How to test manually
 
@@ -90,6 +118,9 @@ No critical findings. Money math: confirmed Decimal-only throughout `rules.py`/`
 
 ## Follow-ups
 
-- `write_flag`/`run_and_persist` never auto-resolve a previously-raised flag once its rule later passes (plan.md decision #8). Not required by any AC here; whoever wires the Verify stage's re-run path (CQ-011) or a future item should decide whether re-running `run_and_persist` on an already-flagged application should resolve stale flags.
-- `service._latest_scenario_snapshot` exists so `run_and_persist` is correct even for a re-verification pass on an already-priced application, but at the only wiring this item currently supports (CQ-011's Verify stage, before any scenario exists) it always resolves to `None`; CQ-013's own pricing service is expected to call `evaluate_rules` directly with a freshly-computed `ScenarioSnapshot` per spec.md's "Two run times" section, not through `run_and_persist`.
+Recorded for real in `handoff.md` (Handoff 1), not just here:
+
+- CQ-011's `verify_application` activity must build its own `activity_events` row(s) from `run_and_persist`'s returned `VerificationRunResult` — CQ-012 no longer writes any itself (review round 1, finding 1).
+- CQ-013's pricing service should call `write_flag`/`resolve_flag` symmetrically (raise on fail, resolve on pass) when it re-runs `evaluate_rules` after a scenario is (re)computed, the same way `run_and_persist` now does — otherwise a DTI/assets flag that clears on a later pricing pass won't resolve.
+- `service._latest_scenario_snapshot` exists so `run_and_persist` is correct even for a re-verification pass on an already-priced application, but at the only wiring this item currently supports (CQ-011's Verify stage, before any scenario exists) it always resolves to `None` there; CQ-013's own pricing service is expected to call `evaluate_rules` directly with a freshly-computed `ScenarioSnapshot` per spec.md's "Two run times" section, not through `run_and_persist`.
 - Wiring `run_and_persist` into the Temporal Verify activity is CQ-011's scope; wiring `write_flag` into the OB-required-field validation stage (persona 7) is CQ-013's scope. Neither exists in the codebase yet as of this item's completion — expected per spec.md's explicit note not to reach into that scope.

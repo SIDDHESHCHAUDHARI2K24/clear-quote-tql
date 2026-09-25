@@ -53,9 +53,9 @@ async def test_persona_8_housing_flag(
     )
     await db_session.flush()
 
-    results = await run_and_persist(application.id, db_session)
+    run_result = await run_and_persist(application.id, db_session)
 
-    housing_result = next(r for r in results if r.rule_id == "housing_history_24mo")
+    housing_result = next(r for r in run_result.rule_results if r.rule_id == "housing_history_24mo")
     assert housing_result.passed is False
 
     flag = (
