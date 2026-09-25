@@ -2,8 +2,10 @@
 `TEMPORAL_ADDRESS` (default `localhost:7233`) and registers
 `ApplicationPipelineWorkflow` and its activities on the
 `application-pipeline`-equivalent task queue (spec.md CQ-011). `make
-worker` (root Makefile) runs the same command via `cd backend && uv run
-python -m app.workflows.worker`.
+worker` (root Makefile) runs the same command from the repo root via `uv
+run python -m app.workflows.worker` -- not `cd backend` first, so
+Settings' env_file=".env" (backend/app/core/config.py) resolves the
+repo-root .env, same as `make api`/`make test`/`make demo-reset`.
 """
 
 from __future__ import annotations

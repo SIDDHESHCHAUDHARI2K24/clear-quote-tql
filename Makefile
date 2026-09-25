@@ -47,6 +47,8 @@ api:
 
 # Temporal worker: registers ApplicationPipelineWorkflow + activities on
 # the pipeline task queue (CQ-011). Requires `make up` (Temporal at
-# localhost:7233) to be running first.
+# localhost:7233) to be running first. Run from the repo root (like `api`
+# above) so Settings' env_file=".env" (backend/app/core/config.py) resolves
+# the repo-root .env instead of a nonexistent backend/.env (CQ-011 fix).
 worker:
-	cd backend && uv run python -m app.workflows.worker
+	uv run python -m app.workflows.worker
