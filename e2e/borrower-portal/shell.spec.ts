@@ -52,17 +52,19 @@ test("header, nav and footer disclosures render; no horizontal scroll at 375 px"
 
   await nav.getByRole("link", { name: "Support" }).click();
   await page.waitForURL("/support");
-  await expect(page.getByRole("heading", { level: 1, name: "Support" })).toBeVisible();
-  await expect(page.getByText("Built in CQ-034")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Get in touch" })).toBeVisible();
   await expectNoHorizontalScroll(page);
 
-  for (const [path, title, item] of [
-    ["/apply", "Apply", "CQ-032"],
-    ["/tasks/credit-check/00000000-0000-0000-0000-000000000000", "Credit check", "CQ-033"],
+  // The real pages (CQ-032, CQ-033), not the stub-era placeholders: /apply
+  // renders its own "Apply" heading, and an unknown credit-check id (this
+  // all-zero UUID matches no request) 404s to CreditConsent's "Request not
+  // found" state (ConsentStates.tsx) rather than a per-page title.
+  for (const [path, title] of [
+    ["/apply", "Apply"],
+    ["/tasks/credit-check/00000000-0000-0000-0000-000000000000", "Request not found"],
   ] as const) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
-    await expect(page.getByText(`Built in ${item}`)).toBeVisible();
     await expect(page.getByRole("contentinfo")).toContainText("Equal Housing Lender");
     await expectNoHorizontalScroll(page);
   }

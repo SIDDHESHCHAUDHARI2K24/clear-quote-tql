@@ -47,10 +47,13 @@ export default defineConfig({
     // single-baseURL projects above fits, so it gets its own project with
     // no `baseURL` and reads `LO_BASE_URL`/`PORTAL_BASE_URL` directly
     // (same env vars, just used as full URLs inside the spec itself).
+    // `e2e/cross-app/*.spec.ts` (the P5/P6 phase-verification milestone
+    // specs) drive both apps the same way, so they share this project
+    // rather than getting one each.
     {
       name: "cross-app",
       testDir: "./e2e",
-      testMatch: "borrower-action-reflects-in-console.spec.ts",
+      testMatch: ["borrower-action-reflects-in-console.spec.ts", "cross-app/*.spec.ts"],
       use: {
         ...devices["Desktop Chrome"],
       },
