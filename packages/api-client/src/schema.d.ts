@@ -767,6 +767,8 @@ export interface components {
         QuotePreviewResponse: {
             /** Loan Amount */
             loan_amount: string;
+            /** Down Payment Amount */
+            down_payment_amount: string;
             /** Ltv Pct */
             ltv_pct: string;
             /** Monthly Pi */
@@ -804,6 +806,8 @@ export interface components {
             qualifying_rent?: string | null;
             /** Underwritten Str Rent */
             underwritten_str_rent?: string | null;
+            /** Str Gross Monthly Revenue */
+            str_gross_monthly_revenue?: string | null;
             /** Dscr Ratio */
             dscr_ratio?: string | null;
             dscr_bucket?: components["schemas"]["DSCRBucket"] | null;
@@ -969,6 +973,201 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** Breakdown */
+        Breakdown: {
+            /** Payment Lines */
+            payment_lines: components["schemas"]["BreakdownLine"][];
+            /** Payment Total */
+            payment_total: string;
+            /** Cash To Close Lines */
+            cash_to_close_lines: components["schemas"]["BreakdownLine"][];
+            /** Cash To Close Total */
+            cash_to_close_total: string;
+        };
+        /** BreakdownLine */
+        BreakdownLine: {
+            /** Label */
+            label: string;
+            /** Amount */
+            amount: string;
+        };
+        /** CashflowTable */
+        CashflowTable: {
+            /** Rent Label */
+            rent_label: string;
+            /** Gross Amount */
+            gross_amount: string;
+            /** Expense Ratio */
+            expense_ratio: string | null;
+            /** Qualifying Rent */
+            qualifying_rent: string;
+            /** Pitia */
+            pitia: string;
+            /** Monthly Cashflow */
+            monthly_cashflow: string;
+            /** Annual Cashflow */
+            annual_cashflow: string;
+            /** Dscr */
+            dscr: string;
+            /** Cap Rate Pct */
+            cap_rate_pct: string;
+            /** Monthly Cashflow Incl Tax */
+            monthly_cashflow_incl_tax: string;
+        };
+        /** CostSegTable */
+        CostSegTable: {
+            /** Purchase Price */
+            purchase_price: string;
+            /** Land Allocation Pct */
+            land_allocation_pct: string;
+            /** Land Value Allocation */
+            land_value_allocation: string;
+            /** Depreciable Building Basis */
+            depreciable_building_basis: string;
+            /** Accelerated Property Pct */
+            accelerated_property_pct: string;
+            /** Accelerated Basis Amount */
+            accelerated_basis_amount: string;
+            /** Bonus Depreciation Pct */
+            bonus_depreciation_pct: string;
+            /** Year One Tax Deduction */
+            year_one_tax_deduction: string;
+            /** Investor Marginal Tax Rate */
+            investor_marginal_tax_rate: string;
+            /** Year One Tax Savings */
+            year_one_tax_savings: string;
+        };
+        /** HeroNumbers */
+        HeroNumbers: {
+            /** Monthly Payment */
+            monthly_payment: string;
+            /** Cash To Close */
+            cash_to_close: string;
+            /** Loan Amount */
+            loan_amount: string | null;
+            /** Monthly Cashflow */
+            monthly_cashflow: string | null;
+            /** Year1 Tax Savings */
+            year1_tax_savings: string | null;
+            /** Year1 Tax Savings Monthly */
+            year1_tax_savings_monthly: string | null;
+        };
+        /** ReportDisclosures */
+        ReportDisclosures: {
+            /** Core */
+            core: string;
+            /** Investment */
+            investment: string | null;
+            /** Tax */
+            tax: string | null;
+        };
+        /** ReportHeader */
+        ReportHeader: {
+            /** First Name */
+            first_name: string;
+            /** Property Label */
+            property_label: string;
+            /** Purchase Price */
+            purchase_price: string;
+            /** Prepared At */
+            prepared_at: string;
+            /** Rates As Of */
+            rates_as_of: string;
+            /** Expires At */
+            expires_at: string | null;
+            /** Expired */
+            expired: boolean;
+            /** Superseded */
+            superseded: boolean;
+        };
+        /** ReportLo */
+        ReportLo: {
+            /** Name */
+            name: string;
+            /** Title */
+            title: string;
+            /** Nmls */
+            nmls: string;
+            /** Phone */
+            phone: string;
+            /** Email */
+            email: string;
+        };
+        /**
+         * ReportMatch
+         * @description Placeholder shape for CQ-023's match cards (data-field-catalog §11).
+         *     Always `[]` in CQ-021's own fixtures/tests.
+         */
+        ReportMatch: {
+            /** Matched Property Id */
+            matched_property_id: string;
+            /** Property Image Url */
+            property_image_url: string;
+            /** Property Address */
+            property_address: string;
+            /** Bed Bath Sqft */
+            bed_bath_sqft: string;
+            /** Deal Grade Badge */
+            deal_grade_badge: string;
+            /** Property Tagline */
+            property_tagline: string;
+            /** Price */
+            price: string;
+        };
+        /** ReportOption */
+        ReportOption: {
+            /** Quote Id */
+            quote_id: string;
+            /** Label */
+            label: string;
+            /** Recommended */
+            recommended: boolean;
+            /** Rate */
+            rate: string;
+            /** Points Pct */
+            points_pct: string;
+            /** Points Amount */
+            points_amount: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
+            /** Prepay Label */
+            prepay_label: string;
+            hero: components["schemas"]["HeroNumbers"];
+            breakdown: components["schemas"]["Breakdown"];
+            cashflow: components["schemas"]["CashflowTable"] | null;
+            cost_seg: components["schemas"]["CostSegTable"] | null;
+        };
+        /** ReportRecommendation */
+        ReportRecommendation: {
+            /** Text */
+            text: string;
+            /** Lo Note */
+            lo_note: string | null;
+        };
+        /**
+         * ReportStrategy
+         * @description Lowercase mirror of `pricing.engine.types.StrategyType`, per spec.md's
+         *     binding `strategy`: `primary` | `ltr` | `str` (the engine's own enum is
+         *     uppercase `PRIMARY`/`LTR`/`STR` -- this is a presentation-layer rename,
+         *     not a new business concept).
+         * @enum {string}
+         */
+        ReportStrategy: "primary" | "ltr" | "str";
+        /**
+         * ReportViewModel
+         * @description The one contract. See module docstring.
+         */
+        ReportViewModel: {
+            header: components["schemas"]["ReportHeader"];
+            strategy: components["schemas"]["ReportStrategy"];
+            /** Options */
+            options: components["schemas"]["ReportOption"][];
+            recommendation: components["schemas"]["ReportRecommendation"];
+            /** Matches */
+            matches: components["schemas"]["ReportMatch"][];
+            disclosures: components["schemas"]["ReportDisclosures"];
+            lo: components["schemas"]["ReportLo"];
         };
     };
     responses: never;

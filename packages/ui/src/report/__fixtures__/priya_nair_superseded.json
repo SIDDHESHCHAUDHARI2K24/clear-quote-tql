@@ -1,0 +1,168 @@
+{
+  "header": {
+    "first_name": "Priya",
+    "property_label": "18 Maple Ct, Carmel, IN 46032",
+    "purchase_price": "420000.00",
+    "prepared_at": "2026-09-25",
+    "rates_as_of": "2026-09-25",
+    "expires_at": "2026-10-16",
+    "expired": false,
+    "superseded": true
+  },
+  "strategy": "primary",
+  "options": [
+    {
+      "quote_id": "priya-par",
+      "label": "Par",
+      "recommended": true,
+      "rate": "6.500",
+      "points_pct": "0.000",
+      "points_amount": "0.00",
+      "down_payment_pct": "20.00",
+      "prepay_label": "No prepayment penalty",
+      "hero": {
+        "monthly_payment": "2596.25",
+        "cash_to_close": "93134.37",
+        "loan_amount": "336000.00",
+        "monthly_cashflow": null,
+        "year1_tax_savings": null,
+        "year1_tax_savings_monthly": null
+      },
+      "breakdown": {
+        "payment_lines": [
+          {
+            "label": "Principal & interest",
+            "amount": "2123.75"
+          },
+          {
+            "label": "Property taxes",
+            "amount": "297.50"
+          },
+          {
+            "label": "Homeowners insurance",
+            "amount": "175.00"
+          }
+        ],
+        "payment_total": "2596.25",
+        "cash_to_close_lines": [
+          {
+            "label": "Down payment",
+            "amount": "84000.00"
+          },
+          {
+            "label": "Lender fees",
+            "amount": "1790.00"
+          },
+          {
+            "label": "Discount points",
+            "amount": "0.00"
+          },
+          {
+            "label": "Title & escrow",
+            "amount": "2940.00"
+          },
+          {
+            "label": "Prepaid interest",
+            "amount": "1061.87"
+          },
+          {
+            "label": "Prepaid insurance",
+            "amount": "2450.00"
+          },
+          {
+            "label": "Prepaid taxes",
+            "amount": "892.50"
+          }
+        ],
+        "cash_to_close_total": "93134.37"
+      },
+      "cashflow": null,
+      "cost_seg": null
+    },
+    {
+      "quote_id": "priya-buydown",
+      "label": "Buydown",
+      "recommended": false,
+      "rate": "6.125",
+      "points_pct": "1.000",
+      "points_amount": "3360.00",
+      "down_payment_pct": "20.00",
+      "prepay_label": "No prepayment penalty",
+      "hero": {
+        "monthly_payment": "2514.07",
+        "cash_to_close": "96453.29",
+        "loan_amount": "336000.00",
+        "monthly_cashflow": null,
+        "year1_tax_savings": null,
+        "year1_tax_savings_monthly": null
+      },
+      "breakdown": {
+        "payment_lines": [
+          {
+            "label": "Principal & interest",
+            "amount": "2041.57"
+          },
+          {
+            "label": "Property taxes",
+            "amount": "297.50"
+          },
+          {
+            "label": "Homeowners insurance",
+            "amount": "175.00"
+          }
+        ],
+        "payment_total": "2514.07",
+        "cash_to_close_lines": [
+          {
+            "label": "Down payment",
+            "amount": "84000.00"
+          },
+          {
+            "label": "Lender fees",
+            "amount": "1790.00"
+          },
+          {
+            "label": "Discount points",
+            "amount": "3360.00"
+          },
+          {
+            "label": "Title & escrow",
+            "amount": "2940.00"
+          },
+          {
+            "label": "Prepaid interest",
+            "amount": "1020.79"
+          },
+          {
+            "label": "Prepaid insurance",
+            "amount": "2450.00"
+          },
+          {
+            "label": "Prepaid taxes",
+            "amount": "892.50"
+          }
+        ],
+        "cash_to_close_total": "96453.29"
+      },
+      "cashflow": null,
+      "cost_seg": null
+    }
+  ],
+  "recommendation": {
+    "text": "We recommend the par option for the lowest total cost.",
+    "lo_note": null
+  },
+  "matches": [],
+  "disclosures": {
+    "core": "This is not a commitment to lend. Rates, payments and closing costs are estimates based on the information available today and are subject to change once your file is fully underwritten. This is not a Loan Estimate.",
+    "investment": null,
+    "tax": null
+  },
+  "lo": {
+    "name": "Jordan Blake",
+    "title": "Loan Officer",
+    "nmls": "NMLS #1933377",
+    "phone": "(813) 555-0100",
+    "email": "jordan.blake@clearquote-demo.test"
+  }
+}
