@@ -2,15 +2,15 @@
 
 Append one entry per handoff, newest at the bottom. A new session reads spec.md, plan.md, then the latest entry.
 
-## Handoff N — YYYY-MM-DD HH:MM — <agent>
+## Handoff 1 — 2026-09-25 — Claude (implementation agent)
 
-- **Branch / last commit:** `cq-xxx-slug` @ `abc1234`
-- **Stage:** 1 Brainstorm | 2 Plan | 3 Execute | 4 Code | 5 Test | 6 Review | 7 Verify | 8 Commit
-- **Done:**
-- **In progress:** file, function, what is half-finished
+- **Branch / last commit:** `cq-011-temporal-pipeline` @ see `git log -1` (committed right after this entry — this file is part of that commit)
+- **Stage:** 5 Test done, 7 Verify done for everything buildable pre-merge; stopped before the post-CQ-010-merge pass per the orchestrator's explicit instruction (do not start it, hand off instead).
+- **Done:** All of CQ-011's scope built and green: `ApplicationPipelineWorkflow`, all 6 contract activities + 1 internal (`record_pipeline_resumed`), retry policies, worker entrypoint + `make worker`, both API endpoints, and the full test suite (AC1–AC7, `backend/app/workflows/tests/*` + `backend/app/features/applications/tests/test_pipeline_endpoints.py`) — `237 passed` on the full backend suite, `ruff check`/`ruff format --check`/`mypy` all clean. Also ran one smoke test against the real local Temporal server (localhost:7233) — worker connected, registered, and a started workflow was dispatched to it (see `post-dev.md`). Decisions logged in `plan.md` (#1–#13); #13 records the mid-session CQ-010 merge news.
+- **In progress / left for next session:** Aisha's persona test (both `test_application_pipeline_personas.py` and `test_activity_events_sequence.py`) still uses the pre-merge Decision #4 workaround (monkeypatching `build_ob_search_request` to null out `Occupancy`) instead of CQ-010's real nullable `applications.occupancy`. `import_application`'s activity still lazy-imports and every workflow test still installs the fake `import_from_los` stub (`backend/app/workflows/tests/conftest.py::_fake_import_from_los`) instead of the real, now-merged function. `phase-p0-p1` (which now contains CQ-010) has **not** been merged into this branch.
 - **Next 3 steps:**
-  1.
-  2.
-  3.
-- **Open questions / blockers:**
-- **Verify state:** commands to run first (e.g. `make up && make test`)
+  1. `git merge phase-p0-p1` into `cq-011-temporal-pipeline`, resolve any conflicts (none expected — this branch only added new files plus `Makefile`/`core/registry.py` appends).
+  2. Swap the fake import stub for the real `app.features.applications.service.import_from_los` (keep `install_import_from_los` available for AC2/AC3's spy/failure-double tests); stop manually seeding `representative_fico` in `make_persona_application` for personas that now go through the real import (it does its own soft credit pull) — keep that seed only where a test still installs the fake stub.
+  3. Update Aisha's fixture to set `occupancy=None` for real (drop the `build_ob_search_request` monkeypatch), change the flag assertion's `field_key` from `"Occupancy"` to `"occupancy_type"`, add the persona-7 resume-signal test the orchestrator asked for, rerun the full 10-persona matrix + `make lint`/`uv run pytest backend`, then push and record the CI run id/result in `post-dev.md`.
+- **Open questions / blockers:** None blocking — all follow-ups are mechanical (swap a stub, update two fixtures, add one test). plan.md Decision #5 (the `pipeline.enriched` type reuse across 3 activities) is a standing design note for CQ-016/028/029 owners, not a blocker.
+- **Verify state:** `make up` (stack already running, shared — never `make down`); this worktree needs its own local `.env` (copy `.env.example`, generate a `FIELD_ENCRYPTION_KEY`, set `DEV_LO_ID=00000000-0000-0000-0000-000000000001`) and its own test DB (`TEST_DATABASE_URL` points at `cq_test_cq011`, already created in the shared Postgres container — the shared `cq_test`'s `alembic_version` belonged to a different branch mid-session and didn't match this one). Then `uv run pytest backend -q` (expect `237 passed`) and `make lint` (backend half clean; frontend half fails in this worktree only because `pnpm install` was never run here — pre-existing, unrelated to this item).

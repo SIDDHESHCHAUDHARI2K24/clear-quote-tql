@@ -1,4 +1,4 @@
-.PHONY: up down logs lint test api api-client demo-reset
+.PHONY: up down logs lint test api api-client demo-reset worker
 
 # Local stack (Postgres, Valkey, MinIO, Mailpit, Temporal), project name
 # `clear-quote` (infra/docker-compose.yml). --wait blocks until every
@@ -39,4 +39,8 @@ demo-reset:
 api:
 	uv run uvicorn app.main:app --port 8000 --reload
 
-# make worker -- added by CQ-011: cd backend && uv run python -m app.workflows.worker
+# Temporal worker: registers ApplicationPipelineWorkflow + activities on
+# the pipeline task queue (CQ-011). Requires `make up` (Temporal at
+# localhost:7233) to be running first.
+worker:
+	cd backend && uv run python -m app.workflows.worker
