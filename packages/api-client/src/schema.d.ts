@@ -39,6 +39,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/applications/{application_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Application Summary */
+        get: operations["get_application_summary_api_v1_applications__application_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Status */
+        patch: operations["patch_status_api_v1_applications__application_id__status_patch"];
+        trace?: never;
+    };
     "/api/v1/applications/{application_id}/field-values/{field_key}": {
         parameters: {
             query?: never;
@@ -336,6 +370,55 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ApplicationStatus
+         * @description Mirrors the application status machine in `system-design.md`,
+         *     including the terminal `withdrawn`/`closed` states set by the LO.
+         * @enum {string}
+         */
+        ApplicationStatus: "intake" | "verifying" | "needs_attention" | "ready_to_price" | "priced" | "sent" | "viewed" | "option_selected" | "inquiry" | "stale" | "withdrawn" | "closed";
+        /**
+         * ApplicationSummaryResponse
+         * @description `GET /applications/{id}/summary` (spec.md). Also the response shape
+         *     for `PATCH /applications/{id}/status` (plan.md decision #9) so the LO
+         *     console header/status pill refresh from one response.
+         */
+        ApplicationSummaryResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Client Name */
+            client_name: string;
+            status: components["schemas"]["ApplicationStatus"];
+            /** Last Pipeline Stage */
+            last_pipeline_stage: string | null;
+            occupancy: components["schemas"]["Occupancy"] | null;
+            strategy: components["schemas"]["Strategy"] | null;
+            /** Program */
+            program: string | null;
+            location: components["schemas"]["LocationResponse"] | null;
+            /** Purchasing Power */
+            purchasing_power: string | null;
+            /** Down Payment Pct */
+            down_payment_pct: string | null;
+            /** Down Payment Amount */
+            down_payment_amount: string | null;
+            /** Ppp Years */
+            ppp_years: number | null;
+            /** Note Rate */
+            note_rate: string | null;
+            /** Tabs */
+            tabs: components["schemas"]["TabStateResponse"][];
+            default_tab: components["schemas"]["ApplicationTab"];
+        };
+        /**
+         * ApplicationTab
+         * @description Matches the 7 workspace tabs.
+         * @enum {string}
+         */
+        ApplicationTab: "borrowers" | "housing" | "credit" | "assets" | "property" | "pricing" | "send";
         /** AutoQuoteResponse */
         AutoQuoteResponse: {
             par: components["schemas"]["QuoteRead"];
@@ -645,12 +728,27 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** LocationResponse */
+        LocationResponse: {
+            /** City */
+            city: string | null;
+            /** State */
+            state: string | null;
+            /** Zip */
+            zip: string | null;
+        };
         /** ManualQuoteCreateRequest */
         ManualQuoteCreateRequest: {
             product: components["schemas"]["PricedProductRow-Input"];
             /** Label */
             label: string;
         };
+        /**
+         * Occupancy
+         * @description Per override O2: Primary, LTR or STR only — no `second_home`.
+         * @enum {string}
+         */
+        Occupancy: "primary" | "investment";
         /** OtpVerifyRequest */
         OtpVerifyRequest: {
             /** Challenge Id */
@@ -944,6 +1042,27 @@ export interface components {
             phone: string | null;
         };
         /**
+         * StatusPatchRequest
+         * @description spec.md: "accepts only Withdrawn or Closed ... any other value
+         *     returns 422" -- the `Literal` does that natively via Pydantic/FastAPI
+         *     request validation, no extra code needed (plan.md decision #8).
+         */
+        StatusPatchRequest: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "withdrawn" | "closed";
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * Strategy
+         * @description Null on `applications.strategy` when `occupancy = primary`.
+         * @enum {string}
+         */
+        Strategy: "ltr" | "str";
+        /**
          * StrategyType
          * @description The engine's single occupancy/strategy field.
          *
@@ -952,6 +1071,17 @@ export interface components {
          * @enum {string}
          */
         StrategyType: "PRIMARY" | "LTR" | "STR";
+        /** TabStateResponse */
+        TabStateResponse: {
+            tab: components["schemas"]["ApplicationTab"];
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ok" | "flagged" | "pending";
+            /** Flag Count */
+            flag_count: number;
+        };
         /**
          * UserRole
          * @enum {string}
@@ -1032,6 +1162,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PipelineResumeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_application_summary_api_v1_applications__application_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_status_api_v1_applications__application_id__status_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationSummaryResponse"];
                 };
             };
             /** @description Validation Error */

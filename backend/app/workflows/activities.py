@@ -45,6 +45,7 @@ from app.features.pricing.scenarios.service import PricingResult, auto_price
 from app.features.quotes.builder.service import QuoteSetResult, draft_default_quote_set
 from app.integrations.common.errors import PricingValidationError, ProviderUnavailableError
 from app.workflows import db as workflow_db
+from app.workflows.constants import PipelineStage
 
 _ACTOR_SYSTEM = "system"
 
@@ -106,6 +107,22 @@ async def _transition_status(
         await db.flush()
 
 
+async def _set_stage(
+    db: AsyncSession, application_id: uuid.UUID, stage: PipelineStage | ApplicationStatus
+) -> None:
+    """CQ-016 (D7): writes `applications.last_pipeline_stage`, committing
+    immediately so a concurrent `GET .../summary` poll sees progress while
+    this activity is still running -- same "commit as you go" pattern as
+    `_write_event`/`_transition_status`. `stage` is either one of the 6
+    running `PipelineStage` names (written at the start of an activity) or
+    a terminal `ApplicationStatus` (`NEEDS_ATTENTION`/`PRICED`, written once
+    the chain stops or finishes -- see `workflows/constants.py`)."""
+    application = await db.get(Application, application_id)
+    if application is not None:
+        application.last_pipeline_stage = stage.value
+        await db.commit()
+
+
 def _needs_attention_message(exc: Exception) -> str:
     """Formats the `needs_attention` message per spec.md's per-activity
     failure-message column."""
@@ -124,6 +141,7 @@ async def _fail_pricing_stage(db: AsyncSession, application_id: uuid.UUID, exc: 
     (spec.md "Retry policy")."""
     message = _needs_attention_message(exc)
     await _transition_status(db, application_id, ApplicationStatus.NEEDS_ATTENTION)
+    await _set_stage(db, application_id, ApplicationStatus.NEEDS_ATTENTION)
     await _write_event(db, application_id, _TYPE_PRICING_BLOCKED, {"message": message})
 
 
@@ -139,6 +157,7 @@ async def import_application(application_id: str) -> ImportResult:
     """
     app_uuid = uuid.UUID(application_id)
     async with workflow_db.session_factory() as db:
+        await _set_stage(db, app_uuid, PipelineStage.IMPORTING)
         result = await import_from_los(app_uuid, db)
         await _write_event(db, app_uuid, _TYPE_IMPORTED, _dataclass_payload(result))
         return result
@@ -153,6 +172,7 @@ async def verify_application(application_id: str) -> VerificationResult:
     (see that module's own docstring)."""
     app_uuid = uuid.UUID(application_id)
     async with workflow_db.session_factory() as db:
+        await _set_stage(db, app_uuid, PipelineStage.VERIFYING)
         run_result = await run_and_persist(app_uuid, db)
         passed = not any(
             result.severity is FlagSeverity.BLOCKING and not result.passed
@@ -166,6 +186,8 @@ async def verify_application(application_id: str) -> VerificationResult:
             if result.severity is FlagSeverity.BLOCKING and not result.passed
         ]
         await _transition_status(db, app_uuid, status)
+        if not passed:
+            await _set_stage(db, app_uuid, ApplicationStatus.NEEDS_ATTENTION)
         await _write_event(
             db,
             app_uuid,
@@ -181,6 +203,7 @@ async def enrich_application(application_id: str) -> EnrichmentResult:
     (`db, application_id -> EnrichmentResult`)."""
     app_uuid = uuid.UUID(application_id)
     async with workflow_db.session_factory() as db:
+        await _set_stage(db, app_uuid, PipelineStage.ENRICHING)
         try:
             result = await enrich_pricing_fields(db, app_uuid)
         except (PricingValidationError, ProviderUnavailableError) as exc:
@@ -197,6 +220,7 @@ async def validate_pricing_inputs(application_id: str) -> bool:
     on missing OB-required fields)."""
     app_uuid = uuid.UUID(application_id)
     async with workflow_db.session_factory() as db:
+        await _set_stage(db, app_uuid, PipelineStage.VALIDATING)
         try:
             result = await validate_ob_required_fields(db, app_uuid)
         except (PricingValidationError, ProviderUnavailableError) as exc:
@@ -212,6 +236,7 @@ async def auto_price_application(application_id: str) -> PricingResult:
     application_id -> PricingResult`)."""
     app_uuid = uuid.UUID(application_id)
     async with workflow_db.session_factory() as db:
+        await _set_stage(db, app_uuid, PipelineStage.PRICING)
         try:
             result = await auto_price(db, app_uuid)
         except (PricingValidationError, ProviderUnavailableError) as exc:
@@ -229,12 +254,14 @@ async def draft_quote_set(application_id: str, pricing_result: PricingResult) ->
     priced`)."""
     app_uuid = uuid.UUID(application_id)
     async with workflow_db.session_factory() as db:
+        await _set_stage(db, app_uuid, PipelineStage.DRAFTING_QUOTES)
         try:
             result = await draft_default_quote_set(db, app_uuid, pricing_result)
         except (PricingValidationError, ProviderUnavailableError) as exc:
             await _fail_pricing_stage(db, app_uuid, exc)
             raise
         await _transition_status(db, app_uuid, ApplicationStatus.PRICED)
+        await _set_stage(db, app_uuid, ApplicationStatus.PRICED)
         await _write_event(db, app_uuid, _TYPE_PRICED, _dataclass_payload(result))
         return result
 

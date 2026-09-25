@@ -33,6 +33,11 @@ function TabStatusMark({ item }: { item: TabItem }) {
       </span>
     );
   }
+  if (item.status === "pending") {
+    // spec.md (CQ-016 Application workspace, "Tab rail"): "a grey dot
+    // (pending)" for a tab the pipeline hasn't reached yet.
+    return <span aria-label="Pending" className="h-2 w-2 rounded-full bg-neutral-300" />;
+  }
   return null;
 }
 
