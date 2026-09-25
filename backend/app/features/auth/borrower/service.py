@@ -28,13 +28,13 @@ from app.core.errors import AuthenticationError, ConflictError, ValidationAppErr
 from app.core.security import (
     DUMMY_PASSWORD_HASH,
     generate_token,
-    hash_password,
-    verify_password,
+    hash_password_async,
+    verify_password_async,
 )
 from app.features.applications.models import Application
 from app.features.auth.borrower.schemas import BorrowerMeOut, LatestApplicationOut
 from app.features.auth.models import BorrowerAccount, User
-from app.features.auth.otp.rate_limit import check_login
+from app.features.auth.otp.rate_limit import check_login, check_signup
 from app.features.auth.otp.service import issue_challenge, verify_challenge
 from app.features.auth.users.service import MIN_PASSWORD_LENGTH, normalize_email
 from app.features.clients.models import Client
@@ -70,13 +70,17 @@ async def signup(
     `challenge_id` either way (Decision #5). No `borrower_accounts` or
     `clients` row is written until `verify_otp` succeeds.
 
-    Raises `RateLimitedError` (over the login rate limit) or
+    Raises `RateLimitedError` (over the sign-up rate limit) or
     `ValidationAppError` (password shorter than `MIN_PASSWORD_LENGTH`).
     The rate limit is checked first (mirroring `staff/service.py::login`)
     so repeated invalid-password attempts still count against it.
+
+    Uses `check_signup`'s own counters (Decision #8, revised), separate
+    from `login`'s, so a flood of sign-ups for someone's email can't lock
+    them out of logging in.
     """
     normalized_email = normalize_email(email)
-    await check_login(valkey, principal="borrower", email=normalized_email, ip=ip)
+    await check_signup(valkey, principal="borrower", email=normalized_email, ip=ip)
 
     if len(password) < MIN_PASSWORD_LENGTH:
         raise ValidationAppError(f"Password must be at least {MIN_PASSWORD_LENGTH} characters.")
@@ -92,14 +96,14 @@ async def signup(
         # expired code" — and the email tells the owner to sign in
         # instead, with no code.
         #
-        # `hash_password` and `issue_challenge` still run here (their
+        # `hash_password_async` and `issue_challenge` still run here (their
         # results discarded, the issued challenge simply expiring unused
         # via its TTL) so this branch pays the same argon2 CPU time and
         # Valkey round trip as the new-email branch below — otherwise an
         # attacker could distinguish "existing account" from "new
         # account" purely by response latency, which is exactly what the
         # identical-response design is meant to hide.
-        hash_password(password)
+        await hash_password_async(password)
         await issue_challenge(
             valkey, principal="borrower", subject_id="", extra={"mode": "signup_noop"}
         )
@@ -112,7 +116,7 @@ async def signup(
         await db.commit()
         return generate_token(24)
 
-    password_hash = hash_password(password)
+    password_hash = await hash_password_async(password)
     challenge_id, code = await issue_challenge(
         valkey,
         principal="borrower",
@@ -158,10 +162,10 @@ async def login(
     ).scalar_one_or_none()
 
     if account is None or account.password_hash is None:
-        verify_password(DUMMY_PASSWORD_HASH, password)
+        await verify_password_async(DUMMY_PASSWORD_HASH, password)
         raise AuthenticationError(_BAD_CREDENTIALS)
 
-    if not verify_password(account.password_hash, password):
+    if not await verify_password_async(account.password_hash, password):
         raise AuthenticationError(_BAD_CREDENTIALS)
 
     challenge_id, code = await issue_challenge(

@@ -21,6 +21,24 @@ _INVALID_OR_EXPIRED = "Invalid or expired code"
 # passed to `issue_challenge` come back, per its docstring.
 _RESERVED_FIELDS = {"principal", "code_hash", "attempts"}
 
+# Runs the wrong-code bump atomically so a key that's gone by the time this
+# executes (deleted by a concurrent successful verify, or expired between
+# this call's own `HGETALL` and here) is never recreated: without this, a
+# bare `HINCRBY` on a missing key would silently create a new hash with
+# just `attempts` set and no TTL, which then never expires. `EXISTS` +
+# `HINCRBY` + a conditional `DEL` all run as one Valkey operation, so no
+# other command can interleave between the existence check and the bump.
+_BUMP_ATTEMPTS_IF_PRESENT_SCRIPT = """
+if redis.call("EXISTS", KEYS[1]) == 0 then
+    return -1
+end
+local attempts = redis.call("HINCRBY", KEYS[1], "attempts", 1)
+if attempts >= tonumber(ARGV[1]) then
+    redis.call("DEL", KEYS[1])
+end
+return attempts
+"""
+
 
 def _key(challenge_id: str) -> str:
     return f"otp:{challenge_id}"
@@ -83,13 +101,19 @@ async def verify_challenge(
     fields (`subject_id` and any `extra` passed to `issue_challenge`, minus
     the internal `code_hash`/`attempts` bookkeeping) on success.
 
-    Single use: the key is deleted as soon as the right code is presented.
-    A wrong code increments `attempts` and deletes the key once
+    Single use: the key is deleted as soon as the right code is presented,
+    and that delete is what decides success — if it finds the key already
+    gone (a concurrent verify's delete won the race), this call loses and
+    raises too, so two concurrent correct verifies can never both succeed.
+    A wrong code bumps `attempts` and deletes the key once
     `otp_max_attempts` is reached, so a later correct code can't revive a
-    spent challenge. A missing key, a principal mismatch, or a wrong code
-    all raise the identical `AuthenticationError` so a caller can't use the
-    response to distinguish "expired" from "wrong code" from "wrong
-    principal".
+    spent challenge; that bump runs in a single atomic Valkey script (see
+    `_BUMP_ATTEMPTS_IF_PRESENT_SCRIPT`) so a key that's disappeared between
+    this call's `HGETALL` above and the bump (deleted by a concurrent
+    verify, or expired) is never recreated. A missing key, a principal
+    mismatch, or a wrong code all raise the identical `AuthenticationError`
+    so a caller can't use the response to distinguish "expired" from
+    "wrong code" from "wrong principal".
     """
     settings = get_settings()
     key = _key(challenge_id)
@@ -99,10 +123,10 @@ async def verify_challenge(
         raise AuthenticationError(_INVALID_OR_EXPIRED)
 
     if not constant_time_equals(stored["code_hash"], keyed_hash(code)):
-        attempts = await valkey.hincrby(key, "attempts", 1)
-        if attempts >= settings.otp_max_attempts:
-            await valkey.delete(key)
+        await valkey.eval(_BUMP_ATTEMPTS_IF_PRESENT_SCRIPT, 1, key, str(settings.otp_max_attempts))
         raise AuthenticationError(_INVALID_OR_EXPIRED)
 
-    await valkey.delete(key)
+    deleted = await valkey.delete(key)
+    if deleted != 1:
+        raise AuthenticationError(_INVALID_OR_EXPIRED)
     return {field: value for field, value in stored.items() if field not in _RESERVED_FIELDS}

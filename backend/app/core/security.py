@@ -6,6 +6,7 @@ Nothing here is principal-specific — `features/auth/otp` and
 borrower flows.
 """
 
+import asyncio
 import hashlib
 import hmac
 import secrets
@@ -43,6 +44,24 @@ def verify_password(hash_: str, plain: str) -> bool:
         return _hasher.verify(hash_, plain)
     except (VerificationError, InvalidHashError):
         return False
+
+
+async def hash_password_async(plain: str) -> str:
+    """`hash_password`, off the event loop: argon2 is deliberately
+    CPU-expensive (that's the point of it), so calling `hash_password`
+    directly from a request handler blocks the whole event loop — every
+    other in-flight request — for that hash's duration. Runs the same
+    call in a worker thread via `asyncio.to_thread`. Request handlers
+    (staff/borrower login and sign-up, `users.create_user`) should prefer
+    this; `hash_password` stays for scripts, which have no event loop to
+    block.
+    """
+    return await asyncio.to_thread(hash_password, plain)
+
+
+async def verify_password_async(hash_: str, plain: str) -> bool:
+    """`verify_password`, off the event loop — see `hash_password_async`."""
+    return await asyncio.to_thread(verify_password, hash_, plain)
 
 
 def generate_otp_code() -> str:

@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AuthenticationError
-from app.core.security import DUMMY_PASSWORD_HASH, verify_password
+from app.core.security import DUMMY_PASSWORD_HASH, verify_password_async
 from app.features.auth.models import User
 from app.features.auth.otp.rate_limit import check_login
 from app.features.auth.otp.service import issue_challenge, verify_challenge
@@ -58,10 +58,10 @@ async def login(
 
     if user is None:
         # Dummy verify so timing doesn't reveal whether the email exists.
-        verify_password(DUMMY_PASSWORD_HASH, password)
+        await verify_password_async(DUMMY_PASSWORD_HASH, password)
         raise AuthenticationError(_BAD_CREDENTIALS)
 
-    if not verify_password(user.password_hash, password):
+    if not await verify_password_async(user.password_hash, password):
         raise AuthenticationError(_BAD_CREDENTIALS)
 
     challenge_id, code = await issue_challenge(valkey, principal="staff", subject_id=str(user.id))

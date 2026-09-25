@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import UserRole
 from app.core.errors import ConflictError, ValidationAppError
-from app.core.security import hash_password
+from app.core.security import hash_password_async
 from app.features.auth.models import BorrowerAccount, User
 from app.features.clients.models import Client
 
@@ -68,7 +68,7 @@ async def create_user(
 
     user = User(
         email=normalized_email,
-        password_hash=hash_password(password),
+        password_hash=await hash_password_async(password),
         role=role,
         full_name=full_name,
         nmls=nmls,
@@ -222,7 +222,7 @@ async def seed_dev_borrowers(db: AsyncSession, *, password: str) -> list[Borrowe
         account = BorrowerAccount(
             client_id=client.id,
             email=normalize_email(client.email),
-            password_hash=hash_password(password),
+            password_hash=await hash_password_async(password),
             email_verified_at=now,
         )
         try:

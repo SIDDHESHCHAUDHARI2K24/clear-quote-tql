@@ -206,13 +206,13 @@ async def test_signup_existing_account_still_hashes_password(
     await db_session.flush()
 
     calls: list[str] = []
-    original_hash_password = borrower_service.hash_password
+    original_hash_password_async = borrower_service.hash_password_async
 
-    def _tracking_hash_password(password: str) -> str:
+    async def _tracking_hash_password_async(password: str) -> str:
         calls.append(password)
-        return original_hash_password(password)
+        return await original_hash_password_async(password)
 
-    monkeypatch.setattr(borrower_service, "hash_password", _tracking_hash_password)
+    monkeypatch.setattr(borrower_service, "hash_password_async", _tracking_hash_password_async)
 
     response = await client.post(
         "/api/v1/auth/borrower/signup",
@@ -247,6 +247,58 @@ async def test_signup_verify_wrong_code_fails(
         "/api/v1/auth/borrower/otp/verify", json={"challenge_id": challenge_id, "code": "000000"}
     )
     assert verify_response.status_code == 401
+
+
+async def test_signup_rate_limit_is_separate_from_login(
+    client: AsyncClient, db_session: AsyncSession, capture_smtp: list[dict[str, str]]
+) -> None:
+    """Decision #8 (revised): a flood of sign-ups for an email must not
+    trip that email's login rate limit — they use separate Valkey
+    counters. Login for the account first has to exist, so it's created
+    directly rather than through `/signup` (which would itself consume a
+    sign-up-counter slot per call)."""
+    lo = await _make_lo(db_session)
+    existing_client = await _make_client(
+        db_session, lo=lo, email="ratelimit-signup@clearquote.test"
+    )
+    db_session.add(
+        BorrowerAccount(
+            client_id=existing_client.id,
+            email="ratelimit-signup@clearquote.test",
+            password_hash=hash_password(PASSWORD),
+        )
+    )
+    await db_session.flush()
+
+    for _ in range(5):
+        response = await client.post(
+            "/api/v1/auth/borrower/signup",
+            json={
+                "full_name": "Flooder",
+                "email": "ratelimit-signup@clearquote.test",
+                "password": PASSWORD,
+            },
+        )
+        assert response.status_code == 200
+
+    # Login for the same email is unaffected by the sign-up flood.
+    login_response = await client.post(
+        "/api/v1/auth/borrower/login",
+        json={"email": "ratelimit-signup@clearquote.test", "password": PASSWORD},
+    )
+    assert login_response.status_code == 200
+
+    # The 6th sign-up trips the sign-up-specific limit.
+    sixth_signup = await client.post(
+        "/api/v1/auth/borrower/signup",
+        json={
+            "full_name": "Flooder",
+            "email": "ratelimit-signup@clearquote.test",
+            "password": PASSWORD,
+        },
+    )
+    assert sixth_signup.status_code == 429
+    assert sixth_signup.json()["error"]["code"] == "RATE_LIMITED"
 
 
 async def test_signup_verify_with_no_lo_returns_409(

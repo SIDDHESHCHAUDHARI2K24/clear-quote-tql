@@ -11,9 +11,11 @@ from app.core.security import (
     generate_otp_code,
     generate_token,
     hash_password,
+    hash_password_async,
     hash_token,
     keyed_hash,
     verify_password,
+    verify_password_async,
 )
 
 
@@ -67,6 +69,32 @@ def test_generate_token_urlsafe_and_random() -> None:
 def test_constant_time_equals() -> None:
     assert constant_time_equals("abc", "abc") is True
     assert constant_time_equals("abc", "abd") is False
+
+
+async def test_hash_password_async_roundtrips_with_verify_password_async() -> None:
+    hashed = await hash_password_async("correct horse battery staple")
+    assert await verify_password_async(hashed, "correct horse battery staple") is True
+
+
+async def test_verify_password_async_wrong_password_returns_false() -> None:
+    hashed = await hash_password_async("correct horse battery staple")
+    assert await verify_password_async(hashed, "wrong password") is False
+
+
+async def test_hash_password_async_produces_a_hash_verify_password_accepts() -> None:
+    # The async and sync helpers hash/verify the same way underneath —
+    # only the thread offload differs.
+    hashed = await hash_password_async("correct horse battery staple")
+    assert verify_password(hashed, "correct horse battery staple") is True
+
+
+async def test_verify_password_async_accepts_a_sync_hash_password_hash() -> None:
+    hashed = hash_password("correct horse battery staple")
+    assert await verify_password_async(hashed, "correct horse battery staple") is True
+
+
+async def test_verify_password_async_garbage_hash_returns_false() -> None:
+    assert await verify_password_async("not-a-real-argon2-hash", "anything") is False
 
 
 async def test_valkey_fixture_set_get(valkey: Redis) -> None:
