@@ -9,7 +9,7 @@ Status here is updated by the agent at stage 8 and by the human at merge.
 | [CQ-001](CQ-001-agent-tooling/spec.md) | Agent tooling & process | P0 | — | In Review |
 | [CQ-002](CQ-002-monorepo-scaffold/spec.md) | Monorepo scaffold | P0 | CQ-001 | In Review |
 | [CQ-003](CQ-003-local-infra/spec.md) | Local infrastructure | P0 | CQ-002 | In Review |
-| [CQ-004](CQ-004-backend-skeleton/spec.md) | Backend skeleton | P0 | CQ-003 | To Do |
+| [CQ-004](CQ-004-backend-skeleton/spec.md) | Backend skeleton | P0 | CQ-003 | In Review |
 | [CQ-005](CQ-005-frontend-skeleton/spec.md) | Frontend skeleton & design system | P0 | CQ-002 | In Review |
 | [CQ-006](CQ-006-ci/spec.md) | CI | P0 | CQ-004, CQ-005 | To Do |
 | [CQ-007](CQ-007-data-model/spec.md) | Data model & migrations | P1 | CQ-004 | To Do |
