@@ -276,6 +276,50 @@ describe("Send flow (CQ-020)", () => {
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
     expect(await screen.findByTestId("send-toast", {}, SLOW)).toHaveTextContent(`Sent to ${EMAIL}`);
   });
+
+  it("a SEND_IN_PROGRESS resync that finds the send already done refreshes the pill and clears the notice", async () => {
+    serve({ statuses: [status("idle"), status("done", { recipient_email: EMAIL })] });
+    putMock.mockResolvedValue(
+      fail(
+        409,
+        "SEND_IN_PROGRESS",
+        "This package is being sent. Try again once the send finishes.",
+      ),
+    );
+    render(<SendTab />);
+    const selected = await screen.findAllByTestId("selected-quote");
+
+    await userEvent.click(within(selected[2]).getByRole("checkbox"));
+    await waitFor(() => expect(refetchWorkspace).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByTestId("save-status")).toHaveTextContent("All changes saved"),
+    );
+    expect(screen.getByLabelText("Note to the borrower (optional)")).toBeEnabled();
+  });
+
+  it("a status poll that keeps failing gives up with an error instead of locking the tab", async () => {
+    serve({ statuses: [status("idle")] });
+    const served = getMock.getMockImplementation()!;
+    let polling = false;
+    getMock.mockImplementation((path: string) =>
+      polling && path.endsWith("/send-status")
+        ? Promise.resolve(fail(401, "UNAUTHENTICATED", "Sign in again"))
+        : served(path),
+    );
+    postMock.mockImplementation(() => {
+      polling = true;
+      return Promise.resolve(
+        ok({ package_id: pkg.id, workflow_id: "send-package-x", status: "queued" }, 202),
+      );
+    });
+    render(<SendTab />);
+    const dialog = await openDialogAndSend();
+
+    expect(
+      await within(dialog).findByTestId("send-failed", {}, { timeout: 10_000 }),
+    ).toHaveTextContent("Couldn't check the send's progress (Sign in again)");
+    expect(screen.getByLabelText("Note to the borrower (optional)")).toBeEnabled();
+  }, 15_000);
 });
 
 describe("Send-tab saves (PR #22 minor, T13)", () => {

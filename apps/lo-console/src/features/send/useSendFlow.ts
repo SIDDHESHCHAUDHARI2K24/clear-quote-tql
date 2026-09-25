@@ -14,6 +14,8 @@ import {
 
 /** How often the progress is polled while a send runs (handoff 1: ~500 ms). */
 export const SEND_POLL_MS = 500;
+/** Consecutive failed status reads before the tab gives up (about 5 s). */
+export const SEND_POLL_MAX_FAILURES = 10;
 
 export type RunningStep = Extract<SendStep, "queued" | "rendering" | "emailing">;
 
@@ -70,6 +72,8 @@ export function useSendFlow(
   useLayoutEffect(() => {
     packageIdRef.current = packageId;
   }, [packageId]);
+  /** Consecutive failed `send-status` reads while polling. */
+  const failedPolls = useRef(0);
 
   const loadVersions = useCallback(async (forPackageId: string) => {
     const result = await fetchSentVersions(forPackageId);
@@ -86,16 +90,21 @@ export function useSendFlow(
       if (!active || !status.ok) return;
       const step = status.data.status;
       if (isRunningStep(step)) {
+        failedPolls.current = 0;
         setPhase({ kind: "running", step, tick: 0 });
       } else if (step === "failed") {
         setPhase({ kind: "failed", message: status.data.error ?? "The last send failed." });
+      } else if (step === "done" && resyncKey > 0) {
+        // A resync after a SEND_IN_PROGRESS refusal whose send finished in
+        // between: the pill, `sent_at` and the save notice must follow.
+        onSent();
       }
     });
     void loadVersions(packageId);
     return () => {
       active = false;
     };
-  }, [packageId, resyncKey, loadVersions]);
+  }, [packageId, resyncKey, loadVersions, onSent]);
 
   // Polls while running: each result sets a fresh `running` phase (new
   // `tick`), which schedules the next poll.
@@ -108,9 +117,20 @@ export function useSendFlow(
       if (!active || packageIdRef.current !== forPackageId) return;
       if (!status.ok) {
         // A blip while polling: keep polling, the workflow keeps running.
+        // A status read that keeps failing (session expired, API down)
+        // stops after a few seconds instead of locking the tab forever.
+        failedPolls.current += 1;
+        if (failedPolls.current >= SEND_POLL_MAX_FAILURES) {
+          setPhase({
+            kind: "failed",
+            message: `Couldn't check the send's progress (${status.message}). Reload to see where it stands.`,
+          });
+          return;
+        }
         setPhase({ kind: "running", step: phase.step, tick: phase.tick + 1 });
         return;
       }
+      failedPolls.current = 0;
       const { status: step, error, recipient_email: recipient } = status.data;
       if (isRunningStep(step)) {
         setPhase({ kind: "running", step, tick: phase.tick + 1 });
@@ -147,6 +167,7 @@ export function useSendFlow(
     }
     // A double click returns the running send's id; either way, poll.
     const step = result.data.status;
+    failedPolls.current = 0;
     setPhase({ kind: "running", step: isRunningStep(step) ? step : "queued", tick: 0 });
   }, [packageId]);
 

@@ -24,6 +24,11 @@ Two units on one branch (`cq-020-letter-and-send`): **unit 1 — backend** (this
 | 14 | Decision | WeasyPrint system libraries | There is no backend Dockerfile in the repo (H4: Railway image libraries come in CQ-035). Added instead: CI (`.github/workflows/ci.yml`) installs `libpango-1.0-0 libpangoft2-1.0-0` and runs a Mailpit service for the AC1 test; macOS dev uses `brew install pango` plus `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`, which the Makefile now exports on Darwin for `test`, `api` and `worker`. |
 | 15 | Decision | Retry policy for the send activities | `SEND_RETRY_POLICY`: 1 s initial, x2, max 30 s, 5 attempts, non-retryable `PackageNotReadyError`. CRM `ProviderUnavailableError` is retryable here (unlike the pipeline), so a CRM blip doesn't fail a send whose email already went out. After the last attempt the workflow runs `mark_send_failed` (status `failed`, `send_error`). |
 | 16 | Decision | Email HTML | Table-based, inline-styled, one screen: greeting, address (or "Property to be determined"), purchase price, recommended option's monthly payment and cash to close (display formatting of snapshot strings only), a "See your numbers" button to `/report/{token}`, LO signature. A plain-text alternative carries the same lines and URL. The PDF is attached as `preapproval-letter.pdf`. |
+| 17 | Decision (unit 2) | "Open in Outbox" when the Outbox UI is CQ-029 (P5/P6) | Decided: link to the planned route `/outbox?email={outbox_email_id}` (a Next `Link`). It 404s until CQ-029 builds the page; CQ-029 should read the `email` query param to open that row. Hidden when `outbox_email_id` is null (seeded versions). |
+| 18 | Decision (unit 2) | Send progress UI | The confirm dialog runs the send: Send → `POST /send` → a step list (Rendering letter → Emailing → Done; `queued`/`rendering` show as Rendering letter) polled every 500 ms from `GET /send-status`. A 409 `PACKAGE_NOT_READY` lists the blockers in the dialog; `failed` shows `error` with "Try again". "Hide" closes the dialog while the send keeps running, and a one-line progress shows under the button. Opening the tab mid-send (reload, second tab) resumes polling from `send-status`. On done: toast "Sent to {email}" (auto-hides after 6 s), workspace summary refetch (status pill → Sent), package reload, versions reload. The button label stays "Send to borrower" after a send (CQ-019's blocked-persona e2e checks it on an already-sent persona). |
+| 19 | Decision (unit 2) | Editing during a send | The quote checklist and the note are disabled while a send is starting or running. If a PUT still gets 409 `SEND_IN_PROGRESS` (a send started in another tab), the optimistic edit is dropped, the server's package is shown again, the notice says the change wasn't saved, and `send-status` is re-read so the tab follows the running send. |
+| 20 | Decision (unit 2, T13) | PR #22 minor: a failed Send-tab save could be silently dropped by a later successful save | Fixed: a failed save's edit is kept in `unsavedEdits` and merged into every later PUT (later fields win), so a later successful save also saves it. The error stays until a save that includes it succeeds; a Retry button re-sends it. Before, the later save's body started from the last confirmed package, so the failed edit vanished from screen and server with no error. Tests: `SendFlow.test.tsx` "Send-tab saves (PR #22 minor, T13)". |
+| 21 | Decision (unit 2, fix) | `backend/scripts/freeze_sent_version.py` raised `NoReferencedTableError` for `quote_package_versions.outbox_email_id` (found by the full e2e run: CQ-024's specs use the script) | `send/models.py` imports the outbox model so the FK target table is always registered. |
 
 No big gaps: nothing raised in Kaneo.
 
@@ -112,7 +117,7 @@ All under `/api/v1`, staff session required, out-of-scope package = 404 (Decisio
 - [x] T7
 - [x] T8
 - [x] T9
-- [ ] T10 (unit 2)
-- [ ] T11 (unit 2)
-- [ ] T12 (unit 2)
-- [ ] T13 (unit 2)
+- [x] T10 (unit 2)
+- [x] T11 (unit 2)
+- [x] T12 (unit 2)
+- [x] T13 (unit 2)

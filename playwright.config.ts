@@ -51,7 +51,8 @@ export default defineConfig({
       name: "cross-app",
       testDir: "./e2e",
       // CQ-020: the P3 milestone spec (send in the console, open the
-      // emailed link in the portal) drives both apps too.
+      // emailed link in the portal) drives both apps too; it also holds
+      // the LO send-flow test, serially, since both send Marcus Hale.
       testMatch: [
         "borrower-action-reflects-in-console.spec.ts",
         "p3-milestone-send-to-report.spec.ts",
