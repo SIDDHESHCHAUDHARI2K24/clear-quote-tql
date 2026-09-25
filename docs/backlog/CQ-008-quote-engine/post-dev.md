@@ -57,7 +57,43 @@ the spec's own test-plan commands.
 
 ## Review findings (stage 6)
 
-_(left for the fresh-subagent reviewer)_
+Reviewed by a fresh subagent that did not write this code. Scope: `git diff d166cf1...HEAD`
+(the commit this branch was cut from, before CQ-004 merged into `phase-p0-p1`).
+
+**Merge check.** `git merge-tree --write-tree phase-p0-p1 HEAD` wrote a tree cleanly
+(`3dd95ebaec052a9027b5dc90570378d504eac03f`, exit 0, no conflict markers) — this branch
+merges into current `phase-p0-p1` (post-CQ-004) without conflicts. Not merged, per instructions.
+
+**Commands re-run**
+
+| Command | Result |
+| --- | --- |
+| `uv run pytest backend/app/features/pricing/engine -v` | 28 passed |
+| `uv run pytest backend -q` | 29 passed (no collisions with CQ-004) |
+| `uv run ruff check backend/app/features/pricing/engine/` | All checks passed! |
+| `uv run ruff format --check backend/app/features/pricing/engine/` | 11 files already formatted |
+| `uv run mypy backend/app/features/pricing/engine/` | Success: no issues found in 11 source files |
+| `git merge-tree --write-tree phase-p0-p1 HEAD` | Clean merge, no conflicts |
+| Independent Decimal re-derivation of AC2–AC9 golden values (own script, not the engine) | All match to the cent: 1515.87, 1913.05, 27313.05, 2440.00, 0.90, 24275.78, 6.42, 1758.87 |
+| Non-golden spot checks: primary 95% LTV/FICO 700 with MI, LTR 25% down, STR 15% down — P&I/PITIA/LTV/MI/CTC/DSCR independently recomputed and compared to `compute_quote` output | All match; PRIMARY scenario confirmed to carry `None` for every rent/DSCR/cashflow/cost-seg field |
+| `grep -rn "float(\|round(" backend/app/features/pricing/engine` (excluding `.quantize(..., ROUND_HALF_UP)` and test helpers) | No float literals/casts; no bare `round()` outside `.quantize` helpers |
+| `make lint` / `make test` | Not runnable — Makefile targets don't exist yet (CQ-002/CQ-003 territory), consistent with post-dev's own note; used `uv`-level equivalents above instead |
+
+**Findings**
+
+| # | Severity | file:line | Finding | Suggested fix |
+| --- | --- | --- | --- | --- |
+| 1 | Major | `backend/app/features/pricing/engine/types.py:41-157` | `ScenarioInputs`/`ConfigSnapshot`/`QuoteComputation` are frozen stdlib `@dataclass`, not the "frozen Pydantic v2 model(s)" spec.md's Public API section pins. The stated justification (pydantic not yet a project dependency) was true on `d166cf1` but is stale on the merge target: `phase-p0-p1` already has `pydantic-settings` (which pulls in pydantic) as a real dependency, and pydantic is directly imported in `backend/app/core/config.py` (`from pydantic import field_validator`) and `backend/app/features/system/schemas.py` (`from pydantic import BaseModel`), both already merged via CQ-004. CQ-013 (pricing service/API layer) will need pydantic models to expose these types through FastAPI request/response bodies and OpenAPI (`packages/api-client` is generated from the OpenAPI schema); plain dataclasses give none of `.model_dump()`/JSON schema/validation, so CQ-013 will have to wrap or rewrite these types — the unplanned cost the spec's Pydantic pin was meant to avoid. | Re-express the three types as frozen Pydantic v2 models (`model_config = ConfigDict(frozen=True)`) now that the dependency genuinely exists, or raise this back as a `needs-input` decision before merge rather than carrying the now-stale deviation forward. |
+| 2 | Minor | `backend/app/features/pricing/engine/mi_matrix.py:86-101` | `mi_factor` silently returns `None` for `ltv_pct` above the top tabulated band (>97%), identical to the "no MI needed" case for `ltv_pct <= 80`. A PRIMARY loan at, e.g., 99% LTV would get a quote with `monthly_mi = None`, understating PITIA/CTC. No test covers this range. | Raise (or otherwise flag) on out-of-range LTV instead of silently treating it as "no MI required," or explicitly document/assert the product's max LTV is 97%. |
+| 3 | Minor | `backend/app/features/pricing/engine/types.py:122-123` | `QuoteComputation.ltv_pct` is on a 0–100 scale while every other `*_pct` field in `ScenarioInputs`/`ConfigSnapshot` (`down_payment_pct`, `title_rate_pct`, `str_expense_ratio`, `investor_marginal_tax_rate`, …) is a 0–1 fraction. This matches spec's own wording for `mi_factor`'s threshold ("`ltv_pct <= 80`") but is an inconsistent scale inside the same result object — a real footgun for CQ-009/CQ-013 consumers who may assume all `*_pct` fields share one scale. The scale is documented on the internal `ltv_pct()` helper function's docstring (`quote_engine.py:48-50`) but not on the `QuoteComputation.ltv_pct` field itself. | Add an explicit field-level docstring/comment on `QuoteComputation.ltv_pct` calling out the 0–100 scale (the field name itself is spec-pinned, so it can't be renamed). |
+| 4 | Minor | `backend/app/features/pricing/engine/quote_engine.py:169-172` | `str_annual_rent_target` hardcodes `Decimal("0.80")` rather than deriving from `config.str_expense_ratio`, per spec's literal formula text (already logged as plan.md Decision 5). Correct today since the two values coincide (both 0.20/0.80), but the constant lives outside `ConfigSnapshot` even though it's conceptually the same knob — a future change to `str_expense_ratio` alone would silently stop matching this formula's implicit assumption, in tension with the "quotes are reproducible from their snapshot" principle (the formula no longer reads from the snapshot at all). Not a bug against the pinned spec text as written. | Confirm with the spec owner whether `0.80` should in fact read `1 - config.str_expense_ratio`; if the literal is truly intentional, say so explicitly in spec.md next to the formula so it doesn't look like a copy-paste of the default. |
+| 5 | Minor | `backend/app/features/pricing/engine/tests/` | No test exercises `ScenarioInputs.__post_init__`'s validation (e.g. `market_rent_ltr` required for LTR and must be `None` for PRIMARY/STR, and the STR/PRIMARY equivalents) even though this is real validation logic CQ-013 will rely on to catch malformed inputs early. | Add `test_scenario_inputs_validation.py` with `pytest.raises(ValueError)` cases for each strategy's required/forbidden field. |
+| 6 | Minor | `backend/app/features/pricing/engine/tests/test_golden.py`, `test_cost_segregation.py` | `land_value_allocation`, `depreciable_building_basis`, `accelerated_basis_amount` and `break_even_rent_ltr` are never asserted through the actual `compute_quote()` orchestration path — only via the standalone `cost_segregation()` function, which bypasses `compute_quote`'s tuple-unpacking/field-wiring and rounding. Manually verified during this review that `compute_quote` wires all four correctly for the shared $342,000 STR golden scenario (68,400.00 / 273,600.00 / 68,400.00 / matches `total_monthly_payment`), so this is a coverage gap, not a bug — but a future refactor could silently reorder the tuple unpack without a test catching it. | Extend `test_full_scenario_matches_all_pinned_golden_values` to assert these four fields too. |
+
+No critical findings. AC1–AC15 all independently re-verified as met (tests pass, ruff/mypy clean,
+golden values re-derived by hand). Primary-loan field suppression (rule in AGENTS.md: primary
+never shows rent/DSCR/cashflow/cost-seg/PPP) holds — verified directly on a non-golden PRIMARY
+scenario, not just by reading the code.
 
 ## How to test manually
 
