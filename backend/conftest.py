@@ -7,13 +7,20 @@
   session, then rolls back and closes — so no test's writes survive into
   the next test.
 - `app`: the FastAPI app instance.
-- `client`: an `httpx.AsyncClient` wired to that app with `get_db`
-  overridden to hand out the per-test `db_session`.
+- `valkey`: a function-scoped `redis.asyncio.Redis` against `VALKEY_URL`,
+  `FLUSHDB`d before and after each test.
+- `client`: an `httpx.AsyncClient` wired to that app with `get_db` and
+  `get_valkey` overridden to hand out the per-test `db_session`/`valkey`.
 
 CQ-007: `test_engine` now runs `alembic upgrade head` against
 `TEST_DATABASE_URL` (once per session) instead of CQ-004's
 `Base.metadata.create_all`, so tests exercise the real migration path
 (AC1/AC5/AC6 all depend on this).
+
+CQ-014: the `valkey` fixture `FLUSHDB`s the db in `VALKEY_URL` before and
+after every test, so a local run MUST point `VALKEY_URL` at a dedicated db
+index — never db 0, which other tools/dev servers may share. This worktree's
+`.env` uses db 2 (`redis://localhost:6379/2`); CI's service uses db 1.
 
 The two `os.environ.setdefault` calls below must run before anything below
 them imports `app.core.db` (which calls `get_settings()` at *module* import
@@ -46,10 +53,12 @@ from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
 from fastapi import FastAPI  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
+from redis.asyncio import Redis  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine  # noqa: E402
 
 from app.core.config import get_settings  # noqa: E402
 from app.core.db import get_db  # noqa: E402
+from app.core.valkey import get_valkey  # noqa: E402
 from app.main import app as fastapi_app  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -104,11 +113,28 @@ async def app() -> AsyncIterator[FastAPI]:
 
 
 @pytest_asyncio.fixture
-async def client(app: FastAPI, db_session: AsyncSession) -> AsyncIterator[AsyncClient]:
+async def valkey() -> AsyncIterator[Redis]:
+    client = Redis.from_url(get_settings().valkey_url, decode_responses=True)
+    try:
+        await client.flushdb()
+        yield client
+    finally:
+        await client.flushdb()
+        await client.aclose()
+
+
+@pytest_asyncio.fixture
+async def client(
+    app: FastAPI, db_session: AsyncSession, valkey: Redis
+) -> AsyncIterator[AsyncClient]:
     async def _override_get_db() -> AsyncIterator[AsyncSession]:
         yield db_session
 
+    async def _override_get_valkey() -> AsyncIterator[Redis]:
+        yield valkey
+
     app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_valkey] = _override_get_valkey
     try:
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
@@ -116,3 +142,4 @@ async def client(app: FastAPI, db_session: AsyncSession) -> AsyncIterator[AsyncC
             yield async_client
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_valkey, None)
