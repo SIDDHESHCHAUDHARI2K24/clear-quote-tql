@@ -26,16 +26,11 @@ describe("SentVersionsTable", () => {
     render(<SentVersionsTable versions={VERSIONS} />);
     expect(screen.getByText("30yr Fixed · Par")).toBeInTheDocument();
     expect(screen.getByText("Viewed")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Preview" })).toHaveAttribute(
-      "href",
-      "/report/abc123",
-    );
+    expect(screen.getByRole("link", { name: "Preview" })).toHaveAttribute("href", "/report/abc123");
   });
 
   it("shows a dash when there's no recommended option", () => {
-    render(
-      <SentVersionsTable versions={[{ ...VERSIONS[0], recommended_option_label: null }]} />,
-    );
+    render(<SentVersionsTable versions={[{ ...VERSIONS[0], recommended_option_label: null }]} />);
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 });

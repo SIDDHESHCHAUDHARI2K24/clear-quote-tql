@@ -46,7 +46,12 @@ describe("ClientsTable", () => {
   it("shows a dash when there's no active application", () => {
     const row: ClientRow = { ...ROWS[0], active_status: null };
     render(
-      <ClientsTable rows={[row]} sort="-last_activity" onSortChange={vi.fn()} onRowClick={vi.fn()} />,
+      <ClientsTable
+        rows={[row]}
+        sort="-last_activity"
+        onSortChange={vi.fn()}
+        onRowClick={vi.fn()}
+      />,
     );
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
@@ -54,7 +59,12 @@ describe("ClientsTable", () => {
   it("sorts by name on header click", async () => {
     const onSortChange = vi.fn();
     render(
-      <ClientsTable rows={ROWS} sort="-last_activity" onSortChange={onSortChange} onRowClick={vi.fn()} />,
+      <ClientsTable
+        rows={ROWS}
+        sort="-last_activity"
+        onSortChange={onSortChange}
+        onRowClick={vi.fn()}
+      />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Name" }));
     expect(onSortChange).toHaveBeenCalledWith("name");
@@ -73,15 +83,17 @@ describe("ClientsTable", () => {
     );
 
     rerender(
-      <ClientsTable rows={ROWS} sort="-last_activity" onSortChange={vi.fn()} onRowClick={vi.fn()} />,
+      <ClientsTable
+        rows={ROWS}
+        sort="-last_activity"
+        onSortChange={vi.fn()}
+        onRowClick={vi.fn()}
+      />,
     );
     expect(screen.getByRole("columnheader", { name: "Last activity" })).toHaveAttribute(
       "aria-sort",
       "descending",
     );
-    expect(screen.getByRole("columnheader", { name: "Name" })).toHaveAttribute(
-      "aria-sort",
-      "none",
-    );
+    expect(screen.getByRole("columnheader", { name: "Name" })).toHaveAttribute("aria-sort", "none");
   });
 });

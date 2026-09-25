@@ -9,16 +9,17 @@ from typing import Any
 from sqlalchemy import ColumnElement, Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import scope_applications
 from app.core.config import get_settings
 from app.core.enums import ApplicationStatus, Strategy, UserRole
 from app.core.errors import NotFoundError, ValidationAppError
 from app.core.pagination import Page, paginate
+from app.core.sql import LIKE_ESCAPE_CHAR, escape_like
 from app.features.applications.listing.schemas import ApplicationRow, StrategyLabel
 from app.features.applications.models import Application
 from app.features.applications.property.models import Property, PropertyAddressStatus
 from app.features.applications.timeline.models import ActivityEvent
-from app.features.applications.timeline.schemas import ActivityEventOut
-from app.features.applications.timeline.service import list_activity
+from app.features.applications.timeline.service import list_activity_for_applications
 from app.features.applications.verification.models import Flag
 from app.features.auth.models import User
 from app.features.clients.models import Client
@@ -84,16 +85,40 @@ def _order_by(sort: str, last_activity_expr: Any) -> list[ColumnElement[Any]]:
     return [primary, Client.id.asc()]
 
 
-def _base_query() -> tuple[Select[*tuple[Any, ...]], Any]:
+def _application_scope_clauses(lo_scope: uuid.UUID | None) -> list[ColumnElement[bool]]:
+    """The `Application` rows every list-level aggregate below is computed
+    over: a client's own applications, additionally restricted to
+    `lo_scope`'s when given.
+
+    Review round 1 (CQ-026): an LO's `application_count`/`active_status`/
+    `last_activity` were computed over the client's *entire* application
+    set, including other LOs'. `application_count` in particular could
+    reveal that another LO has applications with a shared client -- so for
+    a requesting LO (`lo_scope=user.id`), every aggregate is now scoped to
+    just their own applications, matching what `get_client_detail` shows
+    them. A Manager/Admin's aggregates stay unscoped (`lo_scope=None`)
+    even when filtering the list by `lo_id`: that filter narrows which
+    clients appear, not what a Manager -- who can already see everything
+    -- is told about them (plan.md Decision, review round 1)."""
+    clauses: list[ColumnElement[bool]] = [Application.client_id == Client.id]
+    if lo_scope is not None:
+        clauses.append(Application.lo_id == lo_scope)
+    return clauses
+
+
+def _base_query(lo_scope: uuid.UUID | None = None) -> tuple[Select[*tuple[Any, ...]], Any]:
     application_count = (
         select(func.count(Application.id))
-        .where(Application.client_id == Client.id)
+        .where(*_application_scope_clauses(lo_scope))
         .correlate(Client)
         .scalar_subquery()
     )
     active_status = (
         select(Application.status)
-        .where(Application.client_id == Client.id, Application.status.notin_(_TERMINAL_STATUSES))
+        .where(
+            *_application_scope_clauses(lo_scope),
+            Application.status.notin_(_TERMINAL_STATUSES),
+        )
         .order_by(Application.updated_at.desc())
         .limit(1)
         .correlate(Client)
@@ -103,7 +128,7 @@ def _base_query() -> tuple[Select[*tuple[Any, ...]], Any]:
         select(func.max(ActivityEvent.at))
         .select_from(ActivityEvent)
         .join(Application, Application.id == ActivityEvent.application_id)
-        .where(Application.client_id == Client.id)
+        .where(*_application_scope_clauses(lo_scope))
         .correlate(Client)
         .scalar_subquery()
     )
@@ -153,16 +178,22 @@ async def list_clients(
     page: int | None = 1,
     page_size: int | None = None,
 ) -> Page[ClientRow]:
-    stmt, last_activity_expr = _base_query()
+    lo_scope = user.id if user.role == UserRole.LO else None
+    stmt, last_activity_expr = _base_query(lo_scope)
     stmt = scope_clients(stmt, user, lo_id)
 
     if q:
-        needle = f"%{q.strip()}%"
-        stmt = stmt.where(or_(Client.full_name.ilike(needle), Client.email.ilike(needle)))
-    if created_from is not None:
+        # `%`/`_` escaped so a literal search term can't act as a SQL LIKE
+        # wildcard (review round 1, CQ-026).
+        needle = f"%{escape_like(q.strip())}%"
         stmt = stmt.where(
-            Client.created_at >= datetime.combine(created_from, time.min, tzinfo=UTC)
+            or_(
+                Client.full_name.ilike(needle, escape=LIKE_ESCAPE_CHAR),
+                Client.email.ilike(needle, escape=LIKE_ESCAPE_CHAR),
+            )
         )
+    if created_from is not None:
+        stmt = stmt.where(Client.created_at >= datetime.combine(created_from, time.min, tzinfo=UTC))
     if created_to is not None:
         stmt = stmt.where(
             Client.created_at
@@ -220,12 +251,20 @@ def _property_label(prop: Property | None) -> str | None:
     return f"TBD · {', '.join(metros)}" if metros else "TBD"
 
 
-async def _application_rows_for_client(db: AsyncSession, client_id: uuid.UUID) -> list[Application]:
-    stmt = (
-        select(Application)
-        .where(Application.client_id == client_id)
-        .order_by(Application.updated_at.desc(), Application.id.asc())
-    )
+async def _application_rows_for_client(
+    db: AsyncSession, client_id: uuid.UUID, user: User
+) -> list[Application]:
+    """`user`-scoped applications for this client (review round 1, CQ-026 --
+    critical: this used to return every application regardless of role,
+    so an LO's client-detail page leaked other LOs' applications, sent
+    versions and activity for a client they shared. `scope_applications`
+    is the same helper every other application-scoped route uses --
+    `core/auth.py`'s "an LO only ever sees their own applications" -- so an
+    LO gets just their own rows here and a Manager/Admin still gets every
+    application, matching CQ-014's role scoping."""
+    stmt = scope_applications(
+        select(Application).where(Application.client_id == client_id), user
+    ).order_by(Application.updated_at.desc(), Application.id.asc())
     return list((await db.execute(stmt)).scalars().all())
 
 
@@ -252,9 +291,7 @@ async def _application_rows(
     )
     properties = {
         p.application_id: p
-        for p in (
-            await db.execute(select(Property).where(Property.application_id.in_(app_ids)))
-        )
+        for p in (await db.execute(select(Property).where(Property.application_id.in_(app_ids))))
         .scalars()
         .all()
     }
@@ -352,43 +389,34 @@ async def _sent_versions_for_client(
     return rows
 
 
-async def _merged_activity(
-    db: AsyncSession, applications: list[Application], limit: int = 50
-) -> list[ActivityEventOut]:
-    """plan.md Decision 7: calls the public `list_activity` once per
-    application (typically 1) and merges -- no private timeline helpers
-    imported, no new endpoint."""
-    events: list[ActivityEventOut] = []
-    for application in applications:
-        page = await list_activity(db, application, page=1, page_size=limit)
-        events.extend(page.items)
-    events.sort(key=lambda e: e.at, reverse=True)
-    return events[:limit]
-
-
 async def get_client_detail(db: AsyncSession, user: User, client_id: uuid.UUID) -> ClientDetail:
     client = await db.get(Client, client_id)
     if client is None:
         raise NotFoundError(f"Client not found: {client_id}")
 
-    if user.role == UserRole.LO:
-        in_scope = (
-            await db.execute(
-                select(Application.id).where(
-                    Application.client_id == client_id, Application.lo_id == user.id
-                )
-            )
-        ).first()
-        if in_scope is None:
-            raise NotFoundError(f"Client not found: {client_id}")
+    # `applications` is already `user`-scoped (see
+    # `_application_rows_for_client`), so the applications, sent versions
+    # and merged activity below are too. An LO with zero in-scope
+    # applications for this client gets 404, same as before (review round
+    # 1: simplified -- no separate "is one of the client's applications
+    # mine" existence check needed, `scope_applications` already answers
+    # it). A Manager/Admin still sees every application regardless of
+    # count, including zero (list-level "orphan" clients stay visible to
+    # them, matching `list_clients`).
+    applications = await _application_rows_for_client(db, client_id, user)
+    if not applications and user.role == UserRole.LO:
+        raise NotFoundError(f"Client not found: {client_id}")
 
     lo = await db.get(User, client.assigned_lo_id)
     lo_name = lo.full_name if lo is not None else "Unknown"
 
-    applications = await _application_rows_for_client(db, client_id)
     application_rows = await _application_rows(db, client, applications)
     sent_versions = await _sent_versions_for_client(db, [a.id for a in applications])
-    activity = await _merged_activity(db, applications)
+    # Batched (review round 1, minor): one query for the events across
+    # every in-scope application plus one staff-name lookup, instead of
+    # `list_activity` once per application (each of which re-fetched the
+    # client row too).
+    activity = await list_activity_for_applications(db, applications, limit=50)
 
     return ClientDetail(
         id=client.id,

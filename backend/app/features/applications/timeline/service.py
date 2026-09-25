@@ -1,13 +1,16 @@
 """`GET /applications/{id}/activity` (spec.md "Timeline").
 
-`list_activity` is the one entry point: paginates `activity_events` newest
-first (plan.md decision — `at DESC, id DESC` for a stable order when two
-events share a timestamp), then maps each row to an `ActivityEventOut` via
-`_resolve_actor` (plan.md decision 3) and `describe_event` (decision 4).
+`list_activity` is the single-application entry point: paginates
+`activity_events` newest first (plan.md decision — `at DESC, id DESC` for a
+stable order when two events share a timestamp), then maps each row to an
+`ActivityEventOut` via `_resolve_actor` (plan.md decision 3) and
+`describe_event` (decision 4).
 
-CQ-026 (clients wave) reuses this service, not just the frontend
-component — its client-detail page shows the same timeline for a client's
-most recent application.
+`list_activity_for_applications` is the multi-application entry point CQ-026
+(clients wave) uses for its client-detail page's merged "Activity" section
+(review round 1: batched into one query + one staff-name lookup across every
+application, rather than the caller running `list_activity` once per
+application).
 """
 
 from __future__ import annotations
@@ -180,6 +183,35 @@ def _resolve_actor(
     return ActivityActor(kind="staff", name=staff_names.get(user_id, "Unknown user"))
 
 
+async def _events_to_out(
+    db: AsyncSession, events: list[ActivityEvent], *, borrower_name: str
+) -> list[ActivityEventOut]:
+    """Batched `ActivityEvent` -> `ActivityEventOut` mapping shared by
+    `list_activity` and `list_activity_for_applications`: one lookup for
+    every staff actor across `events` instead of a per-row `db.get`
+    (code review finding, minor 1)."""
+    staff_ids = {uid for event in events if (uid := _staff_actor_id(event)) is not None}
+    staff_names: dict[uuid.UUID, str] = {}
+    if staff_ids:
+        rows = await db.execute(select(User.id, User.full_name).where(User.id.in_(staff_ids)))
+        staff_names = dict(rows.all())
+
+    items: list[ActivityEventOut] = []
+    for event in events:
+        actor = _resolve_actor(event, borrower_name=borrower_name, staff_names=staff_names)
+        items.append(
+            ActivityEventOut(
+                id=event.id,
+                actor=actor,
+                type=event.type,
+                message=describe_event(event.type, event.payload),
+                payload_summary=_payload_summary(event.payload),
+                at=event.at,
+            )
+        )
+    return items
+
+
 async def list_activity(
     db: AsyncSession,
     application: Application,
@@ -196,28 +228,42 @@ async def list_activity(
     client = await db.get(Client, application.client_id)
     borrower_name = client.full_name if client is not None else "Borrower"
 
-    # One batched lookup for every staff actor on the page instead of a
-    # per-row `db.get` (code review finding, minor 1).
-    staff_ids = {uid for event in result.items if (uid := _staff_actor_id(event)) is not None}
-    staff_names: dict[uuid.UUID, str] = {}
-    if staff_ids:
-        rows = await db.execute(select(User.id, User.full_name).where(User.id.in_(staff_ids)))
-        staff_names = dict(rows.all())
-
-    items: list[ActivityEventOut] = []
-    for event in result.items:
-        actor = _resolve_actor(event, borrower_name=borrower_name, staff_names=staff_names)
-        items.append(
-            ActivityEventOut(
-                id=event.id,
-                actor=actor,
-                type=event.type,
-                message=describe_event(event.type, event.payload),
-                payload_summary=_payload_summary(event.payload),
-                at=event.at,
-            )
-        )
+    items = await _events_to_out(db, result.items, borrower_name=borrower_name)
 
     return Page[ActivityEventOut](
         items=items, total=result.total, page=result.page, page_size=result.page_size
     )
+
+
+async def list_activity_for_applications(
+    db: AsyncSession, applications: list[Application], *, limit: int = 50
+) -> list[ActivityEventOut]:
+    """Merged, newest-first activity across several applications that all
+    belong to the same client -- CQ-026's client-detail "Activity" section
+    (module docstring). One query for the events (capped at `limit`,
+    ordered the same as `list_activity`'s own `ORDER BY`) and one batched
+    staff-name lookup, instead of the caller running `list_activity` once
+    per application -- each of which re-fetched the client row and only
+    trimmed to `limit` locally after over-fetching per application (review
+    round 1, minor: batched).
+
+    All `applications` are assumed to share one client (CQ-026 is the only
+    caller today); `applications[0]`'s client supplies the borrower name.
+    """
+    if not applications:
+        return []
+    application_ids = [a.id for a in applications]
+    stmt = (
+        select(ActivityEvent)
+        .where(ActivityEvent.application_id.in_(application_ids))
+        .order_by(ActivityEvent.at.desc(), ActivityEvent.id.desc())
+        .limit(limit)
+    )
+    events = list((await db.execute(stmt)).scalars().all())
+    if not events:
+        return []
+
+    client = await db.get(Client, applications[0].client_id)
+    borrower_name = client.full_name if client is not None else "Borrower"
+
+    return await _events_to_out(db, events, borrower_name=borrower_name)

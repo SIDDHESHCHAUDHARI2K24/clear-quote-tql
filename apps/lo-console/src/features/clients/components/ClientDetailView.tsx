@@ -71,10 +71,7 @@ export function ClientDetailView({ clientId }: ClientDetailViewProps) {
       <section className="flex flex-col gap-2">
         <h2 className="text-base font-semibold text-navy-900">Applications</h2>
         {client.applications.length === 0 ? (
-          <EmptyState
-            title="No applications yet"
-            body="This client has no applications on file."
-          />
+          <EmptyState title="No applications yet" body="This client has no applications on file." />
         ) : (
           <table className="w-full border-collapse text-sm">
             <thead>

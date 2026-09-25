@@ -23,6 +23,7 @@ from app.core.auth import scope_applications
 from app.core.enums import ApplicationStatus, Strategy, UserRole
 from app.core.errors import ValidationAppError
 from app.core.pagination import Page, paginate
+from app.core.sql import LIKE_ESCAPE_CHAR, escape_like
 from app.features.applications.listing.schemas import ApplicationRow, LoOption, StrategyLabel
 from app.features.applications.models import Application
 from app.features.applications.property.models import Property, PropertyAddressStatus
@@ -242,8 +243,16 @@ async def list_applications(
     stmt = scope_applications(_base_query(), user, lo_id)
 
     if q:
-        needle = f"%{q.strip()}%"
-        stmt = stmt.where(or_(Client.full_name.ilike(needle), Client.email.ilike(needle)))
+        # `%`/`_` in `q` are escaped so a literal search term can't act as a
+        # SQL LIKE wildcard (review round 1, CQ-026 -- same fix as
+        # `clients/service.py`'s search and the outbox's).
+        needle = f"%{escape_like(q.strip())}%"
+        stmt = stmt.where(
+            or_(
+                Client.full_name.ilike(needle, escape=LIKE_ESCAPE_CHAR),
+                Client.email.ilike(needle, escape=LIKE_ESCAPE_CHAR),
+            )
+        )
     if status:
         stmt = stmt.where(_status_filter(status))
     if strategy:

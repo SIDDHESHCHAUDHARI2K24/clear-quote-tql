@@ -16,9 +16,7 @@ import {
 import { useStaffSession } from "../../../features/shell";
 
 type LoadState =
-  | { kind: "loading" }
-  | { kind: "ready"; items: ClientRow[]; total: number }
-  | { kind: "error" };
+  { kind: "loading" } | { kind: "ready"; items: ClientRow[]; total: number } | { kind: "error" };
 
 // spec.md CQ-026 "Frontend": search box (debounced), filters, sortable
 // table, pagination. Filters and page live in the URL

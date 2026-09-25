@@ -39,12 +39,16 @@ async def test_client_detail_marcus_hale(
     assert application is not None
 
     quotes = (
-        await db_session.execute(
-            select(Quote)
-            .join(Scenario, Quote.scenario_id == Scenario.id)
-            .where(Scenario.application_id == application.id)
+        (
+            await db_session.execute(
+                select(Quote)
+                .join(Scenario, Quote.scenario_id == Scenario.id)
+                .where(Scenario.application_id == application.id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert quotes, "Marcus Hale's persona must price cleanly for this fixture to be meaningful"
     quote_ids = [q.id for q in quotes]
 

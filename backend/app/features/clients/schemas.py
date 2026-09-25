@@ -15,8 +15,15 @@ from app.features.applications.listing.schemas import ApplicationRow
 from app.features.applications.timeline.schemas import ActivityEventOut
 
 SentVersionStatus = Literal[
-    "sent", "viewed", "expired", "superseded", "option_selected", "move_forward",
-    "ask_other", "ask_updated", "inquiry",
+    "sent",
+    "viewed",
+    "expired",
+    "superseded",
+    "option_selected",
+    "move_forward",
+    "ask_other",
+    "ask_updated",
+    "inquiry",
 ]
 """plan.md Decision 9: derived, not stored -- see `service._version_status`."""
 

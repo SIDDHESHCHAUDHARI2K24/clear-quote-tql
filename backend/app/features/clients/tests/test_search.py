@@ -45,3 +45,34 @@ async def test_client_search(
     # No match.
     resp = await client.get("/api/v1/clients", params={"q": "nobody-here"})
     assert resp.json()["items"] == []
+
+
+async def test_client_search_escapes_like_wildcards(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_staff_session: Any,
+    make_client: MakeClient,
+    make_application_for: MakeApplicationFor,
+) -> None:
+    """Review round 1: `q` used to build an unescaped ILIKE pattern, so a
+    literal `%`/`_` in the search text matched everything instead of
+    matching literally (same fix as the outbox's own `q`)."""
+    await make_staff_session(UserRole.MANAGER)
+
+    foo_bar = await make_client(full_name="foo_bar Client", email=f"{uuid.uuid4()}@example.test")
+    await make_application_for(foo_bar.client, foo_bar.lo)
+    foo_x_bar = await make_client(full_name="fooXbar Client", email=f"{uuid.uuid4()}@example.test")
+    await make_application_for(foo_x_bar.client, foo_x_bar.lo)
+    percent = await make_client(full_name="100% Client", email=f"{uuid.uuid4()}@example.test")
+    await make_application_for(percent.client, percent.lo)
+    await db_session.flush()
+
+    # A literal "_" must not act as a single-character wildcard: "foo_bar"
+    # matches only the client actually named "foo_bar Client", not
+    # "fooXbar Client" too.
+    resp = await client.get("/api/v1/clients", params={"q": "foo_bar"})
+    assert {uuid.UUID(item["id"]) for item in resp.json()["items"]} == {foo_bar.client.id}
+
+    # A literal "%" must not act as a wildcard matching every row.
+    resp = await client.get("/api/v1/clients", params={"q": "100%"})
+    assert {uuid.UUID(item["id"]) for item in resp.json()["items"]} == {percent.client.id}
