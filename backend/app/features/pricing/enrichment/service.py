@@ -41,6 +41,22 @@ from app.integrations.tax.mock import MockTaxClient
 
 _OB_REQUIRED_FLAG_RULE = "ob_required_field"
 
+# CQ-010 review round 1, finding #1: every other missing OB field uses its
+# own wire name as `flags.field_key` (e.g. `RepresentativeFICO`) -- but
+# CQ-012's spec.md/tests (`applications/verification/tests/test_personas.py
+# ::test_persona_7_write_flag`) pin persona 7 (Aisha Coleman)'s flag to
+# `field_key="occupancy_type"` (the LOS/1003 field name, not the OB request
+# name), matching system-design.md's "Cannot price: missing Occupancy"
+# narrative at the field the LO would actually go fix on the Borrowers/
+# Property tab. This is the one exception; every other missing field keeps
+# its OB name unchanged (CQ-013's own `test_ob_validation.py` pins
+# `RepresentativeFICO` verbatim).
+_FIELD_KEY_OVERRIDES: dict[str, str] = {"Occupancy": "occupancy_type"}
+
+
+def _flag_field_key(ob_field_name: str) -> str:
+    return _FIELD_KEY_OVERRIDES.get(ob_field_name, ob_field_name)
+
 
 @dataclass(frozen=True)
 class EnrichmentResult:
@@ -248,7 +264,7 @@ async def validate_ob_required_fields(db: AsyncSession, application_id: uuid.UUI
                 db,
                 application_id,
                 ApplicationTab.PRICING,
-                missing_field,
+                _flag_field_key(missing_field),
                 _OB_REQUIRED_FLAG_RULE,
                 FlagSeverity.BLOCKING,
             )
@@ -259,7 +275,7 @@ async def validate_ob_required_fields(db: AsyncSession, application_id: uuid.UUI
     if application.occupancy is Occupancy.INVESTMENT:
         possible_fields += CONDITIONALLY_REQUIRED_INVESTMENT
     for field_name in possible_fields:
-        await resolve_flag(db, application_id, field_name, _OB_REQUIRED_FLAG_RULE)
+        await resolve_flag(db, application_id, _flag_field_key(field_name), _OB_REQUIRED_FLAG_RULE)
     await db.commit()
     return True
 

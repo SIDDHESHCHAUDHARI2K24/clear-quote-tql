@@ -1,0 +1,94 @@
+# Persona 1 -- Marcus Hale. STR, Tampa FL, DSCR < 1 (negative cashflow shown
+# honestly), tax savings, DSCR re-price loop. system-design.md "Seed data
+# personas" row 1; CQ-010 spec.md persona table row 1.
+key: marcus_hale
+first_name: Marcus
+last_name: Hale
+email: marcus.hale@clearquote-demo.test
+occupancy: investment
+strategy: str
+purchase_price: "342000.00"
+down_payment_pct: "0.20"
+ppp_years: 5
+fico: 760
+beds: 3
+loan_number: LOS-1000001
+current_residence_months: 60
+missing_fields: []
+pipeline_end_status: priced
+seed_end_status: priced
+market:
+  city: Tampa
+  state: FL
+  zip: "33602"
+  county: Hillsborough
+property_type: single_family
+vesting: personal_name
+llc_entity_name: null
+co_borrower: null
+fico_bureau_scores:
+  experian: 762
+  equifax: 758
+  transunion: 760
+  middle: 760
+los_record:
+  borrower_first_name: Marcus
+  borrower_last_name: Hale
+  borrower_full_name: Marcus Hale
+  borrower_ssn: "100011000"
+  borrower_dob: "1985-04-12"
+  marital_status: Unmarried
+  dependents_count: 0
+  borrower_email: marcus.hale@clearquote-demo.test
+  borrower_cell_phone: "8135551234"
+  borrower_home_phone: null
+  has_co_borrower: false
+  no_co_applicant_check: false
+  business_vesting: Personal Name
+  llc_entity_name: null
+  current_street_address: "100 Bayshore Blvd"
+  current_city: Tampa
+  current_state: FL
+  current_zip: "33602"
+  current_housing_status: Own
+  current_residence_years: 5
+  current_residence_months: 0
+  vom_completed: true
+  has_subject_property: true
+  property_address_status: Specific_Address
+  subject_street_address: "4412 W Gray St"
+  subject_city: Tampa
+  subject_state: FL
+  subject_zip: "33602"
+  subject_county: Hillsborough
+  property_type: Single_Family
+  number_of_units: 1
+  loan_purpose: Purchase
+  occupancy_type: Investment_Property
+  investment_strategy: Short_Term_Rental
+  loan_program_name: "DSCR 30 YR Fixed"
+  amortization_term_years: 30
+  amortization_type: Fixed
+  purchase_price: "342000.00"
+  appraised_value: "342000.00"
+  down_payment_pct: "0.20"
+  prepayment_penalty_term: "5 Years"
+  automated_uw_system: Manual_Traditional
+  lead_source: BiggerPockets
+  employment:
+    - employer_name: "Hale Consulting LLC"
+      monthly_income: "12000.00"
+      years_at_job: "6.0"
+      self_employed: true
+  liabilities:
+    - creditor_name: "Chase"
+      account_type: "Auto Loan"
+      monthly_payment: "450.00"
+      balance: "18000.00"
+  assets:
+    - account_type: Checking
+      institution: "Chase Bank"
+      verified_amount: "95000.00"
+    - account_type: Savings
+      institution: "Ally Bank"
+      verified_amount: "40000.00"

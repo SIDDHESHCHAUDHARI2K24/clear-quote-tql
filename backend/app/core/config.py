@@ -60,6 +60,12 @@ class Settings(BaseSettings):
     # raises `AuthenticationError` (401).
     dev_lo_id: str | None = None
 
+    # CQ-010 (review round 1, finding #3): shared demo password
+    # `seed/loader.py::seed_users` bcrypt-hashes for the seeded staff users.
+    # No default -- deliberately never committed as a literal anywhere in
+    # the repo. `make demo-reset` fails fast with a clear message if unset.
+    seed_staff_password: str | None = None
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, value: object) -> object:
