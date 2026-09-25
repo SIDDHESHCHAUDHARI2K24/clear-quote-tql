@@ -28,11 +28,13 @@ Plan-level decisions that apply: E1 (drafts table, consent columns, `application
 | 15 | Decision | Source badge "Borrower portal" | Decided: the badge is `applications.source = portal` (foundation enum); list/workspace UIs label it "Borrower portal". Parties/housing rows have no per-row source column, so nothing else is needed. |
 | 16 | Decision | LO assignment (AC5) | Decided: `applications.lo_id = least_loaded_lo_id(db)` (fewest active applications, ties alphabetical). If the borrower's client has no other active application, `clients.assigned_lo_id` moves to the same LO so the LO sees the client too. Events: `application.submitted` (actor `borrower`) and `application.assigned` (actor `system`, payload `lo_id`, `lo_name`, `rule = "least_loaded"`). No LO at all → 409 "No loan officer is available". |
 | 17 | Decision | Workflow start | Decided: same call as `applications/router.py` (`application-{id}`, `REJECT_DUPLICATE`, `APPLICATION_PIPELINE_TASK_QUEUE`) via the `get_temporal_client` dependency, **after** the application commit. If Temporal is unreachable the submit still succeeds (the application exists in Intake, the error is logged and `pipeline_started = false` is returned); the LO can re-trigger with `POST .../pipeline/start`. |
-| 18 | Decision | Consent row (AC6) | Decided: one `consents` row per submit, new `ConsentType.APPLICATION = "application"` (migration off `3b55187d53d7`, `ALTER TYPE consent_type ADD VALUE`), `status = accepted`, `text_version = "apply-v1"`, `text_hash = sha256(consent text)`, `typed_name`, `ip` (first `X-Forwarded-For` hop, else the socket peer), `user_agent`, `at = decided_at = requested_at = now()`. The consent text is served in the draft response (`consent.text`, `consent.version`) so the UI shows exactly what is hashed. |
+| 18 | Decision | Consent row (AC6) | Decided: one `consents` row per submit, new `ConsentType.APPLICATION = "application"` (migration off `3b55187d53d7`, `ALTER TYPE consent_type ADD VALUE`), `status = accepted`, `text_version = "apply-v1"`, `text_hash = sha256(consent text)`, `typed_name`, `ip` from `auth.common.client_ip` (the socket peer, the same helper the login rate limits use; trusting `X-Forwarded-For` behind the Railway proxy lands there once, CQ-035, rather than as an unverified header here), `user_agent`, `at = decided_at = requested_at = now()`. The consent text is served in the draft response (`consent.text`, `consent.version`) so the UI shows exactly what is hashed. |
 | 19 | Decision | Uploads before submit | Decided: uploads are keyed by the draft: stored at `drafts/{draft_id}/documents/{uuid}{ext}` and listed in `data.income.documents`. At submit each object is copied to `applications/{application_id}/documents/{uuid}{ext}` (spec path), a `documents` row is created (`doc_type` `pay_stub`/`w2`/`bank_statement`, `received_at = now`) and the draft copy is deleted. After submit, uploads return 409 (editing after submit is out of scope). |
 | 20 | Decision | Upload limits (AC7) | Decided: extension `.pdf/.jpg/.jpeg/.png` **and** matching magic bytes (`%PDF`, `\xFF\xD8\xFF`, `\x89PNG`) else 415 `"Only PDF, JPG and PNG files are accepted."`; more than 10 MB (10 × 1024 × 1024 bytes) → 413 `"Files must be 10 MB or smaller."`; empty → 422. At most 20 documents per draft. |
-| 21 | Decision | LO email (AC5) | Decided: subject `New application from {First Last}`, a short table-based body (borrower, occupancy/strategy, price, location) via `send_email(..., application_id=...)`, in the same transaction as the application. |
+| 21 | Decision | LO email (AC5) | Decided: subject `New application from {First Last}`, a short table-based body (borrower, occupancy/strategy, price, location) via `send_email(..., application_id=...)`, sent **after** the application commits (SMTP sends immediately, so a rolled-back submit must not email anyone); its outbox row commits right after. |
 | 22 | Decision | Submit idempotency | Decided: submit on an already-submitted draft returns 409 with the existing `application_id` in `details`. Submit with invalid tabs returns 422 with `details.field_errors` per tab and `details.first_invalid_tab`. |
+| 23 | Decision | New dependency | Decided: `python-multipart` added to `pyproject.toml`/`uv.lock` (FastAPI needs it for `UploadFile`/`Form`; nothing in the backend took multipart before). Small necessity, logged. |
+| 24 | Decision | Schema test | Decided: `backend/tests/test_schema.py`'s pinned `ConsentType` value set gains `application` (one-line necessity outside owned files). |
 
 No big gaps: nothing raised in Kaneo.
 
@@ -54,13 +56,13 @@ The draft's `data` is `{ "you": {...}, "property": {...}, "income": {...}, "cons
 | `dob` | `YYYY-MM-DD` | required; `"You must be at least 18 years old."` (age ≥ 18, ≤ 120) |
 | `ssn` | string | required; 9 digits (dashes/spaces allowed) → `"SSN must be 9 digits."` |
 | `marital_status` | `married` \| `unmarried` \| `separated` | required |
-| `dependents_count` | integer ≥ 0 | required |
+| `dependents_count` | integer 0–20 | required |
 | `current_address` | `{street, city, state, zip}` | all required; `state` 2 letters (upper-cased), `zip` 5 digits |
 | `housing_status` | `own` \| `rent` \| `rent_free` | required |
 | `residence_years` | integer 0–99 | required |
 | `residence_months` | integer 0–11 | required |
-| `prior_address` | `{street, city, state, zip, residence_years, residence_months}` \| null | required when `residence_years*12 + residence_months < 24` → error on `prior_address`: `"Add your prior address (you've lived at your current address under 2 years)."` |
-| `has_co_borrower` | boolean | default false |
+| `prior_address` | `{street, city, state, zip, residence_years, residence_months}` \| null | required when `residence_years*12 + residence_months < 24` (ignored otherwise) → error on `prior_address`: `"Add your prior address (you've lived at your current address under 2 years)."` |
+| `has_co_borrower` | boolean | default false; when false any `co_borrower` block is ignored (not validated, not written) |
 | `co_borrower` | `{first_name, last_name, email?, cell_phone, dob, ssn, marital_status, dependents_count}` \| null | required when `has_co_borrower`; same rules as the borrower (`email` optional, must look like an email) |
 
 ### Tab 2 `property`
@@ -80,13 +82,13 @@ The draft's `data` is `{ "you": {...}, "property": {...}, "income": {...}, "cons
 | Field | Type | Rule / error text |
 | --- | --- | --- |
 | `employer_name` | string | required for primary |
-| `years_employed` | decimal string ≥ 0 | required for primary |
+| `years_employed` | decimal string 0–99 | required for primary |
 | `monthly_income` | decimal string | required for primary and > 0 → `"Monthly income is required for a home you'll live in."`; ≥ 0 otherwise |
 | `monthly_debts` | decimal string ≥ 0 | required for primary |
 | `liquid_assets` | decimal string ≥ 0 | required for everyone |
 | `documents` | `[{id, doc_type, filename, content_type, size_bytes, uploaded_at}]` | **server-managed**, filled by the upload endpoint; ignored on PATCH |
 
-Any negative number → `"Must be 0 or more."`.
+Any negative number → `"Must be 0 or more."`. Money fields (price, income, debts, assets) must be under 100,000,000 (column precision).
 
 ### Tab 4 `consent`
 
@@ -110,8 +112,10 @@ Any negative number → `"Must be 0 or more."`.
 ```
 
 - `PATCH .../draft` body `{tab, data}` → `{ draft: ApplyDraftOut, tab, tab_valid, field_errors: {path: message} }`. `field_errors` also lists "required" for fields not yet filled, so the UI shows errors only for touched fields (or all of them on "Next").
-- `POST .../submit` (no body) → `{ application_id, draft_id, status: "intake", assigned_lo_name, pipeline_started }`. 422 → `details: {field_errors: {tab: {path: msg}}, first_invalid_tab}`; 409 if already submitted.
-- `POST .../documents` multipart `file`, `doc_type` (`pay_stub`|`w2`|`bank_statement`) → the new document entry (201). 413 / 415 / 422 with `{code, message}`.
+- `POST .../submit` (no body) → `{ application_id, draft_id, status: "intake", assigned_lo_name, pipeline_started }`. 422 → `error.details: {field_errors: {tab: {path: msg}}, first_invalid_tab}`; 409 if already submitted (`error.details.application_id`).
+- Every error body has the app-wide shape `{"error": {code, message, details}}`.
+- Cross-field rules (prior address, co-borrower required, down payment option, metro, primary income) are checked once that tab's field-level rules pass, so a tab with several problems may reveal one of these on the next save.
+- `POST .../documents` multipart `file`, `doc_type` (`pay_stub`|`w2`|`bank_statement`) → the new document entry (201). 413 (`FILE_TOO_LARGE`) / 415 (`UNSUPPORTED_FILE_TYPE`) / 422 / 409 (after submit).
 - `DELETE .../documents/{document_id}` → 204.
 
 ## What changes

@@ -211,3 +211,32 @@ def test_context_and_first_incomplete_tab(valid_tabs: Tabs) -> None:
     _, failures = validate_all(tabs, context_for(tabs, METROS))
     assert list(failures) == [TabName.INCOME]
     assert first_incomplete_tab(failures) is TabName.INCOME
+
+
+def test_values_stay_inside_column_precision(valid_tabs: Tabs) -> None:
+    """Review fix: a value the DB column cannot hold is a field error, not
+    a 500 at submit."""
+    income = valid_tabs()["income"] | {"years_employed": "1000", "monthly_debts": "150000000"}
+    _, errors = validate_tab(TabName.INCOME, income, _ctx())
+    assert set(errors) == {"years_employed", "monthly_debts"}
+
+    you = valid_tabs()["you"] | {"dependents_count": 5000}
+    _, errors = validate_tab(TabName.YOU, you, _ctx())
+    assert set(errors) == {"dependents_count"}
+
+    prop = valid_tabs()["property"] | {"target_price": "999999999999"}
+    _, errors = validate_tab(TabName.PROPERTY, prop, _ctx())
+    assert set(errors) == {"target_price"}
+
+
+def test_unused_co_borrower_and_prior_address_are_ignored(valid_tabs: Tabs) -> None:
+    """Review fix: a stale co-borrower block (box unticked) or a prior
+    address no longer needed cannot fail tab 1."""
+    you = valid_tabs()["you"] | {
+        "has_co_borrower": False,
+        "co_borrower": {"first_name": "Half"},
+        "prior_address": {"street": "partial"},
+    }
+    model, errors = validate_tab(TabName.YOU, you, _ctx())
+    assert errors == {}
+    assert model is not None

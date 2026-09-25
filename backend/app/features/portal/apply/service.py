@@ -633,6 +633,13 @@ async def submit(
         if prop.has_property and prop.address is not None
         else f"To be determined: {', '.join(prop.buy_box_metros)}"
     )
+    draft.submitted_application_id = app_id
+    draft.updated_at = now
+    await db.commit()
+
+    # The LO email goes out only once the application exists (SMTP sends
+    # immediately; a rolled-back submit must not have emailed anyone). Its
+    # outbox row commits on its own right after.
     await send_email(
         db,
         to=lo.email,
@@ -647,9 +654,6 @@ async def submit(
         ),
         application_id=app_id,
     )
-
-    draft.submitted_application_id = app_id
-    draft.updated_at = now
     await db.commit()
 
     for key in draft_keys:

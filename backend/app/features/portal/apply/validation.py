@@ -53,6 +53,11 @@ TAB_ORDER: tuple[TabName, ...] = (
 MIN_AGE_YEARS = 18
 MAX_AGE_YEARS = 120
 MIN_HOUSING_MONTHS = 24
+MAX_DEPENDENTS = 20
+MAX_YEARS_EMPLOYED = Decimal("99")
+MAX_AMOUNT = Decimal("100000000")
+"""Exclusive cap on every money field: fits `Numeric(10,2)` and
+`Numeric(12,2)` columns even after rounding to cents."""
 
 DOWN_PAYMENT_OPTIONS: dict[str, tuple[Decimal, ...]] = {
     "primary": (
@@ -227,6 +232,8 @@ class PersonFields(_TabModel):
     def _dependents(cls, value: int) -> int:
         if value < 0:
             raise _custom(MSG_NON_NEGATIVE)
+        if value > MAX_DEPENDENTS:
+            raise _custom(f"Enter {MAX_DEPENDENTS} or fewer.")
         return value
 
 
@@ -269,6 +276,25 @@ class YouTab(PersonFields):
             raise _custom("Enter 0 to 11 months.")
         return value
 
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_unused_blocks(cls, data: Any) -> Any:
+        """A co-borrower block with the box unticked, or a prior address
+        once 24+ months are covered, is ignored (submit never writes it),
+        so a stale block the UI still sends cannot fail the tab."""
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        if data.get("has_co_borrower") is not True:
+            data["co_borrower"] = None
+        try:
+            months = int(data.get("residence_years")) * 12 + int(data.get("residence_months"))
+        except (TypeError, ValueError):
+            return data
+        if months >= MIN_HOUSING_MONTHS:
+            data["prior_address"] = None
+        return data
+
     @model_validator(mode="after")
     def _conditionals(self) -> YouTab:
         months = self.residence_years * 12 + self.residence_months
@@ -297,7 +323,7 @@ class PropertyTab(_TabModel):
     def _price(cls, value: Decimal) -> Decimal:
         if not value.is_finite() or value <= 0:
             raise _custom(MSG_PRICE)
-        if value >= Decimal("10000000000"):
+        if value >= MAX_AMOUNT:
             raise _custom("Enter a realistic price.")
         return value
 
@@ -352,12 +378,18 @@ class IncomeTab(_TabModel):
 
     @field_validator("years_employed", "monthly_income", "monthly_debts", "liquid_assets")
     @classmethod
-    def _non_negative(cls, value: Decimal | None) -> Decimal | None:
+    def _non_negative(cls, value: Decimal | None, info: ValidationInfo) -> Decimal | None:
         if value is None:
             return None
         if not value.is_finite() or value < 0:
             raise _custom(MSG_NON_NEGATIVE)
-        if value >= Decimal("10000000000"):
+        # Upper bounds keep every value inside its column's precision
+        # (employment.years_at_job Numeric(4,1), liabilities.monthly_payment
+        # Numeric(10,2), the rest Numeric(12,2)).
+        if info.field_name == "years_employed":
+            if value > MAX_YEARS_EMPLOYED:
+                raise _custom(f"Enter {MAX_YEARS_EMPLOYED} years or fewer.")
+        elif value >= MAX_AMOUNT:
             raise _custom("Enter a realistic amount.")
         return value
 
