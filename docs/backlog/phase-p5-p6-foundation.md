@@ -106,4 +106,108 @@ overlaps.
 
 ## Progress
 
-- [ ] T1 – T13 (ticked in the post-dev section below)
+- [x] T1 settings + clock
+- [x] T2 migration + models
+- [x] T3 pagination
+- [x] T4 storage
+- [x] T5 least_loaded_lo_id
+- [x] T6 flag messages
+- [x] T7 pipeline skip-import
+- [x] T8 seed E17
+- [x] T9 UI primitives
+- [x] T10 LO `(staff)` shell
+- [x] T11 portal `(portal)` shell
+- [x] T12 worktree slots + Valkey databases
+- [x] T13 api-client, e2e, evidence
+
+---
+
+# P5/P6 foundation — Post-development notes
+
+## Summary
+
+One migration (`3b55187d53d7`, off `e419a34bcdbd`; `alembic heads` = 1)
+adds `flags.message`, the consent request/decision columns, `support_requests`,
+`application_drafts` and `applications.source`. New core helpers:
+`core/clock.now()`, `core/storage` (MinIO/S3), `core/pagination`
+(`Page[T]`, `paginate`), plus `applications.assignment.least_loaded_lo_id`.
+Flags now carry human text; a `portal`-source application skips the import
+stage and still prices. Both apps have a signed-in shell (route groups
+`(staff)` and `(portal)`) with session providers and stub routes, and
+`packages/ui` has six new primitives. The seed adds one borrower with no
+application.
+
+## What later items can rely on
+
+| Item | Contract |
+| --- | --- |
+| all backend | `app.core.clock.now()` (honours `CLOCK_NOW`); `app.core.pagination.Page[T]`, `paginate(db, stmt, page, page_size)` (1..100, default 25; `stmt` carries its own stable `ORDER BY`); `app.core.storage.{ensure_bucket, put_object, get_object, stream_object, presigned_get_url, delete_object, ObjectNotFoundError}` |
+| CQ-025/027/028 | `Flag.message` (always set by `write_flag`; `rules.flag_message(rule, field_key)`, `rules.field_label`) |
+| CQ-028/033 | `Consent` + `ConsentStatus` (`pending`/`accepted`/`declined`/`expired`), `requested_by/at`, `decided_at`, `expires_at`, `typed_name`, `user_agent`, `text_version`, `decline_reason`; `text_hash`/`ip`/`at` nullable |
+| CQ-032 | `ApplicationDraft` (`data` per-tab JSONB, `current_tab`, `submitted_application_id`; one open draft per borrower, `IntegrityError` on a second), `Application.source = ApplicationSource.PORTAL` → pipeline skips `import_application` (activity `load_application_source`, Temporal patch `p56-load-application-source`); `least_loaded_lo_id(db)` |
+| CQ-034 | `SupportRequest` (`reference` unique `String(16)`), `settings.support_inbox` |
+| CQ-030 | `settings.stale_check_interval_seconds`, `settings.clock_now` |
+| CQ-031/034 | seed `noapp.borrower@clearquote-demo.test` ("Nadia Noapp", client, no application) when `SEED_BORROWER_PASSWORD` is set |
+| LO console | `src/features/shell`: `StaffSessionProvider`, `useStaffSession()` → `{user, role, isAdmin, isManagerOrAdmin, logout}`, `StaffShell`, `AdminGuard`, `StubPage`, `STAFF_NAV_ITEMS`; routes `app/(staff)/{page, clients, applications, outbox, admin/integrations, admin/settings}` |
+| Portal | `src/features/shell`: `BorrowerSessionProvider`, `useBorrowerSession()` → `{me, refresh, logout}`, `PortalShell`, `StubPage`, `loginUrlFor`; routes `app/(portal)/{page, support, apply, tasks/credit-check/[id]}` |
+| UI | `Pagination`, `Select`, `MultiSelect`, `Drawer`, `EmptyState`, `ToastProvider` + `useToast`, `useFocusTrap` (exported from `@cq/ui`; gallery `/gallery` in the LO console) |
+| e2e | `flushLoginRateLimit()` now deletes only `rl:*` keys, so it no longer drops the sessions `global-setup.ts` saved |
+
+## Deviations from the brief
+
+| Brief said | Built | Why |
+| --- | --- | --- |
+| Refactor `seed/generators/documents.py` to use storage if trivial | Not refactored | It threads its own client and a separate bucket through `seed_persona`; not trivial (decision 11) |
+| `least_loaded_lo_id` — old call site keeps working | Same import, but borrower sign-up now balances by active applications instead of clients | E15 is the single rule; `test_signup.py`'s least-loaded test now gives the busy LO active applications |
+| Slots 11–23 work | Slots 11–13 work on the running Valkey (16 dbs); 14–23 need Valkey recreated with `--databases 64` (compose updated). Script refuses with instructions until then | Recreating the shared container drops every session; left to the orchestrator before wave 2 |
+| — | `scripts/worktree-env.sh` also sets a per-slot `TEST_VALKEY_URL` (db 32+N) once Valkey has 64 dbs | pytest FLUSHDBs its Valkey db (default 15, shared by every worktree and equal to slot 13's dev db) |
+| — | Pipeline's new first step is behind `workflow.patched` | Code review: in-flight workflows (e.g. parked at needs_attention) must replay deterministically |
+
+## Acceptance evidence (stage 7)
+
+| Deliverable | Status | Evidence |
+| --- | --- | --- |
+| 1 Migration + models | ✅ | `backend/tests/test_p5p6_schema.py` (8 tests: columns, source default, pending consent, status server default, one open draft, unique reference, backfill parity with `flag_message`, settings defaults); `test_schema.py` FK-index test; `alembic upgrade/downgrade/upgrade` round trip; `alembic check` "No new upgrade operations"; `alembic heads` → `3b55187d53d7 (head)` |
+| 2 clock | ✅ | `backend/app/core/tests/test_clock.py` (5) |
+| 3 storage | ✅ | `backend/app/core/tests/test_storage.py` (stub round trip, settings bucket, error re-raise; live MinIO round trip incl. presigned GET fetch) |
+| 4 pagination | ✅ | `backend/app/core/tests/test_pagination.py` (16) |
+| 5 assignment | ✅ | `backend/app/features/applications/tests/test_assignment.py` (5); `auth/borrower/tests/test_signup.py` green |
+| 6 flag messages | ✅ | `verification/tests/test_flag_messages.py`; persona workflow tests assert Aisha "Cannot price: missing Occupancy" and Ben "Only 14 months of housing history on file; 24 required."; slot-11 DB after `make demo-reset`: both rows carry those messages |
+| 7 skip-import | ✅ | `workflows/tests/test_portal_source_skips_import.py`: portal app (LOS record deleted, `import_from_los` spy raises) reaches `priced`, zero LOS integration calls, no `pipeline.imported` event; LOS app still imports |
+| 8 seed E17 | ✅ | `seed/tests/test_no_application_borrower.py` (3); `make demo-reset` 1.6 s, personas unchanged (6 priced, Aisha/Ben needs_attention, Grace sent, Luis option_selected), "no-application borrower seeded" |
+| 9 settings | ✅ | `test_p5p6_settings_defaults`, `test_clock_now_env_var_reaches_settings`; `.env.example` documents all three |
+| 10 LO shell | ✅ | `StaffSessionProvider.test.tsx` (6), `StaffShell.test.tsx` (11, incl. AdminGuard), `(staff)/page.test.tsx` (6 stubs); `e2e/lo-console/shell.spec.ts` (4); screenshots `docs/backlog/evidence/p56-foundation/lo-admin-user-menu.png`, `lo-user-menu.png`, `lo-dashboard-stub.png` |
+| 11 portal shell | ✅ | `PortalShell.test.tsx` (10), `(portal)/page.test.tsx` (5); `e2e/borrower-portal/shell.spec.ts` (3, incl. no horizontal scroll at 375 px on /, /support, /apply, /tasks/credit-check/[id]); `portal-home-375.png`, `portal-home-1280.png` |
+| 12 UI primitives | ✅ | one Vitest file per component + barrel test (`packages/ui` 163 tests); gallery section `apps/lo-console/src/app/gallery/PrimitivesSection.tsx` + gallery test |
+| 13 slots | ✅ | `scripts/worktree-env.sh 11` ok (db 13); `scripts/worktree-env.sh 14` exits 1 with the recreate instruction on the 16-db Valkey |
+| 14 api-client / e2e | ✅ | `make api-client` → no diff (no API change); full Playwright run on slot 11: **36 passed** (`--workers=1`) |
+
+## Test log (stage 5)
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Backend tests | `uv run pytest backend` | 494 passed |
+| Seed tests | `uv run pytest seed` | 31 passed |
+| Lint / types | `make lint` (ruff, ruff format, mypy, eslint, tsc, prettier) | clean |
+| Frontend | `pnpm -r run test` | ui 163, lo-console 57, borrower-portal 92, api-client 2 — all passed |
+| react-doctor | `npx react-doctor -y --blocking error` (both apps) | pass (0 errors). Warnings: `nextjs-no-client-side-redirect` on the session providers' 401 redirect (the session cookie is on the API origin, so the check must run client-side, as the old home pages did) plus pre-existing workspace warnings |
+| e2e | `pnpm exec playwright test --workers=1` (slot 11) | 36 passed |
+
+## Review findings (stage 6)
+
+| Severity | Finding | Resolution |
+| --- | --- | --- |
+| Medium | New first workflow activity without a Temporal version check breaks replay of in-flight runs | Fixed: `workflow.patched("p56-load-application-source")`; old histories keep the import-first path |
+| Low | Migration backfill labels differed from `rules.field_label` (snake_case and "Check …" branches) | Fixed: SQL mirrors `field_label`; `test_flag_message_backfill_matches_flag_message` pins parity over 13 cases |
+
+## How to test manually
+
+1. `source scripts/worktree-env.sh 11 && make demo-reset`
+2. Start API (`uv run uvicorn app.main:app --port 8111` from the repo root), `make worker`, both apps on 3111/3211.
+3. Sign in to the LO console as `riley.admin@clearquote-demo.test` → user menu shows Integrations/Settings; as `jordan.lee@…` they are absent and `/admin/settings` shows "Not authorized".
+4. Sign in to the portal as `noapp.borrower@clearquote-demo.test` → header, footer disclosures, "No application yet".
+
+## Follow-ups
+
+- Orchestrator: recreate the shared Valkey once (`docker compose -f infra/docker-compose.yml up -d valkey`) before wave 2 so slots 14–23 (and per-slot test dbs) work; rerun `scripts/worktree-env.sh <slot>` afterwards.
+- `workspace.spec.ts` and other real-login specs still assume `--workers=1` for a full run.

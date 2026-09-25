@@ -24,6 +24,7 @@ from app.core.enums import (
 )
 from app.features.applications.models import Application
 from app.features.applications.verification.models import Flag
+from app.features.applications.verification.rules import flag_message
 from app.features.auth.models import BorrowerAccount, User
 from app.features.borrower.consent.models import Consent, ConsentStatus, ConsentType
 from app.features.clients.models import Client
@@ -212,16 +213,29 @@ async def test_support_request_reference_is_unique(db_session: AsyncSession) -> 
             await db_session.flush()
 
 
-async def test_flag_message_backfill(db_session: AsyncSession) -> None:
+_BACKFILL_CASES = [
+    ("occupancy_type", "ob_required_field", ApplicationTab.PRICING),
+    ("RepresentativeFICO", "ob_required_field", ApplicationTab.PRICING),
+    ("PurchasePrice", "ob_required_field", ApplicationTab.PRICING),
+    ("LTV", "ob_required_field", ApplicationTab.PRICING),
+    ("loan_amount", "ob_required_field", ApplicationTab.PRICING),
+    ("current_residence_years", "housing_history_24mo", ApplicationTab.HOUSING),
+    ("borrower_ssn", "ssn_format", ApplicationTab.BORROWERS),
+    ("co_borrower_dob", "dob_format", ApplicationTab.BORROWERS),
+    ("total_verified_assets", "assets_vs_ctc_reserves", ApplicationTab.ASSETS),
+    ("dti_ratio", "dti_primary", ApplicationTab.PRICING),
+    ("dscr_ratio", "dscr_bucket_unstable", ApplicationTab.PRICING),
+    ("some_field", "unknown_rule", ApplicationTab.BORROWERS),
+    ("PurchasePrice", "unknown_rule_2", ApplicationTab.BORROWERS),
+]
+
+
+async def test_flag_message_backfill_matches_flag_message(db_session: AsyncSession) -> None:
+    """The migration's frozen SQL backfill writes exactly what
+    `rules.flag_message` (used by `write_flag` for new rows) would."""
     lo, client, _ = await _make_borrower(db_session)
     application = await _make_application(db_session, lo, client)
-    rows = [
-        ("occupancy_type", "ob_required_field", ApplicationTab.PRICING),
-        ("PurchasePrice", "ob_required_field", ApplicationTab.PRICING),
-        ("current_residence_years", "housing_history_24mo", ApplicationTab.HOUSING),
-        ("some_field", "unknown_rule", ApplicationTab.BORROWERS),
-    ]
-    for field_key, rule, tab in rows:
+    for field_key, rule, tab in _BACKFILL_CASES:
         db_session.add(
             Flag(
                 application_id=application.id,
@@ -235,21 +249,21 @@ async def test_flag_message_backfill(db_session: AsyncSession) -> None:
 
     await db_session.execute(sa.text(_load_migration()._FLAG_MESSAGE_BACKFILL))
 
-    messages = dict(
-        (
-            await db_session.execute(
-                sa.select(Flag.field_key, Flag.message).where(Flag.application_id == application.id)
+    rows = (
+        await db_session.execute(
+            sa.select(Flag.rule, Flag.field_key, Flag.message).where(
+                Flag.application_id == application.id
             )
-        ).all()
+        )
+    ).all()
+    assert len(rows) == len(_BACKFILL_CASES)
+    for rule, field_key, message in rows:
+        assert message == flag_message(rule, field_key), (rule, field_key)
+    backfilled = {(rule, key): message for rule, key, message in rows}
+    assert backfilled[("ob_required_field", "occupancy_type")] == (
+        "Cannot price: missing Occupancy"
     )
-    assert messages == {
-        "occupancy_type": "Cannot price: missing Occupancy",
-        "PurchasePrice": "Cannot price: missing Purchase Price",
-        "current_residence_years": (
-            "Less than 24 months of housing history on file; add a prior address."
-        ),
-        "some_field": "Check some field.",
-    }
+    assert backfilled[("ob_required_field", "loan_amount")] == "Cannot price: missing Loan amount"
 
 
 def test_p5p6_settings_defaults() -> None:

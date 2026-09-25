@@ -43,15 +43,25 @@ consent_status = postgresql.ENUM(
     "pending", "accepted", "declined", "expired", name="consent_status", create_type=False
 )
 
-# Frozen copy of `rules.py::RULE_MESSAGES` for the backfill (a migration
-# must not import app code that may change later).
-_FLAG_MESSAGE_BACKFILL = """
-UPDATE flags SET message = CASE rule
-    WHEN 'ob_required_field' THEN 'Cannot price: missing ' || CASE field_key
-        WHEN 'occupancy_type' THEN 'Occupancy'
-        WHEN 'RepresentativeFICO' THEN 'Representative FICO'
+# Frozen copy of `rules.py::flag_message` / `field_label` /
+# `RULE_MESSAGES` for the backfill (a migration must not import app code
+# that may change later). `_FIELD_LABEL_SQL` mirrors `field_label`:
+# explicit labels first, then snake_case -> "Sentence case" (Python's
+# `str.capitalize`), else CamelCase -> "Camel Case".
+# `backend/tests/test_p5p6_schema.py::test_flag_message_backfill_matches_
+# flag_message` pins the parity.
+_FIELD_LABEL_SQL = """CASE
+        WHEN field_key = 'occupancy_type' THEN 'Occupancy'
+        WHEN field_key = 'RepresentativeFICO' THEN 'Representative FICO'
+        WHEN position('_' in field_key) > 0 THEN
+            upper(left(replace(field_key, '_', ' '), 1))
+            || lower(substr(replace(field_key, '_', ' '), 2))
         ELSE regexp_replace(field_key, '([a-z])([A-Z])', '\\1 \\2', 'g')
-    END
+    END"""
+
+_FLAG_MESSAGE_BACKFILL = f"""
+UPDATE flags SET message = CASE rule
+    WHEN 'ob_required_field' THEN 'Cannot price: missing ' || {_FIELD_LABEL_SQL}
     WHEN 'housing_history_24mo'
         THEN 'Less than 24 months of housing history on file; add a prior address.'
     WHEN 'ssn_format' THEN 'SSN must be exactly 9 digits.'
@@ -61,7 +71,7 @@ UPDATE flags SET message = CASE rule
     WHEN 'dti_primary' THEN 'DTI exceeds the 45% guideline.'
     WHEN 'dscr_bucket_unstable'
         THEN 'DSCR bucket changed between pricing passes; priced at the lower DSCR.'
-    ELSE 'Check ' || replace(field_key, '_', ' ') || '.'
+    ELSE 'Check ' || {_FIELD_LABEL_SQL} || '.'
 END
 WHERE message IS NULL
 """
