@@ -1,4 +1,4 @@
-.PHONY: up down logs lint test api-client demo-reset
+.PHONY: up down logs lint test api api-client demo-reset
 
 # Local stack (Postgres, Valkey, MinIO, Mailpit, Temporal), project name
 # `clear-quote` (infra/docker-compose.yml). --wait blocks until every
@@ -15,7 +15,7 @@ logs:
 lint:
 	uv run ruff check backend
 	uv run ruff format --check backend
-	uv run mypy backend/app
+	uv run mypy backend/app backend/conftest.py backend/tests backend/scripts
 	pnpm -r run lint
 	pnpm -r run typecheck
 	pnpm exec prettier --check .
@@ -42,5 +42,8 @@ api-client:
 demo-reset:
 	@echo "demo-reset: not implemented until CQ-010"
 
-# make api    -- added by CQ-004: uv run uvicorn app.main:app --port 8000 --reload
+# Dev server, port 8000 is pinned for this project (CQ-004).
+api:
+	uv run uvicorn app.main:app --port 8000 --reload
+
 # make worker -- added by CQ-011: cd backend && uv run python -m app.workflows.worker

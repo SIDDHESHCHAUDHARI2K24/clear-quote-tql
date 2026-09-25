@@ -86,9 +86,7 @@ Base class `AppError(Exception)`: fields `code: str`, `message: str`, `status_co
 ## Router registry (`backend/app/core/registry.py`, pin exactly)
 
 ```python
-FEATURE_ROUTERS: list[str] = [
-    "app.features.system.router",
-]
+FEATURE_ROUTERS: list[str] = []
 
 def register_routers(app: FastAPI) -> None:
     for module_path in FEATURE_ROUTERS:
@@ -96,7 +94,7 @@ def register_routers(app: FastAPI) -> None:
         app.include_router(module.router, prefix="/api/v1")
 ```
 
-Each feature's `router.py` exposes a module-level `router = APIRouter()`. To add a feature (CQ-007 onward): create the sub-feature package with its own `router.py`, append its dotted path to `FEATURE_ROUTERS`. `create_app()` calls `register_routers(app)` and `register_exception_handlers(app)`, then mounts `/health` directly on `app` (not through the registry, and not under `/api/v1` — infra/monitoring hits it unprefixed).
+`FEATURE_ROUTERS` starts empty — `system` is not a `/api/v1` feature, it is mounted directly (see below), so it never goes in this list. Each feature's `router.py` exposes a module-level `router = APIRouter()`. To add a feature (CQ-007 onward): create the sub-feature package with its own `router.py`, append its dotted path to `FEATURE_ROUTERS`. `create_app()` calls `register_routers(app)` and `register_exception_handlers(app)`, then mounts `/health` directly on `app` via a plain `app.include_router(system_router)` call (not through the registry, and not under `/api/v1` — infra/monitoring hits it unprefixed; `/api/v1/health` must not exist).
 
 ## `/health` (pin exactly)
 

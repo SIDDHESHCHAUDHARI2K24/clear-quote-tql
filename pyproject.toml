@@ -3,7 +3,16 @@ name = "clear-quote"
 version = "0.1.0"
 description = "Clear Quote — Total Quality Lending prototype mortgage quoting system"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "asyncpg>=0.31.0",
+    "boto3>=1.43.102",
+    "fastapi>=0.141.1",
+    "pydantic-settings>=2.15.0",
+    "redis>=8.1.0",
+    "sqlalchemy[asyncio]>=2.1.0",
+    "temporalio>=1.33.0",
+    "uvicorn[standard]>=0.53.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -18,6 +27,7 @@ dev = [
   "mypy>=1.13.0",
   "pytest>=8.3.0",
   "pytest-asyncio>=0.24.0",
+  "httpx>=0.28.1",
 ]
 
 [tool.ruff]
@@ -27,13 +37,30 @@ src = ["backend"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+# B008: FastAPI's `Depends(...)`/`Query(...)`/etc. in argument defaults is
+# the framework's own idiom, not the mutable-default-argument bug B008
+# guards against — every feature router uses it (CQ-004 onward).
+ignore = ["B008"]
 
 [tool.mypy]
 python_version = "3.12"
 mypy_path = "backend"
-packages = ["app"]
 disallow_untyped_defs = true
+# `make lint` passes explicit paths (backend/app backend/conftest.py
+# backend/tests backend/scripts) rather than using `packages`/`files` here,
+# so this config applies uniformly to production code, fixtures, tests and
+# scripts alike.
+
+[[tool.mypy.overrides]]
+module = ["boto3.*", "botocore.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["backend"]
 pythonpath = ["backend"]
+asyncio_mode = "auto"
+# A session-scoped `test_engine` fixture (backend/conftest.py) must run in
+# the same event loop as the tests that use it, or asyncpg raises "Future
+# attached to a different loop".
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
