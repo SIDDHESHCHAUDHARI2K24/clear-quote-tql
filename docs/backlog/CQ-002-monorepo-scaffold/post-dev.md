@@ -50,10 +50,36 @@ Scaffolded the full monorepo skeleton pinned by `spec.md`: a pnpm workspace (`@c
 
 ## Review findings (stage 6)
 
-_(left for the fresh reviewer — stage 6 not yet run)_
+Fresh-subagent review, 2026-09-25. Verdict: **APPROVE** — no critical/major findings.
 
-| Severity | Finding | Resolution |
-| --- | --- | --- |
+Re-ran verification commands independently in the worktree (not trusting the log above):
+
+| Command | Result |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | exit 0, lockfile up to date |
+| `uv sync` | exit 0, resolved/checked 14-15 packages |
+| `make lint` | exit 0 (ruff check/format, mypy, pnpm -r lint/typecheck, prettier --check) |
+| `make test` | exit 0 (`uv run pytest backend`: 1 passed; `pnpm -r run test`: 4/4 suites, 1 test each) |
+| `find backend/app apps packages alembic -maxdepth 2 \| sort` | matches spec's pinned layout exactly |
+| `pnpm ls -r --depth -1 --json \| jq '[.[].name]'` | `["clear-quote","@cq/borrower-portal","@cq/lo-console","@cq/api-client","@cq/ui"]` — matches AC3 |
+| `uv sync && uv run python -c "import app"` | succeeds, prints `ok` |
+| `grep -E '^[A-Z_]+=' .env.example \| wc -l` | `12` (spec's pinned regex, as documented, misses `S3_*` keys) |
+| `grep -cE '^[A-Za-z_][A-Za-z0-9_]*=' .env.example` | `17` — all pinned keys present, spelled exactly |
+| `grep -E '^(up\|down\|logs\|lint\|test\|api-client\|demo-reset):' Makefile` + `make demo-reset; echo $?` | all 7 targets present; prints placeholder message, exit 0 |
+| `make up` (no compose file yet) | fails loudly: `open .../infra/docker-compose.yml: no such file or directory`, exit 2 |
+| `pre-commit run --all-files` | all 6 hooks `Passed` |
+
+Also checked: `pyproject.toml`, `package.json`, `pnpm-workspace.yaml`, `.env.example`, `Makefile`, `alembic/env.py`/`alembic.ini`, all four apps'/packages' `package.json` and `tsconfig.json` against the spec's pinned contents — byte-for-byte match on names, paths, ports-deferred-to-CQ-005, and import wiring. Diffed `docs/` to confirm only `docs/backlog/README.md`'s CQ-002 status row and this item's own `plan.md`/`post-dev.md` changed — no other backlog item's `spec.md` or `docs/design/*` touched. Confirmed no secrets in `.env.example`, no `node_modules` committed, `uv.lock`/`pnpm-lock.yaml` both committed. Commit is on branch `cq-002-monorepo-scaffold`, not `main`, prefixed `CQ-002:`.
+
+Sanity-checked plug-in points for downstream items: `@cq/ui`/`@cq/api-client` package names match CQ-005's spec exactly (CQ-005 explicitly says to reconcile against CQ-002 if it differs — it doesn't); both apps' `tsconfig.json` already set `"strict": true` (CQ-005 AC2); `eslint.config.mjs` already ignores `packages/api-client/src/schema.d.ts` ahead of CQ-005 generating it; `backend/app/core/{config,db,errors,registry}.py` are correctly left uncreated (`.gitkeep` only) so CQ-004 creates rather than overwrites them; `alembic/env.py` imports the not-yet-existing `app.core.db`/`app.core.config` but this is outside `backend/` (ruff/mypy scope) and no CQ-002 AC invokes `alembic`, so it's inert until CQ-004 lands; `.env.example` keys/ports match what CQ-003's and CQ-004's specs assume (`5432`, `6379`, `9010`, `1025`, `7233`, `8000` reserved for `make api`, `3010`/`3020` reserved for CQ-005).
+
+| # | severity | file:line | finding | suggested fix |
+| --- | --- | --- | --- | --- |
+| 1 | minor | `docs/backlog/CQ-002-monorepo-scaffold/spec.md:170` | AC5's pinned test command `grep -E '^[A-Z_]+=' .env.example \| wc -l` undercounts (12, not ≥16) because `[A-Z_]+` can't match keys containing a digit (`S3_*`). Correctly diagnosed and logged as Decision #10 in `plan.md`, with the corrected regex giving 17 — but the spec itself (which this item may not edit per AGENTS.md) still has a command that fails its own stated threshold. | Flag for the human/a future item to fix the regex in `spec.md` (e.g. `^[A-Za-z_][A-Za-z0-9_]*=`) so the pinned AC command matches its own acceptance evidence. |
+| 2 | nit | `.pre-commit-config.yaml:1`, `.prettierignore:11` | The `docs/` exclude (needed to avoid reformatting pre-existing content owned by other items) also exempts this item's own `plan.md`/`post-dev.md`, and every future item's backlog docs, from `trailing-whitespace`/`end-of-file-fixer`/Prettier going forward — not just the pre-existing files it was meant to protect. | Not blocking; consider scoping the exclude to specific pre-existing paths/a git-tracked-at-CQ-001 list instead of all of `docs/`, in a later item, if backlog-doc formatting drift becomes a problem. |
+| 3 | nit | `apps/lo-console` / `packages/ui`, `pnpm -r run lint` output | `eslint-config-next`'s `no-html-link-for-pages` rule prints a cosmetic "Pages directory cannot be found" warning when linting the non-Next packages (`packages/ui`, `packages/api-client`). Already noted in this file's Follow-ups. | No action needed for this item; CQ-005 could scope the Next-specific ESLint extends to `apps/**` only if the noise becomes a problem. |
+
+0 critical, 0 major, 1 minor, 2 nit.
 
 ## How to test manually
 
