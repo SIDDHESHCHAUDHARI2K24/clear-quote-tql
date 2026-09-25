@@ -14,7 +14,7 @@ One or two sentences: what the user can do when this is done, and why it matters
 
 ## Scope
 
-WeasyPrint pre-approval letter (TBD and address variants), MinIO storage, portal report link (borrower signs in with password + OTP per CQ-015; no magic link), email + outbox, CRM event, status Sent.
+WeasyPrint pre-approval letter (TBD and address variants), MinIO storage, magic link, email + outbox, CRM event, status Sent.
 
 ## Out of scope
 
