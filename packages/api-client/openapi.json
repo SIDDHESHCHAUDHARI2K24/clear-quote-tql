@@ -4568,11 +4568,24 @@
             "maxLength": 200,
             "minLength": 1,
             "title": "Typed Name"
+          },
+          "text_version": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Text Version"
+          },
+          "text_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Text Sha256"
           }
         },
         "type": "object",
         "required": [
-          "typed_name"
+          "typed_name",
+          "text_version",
+          "text_sha256"
         ],
         "title": "ConsentAcceptRequest"
       },
@@ -8987,6 +9000,10 @@
             "type": "string",
             "title": "Body"
           },
+          "authorization": {
+            "type": "string",
+            "title": "Authorization"
+          },
           "sha256": {
             "type": "string",
             "title": "Sha256"
@@ -8996,6 +9013,7 @@
         "required": [
           "version",
           "body",
+          "authorization",
           "sha256"
         ],
         "title": "ConsentTextOut"

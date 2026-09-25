@@ -39,6 +39,8 @@ async def accept_consent(
         borrower=borrower,
         consent_id=consent_id,
         typed_name=body.typed_name,
+        text_version=body.text_version,
+        text_sha256=body.text_sha256,
         ip=client_ip(request),
         user_agent=request.headers.get("user-agent"),
     )

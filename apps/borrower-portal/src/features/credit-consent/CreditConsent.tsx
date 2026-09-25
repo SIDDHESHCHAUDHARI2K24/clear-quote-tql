@@ -26,6 +26,19 @@ type ViewState =
 export function CreditConsent({ consentId }: { consentId: string }) {
   const router = useRouter();
   const [state, setState] = useState<ViewState>({ kind: "loading" });
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const signIn = useCallback(() => {
+    // Clear the stale cookie first, or the middleware bounces /login
+    // straight back here (same pattern as `HomeView`); `next` brings the
+    // borrower back to this request after signing in.
+    api
+      .POST("/api/v1/auth/borrower/logout")
+      .catch(() => {})
+      .finally(() => {
+        router.replace(loginUrlFor(`/tasks/credit-check/${consentId}`));
+      });
+  }, [consentId, router]);
 
   const load = useCallback(() => {
     setState({ kind: "loading" });
@@ -40,15 +53,7 @@ export function CreditConsent({ consentId }: { consentId: string }) {
           return;
         }
         if (response.status === 401) {
-          // Clear the stale cookie first, or the middleware bounces /login
-          // straight back here (same pattern as `HomeView`); `next` brings the
-          // borrower back to this request after signing in.
-          api
-            .POST("/api/v1/auth/borrower/logout")
-            .catch(() => {})
-            .finally(() => {
-              router.replace(loginUrlFor(`/tasks/credit-check/${consentId}`));
-            });
+          signIn();
           return;
         }
         setState({ kind: "error" });
@@ -56,7 +61,7 @@ export function CreditConsent({ consentId }: { consentId: string }) {
       .catch(() => {
         setState({ kind: "error" });
       });
-  }, [consentId, router]);
+  }, [consentId, signIn]);
 
   useEffect(() => {
     void load();
@@ -65,8 +70,16 @@ export function CreditConsent({ consentId }: { consentId: string }) {
   }, [consentId]);
 
   const handleDecided = useCallback((consent: PortalConsent) => {
+    setNotice(null);
     setState({ kind: "loaded", consent });
   }, []);
+
+  // A 409 on accept/decline: re-read the request and show where it stands
+  // (the outcome if it was decided or expired, else the updated form).
+  const handleStale = useCallback(() => {
+    setNotice("This request changed since you opened it. Review it and try again.");
+    void load();
+  }, [load]);
 
   if (state.kind === "loading") {
     return (
@@ -93,7 +106,16 @@ export function CreditConsent({ consentId }: { consentId: string }) {
   return (
     <main className="mx-auto w-full max-w-2xl">
       {state.consent.status === "pending" ? (
-        <ConsentForm consent={state.consent} onDecided={handleDecided} />
+        <ConsentForm
+          // New text (a 409 CONSENT_TEXT_CHANGED re-fetch) remounts the form,
+          // so the checkbox and signature must be given again for it.
+          key={state.consent.text.sha256}
+          consent={state.consent}
+          onDecided={handleDecided}
+          onStale={handleStale}
+          onUnauthorized={signIn}
+          notice={notice}
+        />
       ) : (
         <ConsentOutcome consent={state.consent} />
       )}

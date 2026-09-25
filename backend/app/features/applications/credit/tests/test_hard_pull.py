@@ -4,6 +4,7 @@ on the seeded Tom & Lisa Brandt persona (priced, with quotes)."""
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -14,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.clock import now
 from app.features.applications.credit.hard_pull import (
     HardPullConsentRequiredError,
+    HardPullConsentUsedError,
     perform_hard_pull,
 )
 from app.features.applications.credit.models import Liability
@@ -37,18 +39,18 @@ async def _seed_brandt(db: AsyncSession) -> Application:
     return application
 
 
-async def _accept(db: AsyncSession, application_id: uuid.UUID) -> None:
-    db.add(
-        Consent(
-            application_id=application_id,
-            type=ConsentType.HARD_PULL,
-            status=ConsentStatus.ACCEPTED,
-            requested_at=now(),
-            decided_at=now(),
-            at=now(),
-        )
+async def _accept(db: AsyncSession, application_id: uuid.UUID) -> uuid.UUID:
+    consent = Consent(
+        application_id=application_id,
+        type=ConsentType.HARD_PULL,
+        status=ConsentStatus.ACCEPTED,
+        requested_at=now(),
+        decided_at=now(),
+        at=now(),
     )
+    db.add(consent)
     await db.flush()
+    return consent.id
 
 
 async def _field(db: AsyncSession, application_id: uuid.UUID, key: str) -> FieldValue | None:
@@ -79,10 +81,14 @@ async def test_hard_pull_requires_consent(db_session: AsyncSession) -> None:
     """AC2: no accepted consent -> raises, writes nothing (no FICO change,
     no liabilities change, no event, no provider call)."""
     app = await _seed_brandt(db_session)
-    # A pending and a declined request do not count.
+    # A pending and a declined request do not count, nor does an unknown id
+    # (m6: the pull is tied to the one consent it names).
+    refused: list[uuid.UUID] = [uuid.uuid4()]
     for status in (ConsentStatus.PENDING, ConsentStatus.DECLINED):
-        db_session.add(Consent(application_id=app.id, type=ConsentType.HARD_PULL, status=status))
-    await db_session.flush()
+        row = Consent(application_id=app.id, type=ConsentType.HARD_PULL, status=status)
+        db_session.add(row)
+        await db_session.flush()
+        refused.append(row.id)
     fico_before = (await _field(db_session, app.id, "representative_fico")).value  # type: ignore[union-attr]
     events_before = await _count(
         db_session,
@@ -96,10 +102,10 @@ async def test_hard_pull_requires_consent(db_session: AsyncSession) -> None:
     )
     calls_before = await _count(db_session, select(func.count()).select_from(IntegrationCall))
 
-    with pytest.raises(HardPullConsentRequiredError) as excinfo:
-        await perform_hard_pull(db_session, app.id)
-
-    assert excinfo.value.status_code == 409
+    for consent_id in refused:
+        with pytest.raises(HardPullConsentRequiredError) as excinfo:
+            await perform_hard_pull(db_session, app.id, consent_id=consent_id)
+        assert excinfo.value.status_code == 409
     assert (await _field(db_session, app.id, "representative_fico")).value == fico_before  # type: ignore[union-attr]
     assert await _field(db_session, app.id, "credit_pull_type") is None
     assert (
@@ -128,13 +134,13 @@ async def test_hard_pull_writes_middle_score(db_session: AsyncSession) -> None:
     CQ-028a contract (`source_ref="hard_pull"`), `credit_pull_type`,
     tradelines matched onto the imported liability, one event."""
     app = await _seed_brandt(db_session)
-    await _accept(db_session, app.id)
+    consent_id = await _accept(db_session, app.id)
     liabilities_before = await _count(
         db_session,
         select(func.count()).select_from(Liability).where(Liability.application_id == app.id),
     )
 
-    result = await perform_hard_pull(db_session, app.id)
+    result = await perform_hard_pull(db_session, app.id, consent_id=consent_id)
 
     assert result.fico == 690  # Experian 692, Equifax 688, TransUnion 690
     assert result.previous_fico == 692
@@ -164,6 +170,7 @@ async def test_hard_pull_writes_middle_score(db_session: AsyncSession) -> None:
     assert len(completed) == 1
     payload: Any = completed[0].payload
     assert payload["fico"] == 690
+    assert payload["consent_id"] == str(consent_id)
 
 
 async def test_fico_bucket_change_marks_stale(db_session: AsyncSession) -> None:
@@ -173,9 +180,9 @@ async def test_fico_bucket_change_marks_stale(db_session: AsyncSession) -> None:
     assert app.los_loan_guid is not None
     stale_before = await _quotes_stale(db_session, app.id)
     assert stale_before and not any(stale_before)
-    await _accept(db_session, app.id)
-
-    same_bucket = await perform_hard_pull(db_session, app.id)
+    same_bucket = await perform_hard_pull(
+        db_session, app.id, consent_id=await _accept(db_session, app.id)
+    )
 
     assert same_bucket.bracket == same_bucket.previous_bracket == "680–699"
     assert same_bucket.quotes_marked_stale == 0
@@ -190,7 +197,10 @@ async def test_fico_bucket_change_marks_stale(db_session: AsyncSession) -> None:
         .values(experian_score=675, equifax_score=670, transunion_score=680, middle_score=675)
     )
 
-    crossed = await perform_hard_pull(db_session, app.id)
+    # Each pull needs its own accepted consent (m6).
+    crossed = await perform_hard_pull(
+        db_session, app.id, consent_id=await _accept(db_session, app.id)
+    )
 
     assert crossed.previous_bracket == "680–699" and crossed.bracket == "660–679"
     assert crossed.quotes_marked_stale == len(stale_before)
@@ -229,9 +239,9 @@ async def test_tradelines_keep_manual_rows_and_add_new(db_session: AsyncSession)
             ]
         )
     )
-    await _accept(db_session, app.id)
-
-    result = await perform_hard_pull(db_session, app.id)
+    result = await perform_hard_pull(
+        db_session, app.id, consent_id=await _accept(db_session, app.id)
+    )
 
     assert (result.liabilities_updated, result.liabilities_added) == (1, 1)
     rows = {
@@ -248,3 +258,84 @@ async def test_tradelines_keep_manual_rows_and_add_new(db_session: AsyncSession)
     assert str(rows["Chase"].monthly_payment) == "50.00"
     assert str(rows["Discover"].monthly_payment) == "35.00"
     assert "Capital One" not in rows  # no amounts: no phantom $0 debt
+
+
+async def test_hard_pull_uses_each_consent_once(db_session: AsyncSession) -> None:
+    """Hardening m6: the pull is tied to the consent it names; the completed
+    event records it, and a second pull under the same consent is refused
+    before any provider call."""
+    app = await _seed_brandt(db_session)
+    consent_id = await _accept(db_session, app.id)
+    await perform_hard_pull(db_session, app.id, consent_id=consent_id)
+    calls_before = await _count(db_session, select(func.count()).select_from(IntegrationCall))
+
+    with pytest.raises(HardPullConsentUsedError) as excinfo:
+        await perform_hard_pull(db_session, app.id, consent_id=consent_id)
+
+    assert excinfo.value.status_code == 409
+    assert await _count(db_session, select(func.count()).select_from(IntegrationCall)) == (
+        calls_before
+    )
+    payloads: list[Any] = list(
+        (
+            await db_session.execute(
+                select(ActivityEvent.payload).where(
+                    ActivityEvent.application_id == app.id,
+                    ActivityEvent.type == "credit.hard_pull_completed",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert [payload["consent_id"] for payload in payloads] == [str(consent_id)]
+
+
+async def test_tradelines_with_same_creditor_and_type_stay_separate(
+    db_session: AsyncSession,
+) -> None:
+    """Hardening m5: two Chase cards are two accounts. Each imported row
+    takes one bureau line; a third Chase card line is added, not merged."""
+    app = await _seed_brandt(db_session)
+    for payment in ("40.00", "60.00"):
+        db_session.add(
+            Liability(
+                application_id=app.id,
+                creditor_name="Chase",
+                account_type="Credit Card",
+                monthly_payment=Decimal(payment),
+                balance=Decimal("500.00"),
+            )
+        )
+    await db_session.flush()
+    await db_session.execute(
+        update(ProviderCreditReport)
+        .where(
+            ProviderCreditReport.loan_number == app.los_loan_guid,
+            ProviderCreditReport.pull_type == CreditPullType.HARD_PULL,
+        )
+        .values(
+            tradelines=[
+                {"creditor": "Chase", "type": "Credit Card", "monthly_payment": "111.00"},
+                {"creditor": "Chase", "type": "Credit Card", "monthly_payment": "222.00"},
+                {"creditor": "Chase", "type": "Credit Card", "monthly_payment": "333.00"},
+            ]
+        )
+    )
+
+    result = await perform_hard_pull(
+        db_session, app.id, consent_id=await _accept(db_session, app.id)
+    )
+
+    assert (result.liabilities_updated, result.liabilities_added) == (2, 1)
+    chase = sorted(
+        str(row.monthly_payment)
+        for row in (
+            await db_session.execute(
+                select(Liability)
+                .where(Liability.application_id == app.id, Liability.creditor_name == "Chase")
+                .execution_options(populate_existing=True)
+            )
+        ).scalars()
+    )
+    assert chase == ["111.00", "222.00", "333.00"]

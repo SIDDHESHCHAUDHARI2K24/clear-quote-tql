@@ -113,11 +113,13 @@ async def request_hard_pull(
     db: AsyncSession, application: Application, user_id: uuid.UUID
 ) -> Consent:
     """Creates one pending hard-pull consent request and emails the borrower.
-    409 while a pending, unexpired request exists (AC5)."""
-    # Serialize concurrent requests for the same application.
-    await db.execute(
-        select(Application.id).where(Application.id == application.id).with_for_update()
-    )
+    409 while a pending, unexpired request exists (AC5).
+
+    The caller must hold `lock_application` (the router does): that lock
+    serialises concurrent requests, so the pending check below cannot race.
+    No second `FOR UPDATE` here (CQ-033 hardening): upgrading from the
+    router's `FOR NO KEY UPDATE` conflicts with the `FOR KEY SHARE` that FK
+    inserts take and risks a deadlock."""
     existing = await latest_consent(db, application.id)
     if existing is not None and effective_consent_status(existing) is ConsentStatus.PENDING:
         raise ConflictError("A hard-pull consent request is already pending for this borrower.")

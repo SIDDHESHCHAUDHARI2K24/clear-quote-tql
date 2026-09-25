@@ -1459,6 +1459,10 @@ export interface components {
         ConsentAcceptRequest: {
             /** Typed Name */
             typed_name: string;
+            /** Text Version */
+            text_version: string;
+            /** Text Sha256 */
+            text_sha256: string;
         };
         /** ConsentDeclineRequest */
         ConsentDeclineRequest: {
@@ -2850,6 +2854,8 @@ export interface components {
             version: string;
             /** Body */
             body: string;
+            /** Authorization */
+            authorization: string;
             /** Sha256 */
             sha256: string;
         };
