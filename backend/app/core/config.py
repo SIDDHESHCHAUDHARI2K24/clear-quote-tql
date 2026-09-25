@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     integration_latency_max_ms: int = 1200
     integration_latency_enabled: bool = True
 
+    # CQ-013: fixed dev LO id `deps.get_current_lo_stub()` returns until
+    # CQ-014 replaces it with real staff auth. Unset -> every pricing route
+    # raises `AuthenticationError` (401).
+    dev_lo_id: str | None = None
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, value: object) -> object:
