@@ -73,7 +73,24 @@ export interface paths {
         patch: operations["patch_status_api_v1_applications__application_id__status_patch"];
         trace?: never;
     };
-    "/api/v1/dashboard": {
+    "/api/v1/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Applications */
+        get: operations["get_applications_api_v1_applications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/los": {
         parameters: {
             query?: never;
             header?: never;
@@ -81,12 +98,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Dashboard
-         * @description An LO always sees their own files (`lo_id` is ignored for them); a
-         *     Manager/Admin sees every file, or just one LO's when `lo_id` is set
-         *     (`core.auth.scope_applications`).
+         * Get Lo Options
+         * @description Backs the frontend's LO `Select` (spec.md "Frontend", Manager/Admin
+         *     only) -- 403s for an LO (E16), same as every other admin-scoped route.
          */
-        get: operations["get_dashboard_api_v1_dashboard_get"];
+        get: operations["get_lo_options_api_v1_applications_los_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -422,6 +438,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Portal Home */
+        get: operations["get_portal_home_api_v1_portal_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -444,31 +477,58 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * ActivityItem
-         * @description One row of the "Recent activity" feed.
+         * ApplicationListResponse
+         * @description `GET /applications` response: `core/pagination.Page[ApplicationRow]`
+         *     (`items`, `total`, `page`, `page_size`).
          */
-        ActivityItem: {
+        ApplicationListResponse: {
+            /** Items */
+            items: components["schemas"]["ApplicationRow"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * ApplicationRow
+         * @description One row of `GET /applications` (spec.md "Row"). Shared with CQ-026
+         *     (E9) -- keep this shape stable; CQ-026 imports it directly rather than
+         *     redefining it.
+         */
+        ApplicationRow: {
             /**
              * Id
              * Format: uuid
              */
             id: string;
-            /** Actor */
-            actor: string;
-            /** Type */
-            type: string;
-            /**
-             * Application Id
-             * Format: uuid
-             */
-            application_id: string;
             /** Client Name */
             client_name: string;
+            /** Property Label */
+            property_label: string | null;
             /**
-             * At
+             * Strategy
+             * @enum {string}
+             */
+            strategy: "primary" | "ltr" | "str";
+            /** Purchase Price */
+            purchase_price: string | null;
+            status: components["schemas"]["ApplicationStatus"];
+            /** Flag Count */
+            flag_count: number;
+            /**
+             * Lo Id
+             * Format: uuid
+             */
+            lo_id: string;
+            /** Lo Name */
+            lo_name: string;
+            /**
+             * Updated At
              * Format: date-time
              */
-            at: string;
+            updated_at: string;
         };
         /**
          * ApplicationStatus
@@ -519,25 +579,6 @@ export interface components {
          * @enum {string}
          */
         ApplicationTab: "borrowers" | "housing" | "credit" | "assets" | "property" | "pricing" | "send";
-        /**
-         * AttentionItem
-         * @description One row of the "Needs your attention" list: NeedsAttention, Inquiry
-         *     or OptionSelected, oldest status change first.
-         */
-        AttentionItem: {
-            /**
-             * Application Id
-             * Format: uuid
-             */
-            application_id: string;
-            /** Client Name */
-            client_name: string;
-            status: components["schemas"]["ApplicationStatus"];
-            /** Reason */
-            reason: string;
-            /** Age Days */
-            age_days: number;
-        };
         /** AutoQuoteResponse */
         AutoQuoteResponse: {
             par: components["schemas"]["QuoteRead"];
@@ -848,38 +889,6 @@ export interface components {
          * @enum {string}
          */
         DSCRBucket: "BELOW_1_00" | "ONE_TO_1_25" | "GE_1_25";
-        /** DashboardResponse */
-        DashboardResponse: {
-            tiles: components["schemas"]["DashboardTiles"];
-            /** Attention */
-            attention: components["schemas"]["AttentionItem"][];
-            /** Stale */
-            stale: components["schemas"]["StaleItem"][];
-            /** Activity */
-            activity: components["schemas"]["ActivityItem"][];
-            /** Los */
-            los: components["schemas"]["LoOption"][] | null;
-        };
-        /**
-         * DashboardTiles
-         * @description One count per spec.md's tile table, all scoped by role/`lo_id`.
-         */
-        DashboardTiles: {
-            /** Clients */
-            clients: number;
-            /** Applications */
-            applications: number;
-            /** Pre Approvals Sent */
-            pre_approvals_sent: number;
-            /** With Property */
-            with_property: number;
-            /** Awaiting Review */
-            awaiting_review: number;
-            /** Needs Attention */
-            needs_attention: number;
-            /** Stale Quotes */
-            stale_quotes: number;
-        };
         /**
          * FieldSource
          * @description Drives the source badge + "revert to source" UI on `field_values`.
@@ -965,7 +974,10 @@ export interface components {
         };
         /**
          * LoOption
-         * @description One entry in the Manager/Admin LO filter `Select`.
+         * @description One entry of `GET /applications/los` -- the frontend's "LO" `Select`
+         *     for a Manager/Admin (spec.md "Frontend"). Nothing else in the backend
+         *     exposes a role=lo user list yet, so this item owns it (small, scoped
+         *     necessity -- plan.md).
          */
         LoOption: {
             /**
@@ -1057,6 +1069,54 @@ export interface components {
             /** Started */
             started: boolean;
         };
+        /** PortalApplicationOut */
+        PortalApplicationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            stage: components["schemas"]["PortalStage"];
+            /** Label */
+            label: string;
+            next_action: components["schemas"]["PortalNextAction"];
+            /** Secondary Report Token */
+            secondary_report_token?: string | null;
+            lo?: components["schemas"]["PortalLoOut"] | null;
+        };
+        /** PortalHomeResponse */
+        PortalHomeResponse: {
+            /** First Name */
+            first_name: string;
+            /** Email */
+            email: string;
+            /** Applications */
+            applications: components["schemas"]["PortalApplicationOut"][];
+        };
+        /** PortalLoOut */
+        PortalLoOut: {
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string | null;
+            /** Email */
+            email: string;
+        };
+        /** PortalNextAction */
+        PortalNextAction: {
+            type: components["schemas"]["PortalNextActionType"];
+            /** Report Token */
+            report_token?: string | null;
+            /** Consent Id */
+            consent_id?: string | null;
+            /** Draft Id */
+            draft_id?: string | null;
+        };
+        /**
+         * PortalNextActionType
+         * @enum {string}
+         */
+        PortalNextActionType: "view_report" | "continue_application" | "authorize_credit_check" | "none";
         /** PortalReportActionRequest */
         PortalReportActionRequest: {
             type: components["schemas"]["BorrowerActionType"];
@@ -1103,6 +1163,13 @@ export interface components {
             /** Newest Report Token */
             newest_report_token?: string | null;
         };
+        /**
+         * PortalStage
+         * @description Borrower-facing stage (spec.md's mapping table), plus `draft` for an
+         *     open `application_drafts` row (CQ-032a) that has no `Application` yet.
+         * @enum {string}
+         */
+        PortalStage: "applied" | "in_review" | "preapproved" | "option_selected" | "closed" | "draft";
         /** PricedProductRow */
         "PricedProductRow-Input": {
             /** Investor Name */
@@ -1496,22 +1563,6 @@ export interface components {
             phone: string | null;
         };
         /**
-         * StaleItem
-         * @description One row of the "Going stale" list: the recommended quote or latest
-         *     sent version is older than 21 days.
-         */
-        StaleItem: {
-            /**
-             * Application Id
-             * Format: uuid
-             */
-            application_id: string;
-            /** Client Name */
-            client_name: string;
-            /** Days Old */
-            days_old: number;
-        };
-        /**
          * StatusPatchRequest
          * @description spec.md: "accepts only Withdrawn or Closed ... any other value
          *     returns 422" -- the `Literal` does that natively via Pydantic/FastAPI
@@ -1730,10 +1781,26 @@ export interface operations {
             };
         };
     };
-    get_dashboard_api_v1_dashboard_get: {
+    get_applications_api_v1_applications_get: {
         parameters: {
             query?: {
+                /** @description Client name or email, partial, case-insensitive */
+                q?: string | null;
+                /** @description Manager/Admin only; ignored for an LO's own request */
                 lo_id?: string | null;
+                /** @description Comma list of status labels, plus the alias sent_or_later */
+                status?: string | null;
+                /** @description Comma list of primary, ltr, str */
+                strategy?: string | null;
+                amount_min?: number | string | null;
+                amount_max?: number | string | null;
+                state?: string | null;
+                has_property?: boolean | null;
+                created_from?: string | null;
+                created_to?: string | null;
+                sort?: string;
+                page?: number;
+                page_size?: number;
             };
             header?: never;
             path?: never;
@@ -1749,7 +1816,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DashboardResponse"];
+                    "application/json": components["schemas"]["ApplicationListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_lo_options_api_v1_applications_los_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoOption"][];
                 };
             };
             /** @description Validation Error */
@@ -2361,6 +2459,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortalReportActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portal_home_api_v1_portal_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalHomeResponse"];
                 };
             };
             /** @description Validation Error */

@@ -18,7 +18,6 @@ vi.mock("next/navigation", () => ({
 
 import DashboardRoute from "./page";
 import ClientsPage from "./clients/page";
-import ApplicationsPage from "./applications/page";
 import OutboxPage from "./outbox/page";
 import IntegrationsPage from "./admin/integrations/page";
 import SettingsPage from "./admin/settings/page";
@@ -31,10 +30,14 @@ import SettingsPage from "./admin/settings/page";
 // placeholder home tested -- /me, 401 -> logout -> /login, Sign out --
 // moved to src/features/shell/StaffSessionProvider.test.tsx and
 // StaffShell.test.tsx.)
+//
+// CQ-027 (small, logged necessity): `./applications/page` is no longer a
+// stub -- it needs a `StaffSessionProvider` and a mocked api-client, which
+// this bare-render table doesn't set up. Its own tests are
+// `applications/page.test.tsx`.
 describe("(staff) stub pages", () => {
   it.each([
     ["Clients", ClientsPage, "CQ-026"],
-    ["Applications", ApplicationsPage, "CQ-027"],
     ["Outbox", OutboxPage, "CQ-029"],
     ["Integrations", IntegrationsPage, "CQ-029"],
     ["Settings", SettingsPage, "CQ-029"],

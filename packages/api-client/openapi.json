@@ -251,15 +251,32 @@
         }
       }
     },
-    "/api/v1/dashboard": {
+    "/api/v1/applications": {
       "get": {
         "tags": [
-          "dashboard"
+          "applications"
         ],
-        "summary": "Get Dashboard",
-        "description": "An LO always sees their own files (`lo_id` is ignored for them); a\nManager/Admin sees every file, or just one LO's when `lo_id` is set\n(`core.auth.scope_applications`).",
-        "operationId": "get_dashboard_api_v1_dashboard_get",
+        "summary": "Get Applications",
+        "operationId": "get_applications_api_v1_applications_get",
         "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Client name or email, partial, case-insensitive",
+              "title": "Q"
+            },
+            "description": "Client name or email, partial, case-insensitive"
+          },
           {
             "name": "lo_id",
             "in": "query",
@@ -274,7 +291,186 @@
                   "type": "null"
                 }
               ],
+              "description": "Manager/Admin only; ignored for an LO's own request",
               "title": "Lo Id"
+            },
+            "description": "Manager/Admin only; ignored for an LO's own request"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma list of status labels, plus the alias sent_or_later",
+              "title": "Status"
+            },
+            "description": "Comma list of status labels, plus the alias sent_or_later"
+          },
+          {
+            "name": "strategy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma list of primary, ltr, str",
+              "title": "Strategy"
+            },
+            "description": "Comma list of primary, ltr, str"
+          },
+          {
+            "name": "amount_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Min"
+            }
+          },
+          {
+            "name": "amount_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Max"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 2
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "name": "has_property",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Property"
+            }
+          },
+          {
+            "name": "created_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created From"
+            }
+          },
+          {
+            "name": "created_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created To"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "-updated_at",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
             }
           },
           {
@@ -300,7 +496,61 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DashboardResponse"
+                  "$ref": "#/components/schemas/ApplicationListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/los": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Get Lo Options",
+        "description": "Backs the frontend's LO `Select` (spec.md \"Frontend\", Manager/Admin\nonly) -- 403s for an LO (E16), same as every other admin-scoped route.",
+        "operationId": "get_lo_options_api_v1_applications_los_get",
+        "parameters": [
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LoOption"
+                  },
+                  "title": "Response Get Lo Options Api V1 Applications Los Get"
                 }
               }
             }
@@ -1282,6 +1532,55 @@
         }
       }
     },
+    "/api/v1/portal/me": {
+      "get": {
+        "tags": [
+          "portal-home"
+        ],
+        "summary": "Get Portal Home",
+        "operationId": "get_portal_home_api_v1_portal_me_get",
+        "parameters": [
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalHomeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -1306,47 +1605,118 @@
   },
   "components": {
     "schemas": {
-      "ActivityItem": {
+      "ApplicationListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationRow"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "ApplicationListResponse",
+        "description": "`GET /applications` response: `core/pagination.Page[ApplicationRow]`\n(`items`, `total`, `page`, `page_size`)."
+      },
+      "ApplicationRow": {
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid",
             "title": "Id"
           },
-          "actor": {
-            "type": "string",
-            "title": "Actor"
-          },
-          "type": {
-            "type": "string",
-            "title": "Type"
-          },
-          "application_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Application Id"
-          },
           "client_name": {
             "type": "string",
             "title": "Client Name"
           },
-          "at": {
+          "property_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Label"
+          },
+          "strategy": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "ltr",
+              "str"
+            ],
+            "title": "Strategy"
+          },
+          "purchase_price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Price"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatus"
+          },
+          "flag_count": {
+            "type": "integer",
+            "title": "Flag Count"
+          },
+          "lo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Lo Id"
+          },
+          "lo_name": {
+            "type": "string",
+            "title": "Lo Name"
+          },
+          "updated_at": {
             "type": "string",
             "format": "date-time",
-            "title": "At"
+            "title": "Updated At"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "actor",
-          "type",
-          "application_id",
           "client_name",
-          "at"
+          "property_label",
+          "strategy",
+          "purchase_price",
+          "status",
+          "flag_count",
+          "lo_id",
+          "lo_name",
+          "updated_at"
         ],
-        "title": "ActivityItem",
-        "description": "One row of the \"Recent activity\" feed."
+        "title": "ApplicationRow",
+        "description": "One row of `GET /applications` (spec.md \"Row\"). Shared with CQ-026\n(E9) -- keep this shape stable; CQ-026 imports it directly rather than\nredefining it."
       },
       "ApplicationStatus": {
         "type": "string",
@@ -1537,40 +1907,6 @@
         ],
         "title": "ApplicationTab",
         "description": "Matches the 7 workspace tabs."
-      },
-      "AttentionItem": {
-        "properties": {
-          "application_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Application Id"
-          },
-          "client_name": {
-            "type": "string",
-            "title": "Client Name"
-          },
-          "status": {
-            "$ref": "#/components/schemas/ApplicationStatus"
-          },
-          "reason": {
-            "type": "string",
-            "title": "Reason"
-          },
-          "age_days": {
-            "type": "integer",
-            "title": "Age Days"
-          }
-        },
-        "type": "object",
-        "required": [
-          "application_id",
-          "client_name",
-          "status",
-          "reason",
-          "age_days"
-        ],
-        "title": "AttentionItem",
-        "description": "One row of the \"Needs your attention\" list: NeedsAttention, Inquiry\nor OptionSelected, oldest status change first."
       },
       "AutoQuoteResponse": {
         "properties": {
@@ -2126,101 +2462,6 @@
         "title": "DSCRBucket",
         "description": "DSCR classification bucket. Boundaries are inclusive on the lower edge."
       },
-      "DashboardResponse": {
-        "properties": {
-          "tiles": {
-            "$ref": "#/components/schemas/DashboardTiles"
-          },
-          "attention": {
-            "items": {
-              "$ref": "#/components/schemas/AttentionItem"
-            },
-            "type": "array",
-            "title": "Attention"
-          },
-          "stale": {
-            "items": {
-              "$ref": "#/components/schemas/StaleItem"
-            },
-            "type": "array",
-            "title": "Stale"
-          },
-          "activity": {
-            "items": {
-              "$ref": "#/components/schemas/ActivityItem"
-            },
-            "type": "array",
-            "title": "Activity"
-          },
-          "los": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/LoOption"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Los"
-          }
-        },
-        "type": "object",
-        "required": [
-          "tiles",
-          "attention",
-          "stale",
-          "activity",
-          "los"
-        ],
-        "title": "DashboardResponse"
-      },
-      "DashboardTiles": {
-        "properties": {
-          "clients": {
-            "type": "integer",
-            "title": "Clients"
-          },
-          "applications": {
-            "type": "integer",
-            "title": "Applications"
-          },
-          "pre_approvals_sent": {
-            "type": "integer",
-            "title": "Pre Approvals Sent"
-          },
-          "with_property": {
-            "type": "integer",
-            "title": "With Property"
-          },
-          "awaiting_review": {
-            "type": "integer",
-            "title": "Awaiting Review"
-          },
-          "needs_attention": {
-            "type": "integer",
-            "title": "Needs Attention"
-          },
-          "stale_quotes": {
-            "type": "integer",
-            "title": "Stale Quotes"
-          }
-        },
-        "type": "object",
-        "required": [
-          "clients",
-          "applications",
-          "pre_approvals_sent",
-          "with_property",
-          "awaiting_review",
-          "needs_attention",
-          "stale_quotes"
-        ],
-        "title": "DashboardTiles",
-        "description": "One count per spec.md's tile table, all scoped by role/`lo_id`."
-      },
       "FieldSource": {
         "type": "string",
         "enum": [
@@ -2496,7 +2737,7 @@
           "full_name"
         ],
         "title": "LoOption",
-        "description": "One entry in the Manager/Admin LO filter `Select`."
+        "description": "One entry of `GET /applications/los` -- the frontend's \"LO\" `Select`\nfor a Manager/Admin (spec.md \"Frontend\"). Nothing else in the backend\nexposes a role=lo user list yet, so this item owns it (small, scoped\nnecessity -- plan.md)."
       },
       "LocationResponse": {
         "properties": {
@@ -2760,6 +3001,167 @@
         ],
         "title": "PipelineStartResponse"
       },
+      "PortalApplicationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/PortalStage"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "next_action": {
+            "$ref": "#/components/schemas/PortalNextAction"
+          },
+          "secondary_report_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secondary Report Token"
+          },
+          "lo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortalLoOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "stage",
+          "label",
+          "next_action"
+        ],
+        "title": "PortalApplicationOut"
+      },
+      "PortalHomeResponse": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "applications": {
+            "items": {
+              "$ref": "#/components/schemas/PortalApplicationOut"
+            },
+            "type": "array",
+            "title": "Applications"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_name",
+          "email",
+          "applications"
+        ],
+        "title": "PortalHomeResponse"
+      },
+      "PortalLoOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "phone",
+          "email"
+        ],
+        "title": "PortalLoOut"
+      },
+      "PortalNextAction": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/PortalNextActionType"
+          },
+          "report_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Token"
+          },
+          "consent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Id"
+          },
+          "draft_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "PortalNextAction"
+      },
+      "PortalNextActionType": {
+        "type": "string",
+        "enum": [
+          "view_report",
+          "continue_application",
+          "authorize_credit_check",
+          "none"
+        ],
+        "title": "PortalNextActionType"
+      },
       "PortalReportActionRequest": {
         "properties": {
           "type": {
@@ -2902,6 +3304,19 @@
         ],
         "title": "PortalReportResponse",
         "description": "`ReportViewModel` plus the two fields only a live request can answer:\n`borrower_action` (from `QuotePackageVersion.borrower_action`, `None`\nuntil CQ-024) and `newest_report_token` (set only when this version is\nsuperseded, per spec.md's \"SupersededBanner ... a link to the newest\nversion\")."
+      },
+      "PortalStage": {
+        "type": "string",
+        "enum": [
+          "applied",
+          "in_review",
+          "preapproved",
+          "option_selected",
+          "closed",
+          "draft"
+        ],
+        "title": "PortalStage",
+        "description": "Borrower-facing stage (spec.md's mapping table), plus `draft` for an\nopen `application_drafts` row (CQ-032a) that has no `Application` yet."
       },
       "PricedProductRow-Input": {
         "properties": {
@@ -4247,31 +4662,6 @@
           "phone"
         ],
         "title": "StaffUserOut"
-      },
-      "StaleItem": {
-        "properties": {
-          "application_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Application Id"
-          },
-          "client_name": {
-            "type": "string",
-            "title": "Client Name"
-          },
-          "days_old": {
-            "type": "integer",
-            "title": "Days Old"
-          }
-        },
-        "type": "object",
-        "required": [
-          "application_id",
-          "client_name",
-          "days_old"
-        ],
-        "title": "StaleItem",
-        "description": "One row of the \"Going stale\" list: the recommended quote or latest\nsent version is older than 21 days."
       },
       "StatusPatchRequest": {
         "properties": {

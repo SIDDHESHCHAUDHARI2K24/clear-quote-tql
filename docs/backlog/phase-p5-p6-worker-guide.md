@@ -67,6 +67,12 @@ Docs questions: `graphify query "<q>"`. Code questions: codegraph if `.codegraph
   - Post a Kaneo comment on task `{KID}` with the PR link. Do not change the task status; the orchestrator does that.
 
 ## Context cap (binding)
+Wave-2 workers overran the cap (one reached 432K). Keep context lean:
+- Read files by line range, not whole.
+- Run tests with `-q` and tail the output.
+- Don't paste large logs.
+- Hand small, self-contained pieces (a component, a test file) to sub-agents.
+- Check your usage after every stage.
 Never exceed 400K tokens of context. At about 350K:
 1. Commit your WIP.
 2. Append an entry to docs/backlog/{FOLDER}/handoff.md using _templates/handoff.md.
@@ -96,7 +102,7 @@ Each lands as its own PR into phase-p5-p6. Shared lines in registry.py and the a
 
    Shared infra from `make up` is already running. Never touch the cq_dev, cq_test or *_p2 DBs, ports 8000/3010/3020, or any other slot.
 2. Run `make demo-reset`. Then start, in the background:
-   - the API: `cd backend && uv run uvicorn app.main:app --port $API_PORT`
+   - the API, **from the repo root** (config reads `.env` relative to the cwd): `uv run --directory backend uvicorn app.main:app --port $API_PORT` or `PYTHONPATH=backend uv run uvicorn app.main:app --port $API_PORT`. Run pytest from the repo root too
    - `make worker`, if workflows are involved
    - the affected app: `pnpm --filter @cq/<app> exec next dev -p <port>`
 3. API check. Log in with curl:
