@@ -16,6 +16,7 @@ from fastapi import FastAPI
 
 FEATURE_ROUTERS: list[str] = [
     "app.features.auth.staff.router",
+    "app.features.auth.borrower.router",
 ]
 
 

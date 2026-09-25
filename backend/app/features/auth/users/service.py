@@ -10,6 +10,7 @@ caller owns the transaction.
 """
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -17,8 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import UserRole
 from app.core.errors import ConflictError, ValidationAppError
-from app.core.security import hash_password
-from app.features.auth.models import User
+from app.core.security import hash_password_async
+from app.features.auth.models import BorrowerAccount, User
+from app.features.clients.models import Client
 
 MIN_PASSWORD_LENGTH = 8
 
@@ -27,6 +29,39 @@ def normalize_email(email: str) -> str:
     """Strips surrounding whitespace and lowercases, so lookups and the
     `users.email` unique constraint are effectively case-insensitive."""
     return email.strip().lower()
+
+
+async def _insert_user(
+    db: AsyncSession,
+    *,
+    normalized_email: str,
+    password_hash: str,
+    role: UserRole,
+    full_name: str,
+    nmls: str | None = None,
+    title: str | None = None,
+    phone: str | None = None,
+) -> User:
+    """The SAVEPOINT insert shared by `create_user` (which hashes `password`
+    itself) and `seed_dev_users` below (which hashes the shared demo
+    password once and reuses that hash for every `DEV_USERS` entry, rather
+    than re-hashing the same password once per user). Does not commit."""
+    user = User(
+        email=normalized_email,
+        password_hash=password_hash,
+        role=role,
+        full_name=full_name,
+        nmls=nmls,
+        title=title,
+        phone=phone,
+    )
+    try:
+        async with db.begin_nested():
+            db.add(user)
+            await db.flush()
+    except IntegrityError as exc:
+        raise ConflictError(f"A user with email {normalized_email} already exists.") from exc
+    return user
 
 
 async def create_user(
@@ -64,22 +99,16 @@ async def create_user(
     if len(password) < MIN_PASSWORD_LENGTH:
         raise ValidationAppError(f"Password must be at least {MIN_PASSWORD_LENGTH} characters.")
 
-    user = User(
-        email=normalized_email,
-        password_hash=hash_password(password),
+    return await _insert_user(
+        db,
+        normalized_email=normalized_email,
+        password_hash=await hash_password_async(password),
         role=role,
         full_name=full_name,
         nmls=nmls,
         title=title,
         phone=phone,
     )
-    try:
-        async with db.begin_nested():
-            db.add(user)
-            await db.flush()
-    except IntegrityError as exc:
-        raise ConflictError(f"A user with email {normalized_email} already exists.") from exc
-    return user
 
 
 @dataclass(frozen=True)
@@ -125,8 +154,17 @@ async def seed_dev_users(db: AsyncSession, *, password: str) -> list[User]:
     untouched (idempotent — a repeat run does not change an existing user's
     password hash, role or name). Returns all three `User` rows in
     `DEV_USERS` order. Does not commit.
+
+    All `DEV_USERS` share the one `password` argument. Rather than
+    re-hashing that identical password once per `DevUserSpec` (each argon2
+    hash is deliberately CPU-expensive), it's hashed once, lazily, the
+    first time this run actually needs to insert a row — so a rerun where
+    every dev user already exists neither hashes anything nor requires
+    `password` to meet `MIN_PASSWORD_LENGTH` (matching `create_user`, which
+    only checked length for the row it was about to insert).
     """
     users: list[User] = []
+    password_hash: str | None = None
     for spec in DEV_USERS:
         existing = (
             await db.execute(select(User).where(User.email == spec.email))
@@ -134,11 +172,17 @@ async def seed_dev_users(db: AsyncSession, *, password: str) -> list[User]:
         if existing is not None:
             users.append(existing)
             continue
+        if password_hash is None:
+            if len(password) < MIN_PASSWORD_LENGTH:
+                raise ValidationAppError(
+                    f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
+                )
+            password_hash = await hash_password_async(password)
         users.append(
-            await create_user(
+            await _insert_user(
                 db,
-                email=spec.email,
-                password=password,
+                normalized_email=normalize_email(spec.email),
+                password_hash=password_hash,
                 role=spec.role,
                 full_name=spec.full_name,
                 nmls=spec.nmls,
@@ -147,3 +191,96 @@ async def seed_dev_users(db: AsyncSession, *, password: str) -> list[User]:
             )
         )
     return users
+
+
+# CQ-015 Decision #12: the demo borrower's client + account.
+DEMO_BORROWER_EMAIL = "borrower@clearquote.test"
+DEMO_BORROWER_CLIENT_NAME = "Casey Morgan"
+DEMO_BORROWER_LO_EMAIL = "lo@clearquote.test"
+
+
+async def _ensure_demo_borrower_client(db: AsyncSession) -> Client:
+    """Creates the demo borrower's client ("Casey Morgan", assigned to
+    `lo@clearquote.test`) if it doesn't already exist. Does not commit."""
+    client = (
+        await db.execute(select(Client).where(Client.email == DEMO_BORROWER_EMAIL))
+    ).scalar_one_or_none()
+    if client is not None:
+        return client
+
+    lo = (
+        await db.execute(select(User).where(User.email == DEMO_BORROWER_LO_EMAIL))
+    ).scalar_one_or_none()
+    if lo is None:
+        raise ConflictError(
+            f"No {DEMO_BORROWER_LO_EMAIL} user to assign the demo borrower's client to — "
+            "run seed_dev_users first."
+        )
+    client = Client(
+        full_name=DEMO_BORROWER_CLIENT_NAME, email=DEMO_BORROWER_EMAIL, assigned_lo_id=lo.id
+    )
+    db.add(client)
+    await db.flush()
+    return client
+
+
+async def seed_dev_borrowers(db: AsyncSession, *, password: str) -> list[BorrowerAccount]:
+    """CQ-015 Decision #12: ensures the demo borrower's client exists, then
+    creates a `BorrowerAccount` (`password`, `email_verified_at` set to
+    now) for every client — the demo one included — that doesn't already
+    have one.
+
+    Idempotent: a repeat run creates neither a second demo client nor a
+    second account for any client, and never touches an existing account's
+    `password_hash`. Returns only the accounts created by *this* call
+    (empty once every client already has one). Does not commit.
+
+    Every account created this run shares the one `password` argument, so
+    it's hashed once, lazily, the first time this run actually needs to
+    insert an account — rather than re-hashing the identical password once
+    per client, or hashing it at all on a no-op rerun where every client
+    already has one.
+
+    `clients.email` is not unique (unlike `borrower_accounts.email`), so
+    two clients whose emails normalize to the same value — or a client
+    whose email already belongs to another client's account — would
+    otherwise abort the whole run on the first `IntegrityError`. Each
+    insert runs in its own SAVEPOINT (mirroring `create_user`), and a
+    losing one is skipped rather than crashing the seed for every other
+    client.
+    """
+    await _ensure_demo_borrower_client(db)
+
+    clients_missing_accounts = (
+        (
+            await db.execute(
+                select(Client)
+                .outerjoin(BorrowerAccount, BorrowerAccount.client_id == Client.id)
+                .where(BorrowerAccount.id.is_(None))
+                .order_by(Client.created_at, Client.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    now = datetime.now(UTC)
+    password_hash: str | None = None
+    created: list[BorrowerAccount] = []
+    for client in clients_missing_accounts:
+        if password_hash is None:
+            password_hash = await hash_password_async(password)
+        account = BorrowerAccount(
+            client_id=client.id,
+            email=normalize_email(client.email),
+            password_hash=password_hash,
+            email_verified_at=now,
+        )
+        try:
+            async with db.begin_nested():
+                db.add(account)
+                await db.flush()
+        except IntegrityError:
+            continue
+        created.append(account)
+    return created

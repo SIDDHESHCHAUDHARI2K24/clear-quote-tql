@@ -10,12 +10,15 @@ vi.mock("@cq/api-client", () => ({
 
 import { OtpForm } from "./OtpForm";
 
-describe("OtpForm", () => {
+// The generic form behaviour (digit-stripping, pending state, error
+// shapes) is covered by @cq/ui's OtpForm tests. This app only wires it to
+// the staff otp/verify endpoint and its own copy.
+describe("OtpForm (LO Console wiring)", () => {
   afterEach(() => {
     postMock.mockReset();
   });
 
-  it("submits the 6-digit code and calls onSuccess", async () => {
+  it("posts to the staff otp/verify endpoint and calls onSuccess", async () => {
     postMock.mockResolvedValueOnce({
       data: { id: "u1", email: "lo@clearquote.test", full_name: "Jamie Rivera", role: "lo" },
       error: undefined,
@@ -42,8 +45,7 @@ describe("OtpForm", () => {
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 
-  it("strips non-digit characters and caps input at 6 characters", async () => {
-    const user = userEvent.setup();
+  it("shows the LO Console's 'sent to {email}' copy and 'Use a different account' back label", () => {
     render(
       <OtpForm
         challengeId="chal_1"
@@ -53,33 +55,10 @@ describe("OtpForm", () => {
       />,
     );
 
-    const input = screen.getByLabelText("Verification code");
-    await user.type(input, "12a3b456789");
-
-    expect(input).toHaveValue("123456");
-  });
-
-  it("shows the backend's message on an invalid/expired code and does not call onSuccess", async () => {
-    postMock.mockResolvedValueOnce({
-      data: undefined,
-      error: { error: { code: "AUTHENTICATION_ERROR", message: "Invalid or expired code" } },
-    });
-    const onSuccess = vi.fn();
-    const user = userEvent.setup();
-
-    render(
-      <OtpForm
-        challengeId="chal_1"
-        email="lo@clearquote.test"
-        onSuccess={onSuccess}
-        onBack={vi.fn()}
-      />,
-    );
-    await user.type(screen.getByLabelText("Verification code"), "000000");
-    await user.click(screen.getByRole("button", { name: "Verify" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent("Invalid or expired code");
-    expect(onSuccess).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Enter the 6-digit code sent to lo@clearquote.test."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Use a different account" })).toBeInTheDocument();
   });
 
   it("calls onBack when 'Use a different account' is clicked", async () => {

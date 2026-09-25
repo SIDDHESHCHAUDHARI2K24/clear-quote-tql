@@ -80,6 +80,55 @@ async def test_wrong_code_does_not_consume_the_challenge_before_the_limit(valkey
     assert fields["subject_id"] == "user-1"
 
 
+async def test_wrong_code_after_concurrent_deletion_leaves_no_key(
+    valkey: Redis, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: a wrong code arriving after the key was deleted out from
+    under it (a concurrent correct verify, or expiry, landing between
+    `HGETALL` and the attempts bump) must not recreate a TTL-less hash that
+    never expires. Simulated by deleting the real key right after the
+    `HGETALL` that `verify_challenge` itself issued, so the wrong-code path
+    below runs against an already-gone key exactly as the race would leave
+    it."""
+    challenge_id, _code = await issue_challenge(valkey, principal="staff", subject_id="user-1")
+    key = f"otp:{challenge_id}"
+    original_hgetall = valkey.hgetall
+
+    async def _hgetall_then_concurrent_delete(name: str) -> dict[bytes | str, bytes | str]:
+        result = await original_hgetall(name)
+        await valkey.delete(name)
+        return result
+
+    monkeypatch.setattr(valkey, "hgetall", _hgetall_then_concurrent_delete)
+
+    with pytest.raises(AuthenticationError):
+        await verify_challenge(valkey, principal="staff", challenge_id=challenge_id, code="000000")
+
+    assert await valkey.exists(key) == 0
+
+
+async def test_concurrent_correct_verify_second_call_rejected(
+    valkey: Redis, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: the success path must only succeed when its own `DEL`
+    actually removed the key — otherwise two requests that both read the
+    same un-expired challenge with the right code could both build a
+    signed-in response. Simulated by making the delete `verify_challenge`
+    issues find the key already gone, as a concurrent second verify's own
+    `DEL` would have left it."""
+    challenge_id, code = await issue_challenge(valkey, principal="staff", subject_id="user-1")
+    original_delete = valkey.delete
+
+    async def _delete_as_if_a_concurrent_verify_won(name: str) -> int:
+        await original_delete(name)
+        return await original_delete(name)
+
+    monkeypatch.setattr(valkey, "delete", _delete_as_if_a_concurrent_verify_won)
+
+    with pytest.raises(AuthenticationError):
+        await verify_challenge(valkey, principal="staff", challenge_id=challenge_id, code=code)
+
+
 async def test_extra_cannot_override_reserved_fields(valkey: Redis) -> None:
     """A caller-supplied `extra` must never be able to forge the stored
     `principal` (or clobber `code_hash`/`attempts`) — otherwise a challenge

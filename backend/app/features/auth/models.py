@@ -43,6 +43,14 @@ class BorrowerAccount(Base):
         UUID(as_uuid=True), ForeignKey("clients.id"), unique=True, index=True
     )
     email: Mapped[str] = mapped_column(String, unique=True, index=True)
+    # CQ-015: nullable so a pre-existing row (there are none pre-CQ-015, but
+    # the columns are nullable per spec.md's migration scope regardless)
+    # never blocks the migration; `signup`/`verify_otp` always set both on
+    # account creation, so a fully-migrated flow never leaves either null.
+    password_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

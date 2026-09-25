@@ -1,81 +1,95 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
+import { Button } from "@cq/ui";
+import type { components } from "@cq/api-client";
+
+import { applicationStatusLabel } from "../features/auth";
 import { api } from "../lib/api-client";
 
-type HealthState =
-  | { kind: "loading" }
-  | { kind: "ok" }
-  | { kind: "degraded"; failingChecks: string[] }
-  | { kind: "unreachable" };
+type BorrowerMe = components["schemas"]["BorrowerMeOut"];
 
-// The /health OpenAPI contract (CQ-004) only documents a 200 response; the
-// same HealthReport body is also returned on 503 ("degraded"). openapi-fetch
-// resolves (never rejects) on a non-2xx HTTP status, and — because 503 isn't
-// a documented response — puts that body under `error`, not `data`. So we
-// read the report from whichever of `data`/`error` is present, and only
-// treat a network-level failure (a rejected promise) as "unreachable".
-function isHealthReport(
-  value: unknown,
-): value is { status: "ok" | "degraded"; checks: Record<string, string> } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "status" in value &&
-    "checks" in value &&
-    typeof (value as { checks: unknown }).checks === "object"
-  );
-}
+type SessionState = { kind: "loading" } | { kind: "signed-in"; me: BorrowerMe };
 
+// Placeholder signed-in home (CQ-031 replaces this with the real
+// home/status page). `src/middleware.ts` already redirects here-to-/login
+// when the session cookie is missing; this page's own /me call is the
+// second, authoritative check — a present-but-expired/revoked cookie only
+// middleware can't see.
 export default function Home() {
-  const [state, setState] = useState<HealthState>({ kind: "loading" });
+  const router = useRouter();
+  const [state, setState] = useState<SessionState>({ kind: "loading" });
 
   useEffect(() => {
     let cancelled = false;
 
     api
-      .GET("/health")
-      .then(({ data, error }) => {
+      .GET("/api/v1/auth/borrower/me")
+      .then(({ data }) => {
         if (cancelled) return;
-        const report = isHealthReport(data) ? data : isHealthReport(error) ? error : undefined;
-        if (!report) {
-          setState({ kind: "unreachable" });
-        } else if (report.status === "ok") {
-          setState({ kind: "ok" });
-        } else {
-          const failingChecks = Object.entries(report.checks)
-            .filter(([, value]) => value !== "ok")
-            .map(([name]) => name);
-          setState({ kind: "degraded", failingChecks });
+        if (data) {
+          setState({ kind: "signed-in", me: data });
+          return;
         }
+        // A present-but-no-longer-valid cookie (expired/revoked session):
+        // middleware only checks presence, so without clearing it here
+        // first, redirecting to /login would immediately bounce back to
+        // / (middleware sees the stale cookie and redirects away from
+        // /login). Logout deletes the (already-dead) Valkey session, a
+        // no-op, and clears the cookie either way.
+        api
+          .POST("/api/v1/auth/borrower/logout")
+          .catch(() => {})
+          .finally(() => {
+            if (!cancelled) router.replace("/login");
+          });
       })
       .catch(() => {
-        if (!cancelled) setState({ kind: "unreachable" });
+        if (!cancelled) router.replace("/login");
       });
 
     return () => {
       cancelled = true;
     };
+    // Mount-only: this checks the session once when the page loads.
+    // `router` (from next/navigation's useRouter) is stable in the real
+    // app, but including it here isn't needed — router.replace is only
+    // ever called from callbacks, not read reactively.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function handleLogout() {
+    // Best-effort: even if the request fails (network blip, API down),
+    // the user's intent is to leave — don't strand them on this page with
+    // no way out. Any un-cleared cookie is caught by the next /me check.
+    try {
+      await api.POST("/api/v1/auth/borrower/logout");
+    } catch {
+      // ignore — still navigate away below
+    }
+    router.replace("/login");
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-      <h1 className="text-2xl font-semibold text-navy-900">Clear Quote — Borrower Portal</h1>
-      <p
-        role="status"
-        className={
-          state.kind === "unreachable" || state.kind === "degraded"
-            ? "text-status-danger"
-            : "text-status-success"
-        }
-      >
-        {state.kind === "loading" && "Checking API…"}
-        {state.kind === "ok" && "API reachable"}
-        {state.kind === "degraded" &&
-          `API degraded — failing checks: ${state.failingChecks.join(", ")}`}
-        {state.kind === "unreachable" && "API unreachable"}
+      <h1 className="text-2xl font-semibold text-navy-900">Clear Quote</h1>
+      <p role="status">
+        {state.kind === "loading" ? "Checking session…" : `Hi ${state.me.first_name}`}
       </p>
+      {state.kind === "signed-in" && (
+        <>
+          <p className="text-neutral-600">
+            {state.me.latest_application
+              ? applicationStatusLabel(state.me.latest_application.status)
+              : "No application yet"}
+          </p>
+          <Button variant="secondary" onClick={handleLogout}>
+            Logout
+          </Button>
+        </>
+      )}
     </main>
   );
 }
