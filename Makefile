@@ -2,9 +2,12 @@
 
 # Local stack (Postgres, Valkey, MinIO, Mailpit, Temporal), project name
 # `clear-quote` (infra/docker-compose.yml). --wait blocks until every
-# service with a healthcheck reports healthy (or minio-init exits 0).
+# long-running service with a healthcheck reports healthy. `minio` now
+# creates its own buckets at startup via MINIO_DEFAULT_BUCKETS (CQ-003 fix,
+# follow-up to CQ-006 Decision #17), so the old one-shot `minio-init`
+# service is gone and every service is a normal long-running --wait target.
 up:
-	docker compose -f infra/docker-compose.yml up -d --wait
+	docker compose -f infra/docker-compose.yml up -d --wait postgres valkey minio mailpit temporal temporal-ui
 
 down:
 	docker compose -f infra/docker-compose.yml down

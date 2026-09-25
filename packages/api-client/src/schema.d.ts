@@ -5,6 +5,40 @@
  */
 
 export interface paths {
+    "/api/v1/applications/{application_id}/pipeline/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Pipeline */
+        post: operations["start_pipeline_api_v1_applications__application_id__pipeline_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/pipeline/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Pipeline */
+        post: operations["resume_pipeline_api_v1_applications__application_id__pipeline_resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/applications/{application_id}/field-values/{field_key}": {
         parameters: {
             query?: never;
@@ -413,6 +447,23 @@ export interface components {
             /** Label */
             label: string;
         };
+        /** PipelineResumeResponse */
+        PipelineResumeResponse: {
+            /** Workflow Id */
+            workflow_id: string;
+            /**
+             * Signaled
+             * @default true
+             */
+            signaled: boolean;
+        };
+        /** PipelineStartResponse */
+        PipelineStartResponse: {
+            /** Workflow Id */
+            workflow_id: string;
+            /** Started */
+            started: boolean;
+        };
         /** PricedProductRow */
         "PricedProductRow-Input": {
             /** Investor Name */
@@ -686,6 +737,68 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    start_pipeline_api_v1_applications__application_id__pipeline_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_pipeline_api_v1_applications__application_id__pipeline_resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineResumeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     patch_field_value_api_v1_applications__application_id__field_values__field_key__patch: {
         parameters: {
             query?: never;

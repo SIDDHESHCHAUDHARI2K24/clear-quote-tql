@@ -35,6 +35,33 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
+      # `pytest seed` (CQ-010, below) needs a real MinIO round-trip in
+      # seed/tests/test_documents_watermarked.py. `minio/minio` (the image
+      # infra/docker-compose.yml pins) and `quay.io/minio/minio` are both
+      # gone from their registries -- MinIO went source-only distribution in
+      # Oct 2025 (see CQ-006 post-dev.md's "CI clean-up pass" for the
+      # deviation writeup). `bitnamilegacy/minio` still self-starts from env
+      # vars alone (no command needed, unlike the now-unpullable official
+      # image), so it works as an ordinary service container here, and
+      # `MINIO_DEFAULT_BUCKETS` creates both buckets at startup -- no
+      # separate init step needed. Pinned to the exact tag `latest` resolved
+      # to at the time of the CQ-003 follow-up fix, and kept identical to
+      # infra/docker-compose.yml's `minio` service so CI and local can never
+      # diverge (orchestrator decision, CQ-006 Decision #17 follow-up).
+      minio:
+        image: bitnamilegacy/minio:2025.5.24-debian-12-r5
+        env:
+          MINIO_ROOT_USER: cq-minio
+          MINIO_ROOT_PASSWORD: cq-minio-secret
+          MINIO_DEFAULT_BUCKETS: "clear-quote,clearquote-demo-docs"
+        ports:
+          - 9010:9000
+          - 9011:9001
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       APP_ENV: test
       # CQ-007's FIELD_ENCRYPTION_KEY startup check is skipped under
@@ -43,13 +70,18 @@ jobs:
       SECRET_KEY: ci-dummy-secret
       DATABASE_URL: postgresql+asyncpg://cq:cq@localhost:5432/cq_dev
       TEST_DATABASE_URL: postgresql+asyncpg://cq:cq@localhost:5432/cq_test
-      # Dummy values below: CQ-004's /health checks are monkeypatched in
-      # tests, so these never need to resolve in CI (see CQ-006 spec Notes).
+      # Valkey/Temporal stay dummy: CQ-004's /health checks are monkeypatched
+      # in tests, and seed/tests/conftest.py fakes Valkey via fakeredis --
+      # neither ever needs to resolve in CI (see CQ-006 spec Notes).
       VALKEY_URL: redis://localhost:6379/0
+      # S3_* point at the real `minio` service container above (same
+      # credentials/port as infra/docker-compose.yml's `minio` service) --
+      # CQ-010's seed/tests/test_documents_watermarked.py does a real
+      # upload/download round-trip against it (G3 CI clean-up pass).
       S3_ENDPOINT: http://localhost:9010
       S3_BUCKET: clear-quote
-      S3_ACCESS_KEY: cq-dummy
-      S3_SECRET_KEY: cq-dummy
+      S3_ACCESS_KEY: cq-minio
+      S3_SECRET_KEY: cq-minio-secret
       S3_REGION: us-east-1
       SMTP_HOST: localhost
       SMTP_PORT: "1025"
@@ -57,10 +89,19 @@ jobs:
       TEMPORAL_ADDRESS: localhost:7233
       TEMPORAL_NAMESPACE: default
       TEMPORAL_TASK_QUEUE: clear-quote-pipeline
+      # seed/tests/conftest.py already os.environ.setdefault()s a throwaway
+      # value, so this is belt-and-suspenders, not strictly required -- kept
+      # explicit so CI's env is self-documenting about what `pytest seed`
+      # needs (review round 1 finding #3: no real password is ever
+      # committed).
+      SEED_STAFF_PASSWORD: ci-dummy-demo-password
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v3
+      # No moving major tag published from v8 onward (supply-chain hardening
+      # -- see astral-sh/setup-uv's v8.0.0 release notes); pin the exact
+      # version instead of `@v10`.
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -77,14 +118,79 @@ jobs:
 
       - run: uv run pytest backend
 
+      # CQ-010 (G3): same command as `make test`'s second line -- kept
+      # identical so the two can't drift.
+      - run: uv run pytest seed
+
+  # `packages/api-client` is generated from the FastAPI OpenAPI schema
+  # (`make api-client`) and must never drift from it -- caught late once
+  # already (CQ-011 added the pipeline start/resume endpoints without
+  # regenerating; whole-phase review, phase-p0-p1-merge-plan.md G4/G3). This
+  # job re-runs the exact generator and fails if it produces any diff.
+  api-client-drift:
+    runs-on: ubuntu-latest
+    env:
+      # Just enough for `app.main.app` to import (export_openapi.py reads
+      # `app.openapi()`) -- this job never runs the app or touches real
+      # infra, so these mirror the `backend` job's original dummy values,
+      # not its real MinIO ones.
+      APP_ENV: test
+      SECRET_KEY: ci-dummy-secret
+      DATABASE_URL: postgresql+asyncpg://cq:cq@localhost:5432/cq_dev
+      TEST_DATABASE_URL: postgresql+asyncpg://cq:cq@localhost:5432/cq_test
+      VALKEY_URL: redis://localhost:6379/0
+      S3_ENDPOINT: http://localhost:9010
+      S3_BUCKET: clear-quote
+      S3_ACCESS_KEY: cq-dummy
+      S3_SECRET_KEY: cq-dummy
+      S3_REGION: us-east-1
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      SMTP_FROM: noreply@clearquote.local
+      TEMPORAL_ADDRESS: localhost:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: clear-quote-pipeline
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - run: uv sync --frozen
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - run: corepack enable
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: make api-client
+
+      # The whole point of this job: fail if `make api-client` (never
+      # hand-edited, per AGENTS.md) produced any diff against what's
+      # committed.
+      - name: Fail on api-client drift
+        run: git diff --exit-code -- packages/api-client
+
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
+          # v5 started auto-enabling its own pnpm caching whenever
+          # package.json has a `packageManager` field (ours does, CQ-002) --
+          # that would try to resolve the pnpm cache dir before `corepack
+          # enable`/pnpm is even on PATH below. Keep the explicit
+          # store-path + actions/cache steps this job already had instead.
+          package-manager-cache: false
 
       - run: corepack enable
 
@@ -92,7 +198,7 @@ jobs:
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
