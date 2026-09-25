@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import type { ReactNode } from "react";
 
 import { cx } from "../../utils/cx";
@@ -29,6 +29,7 @@ const SIZE_CLASSES: Record<NonNullable<DrawerProps["size"]>, string> = {
  */
 export function Drawer({ isOpen, onClose, title, size = "md", footer, children }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
   useFocusTrap(panelRef, isOpen, onClose);
 
   if (!isOpen) return null;
@@ -45,7 +46,7 @@ export function Drawer({ isOpen, onClose, title, size = "md", footer, children }
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label={typeof title === "string" ? title : undefined}
+        aria-labelledby={titleId}
         tabIndex={-1}
         className={cx(
           "relative z-10 flex h-full w-full flex-col bg-neutral-0 shadow-lg",
@@ -53,7 +54,9 @@ export function Drawer({ isOpen, onClose, title, size = "md", footer, children }
         )}
       >
         <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-          <h2 className="text-md font-semibold text-navy-900">{title}</h2>
+          <h2 id={titleId} className="text-md font-semibold text-navy-900">
+            {title}
+          </h2>
           <button
             type="button"
             aria-label="Close"

@@ -8,7 +8,9 @@ up front so parallel worker worktrees never fork `alembic heads`.
 - `flags.message` (text, nullable): human-readable flag text (E8),
   backfilled below from the rule ids (a frozen copy of
   `verification/rules.py::flag_message` at the time of writing).
-- `consents`: `status` (`consent_status` enum; existing rows -> `accepted`),
+- `consents`: `status` (`consent_status` enum; existing rows -> `accepted`
+  via the column's initial server default, then that default switches to
+  `pending` for every insert from here on -- review round 1),
   `requested_by` (FK users, indexed), `requested_at`, `decided_at`,
   `expires_at`, `typed_name`, `user_agent`, `text_version`,
   `decline_reason`; `text_hash`/`ip`/`at` become nullable so a pending
@@ -203,6 +205,15 @@ def upgrade() -> None:
     )
     # Pre-existing rows are recorded decisions: their decision time is `at`.
     op.execute("UPDATE consents SET decided_at = at WHERE decided_at IS NULL")
+    # The ADD COLUMN above already backfilled every pre-existing row to
+    # `accepted` via its server default. Switch the server default to
+    # `pending` now (existing row values are unaffected by ALTER COLUMN ...
+    # SET DEFAULT) so any insert that skips the ORM's client-side default
+    # (e.g. raw SQL) still creates a pending request, matching
+    # `Consent.status`.
+    op.alter_column(
+        "consents", "status", existing_type=consent_status, server_default=sa.text("'pending'")
+    )
 
     op.add_column("flags", sa.Column("message", sa.Text(), nullable=True))
     op.execute(_FLAG_MESSAGE_BACKFILL)
@@ -210,6 +221,12 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_column("flags", "message")
+
+    # Symmetric undo of the upgrade's server-default switch (the column is
+    # dropped below regardless, but this keeps the pair of ALTERs mirrored).
+    op.alter_column(
+        "consents", "status", existing_type=consent_status, server_default=sa.text("'accepted'")
+    )
 
     op.drop_constraint("consents_requested_by_fkey", "consents", type_="foreignkey")
     op.drop_index(op.f("ix_consents_requested_by"), table_name="consents")

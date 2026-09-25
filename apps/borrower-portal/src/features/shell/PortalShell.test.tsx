@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -111,6 +111,7 @@ describe("BorrowerSessionProvider", () => {
     getMock.mockResolvedValueOnce({
       data: undefined,
       error: { error: { code: "AUTHENTICATION_ERROR", message: "Not authenticated" } },
+      response: { status: 401 },
     });
     render(
       <BorrowerSessionProvider>
@@ -122,14 +123,49 @@ describe("BorrowerSessionProvider", () => {
     expect(screen.queryByTestId("probe")).not.toBeInTheDocument();
   });
 
-  it("redirects to plain /login from / when /me rejects", async () => {
+  it("shows a retry state (no logout, no redirect) on a non-401 error", async () => {
+    getMock.mockResolvedValueOnce({
+      data: undefined,
+      error: { error: { code: "INTERNAL_ERROR", message: "Boom" } },
+      response: { status: 500 },
+    });
+    render(
+      <BorrowerSessionProvider>
+        <Probe />
+      </BorrowerSessionProvider>,
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Can.t reach the server/);
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(postMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a retry state (no logout, no redirect) when /me rejects (network error)", async () => {
     getMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     render(
       <BorrowerSessionProvider>
         <Probe />
       </BorrowerSessionProvider>,
     );
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/login"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Can.t reach the server/);
+    expect(postMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("retries the session check from the retry state and recovers", async () => {
+    getMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    getMock.mockResolvedValueOnce({ data: BORROWER_ME, error: undefined });
+    render(
+      <BorrowerSessionProvider>
+        <Probe />
+      </BorrowerSessionProvider>,
+    );
+    const retry = await screen.findByRole("button", { name: "Retry" });
+
+    fireEvent.click(retry);
+
+    expect(await screen.findByTestId("probe")).toHaveTextContent("Casey Morgan");
+    expect(getMock).toHaveBeenCalledTimes(2);
   });
 
   it.each([

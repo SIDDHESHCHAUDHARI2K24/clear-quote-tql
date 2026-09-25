@@ -85,7 +85,7 @@ export function MultiSelect({
         type="button"
         disabled={disabled}
         aria-expanded={isOpen}
-        aria-controls={popoverId}
+        aria-controls={isOpen ? popoverId : undefined}
         aria-labelledby={`${labelId} ${popoverId}-summary`}
         onClick={() => setIsOpen((open) => !open)}
         className="flex h-10 items-center justify-between gap-2 rounded-md border border-neutral-200 bg-neutral-0 px-3 text-left text-navy-900 outline-none focus:border-navy-500 disabled:opacity-50"
@@ -100,8 +100,8 @@ export function MultiSelect({
           aria-labelledby={labelId}
           className="absolute top-full left-0 z-40 mt-1 flex max-h-72 min-w-full flex-col gap-1 overflow-auto rounded-md border border-neutral-200 bg-neutral-0 p-2 shadow-lg"
         >
-          {options.map((option) => {
-            const checkboxId = `${popoverId}-${option.value}`;
+          {options.map((option, index) => {
+            const checkboxId = `${popoverId}-${index}`;
             return (
               <label
                 key={option.value}

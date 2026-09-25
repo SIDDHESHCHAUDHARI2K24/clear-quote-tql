@@ -193,12 +193,38 @@ application.
 | react-doctor | `npx react-doctor -y --blocking error` (both apps) | pass (0 errors). Warnings: `nextjs-no-client-side-redirect` on the session providers' 401 redirect (the session cookie is on the API origin, so the check must run client-side, as the old home pages did) plus pre-existing workspace warnings |
 | e2e | `pnpm exec playwright test --workers=1` (slot 11) | 36 passed |
 
+### Test log -- review round 1 fixes (re-run on slot 11)
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Backend tests | `uv run pytest backend` | 494 passed (one workflow test timed out under heavy concurrent-agent CPU load on a first pass; passed alone and on a clean re-run of the full suite -- pre-existing flake, unrelated to this round's changes) |
+| Seed tests | `uv run pytest seed` | 32 passed (+1: `test_raises_when_no_lo_exists`) |
+| Lint / types | `make lint` (ruff, ruff format, mypy, eslint, tsc, prettier) | clean |
+| Frontend | `pnpm -r run test` | ui 163, lo-console 60 (+3), borrower-portal 95 (+3), api-client 2 -- all passed |
+| react-doctor | `npx react-doctor -y --blocking error` (both apps) | lo-console 85/100 (0 errors, 2 pre-existing warnings unrelated to this round); borrower-portal 100/100, no issues |
+| Migration round trip | `alembic downgrade -1` + `alembic upgrade head` + `alembic check` on `cq_dev_s11` and `cq_test_s11` | clean; `alembic check` -> "No new upgrade operations detected" |
+| `make demo-reset` | `uv run python -m seed.reset` (slot 11) | 1.5s; "no-application borrower seeded: noapp.borrower@clearquote-demo.test" |
+
 ## Review findings (stage 6)
 
 | Severity | Finding | Resolution |
 | --- | --- | --- |
 | Medium | New first workflow activity without a Temporal version check breaks replay of in-flight runs | Fixed: `workflow.patched("p56-load-application-source")`; old histories keep the import-first path |
 | Low | Migration backfill labels differed from `rules.field_label` (snake_case and "Check …" branches) | Fixed: SQL mirrors `field_label`; `test_flag_message_backfill_matches_flag_message` pins parity over 13 cases |
+
+### Review round 1 (fresh-subagent review of PR #11)
+
+| Severity | Finding | Resolution |
+| --- | --- | --- |
+| Major | Neither shell mounted `ToastProvider`, so no page under `(staff)`/`(portal)` could call `useToast()` | Fixed: both route-group layouts (`app/(staff)/layout.tsx`, `app/(portal)/layout.tsx`) now wrap `StaffSessionProvider`/`BorrowerSessionProvider` in `ToastProvider`; new `layout.test.tsx` in each app renders a child that calls `useToast()` and asserts the toast appears |
+| Major | `consents.status` kept `server_default 'accepted'` after the backfill, so any insert that skipped the ORM's client-side default (raw SQL) silently got `accepted` instead of `pending` | Fixed: migration now `op.alter_column`s the server default to `pending` right after the backfill (downgrade mirrors it back to `accepted` before the column drops); `Consent.status`'s `server_default` updated to match. `test_consent_status_server_default_is_pending` (was `..._is_accepted`) pins the new behaviour; verified with `alembic downgrade -1` + `alembic upgrade head` + `alembic check` on slot 11 |
+| Major | `StaffSessionProvider`/`BorrowerSessionProvider` logged out and redirected to `/login` on *any* `/me` failure, including a network error or 5xx -- an outage looked like "you're signed out" | Fixed: both providers now check `response.status === 401` before logging out/redirecting; any other failure sets an `"error"` state rendering "Can't reach the server" + a Retry button (re-runs the same check). New Vitest cases per provider: non-401 error, network-error rejection, and a Retry-recovers case |
+| Medium | `core/storage.py`'s `stream_object` issues its GET synchronously on the caller's thread; fine for `StreamingResponse` (which iterates it in its own threadpool) but blocks the event loop for any other async caller | Fixed: added `astream_object`, an async generator that runs the GET and every chunk read via `asyncio.to_thread`; module docstring now says which one to use where. Unit test against the existing stub client (round trip + missing-key) |
+| Low | `Drawer`'s dialog only got an accessible name via `aria-label` when `title` was a plain string, so a `ReactNode` title left the dialog unlabelled | Fixed: `aria-labelledby` now always points at the `<h2>` (`useId()`), independent of `title`'s type |
+| Low | `MultiSelect`'s trigger set `aria-controls` to the popover id even while closed (pointing at an element not in the DOM); checkbox ids were built from `option.value`, which can contain characters unsafe in an `id`/CSS selector | Fixed: `aria-controls` only set while `isOpen`; checkbox ids built from the option's index |
+| Low | `seed/loader.py::seed_no_application_borrower` used a bare `assert` for its "seed_users ran first" precondition, which `python -O` strips | Fixed: raises `NoLoanOfficerError(RuntimeError)` instead; new `test_raises_when_no_lo_exists` |
+| Low | Post-dev didn't warn that backfilled `flags.message` (static rule text) can differ from a rerun's dynamic `RuleResult.message` | Fixed: added a Follow-ups note so item workers don't assert exact text on backfilled rows |
+| Info | Optional: Temporal `Replayer` test for `workflow.patched("p56-load-application-source")` against a pre-patch history | Skipped (no existing Replayer test infra in this repo to build on within the review-fix budget); logged as a Follow-up with the concrete approach |
 
 ## How to test manually
 
@@ -211,3 +237,24 @@ application.
 
 - Orchestrator: recreate the shared Valkey once (`docker compose -f infra/docker-compose.yml up -d valkey`) before wave 2 so slots 14–23 (and per-slot test dbs) work; rerun `scripts/worktree-env.sh <slot>` afterwards.
 - `workspace.spec.ts` and other real-login specs still assume `--workers=1` for a full run.
+- Review round 1: the migration's `_FLAG_MESSAGE_BACKFILL` writes static rule
+  text (frozen at migration-write time, mirroring `flag_message`) into every
+  pre-existing (pre-migration) `flags.message` row. Rows written after the
+  migration by `write_flag`/`run_and_persist` get the rule's own dynamic
+  `RuleResult.message` (e.g. "Only 14 months of housing history on file; 24
+  required."), which can differ in wording/detail from the backfilled static
+  text for the same rule until the pipeline reruns for that application.
+  CQ-025/027/028 and any other item reading `Flag.message` off seeded or
+  pre-migration data must not assert exact text on a backfilled row --
+  assert on rule id / field key, or on message text only for a row you know
+  the pipeline produced.
+- Review round 1, optional item 7 (Temporal `Replayer` test for
+  `workflow.patched("p56-load-application-source")` using a pre-patch
+  history): skipped -- not completed within the review-fix budget. A
+  follow-up item should add
+  `backend/app/workflows/tests/test_application_pipeline_replay.py` that
+  captures a workflow history recorded before this patch landed (or builds
+  one via `WorkflowEnvironment.start_time_skipping()` running the
+  pre-patch workflow code) and replays it with `temporalio.worker.Replayer`
+  against the current `ApplicationPipelineWorkflow` to confirm it does not
+  non-deterministically error.

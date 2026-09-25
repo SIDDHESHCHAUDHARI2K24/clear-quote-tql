@@ -13,6 +13,7 @@ from app.features.auth.models import BorrowerAccount
 from app.features.clients.models import Client
 from seed.loader import (
     NO_APPLICATION_BORROWER_EMAIL,
+    NoLoanOfficerError,
     seed_no_application_borrower,
     seed_users,
 )
@@ -68,6 +69,18 @@ async def test_skipped_when_password_unset(
 
     assert await seed_no_application_borrower(db_session) is None
     assert await _account_count(db_session) == 0
+
+
+async def test_raises_when_no_lo_exists(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review round 1: an unmet precondition (no LO for `least_loaded_lo_id`
+    to assign to, i.e. `seed_users` never ran) must raise explicitly, not
+    rely on an `assert` that `python -O` would strip."""
+    _use_password(monkeypatch, "test-only-borrower-pw")
+
+    with pytest.raises(NoLoanOfficerError):
+        await seed_no_application_borrower(db_session)
 
 
 async def test_is_idempotent(db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:

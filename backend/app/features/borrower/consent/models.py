@@ -42,10 +42,14 @@ class Consent(Base):
     status: Mapped[ConsentStatus] = mapped_column(
         pg_enum(ConsentStatus, "consent_status"),
         default=ConsentStatus.PENDING,
-        server_default=ConsentStatus.ACCEPTED.value,
+        server_default=ConsentStatus.PENDING.value,
     )
-    """ORM default `pending` (new requests); the column's server default is
-    `accepted` only so the migration backfills pre-existing decision rows."""
+    """ORM default `pending` (new requests); the column's server default
+    matches. The migration backfills every pre-existing (pre-migration) row
+    to `accepted` via `ADD COLUMN ... DEFAULT 'accepted'`, then switches the
+    server default to `pending` -- existing row values are unaffected by the
+    switch, but any insert that skips the ORM default (e.g. raw SQL) still
+    gets a pending request."""
     requested_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )

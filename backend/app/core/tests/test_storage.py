@@ -73,6 +73,11 @@ async def test_round_trip_with_stub_client() -> None:
     chunks = list(storage.stream_object(key, bucket="docs", client=stub, chunk_size=4))
     assert chunks == [b"%PDF", b"-1.4", b" hi"]
 
+    achunks = [
+        c async for c in storage.astream_object(key, bucket="docs", client=stub, chunk_size=4)
+    ]
+    assert achunks == [b"%PDF", b"-1.4", b" hi"]
+
     url = await storage.presigned_get_url(key, expires_in=60, bucket="docs", client=stub)
     assert url == "https://stub/docs/applications/1/documents/a.pdf?op=get_object&exp=60"
 
@@ -81,6 +86,9 @@ async def test_round_trip_with_stub_client() -> None:
         await storage.get_object(key, bucket="docs", client=stub)
     with pytest.raises(storage.ObjectNotFoundError):
         storage.stream_object(key, bucket="docs", client=stub)
+    with pytest.raises(storage.ObjectNotFoundError):
+        async for _ in storage.astream_object(key, bucket="docs", client=stub):
+            pass
 
 
 async def test_bucket_defaults_to_settings_bucket(monkeypatch: pytest.MonkeyPatch) -> None:

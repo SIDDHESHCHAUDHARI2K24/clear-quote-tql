@@ -150,9 +150,11 @@ async def test_pending_consent_needs_no_decision_fields(db_session: AsyncSession
     assert consent.text_hash is None and consent.ip is None and consent.at is None
 
 
-async def test_consent_status_server_default_is_accepted(db_session: AsyncSession) -> None:
-    """Existing rows (written before the migration, with no status) become
-    `accepted` -- the column's server default."""
+async def test_consent_status_server_default_is_pending(db_session: AsyncSession) -> None:
+    """After the migration's backfill, the column's server default is
+    `pending`: an insert that omits `status` entirely (bypassing the ORM's
+    client-side default, e.g. raw SQL) still gets a pending request, not the
+    `accepted` value pre-existing (pre-migration) rows were backfilled to."""
     lo, client, _ = await _make_borrower(db_session)
     application = await _make_application(db_session, lo, client)
     status: str = (
@@ -164,7 +166,7 @@ async def test_consent_status_server_default_is_accepted(db_session: AsyncSessio
             {"id": uuid.uuid4(), "app": application.id},
         )
     ).scalar_one()
-    assert status == "accepted"
+    assert status == "pending"
 
 
 async def test_one_open_draft_per_borrower(db_session: AsyncSession) -> None:

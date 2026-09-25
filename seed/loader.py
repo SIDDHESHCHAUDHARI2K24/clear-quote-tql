@@ -233,6 +233,13 @@ NO_APPLICATION_BORROWER_EMAIL = "noapp.borrower@clearquote-demo.test"
 NO_APPLICATION_BORROWER_NAME = "Nadia Noapp"
 
 
+class NoLoanOfficerError(RuntimeError):
+    """Raised when `least_loaded_lo_id` finds no LO to assign the
+    no-application borrower's client to -- review round 1: an `assert` is
+    stripped under `python -O`, so a missing precondition must raise
+    explicitly instead."""
+
+
 async def seed_no_application_borrower(db: AsyncSession) -> uuid.UUID | None:
     """One signed-up borrower (client + verified borrower account) who has
     never applied -- CQ-031 AC4 (home empty state) and CQ-034 AC5 (support
@@ -260,7 +267,11 @@ async def seed_no_application_borrower(db: AsyncSession) -> uuid.UUID | None:
         return existing.id
 
     lo_id = await least_loaded_lo_id(db)
-    assert lo_id is not None, "seed_no_application_borrower: seed_users must run first"
+    if lo_id is None:
+        raise NoLoanOfficerError(
+            "seed_no_application_borrower: least_loaded_lo_id found no LO -- "
+            "seed_users must run first."
+        )
     client = Client(full_name=NO_APPLICATION_BORROWER_NAME, email=email, assigned_lo_id=lo_id)
     db.add(client)
     await db.flush()

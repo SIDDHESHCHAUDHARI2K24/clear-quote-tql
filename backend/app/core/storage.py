@@ -13,6 +13,13 @@ plain (sync) chunk iterator: FastAPI/Starlette's `StreamingResponse`
 iterates a sync iterator in its threadpool, so
 `StreamingResponse(stream_object(key), media_type=...)` just works.
 
+An async route that consumes the stream directly -- anywhere other than
+handing the iterator straight to `StreamingResponse` -- must use
+`astream_object` instead: `stream_object` issues its GET synchronously on
+the calling thread, which blocks the event loop outside of
+`StreamingResponse`'s own threadpool. `astream_object` runs the GET and
+every chunk read via `asyncio.to_thread`.
+
 Every function takes an optional `bucket` (default: `settings.s3_bucket`)
 and an optional `client` (default: one cached boto3 client) so tests can
 pass a stub. `seed/generators/documents.py` keeps its own client for the
@@ -23,7 +30,7 @@ docs/backlog/phase-p5-p6-foundation.md decision 11).
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
@@ -154,6 +161,38 @@ def stream_object(
             body.close()
 
     return _chunks()
+
+
+async def astream_object(
+    key: str,
+    *,
+    bucket: str | None = None,
+    client: Any | None = None,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+) -> AsyncIterator[bytes]:
+    """An async chunk iterator of the object's bytes, for async code that
+    consumes the stream itself rather than handing it to Starlette's
+    `StreamingResponse` (see `stream_object`). Both the initial GET and
+    every chunk read run via `asyncio.to_thread`, so the event loop is never
+    blocked. Raises `ObjectNotFoundError` if the key is missing, before any
+    bytes are yielded."""
+    name, s3 = _resolve(bucket, client)
+
+    def _open() -> Any:
+        try:
+            response = s3.get_object(Bucket=name, Key=key)
+        except ClientError as exc:
+            if _is_missing(exc):
+                raise ObjectNotFoundError(key) from exc
+            raise
+        return response["Body"]
+
+    body = await asyncio.to_thread(_open)
+    try:
+        while chunk := await asyncio.to_thread(body.read, chunk_size):
+            yield chunk
+    finally:
+        await asyncio.to_thread(body.close)
 
 
 async def presigned_get_url(

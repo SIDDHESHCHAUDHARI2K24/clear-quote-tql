@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // `vi.hoisted`: the api-client mock factory runs when `lib/api-client`
@@ -77,6 +77,7 @@ describe("StaffSessionProvider", () => {
     getMock.mockResolvedValueOnce({
       data: undefined,
       error: { error: { code: "AUTHENTICATION_ERROR", message: "Not authenticated" } },
+      response: { status: 401 },
     });
     renderProvider();
     await waitFor(() => expect(postMock).toHaveBeenCalledWith("/api/v1/auth/staff/logout"));
@@ -84,10 +85,37 @@ describe("StaffSessionProvider", () => {
     expect(screen.queryByTestId("probe")).not.toBeInTheDocument();
   });
 
-  it("redirects to /login without throwing when /me rejects", async () => {
+  it("shows a retry state (no logout, no redirect) on a non-401 error", async () => {
+    getMock.mockResolvedValueOnce({
+      data: undefined,
+      error: { error: { code: "INTERNAL_ERROR", message: "Boom" } },
+      response: { status: 500 },
+    });
+    renderProvider();
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Can.t reach the server/);
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(postMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a retry state (no logout, no redirect) when /me rejects (network error)", async () => {
     getMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     expect(() => renderProvider()).not.toThrow();
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/login"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Can.t reach the server/);
+    expect(postMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("retries the session check from the retry state and recovers", async () => {
+    getMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    getMock.mockResolvedValueOnce({ data: USER, error: undefined });
+    renderProvider();
+    const retry = await screen.findByRole("button", { name: "Retry" });
+
+    fireEvent.click(retry);
+
+    expect(await screen.findByTestId("probe")).toHaveTextContent("Jamie Rivera|lo|false|false");
+    expect(getMock).toHaveBeenCalledTimes(2);
   });
 
   it("throws a clear error when used outside the provider", () => {
