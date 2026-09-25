@@ -25,7 +25,7 @@ CI's `backend` job mypy step was `uv run mypy backend/app` (spec.md's literal te
 
 | Criterion | Status | Evidence |
 | --- | --- | --- |
-| AC1 — CI green on `main` | **Pending — orchestrator verifies after push** | Not evidenceable from this worktree; per orchestrator, `main`/`phase-p0-p1` are on `origin` and the orchestrator will push this branch and read the real run. |
+| AC1 — CI green on `main` | **Pending — orchestrator verifies after merge to `main`** | Not evidenceable from this worktree; `main`/`phase-p0-p1` merge is the orchestrator's call. Supporting evidence from this pass: `.github/workflows/ci.yml` as it stands (post-clean-up: actions bumped off Node-20, `pytest seed` added, MinIO image fixed, api-client drift guard added) is green end to end on branch `cq-006-ci-cleanup`, run [36116218516](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36116218516) — same workflow file that will run on `main` once merged. |
 | AC2 — triggers on every branch push + PR | **Pass** | `.github/workflows/ci.yml`'s `on:` block matches spec.md verbatim: `push.branches: ["**"]`, `pull_request` (no branch filter). Confirmed with `actionlint` (no errors) and a read of the file. Both trigger kinds now evidenced by real runs (CI clean-up pass, review round 1 finding #1): push run [36098019743](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36098019743) (event `push`, branch `cq-006-ci`); `pull_request` run [36098405665](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36098405665) (event `pull_request`, PR #1, head `phase-p0-p1`) — both `gh run view --json event` confirmed. |
 | AC3 — `backend` job's postgres service + `uv run pytest backend` passes | **Pass** | Local emulation: `docker compose -f infra/docker-compose.yml up -d --wait` (same `postgres:16-alpine` image/creds/db as the job's service container) + `uv run pytest backend` with the job's exact env vars (dummy `VALKEY_URL`/`S3_*`/`TEMPORAL_*`, unresolvable): **16 passed** after the `test_health.py` fix above. |
 | AC4 — backend job fails on ruff/format/mypy/pytest failure | Pass | Added `import os` unused mid-file to `backend/app/features/system/service.py`: `uv run ruff check backend` → exit 1 (E402, F401). Reverted (`git checkout --`), confirmed exit 0 again. Added `x=1` (misformatted): `uv run ruff format --check backend` → exit 1 ("1 file would be reformatted"). Reverted. Working tree confirmed clean after (`git status --short`). |
@@ -139,8 +139,7 @@ All commands run from this worktree against the shared `clear-quote` stack's rea
 
 ### Real CI run (post-push)
 
-Filled in after pushing — see "Acceptance evidence" AC1 row and the run link below.
-
-- Run id / URL: _pending_
-- Result: _pending_
-- Deprecation annotations: _pending_ (`gh run view <id>` checked for Node-20 deprecation warnings — the whole point of the action bumps above)
+- Run id / URL: [36116218516](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36116218516) (push, branch `cq-006-ci-cleanup`, after merging `phase-p0-p1`/CQ-011 and fixing the MinIO image per Decision #17)
+- Result: **success** — `backend` (1m17s, includes `pytest seed`), `frontend` (33s), `api-client-drift` (25s), all green
+- Deprecation annotations: **none.** `gh api .../check-runs/<job>/annotations` on all three jobs shows only (a) a cache-save race between two `setup-uv` jobs reserving the same key concurrently (harmless — `setup-uv` treats cache-save failures as warnings, not job failures) and (b) GitHub's generic "ubuntu-latest label will migrate to Ubuntu 26" notice (unrelated to any action version). No `actions/checkout`, `actions/setup-node`, `actions/cache`, or `astral-sh/setup-uv` Node-20 warning anywhere — confirms review finding #2 is fully resolved.
+- A prior run on this branch, [36115433363](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36115433363), failed at "Start MinIO" (the first, `docker run`-based attempt) — see Decision #17 above; fixed in the next push, evidenced by this run.
