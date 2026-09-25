@@ -61,7 +61,7 @@ Decision: Temporal reuses the `postgres` service (a second database named `tempo
 - [ ] AC1 — All services healthy; Temporal UI and Mailpit reachable in the browser (roadmap exit check).
 - [ ] AC2 — `docker compose -f infra/docker-compose.yml ps` shows every service in the table above as `Up`/`healthy`.
 - [ ] AC3 — `curl -sf http://localhost:8025` (Mailpit UI) and `curl -sf http://localhost:8080` (Temporal UI) both return HTTP 200.
-- [ ] AC4 — Postgres has `cq_dev`, `cq_test`, and `temporal` databases: `docker compose exec postgres psql -U cq -c '\l'` lists all three.
+- [ ] AC4 — Postgres has `cq_dev`, `cq_test`, and `temporal` databases: `docker compose exec postgres psql -U cq -d cq_dev -c '\l'` lists all three.
 - [ ] AC5 — The `clear-quote` bucket exists in MinIO after `make up` with no manual step: the `minio-init` container exits 0 and its logs show the bucket was created (or already existed).
 - [ ] AC6 — `make down` stops and removes all containers cleanly; a second `make up` afterwards succeeds from a clean state.
 
@@ -71,7 +71,7 @@ Decision: Temporal reuses the `postgres` service (a second database named `tempo
 | --- | --- | --- |
 | AC1, AC2 | Manual/shell | `make up && docker compose -f infra/docker-compose.yml ps` |
 | AC3 | Shell | `curl -sf -o /dev/null -w '%{http_code}' http://localhost:8025`; same for `:8080` |
-| AC4 | Shell | `docker compose -f infra/docker-compose.yml exec postgres psql -U cq -c '\l'` |
+| AC4 | Shell | `docker compose -f infra/docker-compose.yml exec postgres psql -U cq -d cq_dev -c '\l'` |
 | AC5 | Shell | `docker compose -f infra/docker-compose.yml logs minio-init` |
 | AC6 | Shell | `make down && make up` |
 
