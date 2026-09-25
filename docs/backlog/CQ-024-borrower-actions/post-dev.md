@@ -168,6 +168,21 @@ re-run green after the fixes.
    --workers=1` (needs `PORTAL_BASE_URL`, `LO_BASE_URL`, `SEED_BORROWER_PASSWORD`,
    `SEED_STAFF_PASSWORD`, `DATABASE_URL` set).
 
+## PR review round 1
+
+Fresh-subagent stage-6 review of PR #8 (the branch's diff against `phase-p3-p4`), separate from
+the stage-6 review recorded above.
+
+| Severity | Finding | Resolution |
+| --- | --- | --- |
+| Major | `submit_action`'s `ask_updated` branch checked only `expired`, not `application.status`. Since `ask_updated` is meant to be repeatable while a report is expired, an expired version whose application had already reached a terminal status elsewhere (`move_forward` on another device/tab, or an LO withdrawing/closing the file) could still be "resurrected" back to `inquiry` — the wrong side effects (an LO email, an `ActivityEvent`, a CRM event) firing for an application the LO or borrower had already considered closed. | Fixed: `ask_updated` now also 409s (same `ConflictError` shape, `details={status, borrower_action}`) when `application.status` is `option_selected`, `withdrawn`, or `closed` (`_TERMINAL_STATUSES` in `service.py`). Regression tests first (RED confirmed: isolated run returned 200 before the fix): `test_router.py::test_ask_updated_refuses_to_resurrect_a_terminal_status`, parametrized over all three statuses, each asserting 409, `application.status` unchanged, zero `OutboxEmail` rows, and zero `ActivityEvent` rows for that application. |
+| Minor | spec.md:27's "ask_other is the only type allowed after an Inquiry is answered by a new version" was never addressed — nothing in this item links a `QuotePackageVersion` back to the inquiry it answers, and only a future send/resend workflow (CQ-020) would create such a version. | Not built here — deferred. Logged as plan.md Decision 12: needs a version↔inquiry link, created by the send workflow; CQ-020 must enforce it. Building the link now, with no caller that resends, would be speculative. |
+| Nit | `backend/scripts/freeze_sent_version.py` duplicates what will become CQ-023's `freeze_version.py` once that item merges into this branch's base. | Already logged (plan.md Decision 10); left as-is per the review's own guidance not to widen this item's scope. |
+| Nit (self-review of the fix above) | The new `ask_updated`-vs-`_TERMINAL_STATUSES` 409 reused the exact same `"This option has already been acted on."` string literal already present for the `_OPEN_STATUSES` check, byte-for-byte — a future edit to one wording could silently drift from the other. | Extracted `_ALREADY_ACTED_ON_MESSAGE` in `service.py`, both call sites now reference it. |
+
+Re-verified after the fix: `backend/app/features/portal/actions/tests/test_router.py` (11 tests,
+was 8) and `backend/app/features/portal` (22 tests) both green; full sweep below.
+
 ## Follow-ups
 
 - CQ-016/CQ-025: `WorkspaceProvider`'s 3s poll stops once the pipeline stage is terminal (by
@@ -182,3 +197,6 @@ re-run green after the fixes.
 - A full de-duplication of `_option_label`/`_validate_quote_id`-style snapshot lookups against
   `portal/reports/service.py`'s own snapshot handling is a small future cleanup; not done here to
   avoid touching a file outside this item's ownership beyond the one logged fix.
+- PR #8 review round 1: spec.md:27's "ask_other is the only type allowed after an Inquiry is
+  answered by a new version" needs a version↔inquiry link, created by the send workflow — CQ-020
+  must build that link and enforce the rule when it lands (plan.md Decision 12).

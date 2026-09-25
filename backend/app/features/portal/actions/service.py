@@ -44,6 +44,25 @@ _OPEN_STATUSES = {
     ApplicationStatus.INQUIRY,
 }
 
+# PR #8 review round 1 (MAJOR): `ask_updated` only checked `expired`, so an
+# expired version whose application had already reached one of these
+# terminal-for-this-item statuses (a `move_forward` elsewhere, or an LO
+# withdrawing/closing the file) could still be resurrected back to
+# `inquiry`. These are every status outside `_OPEN_STATUSES` that isn't
+# itself an input to the machine (`stale` is a pipeline-only status that
+# never reaches this endpoint's `Application`, since a report can't be sent
+# for one -- excluded here rather than silently treated as blocking).
+_TERMINAL_STATUSES = {
+    ApplicationStatus.OPTION_SELECTED,
+    ApplicationStatus.WITHDRAWN,
+    ApplicationStatus.CLOSED,
+}
+
+# Shared between the `ask_updated`-vs-`_TERMINAL_STATUSES` check and the
+# move_forward/ask_other-vs-`_OPEN_STATUSES` check below (code-review nit,
+# PR #8 round 1) so the two 409 wordings can't silently drift apart.
+_ALREADY_ACTED_ON_MESSAGE = "This option has already been acted on."
+
 _ACTIVITY_EVENT_TYPE = {
     BorrowerActionType.MOVE_FORWARD: "quote.move_forward",
     BorrowerActionType.ASK_OTHER: "quote.ask_other",
@@ -156,6 +175,11 @@ async def submit_action(
             raise ConflictError(
                 "This report hasn't expired yet.", details=_current_state(application, version)
             )
+        if application.status in _TERMINAL_STATUSES:
+            raise ConflictError(
+                _ALREADY_ACTED_ON_MESSAGE,
+                details=_current_state(application, version),
+            )
     else:
         if expired:
             raise ConflictError(
@@ -163,7 +187,7 @@ async def submit_action(
             )
         if application.status not in _OPEN_STATUSES:
             raise ConflictError(
-                "This option has already been acted on.",
+                _ALREADY_ACTED_ON_MESSAGE,
                 details=_current_state(application, version),
             )
 

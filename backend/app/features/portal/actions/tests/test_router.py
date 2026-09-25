@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -318,6 +319,67 @@ async def test_expired_allows_only_ask_updated(
     )
     assert len(emails) == 1
     assert "asked for updated numbers" in emails[0].subject
+
+
+@pytest.mark.parametrize(
+    "terminal_status",
+    [ApplicationStatus.OPTION_SELECTED, ApplicationStatus.WITHDRAWN, ApplicationStatus.CLOSED],
+)
+async def test_ask_updated_refuses_to_resurrect_a_terminal_status(
+    terminal_status: ApplicationStatus,
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: MakeBorrowerSession,
+    make_application: Callable[..., Awaitable[Application]],
+    set_field_value: Callable[..., Awaitable[object]],
+) -> None:
+    """Review finding (PR #8 round 1, MAJOR): `ask_updated` only checked
+    `expired`, so an expired version whose application had already reached
+    a terminal status (a move_forward elsewhere, or an LO withdrawing/
+    closing the file) could still be resurrected back to `inquiry`."""
+    application, _package, version = await _sent_package(
+        db_session,
+        make_application,
+        set_field_value,
+        sent_days_ago=25,
+        first_name="Terminal",
+        last_name="Case",
+    )
+    application.status = terminal_status
+    await db_session.commit()
+    await _sign_in(db_session, make_borrower_session, application)
+
+    response = await client.post(
+        f"/api/v1/portal/reports/{version.report_token}/actions",
+        json={"type": "ask_updated"},
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["details"]["status"] == terminal_status.value
+
+    await db_session.refresh(application)
+    assert application.status is terminal_status
+
+    emails = (
+        (
+            await db_session.execute(
+                select(OutboxEmail).where(OutboxEmail.application_id == application.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert emails == []
+
+    events = (
+        (
+            await db_session.execute(
+                select(ActivityEvent).where(ActivityEvent.application_id == application.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert events == []
 
 
 async def test_quote_id_must_be_one_of_the_snapshot_options(
