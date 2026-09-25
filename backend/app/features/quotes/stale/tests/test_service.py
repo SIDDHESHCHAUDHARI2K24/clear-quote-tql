@@ -17,7 +17,8 @@ from seed.loader import (
     seed_users,
 )
 from seed.pricing_seam import run_pricing_stage
-from sqlalchemy import func, select
+from sqlalchemy import event as sa_event
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import clock
@@ -32,6 +33,7 @@ from app.features.quotes.send.models import QuotePackage, QuotePackageVersion
 from app.features.quotes.stale.schemas import StaleResult
 from app.features.quotes.stale.service import (
     EVENT_APPLICATION_STALE,
+    EVENT_REPRICED_FROM_STALE,
     clear_stale,
     mark_application_quotes_stale,
     mark_stale,
@@ -201,20 +203,70 @@ async def test_reprice_clears_stale(db_session: AsyncSession) -> None:
     await mark_stale(db_session, datetime.now(UTC))
     assert await _status(db_session, grace) is ApplicationStatus.STALE
 
+    old_ids = {q.id for q in await _quotes(db_session, grace.id)}
     before_reprice = datetime.now(UTC)
     stage = await run_pricing_stage(db_session, grace.id)
-    moved = await clear_stale(db_session, grace.id)
+    new_ids = set(stage.quote_set_result.quote_ids)
+    moved = await clear_stale(db_session, grace.id, fresh_quote_ids=list(new_ids))
 
     assert moved is True
     assert await _status(db_session, grace) is ApplicationStatus.PRICED
-    new_ids = set(stage.quote_set_result.quote_ids)
     quotes = await _quotes(db_session, grace.id)
     fresh = [q for q in quotes if q.id in new_ids]
     assert fresh and all(q.priced_at >= before_reprice for q in fresh)
-    assert not any(q.stale for q in quotes)
+    assert not any(q.stale for q in fresh)
+    # Superseded quotes the re-price did not write keep their flag (m3).
+    assert all(q.stale for q in quotes if q.id in old_ids - new_ids)
 
     assert await mark_stale(db_session, datetime.now(UTC)) == StaleResult()
     assert await _status(db_session, grace) is ApplicationStatus.PRICED
+
+
+async def test_clear_stale_uses_fresh_ids_not_a_time_window(db_session: AsyncSession) -> None:
+    """Review M1: under a frozen `CLOCK_NOW` far ahead of the real clock,
+    `clear_stale` still clears exactly the ids it is given and moves the
+    application Stale -> Priced; quotes it is not given keep their flag
+    even when they are recent (m3)."""
+    marcus = (await _seed(db_session, "marcus_hale"))["marcus_hale"]
+    quotes = await _quotes(db_session, marcus.id)
+    assert len(quotes) >= 2
+    future = datetime.now(UTC) + timedelta(days=60)
+    await mark_stale(db_session, future)
+    assert await _status(db_session, marcus) is ApplicationStatus.STALE
+
+    fresh_id = quotes[0].id
+    moved = await clear_stale(db_session, marcus.id, fresh_quote_ids=[fresh_id], now=future)
+
+    assert moved is True
+    assert await _status(db_session, marcus) is ApplicationStatus.PRICED
+    by_id = {q.id: q for q in await _quotes(db_session, marcus.id)}
+    assert by_id[fresh_id].stale is False
+    assert all(q.stale for qid, q in by_id.items() if qid != fresh_id)
+    event = (
+        await db_session.execute(
+            select(ActivityEvent).where(
+                ActivityEvent.application_id == marcus.id,
+                ActivityEvent.type == EVENT_REPRICED_FROM_STALE,
+            )
+        )
+    ).scalar_one()
+    assert event.at == future
+
+
+async def test_clear_stale_without_fresh_quotes_keeps_stale(db_session: AsyncSession) -> None:
+    """No fresh quotes (or ids from another application) -> nothing is
+    cleared and the status stays Stale."""
+    seeded = await _seed(db_session, "marcus_hale", "grace_kim")
+    marcus, grace = seeded["marcus_hale"], seeded["grace_kim"]
+    await mark_stale(db_session, datetime.now(UTC) + timedelta(days=60))
+    grace_quote_ids = [q.id for q in await _quotes(db_session, grace.id)]
+
+    assert await clear_stale(db_session, marcus.id, fresh_quote_ids=[]) is False
+    assert await clear_stale(db_session, marcus.id, fresh_quote_ids=grace_quote_ids) is False
+
+    assert await _status(db_session, marcus) is ApplicationStatus.STALE
+    assert all(q.stale for q in await _quotes(db_session, marcus.id))
+    assert all(q.stale for q in await _quotes(db_session, grace.id))
 
 
 async def test_mark_stale_strict_boundary_on_quote_age(db_session: AsyncSession) -> None:
@@ -288,3 +340,98 @@ async def test_newer_quotes_outrank_an_old_recommended_quote(db_session: AsyncSe
     assert await _status(db_session, marcus) is ApplicationStatus.PRICED
     assert result.applications_marked_stale == 0
     assert result.quotes_marked_stale == 1
+
+
+async def _send_marcus(db: AsyncSession, marcus: Application, quote_ids: list[uuid.UUID]) -> None:
+    await apply_send_fixture(
+        db,
+        application_id=marcus.id,
+        quote_ids=quote_ids,
+        recommended_quote_id=quote_ids[0],
+        sent_days_ago=0,
+        viewed_days_ago=None,
+        borrower_action=None,
+        borrower_email="marcus.hale@clearquote-demo.test",
+    )
+
+
+async def test_version_expired_flags_only_sent_or_old_quotes(db_session: AsyncSession) -> None:
+    """Review m5: when an expired version (not quote age) moves the
+    application to Stale, only the version's quotes and quotes older than
+    the cutoff are flagged; a fresh quote outside the version is not."""
+    marcus = (await _seed(db_session, "marcus_hale"))["marcus_hale"]
+    quotes = await _quotes(db_session, marcus.id)
+    assert len(quotes) >= 2
+    sent_id = quotes[0].id
+    await _send_marcus(db_session, marcus, [sent_id])
+    now = datetime.now(UTC)
+    await db_session.execute(
+        update(QuotePackageVersion)
+        .where(
+            QuotePackageVersion.package_id.in_(
+                select(QuotePackage.id).where(QuotePackage.application_id == marcus.id)
+            )
+        )
+        .values(expires_at=now - timedelta(minutes=1))
+    )
+
+    result = await mark_stale(db_session, now)
+
+    assert await _status(db_session, marcus) is ApplicationStatus.STALE
+    by_id = {q.id: q for q in await _quotes(db_session, marcus.id)}
+    assert by_id[sent_id].stale is True
+    assert not any(q.stale for qid, q in by_id.items() if qid != sent_id)
+    assert result.quotes_marked_stale == 1
+
+
+async def test_candidates_are_locked_and_from_status_read_from_the_row(
+    db_session: AsyncSession,
+) -> None:
+    """Review m2: candidate applications are read `FOR UPDATE`, and the
+    event's `from_status` comes from the locked row, not a stale ORM copy."""
+    marcus = (await _seed(db_session, "marcus_hale"))["marcus_hale"]
+    quote_ids = [q.id for q in await _quotes(db_session, marcus.id)]
+    await _send_marcus(db_session, marcus, quote_ids)
+    assert marcus.status is ApplicationStatus.SENT
+    # A concurrent Sent -> Viewed that this session's identity map missed.
+    await db_session.execute(
+        update(Application)
+        .where(Application.id == marcus.id)
+        .values(status=ApplicationStatus.VIEWED)
+        .execution_options(synchronize_session=False)
+    )
+    assert marcus.status is ApplicationStatus.SENT
+
+    statements: list[str] = []
+
+    def _record(conn: object, cursor: object, statement: str, *args: object) -> None:
+        statements.append(statement)
+
+    sync_conn = (await db_session.connection()).sync_connection
+    assert sync_conn is not None
+    sa_event.listen(sync_conn, "before_cursor_execute", _record)
+    try:
+        await mark_stale(db_session, datetime.now(UTC) + timedelta(days=22))
+    finally:
+        sa_event.remove(sync_conn, "before_cursor_execute", _record)
+
+    app_locks = [
+        i
+        for i, s in enumerate(statements)
+        if s.lstrip().startswith("SELECT applications.") and "FOR UPDATE" in s
+    ]
+    quote_locks = [i for i, s in enumerate(statements) if "FOR UPDATE OF quotes" in s]
+    assert app_locks, statements
+    # Review follow-up: candidates' quotes are locked before the
+    # applications, so step 3's quote updates keep quotes -> applications.
+    assert quote_locks and quote_locks[0] < app_locks[0], statements
+    event = (
+        await db_session.execute(
+            select(ActivityEvent).where(
+                ActivityEvent.application_id == marcus.id,
+                ActivityEvent.type == EVENT_APPLICATION_STALE,
+            )
+        )
+    ).scalar_one()
+    assert isinstance(event.payload, dict)
+    assert event.payload["from_status"] == "viewed"

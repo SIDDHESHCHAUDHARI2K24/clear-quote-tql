@@ -147,8 +147,18 @@ async def main() -> None:
         settings.temporal_address,
         settings.temporal_namespace,
     )
+    await run_worker(client)
+
+
+async def run_worker(client: Client) -> None:
+    """Builds the worker, registers the schedules and runs the worker.
+    Review m1: a schedule registration failure is logged and never stops
+    the pipeline worker; the next worker start retries the registration."""
     worker = build_worker(client)
-    await register_schedules(client)
+    try:
+        await register_schedules(client)
+    except Exception:
+        logger.exception("Could not register the stale quote schedule; the worker runs without it")
     await worker.run()
 
 

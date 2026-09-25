@@ -11,7 +11,7 @@ import pytest
 from seed.loader import load_persona_fixtures, seed_persona, seed_providers, seed_users
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from temporalio.client import Client
+from temporalio.client import Client, WorkflowFailureError
 from temporalio.worker import Worker
 
 from app.core import clock
@@ -19,8 +19,10 @@ from app.core.config import get_settings
 from app.core.enums import ApplicationStatus
 from app.features.applications.models import Application
 from app.features.quotes.stale.schemas import StaleResult
+from app.workflows import stale_quote_check
 from app.workflows.constants import APPLICATION_PIPELINE_TASK_QUEUE
-from app.workflows.stale_quote_check import StaleQuoteCheckWorkflow
+from app.workflows.retry_policies import NON_RETRYABLE_ERROR_TYPES
+from app.workflows.stale_quote_check import STALE_RETRY_POLICY, StaleQuoteCheckWorkflow
 
 
 async def _seed_grace(db: AsyncSession) -> uuid.UUID:
@@ -78,3 +80,36 @@ async def test_workflow_resolves_clock_now_when_not_injected(
 
     assert result == StaleResult()
     assert await _status(db_session, grace_id) is ApplicationStatus.SENT
+
+
+def test_stale_retry_policy_is_bounded() -> None:
+    """Review M2: modelled on `IMPORT_ENRICH_RETRY_POLICY`."""
+    assert STALE_RETRY_POLICY.maximum_attempts == 3
+    assert STALE_RETRY_POLICY.maximum_interval is not None
+    assert STALE_RETRY_POLICY.non_retryable_error_types == NON_RETRYABLE_ERROR_TYPES
+
+
+async def test_failing_stale_run_gives_up_after_bounded_attempts(
+    temporal_client: Client,
+    temporal_worker: Worker,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Review M2: a persistently failing run fails the workflow after
+    `STALE_RETRY_POLICY.maximum_attempts` instead of retrying forever."""
+    calls: list[datetime] = []
+
+    async def _always_fails(db: AsyncSession, now: datetime) -> StaleResult:
+        calls.append(now)
+        raise ConnectionError("database unavailable")
+
+    monkeypatch.setattr(stale_quote_check, "mark_stale", _always_fails)
+
+    with pytest.raises(WorkflowFailureError):
+        await temporal_client.execute_workflow(
+            StaleQuoteCheckWorkflow.run,
+            datetime.now(UTC).isoformat(),
+            id=f"stale-test-{uuid.uuid4()}",
+            task_queue=APPLICATION_PIPELINE_TASK_QUEUE,
+        )
+
+    assert len(calls) == STALE_RETRY_POLICY.maximum_attempts == 3

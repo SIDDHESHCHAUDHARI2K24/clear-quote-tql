@@ -4,7 +4,8 @@ startup if it does not exist"; AC6).
 
 `ensure_stale_quote_schedule` describes the schedule and then:
 - creates it if it is missing;
-- updates it in place if its interval, task queue or workflow differs;
+- updates it in place if its interval, task queue, workflow, run timeout,
+  overlap policy or catch-up window differs;
 - otherwise leaves it alone.
 
 A lost create race (two workers starting at once) surfaces as
@@ -60,19 +61,31 @@ def stale_schedule_id(task_queue: str) -> str:
     return f"{STALE_QUOTE_SCHEDULE_ID}-{task_queue}"
 
 
+def run_execution_timeout(interval: timedelta) -> timedelta:
+    """Review M2: a run (all its activity attempts included) is cut off at
+    90% of the interval, so it never overlaps the next tick."""
+    return interval * 9 // 10
+
+
 def build_stale_schedule(*, interval: timedelta, task_queue: str) -> Schedule:
     return Schedule(
         action=ScheduleActionStartWorkflow(
             StaleQuoteCheckWorkflow.run,
             id=f"{stale_schedule_id(task_queue)}-run",
             task_queue=task_queue,
+            execution_timeout=run_execution_timeout(interval),
         ),
         spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=interval)]),
-        policy=SchedulePolicy(overlap=ScheduleOverlapPolicy.SKIP),
+        # A tick missed while the server was down runs at most one
+        # interval late; older ones are dropped (the job is idempotent).
+        policy=SchedulePolicy(overlap=ScheduleOverlapPolicy.SKIP, catchup_window=interval),
     )
 
 
 def _matches(schedule: Schedule, *, interval: timedelta, task_queue: str) -> bool:
+    """Whether an existing schedule already equals `build_stale_schedule`'s
+    in every field it sets (review n1: the policy too, so a schedule
+    registered by an older build is corrected on the next start)."""
     action = schedule.action
     if not isinstance(action, ScheduleActionStartWorkflow):
         return False
@@ -80,6 +93,9 @@ def _matches(schedule: Schedule, *, interval: timedelta, task_queue: str) -> boo
     return (
         action.workflow == "StaleQuoteCheckWorkflow"
         and action.task_queue == task_queue
+        and action.execution_timeout == run_execution_timeout(interval)
+        and schedule.policy.overlap == ScheduleOverlapPolicy.SKIP
+        and schedule.policy.catchup_window == interval
         and len(intervals) == 1
         and intervals[0].every == interval
         and intervals[0].offset in (None, timedelta(0))
