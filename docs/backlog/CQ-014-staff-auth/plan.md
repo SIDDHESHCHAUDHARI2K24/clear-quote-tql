@@ -79,4 +79,4 @@ Every console feature needs a signed-in staff user and the LO/Manager scoping ru
 - [x] T3
 - [x] T4
 - [x] T5
-- [ ] T6
+- [x] T6

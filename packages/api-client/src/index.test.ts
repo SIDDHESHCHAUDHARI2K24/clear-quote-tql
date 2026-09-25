@@ -29,4 +29,16 @@ describe("createApiClient", () => {
     expect(data?.status).toBe("ok");
     expect(data?.checks.database).toBe("ok");
   });
+
+  it("sends credentials: 'include' so staff/borrower session cookies (CQ-014/CQ-015) round-trip", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const api = createApiClient("http://localhost:8000");
+    await api.POST("/api/v1/auth/staff/logout");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const calledRequest = fetchMock.mock.calls[0][0] as Request;
+    expect(calledRequest.credentials).toBe("include");
+  });
 });
