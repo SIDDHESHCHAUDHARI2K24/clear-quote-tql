@@ -30,6 +30,10 @@ dev = [
   "pytest>=8.3.0",
   "pytest-asyncio>=0.24.0",
   "httpx>=0.28.1",
+  # CQ-009: in-process fake for app.integrations.common.failure_toggle's
+  # redis.asyncio client in tests -- CI has no Valkey/Redis service, and the
+  # real local Valkey is shared with parallel agents (see plan.md Decision 1).
+  "fakeredis>=2.26.0",
 ]
 
 [tool.ruff]
