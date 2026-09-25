@@ -68,6 +68,54 @@ Backend changes:
 | Major (found in e2e) | Group `<section aria-label="At DSCR 1.00">` made CQ-017's `getByLabel('DSCR')` (a substring match) resolve to 3 elements whenever the builder loaded first | Groups carry `data-testid="quote-group"` and no accessible name, so CQ-017's spec is untouched. The full `e2e/lo-console` run after a fresh `make demo-reset` passes 27/27. |
 | Note | Reprice updates Par/Buydown quotes in place even when a draft package names them | By design. A sent package reads its frozen `quote_package_versions` snapshot, so borrowers are unaffected. |
 
+## PR review round 1 (fresh stage-6 review, Opus)
+
+| # | Severity | Finding | Resolution | Evidence |
+| --- | --- | --- | --- | --- |
+| M1 | Major | The ladder's Buydown (7.375 @ 1.000) now lands in every investment persona's "At DSCR 1.00" group, and `apply_send_fixture` sent every quote id, so Luis Romero's seeded package had 4 options with two "Buydown"s (strict `getByRole("radio", {name: /buydown/i})` in `report-option-switch.spec.ts`) | **Verified** (seed test failed with 4 ids). Fixed by capping the seeded package at the recommended quote + up to 2 alternatives in group order (CQ-019's default-draft rule), plan.md Decision 14. Bucket-scoping was rejected because Marcus's assumed group shares `ONE_TO_1_25` with every other investment persona | `seed/tests/test_persona_statuses.py::test_seeded_packages_are_recommended_plus_two`; after `make demo-reset`: Luis = Par 7.625 (rec.), Buydown 7.375, Par 7.250; Grace = Par 7.500 (rec.), Buydown 7.375. Full `e2e/lo-console` + `e2e/borrower-portal` 44/44 and cross-app 1/1 |
+| M2 | Major | Save & AutoQuote / Re-price 500 on an empty grid (bare `ValueError`), and a PUT had already committed `stale=True` | `NoEligibleProductsError` → 422 `no_eligible_products` ("No products at 90% LTV"). PUT, autoquote, reprice and create price before committing; failures roll back (Decision 15) | `test_review_round1.py`: `test_put_with_empty_grid_is_422_and_changes_nothing` (Marcus at 10% down: 422, quotes and inputs unchanged), `test_reprice_and_autoquote_with_empty_grid_are_422`, `test_create_scenario_with_empty_grid_is_422` |
+| M3 | Major | The grid's "Buydown" tag (mock `is_buydown_rate`: Keystone 45-Day) differed from the Buydown card (Harborline 7.375) | `get_products` re-tags Par and Buydown with `select_par_and_buydown` (Decision 16); `__fixtures__/products-marcus-hale.json` updated and checked equal to the live grid | `test_grid_tags_match_autoquote` (Marcus, Sam Reed, Tom Brandt, every group) |
+| 1 | Minor | The "more than 0.500 from par" claim was wrong: Low-Points (99.375) beat Blue Harbor Thin (100.750) in `BELOW_1_00` | Low-Points → 99.125, Keystone 45-Day → 99.000 (was 99.250, a tie with Thin); every ladder row is now > 0.750 from par. Claim corrected in `rate_sheet.yaml` and Decision 2 | `test_ladder_rows_never_beat_a_bucket_par`, `test_below_1_00_par_is_blue_harbor_thin_for_ltr`; par table below |
+| 2 | Minor | "Choose manually" always PUT and marked every quote stale | Server: stale + `scenario.updated` only when the normalized stored inputs change. Client: the overlay skips the PUT on "Choose manually" when the inputs equal the saved scenario | `test_put_without_changes_keeps_quotes_fresh`; Vitest "Choose manually lists every product…" (no PUT) and "Choose manually after an input change saves the inputs first" |
+| 3 | Minor | Re-price silently deleted leftover auto quotes, including a recommended one | `quotes.repriced` and `scenario.autoquoted` payloads carry `deleted_quote_ids` and `recommendation_cleared` | `test_reprice_logs_deleted_auto_quotes` |
+| 4 | Minor | Races: an override committing mid-reprice could be overwritten with `stale=False`; a double autoquote could insert two Pars | `lock_application` (`SELECT … FOR UPDATE` on `applications`, `applications/locks.py`) at the start of reprice, autoquote, PUT, recommend, delete, manual pick and the CQ-017 override/revert routes | `test_every_builder_write_locks_the_application_row` (captures the SQL of each route; a true two-connection race test isn't feasible inside the rollback-per-test fixture) |
+| 5 | Minor | The manual pick trusted the client's product row | Matched on `(investor, product, lock)` against a fresh grid; rate/points come from the server row; 422 `product_not_offered` otherwise. `test_manual_quote.py` (CQ-013) now picks a real grid row | `test_manual_pick_uses_server_row` (a tampered 3.000% rate is saved as the grid's 8.250%) |
+| 6 | Minor | PUT validation | A primary PUT with `dscr_bucket` or a PPP 422s with `details.field` | `test_put_422s` (bad down payment, primary `dscr_bucket`, primary PPP, `missing_field` Occupancy) |
+| 7 | Minor | The same-bucket note vanished when the LO added a scenario | The note belongs to the pipeline's collapsed group: the earliest `created_at` batch, when it holds one `ONE_TO_1_25` scenario whose actual DSCR is in that bucket | `test_same_bucket_note_survives_an_added_scenario` |
+| e2e | Found while verifying | Running `e2e/lo-console` and `e2e/borrower-portal` in one invocation 401'd every report spec: `flushLoginRateLimit` ran `flushdb`, dropping the borrower sessions `global-setup.ts` saved | `flushLoginRateLimit` now deletes only the `rl:*` rate-limit keys | The combined run: 44/44 |
+| e2e | Trivial follow-up fixed | AC3's `oldIds` held `priced_at` values, and the spec never checked 25% | Renamed `oldPricedAt`; the spec reopens the overlay and checks the saved down payment is 25 | `quote-builder.spec.ts` AC3 |
+
+### Par per seeded persona, before and after (query over `quotes` after `make demo-reset`)
+
+"Before" is this branch before round 1 (ladder at 99.375/99.250); "after" is with the repriced rows. Par is identical for every persona: no persona is priced in `BELOW_1_00` without STR, the only case the old Low-Points row changed (Marcus is STR, so his `BELOW_1_00` par is Blue Harbor STR, 0.375 from par). `test_below_1_00_par_is_blue_harbor_thin_for_ltr` covers the non-STR case.
+
+| Persona | Group (bucket / down) | Par before | Par after | Buydown after |
+| --- | --- | --- | --- | --- |
+| Marcus Hale | ONE_TO_1_25 / 20% | Blue Harbor STR 7.625 | Blue Harbor STR 7.625 | Harborline 7.375 |
+| Marcus Hale | BELOW_1_00 / 20% | Blue Harbor STR 7.625 | Blue Harbor STR 7.625 | Harborline 7.375 |
+| Kathleen McReynolds | ONE_TO_1_25 / 25% | Blue Harbor Mid 7.500 | Blue Harbor Mid 7.500 | Harborline 7.375 |
+| Sam Reed | ONE_TO_1_25 / 25% | Blue Harbor STR 7.625 | Blue Harbor STR 7.625 | Harborline 7.375 |
+| Sam Reed | GE_1_25 / 25% | Sterling DSCR 7.250 | Sterling DSCR 7.250 | Sterling 6.875 |
+| Tom & Lisa Brandt | ONE_TO_1_25 / 25% | Blue Harbor Mid 7.500 | Blue Harbor Mid 7.500 | Harborline 7.375 |
+| Grace Kim | ONE_TO_1_25 / 25% | Blue Harbor Mid 7.500 | Blue Harbor Mid 7.500 | Harborline 7.375 |
+| Luis Romero | ONE_TO_1_25 / 25% | Blue Harbor STR 7.625 | Blue Harbor STR 7.625 | Harborline 7.375 |
+| Luis Romero | GE_1_25 / 25% | Sterling DSCR 7.250 | Sterling DSCR 7.250 | Sterling 6.875 |
+| Priya Nair | primary / 20% | Sterling Conv 6.500 | Sterling Conv 6.500 | Sterling 6.125 |
+| Daniel Ortiz | primary / 5% | Sterling Conv 6.500 | Sterling Conv 6.500 | Sterling 6.125 |
+| Daniel Ortiz | primary / 20% | Sterling Conv 6.500 | Sterling Conv 6.500 | — |
+
+### Round 1 test log
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Backend | `make test` (pytest backend) | 497 passed |
+| Seed | `make test` (pytest seed) | 31 passed |
+| Frontend | `make test` (`pnpm -r run test`) | lo-console 110, ui 141, borrower-portal 84, api-client 2 |
+| Lint / types | `make lint` | exit 0 |
+| react-doctor | `npx react-doctor -y --blocking error` | exit 0 (78/100, warnings only) |
+| E2E | fresh `make demo-reset`, API/worker/LO/portal on slot 8, `pnpm exec playwright test e2e/lo-console e2e/borrower-portal --workers=1` | 44 passed |
+| E2E cross-app | `pnpm exec playwright test --project=cross-app` | 1 passed |
+
 ## How to test manually
 
 1. `bash scripts/worktree-env.sh 8`, `make demo-reset`, then start the API on 8108, `make worker` and the LO console on 3108.
@@ -90,3 +138,9 @@ Backend changes:
 - `quotes.points` is `Numeric(6,3)` as a fraction, which loses precision (0.875 pts is stored as 0.009). Cards use the engine-derived value. A migration to `Numeric(8,5)` would fix the column itself.
 - The OB request builder uses `applications.requested_price`, not the scenario's own purchase price, so a price edit in the overlay changes the engine numbers but not the mock grid's loan-amount-based rows. This is harmless with the current mock (price-agnostic rate sheet).
 - The mock adapter ignores `DesiredLockDays`, so overlay lock-days changes are stored and sent but don't change the demo grid.
+- (PR review round 1) The "a manual quote left the grid" state keeps the card stale with no banner copy of its own; CQ-019's Send readiness should explain it ("this quote's product is no longer offered").
+- (PR review round 1) The card's display scaling (`rate_pct`, `points_pct`, `note_rate` at percent/fraction scale) lives in the builder service; move it into `quote_engine` helpers.
+- (PR review round 1) `quote-builder-no-money-math.test.ts` scans only the feature's top-level files and misses `+= Number(...)`; recurse into subfolders and catch compound assignment.
+- (PR review round 1) The e2e specs don't revert their writes in `afterAll` (AC3's 25% down, AC5's recommendation, AC8's tax override); a rerun needs `make demo-reset`. Needs an authenticated API helper, so not trivial.
+- (PR review round 1) `RepriceResponse.priced_at` is the response time, not the quotes' own `priced_at` (they differ by milliseconds); return the quotes' value or drop the field.
+- (PR review round 1) `compareIds` in the builder isn't pruned after a reload deletes a compared quote.
