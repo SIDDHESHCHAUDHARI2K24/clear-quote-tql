@@ -19,6 +19,11 @@ export interface WorkspaceContextValue {
   applicationId: string;
   state: WorkspaceState;
   refetch: () => Promise<void>;
+  // Lets a caller that already has a fresh `ApplicationSummary` (e.g. the
+  // one `PATCH .../status` itself returns) update the workspace directly,
+  // instead of discarding it and making a second, redundant `GET .../
+  // summary` call just to get back to the same state (code-review fix).
+  setSummary: (summary: ApplicationSummary) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -37,17 +42,29 @@ export function WorkspaceProvider({ applicationId, children }: WorkspaceProvider
   const [state, setState] = useState<WorkspaceState>({ kind: "loading" });
 
   const refetch = useCallback(async () => {
-    const { data, response } = await fetchApplicationSummary(applicationId);
-    if (data) {
-      setState({ kind: "ready", summary: data });
-      return;
+    try {
+      const { data, response } = await fetchApplicationSummary(applicationId);
+      if (data) {
+        setState({ kind: "ready", summary: data });
+        return;
+      }
+      if (response.status === 404) {
+        setState({ kind: "not-found" });
+        return;
+      }
+      setState({ kind: "error" });
+    } catch {
+      // A network-level failure (offline, DNS, CORS, ...) rejects instead
+      // of resolving `{data, response}` -- without this, `state` would be
+      // stuck at `"loading"` forever with no error/retry UI (code-review
+      // fix).
+      setState({ kind: "error" });
     }
-    if (response.status === 404) {
-      setState({ kind: "not-found" });
-      return;
-    }
-    setState({ kind: "error" });
   }, [applicationId]);
+
+  const setSummary = useCallback((summary: ApplicationSummary) => {
+    setState({ kind: "ready", summary });
+  }, []);
 
   useEffect(() => {
     setState({ kind: "loading" });
@@ -69,7 +86,10 @@ export function WorkspaceProvider({ applicationId, children }: WorkspaceProvider
     return () => clearInterval(timer);
   }, [state, refetch]);
 
-  const value = useMemo(() => ({ applicationId, state, refetch }), [applicationId, state, refetch]);
+  const value = useMemo(
+    () => ({ applicationId, state, refetch, setSummary }),
+    [applicationId, state, refetch, setSummary],
+  );
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }

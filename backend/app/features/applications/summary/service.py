@@ -5,13 +5,14 @@ Header-number sourcing (plan.md decisions #3/#4/#5): "purchasing power",
 down payment % and $, and PPP years all come from the application's
 *current scenario* -- the scenario behind `recommended_quote_id`'s quote
 when set, else the most-recently-created `Scenario`, else `None` when no
-scenario exists yet. Down payment $ is derived directly from that
-scenario's stored `ScenarioInputs` (`purchase_price * down_payment_pct`,
-rounded the same way `quote_engine` rounds every other currency field) --
-deliberately *not* a new `QuoteComputation` field, since this item's owned
-files exclude `pricing/engine/` (CQ-021, in flight, is already adding
-`down_payment_amount` there; this avoids needing to coordinate a merge).
-Note rate is the recommended `Quote.rate` verbatim, never re-derived.
+scenario exists yet. Down payment $ is `quote_engine.compute_quote`'s own
+`down_payment_amount` field (AGENTS.md: "Money math lives only in
+`quote_engine`") -- CQ-021 landed that field on `QuoteComputation` while
+this item was in flight, so what started as a same-formula local copy
+(logged in an earlier revision of this docstring/plan.md decision #4) now
+calls the engine directly, with a same-formula fallback only for a
+scenario the engine can't price yet (see `_scenario_numbers`). Note rate
+is the recommended `Quote.rate` verbatim, never re-derived.
 """
 
 from __future__ import annotations
@@ -38,7 +39,8 @@ from app.features.applications.summary.schemas import (
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.models import Flag
 from app.features.clients.models import Client
-from app.features.pricing.engine.types import ScenarioInputs
+from app.features.pricing.engine.quote_engine import LtvOutOfRangeError, compute_quote
+from app.features.pricing.engine.types import ConfigSnapshot, ScenarioInputs
 from app.features.pricing.scenarios.models import Scenario
 from app.features.quotes.builder.models import Quote
 
@@ -74,10 +76,13 @@ class _CurrentScenarioNumbers:
     ppp_years: int | None
 
 
-def _down_payment_amount(purchase_price: Decimal, down_payment_pct: Decimal) -> Decimal:
+def _down_payment_amount_fallback(purchase_price: Decimal, down_payment_pct: Decimal) -> Decimal:
     """`purchase_price * down_payment_pct`, rounded half-up to cents -- the
-    same formula/rounding `quote_engine.compute_quote` uses internally for
-    its own (unexposed) `down_payment` local. See module docstring."""
+    exact formula/rounding `quote_engine.compute_quote` uses for its own
+    `down_payment_amount` field. Used only when `compute_quote` itself
+    can't run for this scenario yet (`_scenario_numbers`'s `LtvOutOfRangeError`
+    catch) -- down payment $ is well-defined independent of the LTV guard
+    that blocks the rest of the engine's output."""
     return (purchase_price * down_payment_pct).quantize(_CENT, rounding=ROUND_HALF_UP)
 
 
@@ -97,6 +102,22 @@ async def _current_scenario(db: AsyncSession, application: Application) -> Scena
     return (await db.execute(stmt)).scalars().first()
 
 
+def _down_payment_amount(scenario: Scenario, inputs: ScenarioInputs) -> Decimal:
+    config = (
+        ConfigSnapshot.model_validate(scenario.config_snapshot)
+        if isinstance(scenario.config_snapshot, dict)
+        else ConfigSnapshot()
+    )
+    try:
+        return compute_quote(inputs, config).down_payment_amount
+    except LtvOutOfRangeError:
+        # A scenario that was created but never successfully priced (e.g.
+        # its down payment % implies an LTV the engine rejects before any
+        # quote exists for it) -- fall back to the same formula/rounding
+        # rather than 500ing the whole summary over an unrelated field.
+        return _down_payment_amount_fallback(inputs.purchase_price, inputs.down_payment_pct)
+
+
 def _scenario_numbers(scenario: Scenario | None) -> _CurrentScenarioNumbers:
     if scenario is None or not isinstance(scenario.inputs, dict):
         return _CurrentScenarioNumbers(None, None, None, None)
@@ -105,7 +126,7 @@ def _scenario_numbers(scenario: Scenario | None) -> _CurrentScenarioNumbers:
     return _CurrentScenarioNumbers(
         purchasing_power=inputs.purchase_price,
         down_payment_pct=inputs.down_payment_pct,
-        down_payment_amount=_down_payment_amount(inputs.purchase_price, inputs.down_payment_pct),
+        down_payment_amount=_down_payment_amount(scenario, inputs),
         ppp_years=int(ppp_years) if ppp_years is not None else None,
     )
 
@@ -208,7 +229,25 @@ async def patch_application_status(
     """spec.md AC6: sets `status`, writes one `activity_events` row with the
     reason, and hides the actions menu (client-side, once `status` is
     terminal). 409s if the application is already `withdrawn`/`closed`
-    (plan.md decision #8 -- "from any non-terminal status")."""
+    (plan.md decision #8 -- "from any non-terminal status").
+
+    `SELECT ... FOR UPDATE` (with `populate_existing` so the in-memory
+    `application.status` reflects whatever this locked, committed row
+    actually holds, not a possibly-stale value from the `get_scoped_
+    application` dependency's earlier read) closes a race: two concurrent
+    PATCHes for the same application would otherwise both pass the
+    terminal-status check and both commit, instead of the second one
+    409ing as "from any non-terminal status" intends.
+    """
+    application = (
+        await db.execute(
+            select(Application)
+            .where(Application.id == application.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one()
+
     if application.status in _TERMINAL_APPLICATION_STATUSES:
         raise ConflictError(f"Application {application.id} is already {application.status.value}.")
 

@@ -44,11 +44,6 @@ describe("StatusActionsMenu (AC6)", () => {
       data: makeSummary({ status: "withdrawn" }),
       error: undefined,
     });
-    // The refetch after a successful PATCH.
-    getMock.mockResolvedValueOnce({
-      data: makeSummary({ status: "withdrawn" }),
-      response: { status: 200 },
-    });
 
     await user.click(screen.getByRole("button", { name: "Actions" }));
     await user.click(screen.getByRole("menuitem", { name: "Withdraw application" }));
@@ -67,6 +62,14 @@ describe("StatusActionsMenu (AC6)", () => {
       ),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    // Code-review fix: the PATCH response is applied directly (`setSummary`)
+    // instead of triggering a second, redundant GET .../summary -- the menu
+    // hides itself once that status flip is reflected (status is now
+    // terminal), proving the applied summary actually took effect.
+    expect(getMock).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Actions" })).not.toBeInTheDocument(),
+    );
   });
 
   it("shows the API's error message and keeps the dialog open on failure", async () => {

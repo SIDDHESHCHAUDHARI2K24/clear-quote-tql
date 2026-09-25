@@ -55,6 +55,30 @@ async def test_summary_matches_engine_purchasing_power_and_down_payment(
     assert summary.down_payment_amount == expected_down_payment
 
 
+async def test_down_payment_amount_falls_back_when_engine_rejects_the_ltv(
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    make_scenario: Callable[..., Awaitable[Scenario]],
+) -> None:
+    """Code-review fix: down payment $ now comes from `quote_engine.
+    compute_quote` (AGENTS.md: money math lives only in `quote_engine`), but
+    a scenario that was created and never successfully priced can carry a
+    down payment % the engine's own LTV guard rejects (`LtvOutOfRangeError`)
+    -- the summary must still return a down payment $ (same formula/
+    rounding) instead of 500ing."""
+    application = await make_application()
+    purchase_price = Decimal("300000.00")
+    down_payment_pct = Decimal("0.01")  # 99% LTV -- over the engine's 97% cap
+    await make_scenario(
+        application, purchase_price=purchase_price, down_payment_pct=down_payment_pct
+    )
+
+    summary = await build_application_summary(db_session, application)
+
+    expected = (purchase_price * down_payment_pct).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    assert summary.down_payment_amount == expected
+
+
 async def test_summary_no_scenario_yet_numbers_are_null(
     db_session: AsyncSession,
     make_application: Callable[..., Awaitable[Application]],

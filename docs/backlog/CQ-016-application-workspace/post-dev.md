@@ -32,10 +32,10 @@ Built `GET /applications/{id}/summary` and `PATCH /applications/{id}/status` (`b
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Backend tests | `uv run pytest backend -q` | 385 passed |
+| Backend tests | `uv run pytest backend -q` | 387 passed |
 | Seed tests | `uv run pytest seed -q` | 27 passed |
 | ruff / mypy | `make lint` (backend portion) | clean |
-| Frontend tests | `pnpm -r run test` | 111 (packages/ui) + 2 (api-client) + 34 (lo-console) + 37 (borrower-portal) passed |
+| Frontend tests | `pnpm -r run test` | 111 (packages/ui) + 2 (api-client) + 35 (lo-console) + 37 (borrower-portal) passed |
 | eslint / tsc / prettier | `make lint` | clean |
 | E2E typecheck | `pnpm exec tsc --noEmit -p tsconfig.json` | clean |
 | react-doctor | `npx react-doctor -y --blocking error` | exit 0, score 81/100 (Needs work — only warnings, all pre-existing classes or out of this item's owned files; see Follow-ups) |
@@ -45,13 +45,23 @@ Built `GET /applications/{id}/summary` and `PATCH /applications/{id}/status` (`b
 
 ## Review findings (stage 6)
 
-No fresh-subagent review was dispatched for this run (single-context execution). Self-review via `code-review`-equivalent scrutiny during development found and fixed one real bug (see below); no other findings open.
+Self-review (via `code-review`-equivalent scrutiny during development) found and fixed one real bug before the fresh-subagent pass (below); no other findings open there.
 
 | Severity | Finding | Resolution |
 | --- | --- | --- |
 | Major (self-found while writing `StatusActionsMenu.test.tsx`) | `Overlay`'s focus-trap effect was keyed on `[isOpen, onClose]`. Any parent re-render producing a new `onClose` closure (e.g. every keystroke updating local `reason` state) tore the effect down and rebuilt it, which re-stole focus to the dialog's first focusable element (often a button) on every keystroke. A later typed space then "clicked" that focused button, closing the dialog mid-typing. | Split into two effects: initial-focus/return-focus keyed only on `isOpen`; Escape/Tab-trap keyed on `[isOpen, onClose]` (no focus side effect, safe to re-attach). Regression test added to `Overlay.test.tsx` ("does not steal focus back to the first element while typing, even when onClose is a new closure every render"). |
 | Minor | `StatusActionsMenu.confirm()` reset `submitting` outside a `finally` (react-doctor `no-loading-flag-reset-outside-finally`) | Wrapped in try/finally. |
 | Minor | `WorkspaceProvider`'s context value object was reconstructed every render (react-doctor `jsx-no-constructed-context-values`) | Wrapped in `useMemo`. |
+
+**Fresh-subagent review** (`code-review` skill, diff `phase-p3-p4...cq-016-application-workspace`, medium effort, did not write this code). 5 findings, all fixed:
+
+| Severity | Finding | Resolution |
+| --- | --- | --- |
+| Major | `WorkspaceProvider.refetch()` had no try/catch around the fetch call; a network-level failure (offline, DNS, CORS) rejects the promise before it resolves to `{data, response}`, leaving `state` stuck at `{kind: "loading"}` forever with no error UI. | Wrapped in try/catch, setting `{kind: "error"}` on a thrown rejection. Regression test added to `WorkspaceProvider.test.tsx`. |
+| Major | Down-payment $ math (`Decimal` multiply + `ROUND_HALF_UP`) lived in the summary service, not `quote_engine` — violates AGENTS.md's "Money math lives only in `quote_engine`". This was a deliberate, logged decision at the time (CQ-021 was concurrently adding the field, and this item's owned files exclude `pricing/engine/`), but CQ-021's PR had since merged, making it stale. | `_scenario_numbers` now calls `quote_engine.compute_quote` directly and reads its `down_payment_amount`, with the old formula kept only as a fallback for the one case the engine can't handle yet — a scenario that was created but never successfully priced (its LTV trips `compute_quote`'s own guard, `LtvOutOfRangeError`, before any quote exists for it). Regression test added: `test_down_payment_amount_falls_back_when_engine_rejects_the_ltv`. |
+| Major | `import_application` (the one pipeline activity with no `_fail_pricing_stage`-equivalent failure handler, by design — spec.md: a failed import is "a setup error, not a demo path") never wrote a terminal `last_pipeline_stage` on failure, so it stayed `"importing"` forever and the AC7 "banner disappears when the workflow ends" contract broke for that one path. | Added a narrow try/except around the `import_from_los` call that writes the terminal `needs_attention` stage marker before re-raising — `application.status` and all other control flow are unchanged; only `last_pipeline_stage` now reaches a terminal value. Regression test added: `test_import_failure_lands_on_a_terminal_stage_not_stuck_importing` (reuses `test_retry_policy.py`'s `ImportRetryWorkflow` infrastructure). |
+| Minor | `StatusActionsMenu.confirm()` discarded the `ApplicationSummaryResponse` the successful `PATCH` already returned and made a second, redundant `GET .../summary` just to get back to the same state. | Added `WorkspaceContextValue.setSummary(summary)`; `confirm()` now applies the PATCH response directly. Existing test updated to assert exactly one `GET` call across the whole flow. |
+| Minor | `patch_application_status` read-then-wrote `application.status` with no row lock, so two concurrent `PATCH`es for the same application could both pass the terminal-status check and both commit (status flip-flop, two `ActivityEvent` rows) instead of the second one 409ing. | Added `SELECT ... FOR UPDATE` (with `populate_existing=True`) before the terminal-status check, so a second concurrent request blocks until the first's transaction commits and then correctly sees the now-terminal status. |
 
 ## How to test manually
 

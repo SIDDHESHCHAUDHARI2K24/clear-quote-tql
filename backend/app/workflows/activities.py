@@ -152,13 +152,23 @@ async def import_application(application_id: str) -> ImportResult:
     merged, so this imports the real function/type at module scope instead
     of the lazy-import + `Any` workaround used before the merge.
 
-    Does not catch anything: a failed import (no LOS record) is a setup
-    error, not a demo path (spec.md) — the workflow lets it fail the run.
+    Does not catch anything to change *status* or control flow: a failed
+    import (no LOS record) is a setup error, not a demo path (spec.md) —
+    the workflow still lets it fail the run. It does still write a
+    terminal `last_pipeline_stage` (CQ-016 code-review fix) before
+    re-raising, so `applications.last_pipeline_stage` doesn't get stuck at
+    `"importing"` forever -- without this, the workspace summary's polling
+    banner (spec.md CQ-016 AC7: "disappears when the workflow ends") would
+    never stop polling for an application whose import fails.
     """
     app_uuid = uuid.UUID(application_id)
     async with workflow_db.session_factory() as db:
         await _set_stage(db, app_uuid, PipelineStage.IMPORTING)
-        result = await import_from_los(app_uuid, db)
+        try:
+            result = await import_from_los(app_uuid, db)
+        except Exception:
+            await _set_stage(db, app_uuid, ApplicationStatus.NEEDS_ATTENTION)
+            raise
         await _write_event(db, app_uuid, _TYPE_IMPORTED, _dataclass_payload(result))
         return result
 

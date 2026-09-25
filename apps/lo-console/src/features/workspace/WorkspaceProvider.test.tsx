@@ -43,6 +43,21 @@ describe("WorkspaceProvider polling (spec.md AC7)", () => {
     expect(screen.getByText("not-found")).toBeInTheDocument();
   });
 
+  it("code-review fix: a rejected fetch (network failure) settles into an error state, not stuck loading forever", async () => {
+    getMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+    render(
+      <WorkspaceProvider applicationId={APPLICATION_ID}>
+        <Probe />
+      </WorkspaceProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText("error")).toBeInTheDocument();
+  });
+
   it("polls every 3s while the stage is non-terminal, and stops once terminal", async () => {
     getMock
       .mockResolvedValueOnce({

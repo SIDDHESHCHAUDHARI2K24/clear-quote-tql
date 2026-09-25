@@ -19,7 +19,7 @@ const ACTION_LABEL: Record<StatusPatchStatus, string> = {
 // application" (confirm dialog + reason field). Both hidden when the
 // status is already terminal (AC6).
 export function StatusActionsMenu() {
-  const { applicationId, state, refetch } = useWorkspace();
+  const { applicationId, state, setSummary } = useWorkspace();
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<StatusPatchStatus | null>(null);
   const [reason, setReason] = useState("");
@@ -56,8 +56,12 @@ export function StatusActionsMenu() {
         setError(extractErrorMessage(err, "Something went wrong. Try again."));
         return;
       }
+      // `PATCH .../status` already returns the fresh `ApplicationSummary`
+      // (plan.md decision #9) -- apply it directly instead of discarding
+      // it and making a second, redundant `GET .../summary` (code-review
+      // fix).
       setPendingAction(null);
-      await refetch();
+      setSummary(data);
     } finally {
       setSubmitting(false);
     }
