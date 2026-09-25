@@ -20,9 +20,10 @@ On success it (plan.md decisions 3-5, 13):
    carries the `consent_id` it consumed.
 
 Nothing here commits; the caller owns the transaction. Lock order (m1):
-the caller locks the application's quotes (`lock_application_quotes`)
-BEFORE `lock_application`, matching CQ-030's `mark_stale` order (quotes ->
-versions -> applications), because step 5 may UPDATE those quotes.
+the caller locks the application's quotes (`applications.locking.
+lock_application_quotes`) BEFORE `lock_application` -- the one lock order,
+quotes -> packages/versions -> applications (see `applications/locking.py`)
+-- because step 5 may UPDATE those quotes.
 """
 
 from __future__ import annotations
@@ -48,8 +49,6 @@ from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.models import FieldValue
 from app.features.applications.verification.service import run_and_persist
 from app.features.borrower.consent.models import Consent, ConsentStatus, ConsentType
-from app.features.pricing.scenarios.models import Scenario
-from app.features.quotes.builder.models import Quote
 from app.features.quotes.stale.service import mark_application_quotes_stale
 from app.integrations.credit.mock import MockCreditClient, portal_credit_key
 from app.integrations.credit.models import CreditPullType
@@ -86,18 +85,6 @@ class HardPullResult:
 def credit_key(application: Application) -> str:
     """The bureau key: the LOS loan number, else the portal key (E14)."""
     return application.los_loan_guid or portal_credit_key(application.id)
-
-
-async def lock_application_quotes(db: AsyncSession, application_id: uuid.UUID) -> None:
-    """Locks the application's quotes `FOR UPDATE` until the transaction
-    ends. Take it BEFORE `lock_application` (lock order, see module doc)."""
-    await db.execute(
-        select(Quote.id)
-        .join(Scenario, Quote.scenario_id == Scenario.id)
-        .where(Scenario.application_id == application_id)
-        .order_by(Quote.id)
-        .with_for_update(of=Quote)
-    )
 
 
 async def is_accepted_consent(

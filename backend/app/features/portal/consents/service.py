@@ -12,10 +12,11 @@ persisted as `expired` whenever it is read (plan.md decision 7), by a
 conditional UPDATE that never overwrites a decision (hardening m3).
 
 Lock order on accept (hardening m1): the application's quotes
-(`lock_application_quotes`, `FOR UPDATE`) and THEN `lock_application`,
-the same order as CQ-030's `mark_stale` (quotes -> versions ->
-applications), because the pull may UPDATE those quotes (E12). Decline
-touches no quotes and takes only the application lock.
+(`lock_application_quotes`, `FOR NO KEY UPDATE`) and THEN
+`lock_application` -- the one lock order, quotes -> packages/versions ->
+applications (`applications/locking.py`), because the pull may UPDATE
+those quotes (E12). Decline touches no quotes and takes only the
+application lock.
 
 A provider failure (hardening m4) rolls the decision back, so the request
 stays pending for a retry, then records `credit.hard_pull_failed` and
@@ -37,10 +38,9 @@ from app.core.errors import ConflictError, IntegrationError, NotFoundError, Vali
 from app.features.applications.credit.hard_pull import (
     HARD_PULL_FAILED,
     HARD_PULL_SOURCE_REF,
-    lock_application_quotes,
     perform_hard_pull,
 )
-from app.features.applications.locking import lock_application
+from app.features.applications.locking import lock_application, lock_application_quotes
 from app.features.applications.models import Application, ApplicationParty, PartyRole
 from app.features.applications.sections import events
 from app.features.applications.timeline.models import ActivityEvent

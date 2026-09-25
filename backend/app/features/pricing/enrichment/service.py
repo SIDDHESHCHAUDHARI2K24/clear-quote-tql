@@ -383,13 +383,27 @@ async def _mark_application_quotes_stale(
     )
 
 
+async def _commit_or_flush(db: AsyncSession, commit: bool) -> None:
+    if commit:
+        await db.commit()
+    else:
+        await db.flush()
+
+
 async def override_field_value(
     db: AsyncSession,
     application_id: uuid.UUID,
     field_key: str,
     value: Decimal | str,
     lo_id: uuid.UUID,
+    *,
+    commit: bool = True,
 ) -> FieldValue:
+    """Overrides `field_key` and marks the application's quotes stale.
+
+    `commit=False` (the `/field-values` route, PR #34 review m2) flushes
+    instead, so the caller writes its own activity event under the same
+    lock and commits the override and the event together."""
     if field_key not in _FIELD_HANDLERS:
         raise ValidationAppError(f"Not an overridable pricing field: {field_key}")
     json_value = str(value) if isinstance(value, Decimal) else value
@@ -405,7 +419,7 @@ async def override_field_value(
         await _mark_application_quotes_stale(
             db, application_id, field_key, lo_id, "override", old_value, json_value
         )
-        await db.commit()
+        await _commit_or_flush(db, commit)
         return existing
     row = FieldValue(
         application_id=application_id,
@@ -419,16 +433,22 @@ async def override_field_value(
     await _mark_application_quotes_stale(
         db, application_id, field_key, lo_id, "override", None, json_value
     )
-    await db.commit()
+    await _commit_or_flush(db, commit)
     return row
 
 
 async def revert_field_value(
-    db: AsyncSession, application_id: uuid.UUID, field_key: str, actor_id: uuid.UUID
+    db: AsyncSession,
+    application_id: uuid.UUID,
+    field_key: str,
+    actor_id: uuid.UUID,
+    *,
+    commit: bool = True,
 ) -> FieldValue:
     """Clears the override and re-runs that field's own enrichment fetch to
     restore the source value (there is no separate "pre-override value"
-    column on `field_values` -- see plan.md Decision under AC3)."""
+    column on `field_values` -- see plan.md Decision under AC3).
+    `commit=False`: see `override_field_value`."""
     handler = _FIELD_HANDLERS.get(field_key)
     if handler is None:
         raise ValidationAppError(f"Not an overridable pricing field: {field_key}")
@@ -447,5 +467,5 @@ async def revert_field_value(
     await _mark_application_quotes_stale(
         db, application_id, field_key, actor_id, "revert", old_value, row.value
     )
-    await db.commit()
+    await _commit_or_flush(db, commit)
     return row

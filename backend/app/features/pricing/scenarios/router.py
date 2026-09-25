@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import CurrentStaff, get_scoped_application
 from app.core.db import get_db
 from app.core.errors import ValidationAppError
-from app.features.applications.locks import lock_application
+from app.features.applications.locking import lock_application
 from app.features.applications.models import Application
 from app.features.pricing.engine.quote_engine import compute_quote
 from app.features.pricing.engine.types import ConfigSnapshot

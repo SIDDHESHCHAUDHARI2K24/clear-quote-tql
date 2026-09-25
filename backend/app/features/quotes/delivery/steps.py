@@ -35,6 +35,7 @@ from app.core import storage
 from app.core.config import get_settings
 from app.core.enums import ApplicationStatus
 from app.core.errors import AppError
+from app.features.applications.locking import lock_application
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.clients.models import Client
@@ -250,14 +251,10 @@ async def record(db: AsyncSession, version_id: uuid.UUID, workflow_id: str) -> N
     version = await _version(db, version_id)
     package = await db.get(QuotePackage, version.package_id)
     assert package is not None
-    application = (
-        await db.execute(
-            select(Application)
-            .where(Application.id == package.application_id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-    ).scalar_one()
+    # The one application lock (applications/locking.py): `FOR NO KEY
+    # UPDATE`, so the activity/CRM inserts of a concurrent writer are not
+    # blocked. `record` touches no quotes or packages, so it takes only it.
+    application = await lock_application(db, package.application_id)
     already = (
         await db.execute(
             select(ActivityEvent.id).where(
