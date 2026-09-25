@@ -123,6 +123,134 @@
         }
       }
     },
+    "/api/v1/applications/{application_id}/summary": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Get Application Summary",
+        "operationId": "get_application_summary_api_v1_applications__application_id__summary_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/status": {
+      "patch": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Patch Status",
+        "operationId": "patch_status_api_v1_applications__application_id__status_patch",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusPatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/applications/{application_id}/field-values/{field_key}": {
       "patch": {
         "tags": [
@@ -926,6 +1054,196 @@
   },
   "components": {
     "schemas": {
+      "ApplicationStatus": {
+        "type": "string",
+        "enum": [
+          "intake",
+          "verifying",
+          "needs_attention",
+          "ready_to_price",
+          "priced",
+          "sent",
+          "viewed",
+          "option_selected",
+          "inquiry",
+          "stale",
+          "withdrawn",
+          "closed"
+        ],
+        "title": "ApplicationStatus",
+        "description": "Mirrors the application status machine in `system-design.md`,\nincluding the terminal `withdrawn`/`closed` states set by the LO."
+      },
+      "ApplicationSummaryResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "client_name": {
+            "type": "string",
+            "title": "Client Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatus"
+          },
+          "last_pipeline_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Pipeline Stage"
+          },
+          "occupancy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Occupancy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Strategy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "program": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "purchasing_power": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchasing Power"
+          },
+          "down_payment_pct": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Down Payment Pct"
+          },
+          "down_payment_amount": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Down Payment Amount"
+          },
+          "ppp_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ppp Years"
+          },
+          "note_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Rate"
+          },
+          "tabs": {
+            "items": {
+              "$ref": "#/components/schemas/TabStateResponse"
+            },
+            "type": "array",
+            "title": "Tabs"
+          },
+          "default_tab": {
+            "$ref": "#/components/schemas/ApplicationTab"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "client_name",
+          "status",
+          "last_pipeline_stage",
+          "occupancy",
+          "strategy",
+          "program",
+          "location",
+          "purchasing_power",
+          "down_payment_pct",
+          "down_payment_amount",
+          "ppp_years",
+          "note_rate",
+          "tabs",
+          "default_tab"
+        ],
+        "title": "ApplicationSummaryResponse",
+        "description": "`GET /applications/{id}/summary` (spec.md). Also the response shape\nfor `PATCH /applications/{id}/status` (plan.md decision #9) so the LO\nconsole header/status pill refresh from one response."
+      },
+      "ApplicationTab": {
+        "type": "string",
+        "enum": [
+          "borrowers",
+          "housing",
+          "credit",
+          "assets",
+          "property",
+          "pricing",
+          "send"
+        ],
+        "title": "ApplicationTab",
+        "description": "Matches the 7 workspace tabs."
+      },
       "AutoQuoteResponse": {
         "properties": {
           "par": {
@@ -1487,6 +1805,50 @@
         ],
         "title": "LatestApplicationOut"
       },
+      "LocationResponse": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "zip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip"
+          }
+        },
+        "type": "object",
+        "required": [
+          "city",
+          "state",
+          "zip"
+        ],
+        "title": "LocationResponse"
+      },
       "ManualQuoteCreateRequest": {
         "properties": {
           "product": {
@@ -1503,6 +1865,15 @@
           "label"
         ],
         "title": "ManualQuoteCreateRequest"
+      },
+      "Occupancy": {
+        "type": "string",
+        "enum": [
+          "primary",
+          "investment"
+        ],
+        "title": "Occupancy",
+        "description": "Per override O2: Primary, LTR or STR only \u2014 no `second_home`."
       },
       "OtpVerifyRequest": {
         "properties": {
@@ -2553,6 +2924,44 @@
         ],
         "title": "StaffUserOut"
       },
+      "StatusPatchRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "withdrawn",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusPatchRequest",
+        "description": "spec.md: \"accepts only Withdrawn or Closed ... any other value\nreturns 422\" -- the `Literal` does that natively via Pydantic/FastAPI\nrequest validation, no extra code needed (plan.md decision #8)."
+      },
+      "Strategy": {
+        "type": "string",
+        "enum": [
+          "ltr",
+          "str"
+        ],
+        "title": "Strategy",
+        "description": "Null on `applications.strategy` when `occupancy = primary`."
+      },
       "StrategyType": {
         "type": "string",
         "enum": [
@@ -2562,6 +2971,33 @@
         ],
         "title": "StrategyType",
         "description": "The engine's single occupancy/strategy field.\n\nMapping from `applications.occupancy` + `applications.strategy` (CQ-007)\nonto this enum is CQ-013's job, not this item's."
+      },
+      "TabStateResponse": {
+        "properties": {
+          "tab": {
+            "$ref": "#/components/schemas/ApplicationTab"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "flagged",
+              "pending"
+            ],
+            "title": "State"
+          },
+          "flag_count": {
+            "type": "integer",
+            "title": "Flag Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tab",
+          "state",
+          "flag_count"
+        ],
+        "title": "TabStateResponse"
       },
       "UserRole": {
         "type": "string",

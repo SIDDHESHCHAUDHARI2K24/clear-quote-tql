@@ -27,6 +27,11 @@ describe("Tabs", () => {
     expect(screen.getByLabelText("2 flags")).toBeInTheDocument();
   });
 
+  it("shows a grey pending dot for pending tabs", () => {
+    render(<Tabs items={items} activeId="borrowers" onChange={vi.fn()} />);
+    expect(screen.getByLabelText("Pending")).toBeInTheDocument();
+  });
+
   it("calls onChange when a tab is clicked, but not for disabled tabs", async () => {
     const onChange = vi.fn();
     render(<Tabs items={items} activeId="borrowers" onChange={onChange} />);
