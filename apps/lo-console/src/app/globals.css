@@ -1,0 +1,14 @@
+@import "@cq/ui/styles/tokens.css";
+@import "tailwindcss";
+
+/* Tailwind v4 automatic content detection only scans this app's own
+   directory tree; @cq/ui lives in a sibling workspace package, so its
+   component source must be added explicitly for its class names to be
+   picked up by the JIT scan. */
+@source "../../../../packages/ui/src";
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-neutral-50);
+  color: var(--color-navy-900);
+}
