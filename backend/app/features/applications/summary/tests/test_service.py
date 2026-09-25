@@ -32,18 +32,23 @@ from app.features.pricing.engine.types import ConfigSnapshot, ScenarioInputs, St
 from app.features.pricing.scenarios.models import Scenario
 from app.features.quotes.builder.models import Quote
 
-# PR review round 1, MAJOR 1: covers a primary loan, an LTR investment, an
-# STR investment, a needs_attention persona (no scenario ever created) and
-# a sent persona -- via the real seed loader (the same Import -> Verify ->
-# Enrich -> Validate -> AutoQuote -> DraftQuoteSet chain `make demo-reset`
-# and the real Temporal pipeline both run), not a hand-built `make_scenario`
+# PR review round 1, MAJOR 1 (and round 2: spec.md AC1 says "for each of
+# the 10 personas" -- all 10 are covered, not just a representative
+# sample): via the real seed loader (the same Import -> Verify -> Enrich ->
+# Validate -> AutoQuote -> DraftQuoteSet chain `make demo-reset` and the
+# real Temporal pipeline both run), not a hand-built `make_scenario`
 # fixture.
 _AC1_PERSONA_KEYS = [
-    "priya_nair",  # primary
-    "kathleen_mcreynolds",  # LTR
     "marcus_hale",  # STR
+    "kathleen_mcreynolds",  # LTR
+    "priya_nair",  # primary
+    "daniel_ortiz",  # primary, 5% down (MI)
+    "sam_reed",  # STR
+    "tom_lisa_brandt",  # LTR
     "aisha_coleman",  # needs_attention -- pricing never runs, no scenario
+    "ben_ford",  # needs_attention -- pricing never runs, no scenario
     "grace_kim",  # sent
+    "luis_romero",  # option_selected
 ]
 
 

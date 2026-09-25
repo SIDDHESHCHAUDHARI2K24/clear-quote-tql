@@ -1,7 +1,7 @@
 # Graph Report - agent-aa55bef79452874ef  (2026-09-25)
 
 ## Corpus Check
-- 670 files · ~583,990 words
+- 670 files · ~584,110 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7edfe1b0`
+- Built from commit: `6f53647c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -107,7 +107,7 @@
 - CQ-010 Seed data & demo reset
 - CQ-012 — Implementation plan
 - common/errors.py
-- clients/models.py
+- test_encryption.py
 - FieldSource
 - graphify reference: extra exports and benchmark
 - CQ-001 — Implementation plan
@@ -199,7 +199,7 @@
 - scripts
 - scripts
 - reset.py
-- applications/tests/test_models.py
+- Quote
 - graphify reference: query, path, explain
 - CQ-010 — Handoffs
 - roadmap.md
@@ -325,7 +325,7 @@
 - do_run_migrations
 - test_application_status_enum_type_in_db_includes_withdrawn_and_closed
 - G4 whole-phase integration review — `main...phase-p0-p1` (CQ-001…CQ-013)
-- eslint-config-next
+- postcss
 - test_default_scenarios_primary.py
 - test_draft_quote_set.py
 - staff/service.py
@@ -566,8 +566,8 @@ Cohesion: 0.23
 Nodes (15): Random, BackgroundSeedSummary, AsyncSession, UUID, Deterministic ~200-application background generator (spec.md scope item 4, AC5,…, `markets` is CQ-010's 10 persona `{city, state, zip, county}` dicts (Decision…, seed_background_applications(), _weighted_choice() (+7 more)
 
 ### Community 50 - "summary/tests/test_service.py"
-Cohesion: 0.15
-Nodes (38): build_application_summary(), make_application(), make_flag(), make_property(), make_quote(), make_scenario(), AsyncSession, fixture (+30 more)
+Cohesion: 0.16
+Nodes (37): build_application_summary(), make_application(), make_flag(), make_property(), make_quote(), make_scenario(), AsyncSession, fixture (+29 more)
 
 ### Community 51 - "PricedProductDTO"
 Cohesion: 0.17
@@ -583,7 +583,7 @@ Nodes (15): devDependencies, eslint, jsdom, @tailwindcss/postcss, @testing-libra
 
 ### Community 54 - "devDependencies"
 Cohesion: 0.13
-Nodes (15): devDependencies, jsdom, postcss, @tailwindcss/postcss, @testing-library/react, @testing-library/user-event, @types/node, typescript (+7 more)
+Nodes (15): devDependencies, eslint-config-next, jsdom, @tailwindcss/postcss, @testing-library/react, @testing-library/user-event, @types/node, typescript (+7 more)
 
 ### Community 55 - "settings/models.py"
 Cohesion: 0.21
@@ -630,8 +630,8 @@ Cohesion: 0.11
 Nodes (26): ensure_borrower_owns_client(), get_current_borrower(), get_current_staff(), get_scoped_application(), AsyncSession, CurrentStaff, Principal, Redis (+18 more)
 
 ### Community 66 - "User"
-Cohesion: 0.19
-Nodes (21): Any, A dependency that 403s (`ForbiddenError`) unless the signed-in staff user's…, require_roles(), _build_test_app(), _fake_user(), _make_application(), _make_staff(), AsyncSession (+13 more)
+Cohesion: 0.31
+Nodes (13): _make_application(), _make_staff(), AsyncSession, fixture, _scoped_fixture(), test_scope_applications(), _make_account(), _make_client() (+5 more)
 
 ### Community 67 - "Button"
 Cohesion: 0.10
@@ -733,9 +733,9 @@ Nodes (9): Acceptance → test map, CQ-012 — Implementation plan, Decisions & 
 Cohesion: 0.15
 Nodes (12): IntegrationError, CreditPullFailedError, LoanNotFoundError, PricingValidationError, Integration error hierarchy. `IntegrationError` is re-exported (not re-…, Raised by `TaxClient` when no seeded county tax rate matches., Raised by `CreditClient` when no seeded credit report matches., Raised by `PricingClient` when required OB fields are missing. Overrides… (+4 more)
 
-### Community 92 - "clients/models.py"
-Cohesion: 0.12
-Nodes (17): field_validator, model_validator, False for `local`/`test` (plain HTTP dev servers, no TLS); the session cookies…, Allow `CORS_ORIGINS` to be a comma-separated string in `.env`. `NoDecode` above…, AC4: fail fast at startup rather than at first SSN read/write.…, Settings, _make_application(), AsyncSession (+9 more)
+### Community 92 - "test_encryption.py"
+Cohesion: 0.13
+Nodes (16): field_validator, model_validator, False for `local`/`test` (plain HTTP dev servers, no TLS); the session cookies…, Allow `CORS_ORIGINS` to be a comma-separated string in `.env`. `NoDecode` above…, AC4: fail fast at startup rather than at first SSN read/write.…, Settings, _make_application(), AsyncSession (+8 more)
 
 ### Community 93 - "FieldSource"
 Cohesion: 0.20
@@ -1101,9 +1101,9 @@ Nodes (7): scripts, build, dev, lint, start, test, typecheck
 Cohesion: 0.21
 Nodes (12): load_seed_config(), Seed-only configuration read from the environment. Kept separate from…, SeedConfig, MissingStaffPasswordError, Raised when `SEED_STAFF_PASSWORD` is unset -- review round 1, finding #3: no…, _staff_password(), _drop_and_recreate_schema(), main() (+4 more)
 
-### Community 184 - "applications/tests/test_models.py"
-Cohesion: 0.33
-Nodes (9): _make_quote(), AsyncSession, P3/P4 foundation (docs/backlog/phase-p3-p4-foundation.md, migration…, `ON DELETE SET NULL`: deleting the recommended quote must not delete (or block…, test_last_pipeline_stage_defaults_to_null(), test_last_pipeline_stage_is_settable(), test_recommended_quote_id_defaults_to_null(), test_recommended_quote_id_rejects_unknown_quote() (+1 more)
+### Community 184 - "Quote"
+Cohesion: 0.31
+Nodes (10): _make_quote(), AsyncSession, P3/P4 foundation (docs/backlog/phase-p3-p4-foundation.md, migration…, `ON DELETE SET NULL`: deleting the recommended quote must not delete (or block…, test_last_pipeline_stage_defaults_to_null(), test_last_pipeline_stage_is_settable(), test_recommended_quote_id_defaults_to_null(), test_recommended_quote_id_rejects_unknown_quote() (+2 more)
 
 ### Community 185 - "graphify reference: query, path, explain"
 Cohesion: 0.33
@@ -1238,12 +1238,12 @@ Cohesion: 0.18
 Nodes (8): config, middleware(), PUBLIC_PATHS, config, middleware(), PUBLIC_PATHS, isPublicPath(), STATIC_ASSET_PATTERN
 
 ### Community 360 - "Client"
-Cohesion: 0.17
-Nodes (19): post, UUID, Pipeline start/resume routes (spec.md CQ-011 "API"). `POST .../pipeline/start`…, resume_pipeline(), start_pipeline(), PipelineResumeResponse, PipelineStartResponse, BaseModel (+11 more)
+Cohesion: 0.12
+Nodes (25): post, UUID, Pipeline start/resume routes (spec.md CQ-011 "API"). `POST .../pipeline/start`…, resume_pipeline(), start_pipeline(), PipelineResumeResponse, PipelineStartResponse, BaseModel (+17 more)
 
 ### Community 361 - "enums.py"
-Cohesion: 0.11
-Nodes (22): EncryptedString, _fernet(), Any, At-rest encryption for sensitive columns (currently just SSN).…, Encrypts a UTF-8 string to a Fernet token before storing as bytes., LoanPurpose, Occupancy, Cross-cutting enums shared by multiple features. Kept here (rather than beside… (+14 more)
+Cohesion: 0.10
+Nodes (25): Any, A dependency that 403s (`ForbiddenError`) unless the signed-in staff user's…, require_roles(), EncryptedString, _fernet(), Any, At-rest encryption for sensitive columns (currently just SSN).…, Encrypts a UTF-8 string to a Fernet token before storing as bytes. (+17 more)
 
 ### Community 362 - "report-no-money-math.test.ts"
 Cohesion: 0.21
@@ -1353,11 +1353,11 @@ Nodes (16): Everything `run_and_persist` did, for the caller to log or act on �
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Application` connect `Application` to `enrichment/service.py`, `Base`, `activities.py`, `make_persona_application`, `scenarios/service.py`, `test_default_scenarios_primary.py`, `verification/service.py`, `Strategy`, `test_draft_quote_set.py`, `types.py`, `test_activities_are_thin_wrappers.py`, `StrategyType`, `verification/tests/test_service.py`, `seed_background_applications`, `summary/tests/test_service.py`, `PricedProductDTO`, `applications/tests/test_models.py`, `send/tests/test_models.py`, `auth.py`, `User`, `test_ob_validation.py`, `email/tests/test_service.py`, `clients/models.py`, `FieldSource`, `test_enrichment.py`, `borrower/service.py`, `Client`, `enums.py`, `scenarios/tests/test_auth_scope.py`, `test_default_scenarios_investment.py`, `ob_request.py`, `seed_persona`?**
+- **Why does `Application` connect `Application` to `enrichment/service.py`, `Base`, `activities.py`, `make_persona_application`, `scenarios/service.py`, `test_default_scenarios_primary.py`, `verification/service.py`, `Strategy`, `test_draft_quote_set.py`, `types.py`, `test_activities_are_thin_wrappers.py`, `StrategyType`, `verification/tests/test_service.py`, `seed_background_applications`, `summary/tests/test_service.py`, `PricedProductDTO`, `Quote`, `send/tests/test_models.py`, `auth.py`, `User`, `test_ob_validation.py`, `email/tests/test_service.py`, `test_encryption.py`, `FieldSource`, `test_enrichment.py`, `borrower/service.py`, `Client`, `enums.py`, `scenarios/tests/test_auth_scope.py`, `test_default_scenarios_investment.py`, `ob_request.py`, `seed_persona`?**
   _High betweenness centrality (0.056) - this node is a cross-community bridge._
-- **Why does `get_settings()` connect `get_settings` to `verify_challenge`, `test_contract.py`, `test_documents_watermarked.py`, `Base`, `main.py`, `Client`, `enums.py`, `test_security.py`, `backend/conftest.py`, `seed/tests/conftest.py`, `seed_users`, `borrower/router.py`, `smtp_send`, `reset.py`, `worker.py`, `clients/models.py`, `test_rate_limit.py`?**
+- **Why does `get_settings()` connect `get_settings` to `verify_challenge`, `test_contract.py`, `test_documents_watermarked.py`, `Base`, `main.py`, `Client`, `enums.py`, `test_security.py`, `backend/conftest.py`, `seed/tests/conftest.py`, `seed_users`, `borrower/router.py`, `smtp_send`, `reset.py`, `worker.py`, `test_encryption.py`, `test_rate_limit.py`?**
   _High betweenness centrality (0.019) - this node is a cross-community bridge._
-- **Why does `Client` connect `Client` to `test_signup.py`, `User`, `borrower/service.py`, `test_login.py`, `Base`, `main.py`, `enums.py`, `email/tests/test_service.py`, `make_persona_application`, `test_draft_quote_set.py`, `verification/service.py`, `Strategy`, `summary/tests/test_service.py`, `seed_background_applications`, `seed_persona`, `worker.py`, `clients/models.py`, `send/tests/test_models.py`?**
+- **Why does `Client` connect `Client` to `test_signup.py`, `User`, `borrower/service.py`, `test_login.py`, `Base`, `main.py`, `enums.py`, `email/tests/test_service.py`, `make_persona_application`, `test_draft_quote_set.py`, `verification/service.py`, `Strategy`, `summary/tests/test_service.py`, `seed_background_applications`, `seed_persona`, `worker.py`, `test_encryption.py`, `send/tests/test_models.py`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **Are the 6 inferred relationships involving `Application` (e.g. with `Base` and `EncryptedString`) actually correct?**
   _`Application` has 6 INFERRED edges - model-reasoned connections that need verification._

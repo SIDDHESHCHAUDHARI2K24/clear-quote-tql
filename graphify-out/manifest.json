@@ -1990,8 +1990,8 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/post-dev.md": {
-    "mtime": 1790340679.6326396,
-    "ast_hash": "2c2b6b32b1eda0de8e005e806684a54a",
+    "mtime": 1790341038.6646724,
+    "ast_hash": "b6814f40b577ebbb90ffe537b41e9ed3",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/spec.md": {
@@ -3520,8 +3520,8 @@
     "semantic_hash": ""
   },
   "backend/app/features/applications/summary/tests/test_service.py": {
-    "mtime": 1790340160.1975052,
-    "ast_hash": "b2362418e189f872de450536ed3d1c96",
+    "mtime": 1790340964.6138048,
+    "ast_hash": "a33e911d041b25a0e3a5f1a114638c0d",
     "semantic_hash": ""
   },
   "backend/app/workflows/tests/test_pipeline_stage_writes.py": {
