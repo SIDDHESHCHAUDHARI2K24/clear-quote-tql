@@ -20,6 +20,10 @@ os.environ.setdefault("INTEGRATION_LATENCY_ENABLED", "false")
 # never hit those routes directly, but `seed_persona` now runs the real
 # pricing stage, and some transitive CQ-013 helper may read it too.
 os.environ.setdefault("DEV_LO_ID", "00000000-0000-0000-0000-000000000001")
+# Review round 1, finding #3: no plaintext staff password is committed
+# anywhere -- tests provide their own throwaway value via this env var,
+# same as a developer would via .env (see .env.example).
+os.environ.setdefault("SEED_STAFF_PASSWORD", "test-only-demo-password")
 
 import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402

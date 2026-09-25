@@ -10,19 +10,16 @@ Every dollar/rate figure this module writes for a priced quote comes from
 table pins (price, down %, FICO, etc.) -- nothing here hand-types a computed
 number, per spec.md scope item 8.
 
-Phase B addition: nothing in the merged codebase populates `field_values.
-representative_fico` (`enrich_pricing_fields` writes tax/insurance/hoa/rent/
-str only; a real "credit pull" activity isn't chartered by any item's spec
-yet). Since this item already seeds `provider_credit_reports`, `seed_persona`
-pulls credit and writes that one `field_values` row itself
-(`_seed_representative_fico`) -- an input, not a computed figure, exactly
-like the enrichment fields CQ-013 writes. It is skipped for personas whose
-`missing_fields` includes `occupancy_type` (Aisha Coleman): per CQ-013's own
-post-dev.md ("AC4's persona-7 test uses 'missing RepresentativeFICO' rather
-than literally 'missing Occupancy' -- Occupancy is non-nullable in this
-schema"), a missing/incomplete LOS record blocking a representative FICO
-pull is this schema's real equivalent of persona 7's original "missing
-Occupancy" story -- not a fabricated substitute.
+Review round 1 (orchestrator decisions): `applications.occupancy` and
+`field_values.representative_fico` are now both written by
+`applications.service.import_from_los` itself (copied from the LOS record's
+`occupancy_type`, and a real soft credit pull, respectively) -- this module
+no longer seeds either one directly. Persona 7 (Aisha Coleman)'s LOS record
+has no `occupancy_type`, so `import_from_los` leaves her `occupancy` `NULL`
+and the pipeline's Validate stage (`seed/pricing_seam.py` ->
+`validate_ob_required_fields`) raises "Cannot price: missing Occupancy" as
+system-design.md/spec.md/CQ-012's spec.md all pin it -- no seed-side
+special-casing needed any more.
 """
 
 from __future__ import annotations
@@ -39,11 +36,10 @@ import bcrypt
 import yaml
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.enums import (
     ApplicationStatus,
-    FieldSource,
     FlagSeverity,
-    Occupancy,
     Strategy,
     UserRole,
 )
@@ -52,13 +48,11 @@ from app.features.applications.models import Application, BusinessVesting
 from app.features.applications.property.models import Property, PropertyAddressStatus, PropertyType
 from app.features.applications.service import import_from_los
 from app.features.applications.timeline.models import ActivityEvent
-from app.features.applications.verification.models import FieldValue
 from app.features.applications.verification.service import run_and_persist
 from app.features.auth.models import User
 from app.features.clients.models import Client
 from app.features.notifications.outbox.models import EmailStatus, OutboxEmail
 from app.features.quotes.send.models import BorrowerAction, QuotePackage
-from app.integrations.credit.mock import MockCreditClient
 from app.integrations.credit.models import CreditPullType, ProviderCreditReport
 from app.integrations.insurance.models import ProviderInsuranceFactor
 from app.integrations.los.models import ProviderLosRecord
@@ -112,13 +106,38 @@ class UserSeedResult:
     lo_ids: list[uuid.UUID] = field(default_factory=list)
 
 
+class MissingStaffPasswordError(RuntimeError):
+    """Raised when `SEED_STAFF_PASSWORD` is unset -- review round 1, finding
+    #3: no plaintext staff password is ever committed to the repo, so
+    `seed_users` has nothing to hash without this env var."""
+
+
+def _staff_password() -> str:
+    # Read via `get_settings()` (pydantic-settings), not a raw
+    # `os.environ.get` -- `Settings.model_config` loads `.env` itself, which
+    # is how every other seed/dev knob (`DEV_LO_ID`, `S3_*`, ...) already
+    # reaches this process; a bare `os.environ` read would miss a value set
+    # only in `.env` and never exported into the shell.
+    password = get_settings().seed_staff_password
+    if not password:
+        raise MissingStaffPasswordError(
+            "SEED_STAFF_PASSWORD is not set. `make demo-reset` needs a demo "
+            "password to bcrypt-hash for the seeded staff users (2 LO, 1 "
+            "Manager, 1 Admin) -- set it in your .env (see .env.example) "
+            "before running `make demo-reset` again."
+        )
+    return password
+
+
 async def seed_users(db: AsyncSession) -> UserSeedResult:
-    """AC4: exactly 2 LO, 1 Manager, 1 Admin, each with a bcrypt hash."""
+    """AC4: exactly 2 LO, 1 Manager, 1 Admin, each with a bcrypt hash of the
+    shared demo password read from `SEED_STAFF_PASSWORD` (review round 1,
+    finding #3 -- no plaintext password is committed to the repo)."""
+    password_hash = bcrypt.hashpw(_staff_password().encode("utf-8"), bcrypt.gensalt()).decode(
+        "ascii"
+    )
     result = UserSeedResult()
     for row in load_users_fixture():
-        password_hash = bcrypt.hashpw(row["password"].encode("utf-8"), bcrypt.gensalt()).decode(
-            "ascii"
-        )
         user = User(
             id=uuid.UUID(row["id"]) if row.get("id") else uuid.uuid4(),
             email=row["email"],
@@ -269,27 +288,6 @@ async def _add_activity_event(
     await db.commit()
 
 
-async def _seed_representative_fico(
-    db: AsyncSession, application_id: uuid.UUID, loan_number: str
-) -> None:
-    """Writes `field_values.representative_fico` from a real hard-pull
-    credit report (already seeded in `provider_credit_reports`) -- see
-    module docstring. Not called for personas whose `missing_fields`
-    includes `occupancy_type` (Aisha Coleman)."""
-    credit_client = MockCreditClient(db)
-    report = await credit_client.pull_credit(loan_number, CreditPullType.HARD_PULL)
-    db.add(
-        FieldValue(
-            application_id=application_id,
-            field_key="representative_fico",
-            value=report.middle_score,
-            source=FieldSource.CREDIT_BUREAU,
-        )
-    )
-    await db.flush()
-    await db.commit()
-
-
 async def seed_persona(
     db: AsyncSession,
     persona: dict[str, Any],
@@ -309,7 +307,12 @@ async def seed_persona(
     db.add(client)
     await db.flush()
 
-    occupancy = Occupancy(persona["occupancy"])
+    # `strategy` (LTR/STR) is LO-entered at intake and stays that way -- no
+    # persona's defect involves a missing `investment_strategy`, so it's
+    # still set directly here. `occupancy` is intentionally left unset:
+    # `import_from_los` (review round 1, finding #1) is now the sole source
+    # of truth, copying it from the LOS record's `occupancy_type` -- `NULL`
+    # for Aisha Coleman, whose record has none.
     strategy = Strategy(persona["strategy"]) if persona.get("strategy") else None
 
     application = Application(
@@ -317,7 +320,7 @@ async def seed_persona(
         lo_id=lo_id,
         los_loan_guid=persona["loan_number"],
         status=ApplicationStatus.INTAKE,
-        occupancy=occupancy,
+        occupancy=None,
         strategy=strategy,
         requested_price=Decimal(str(persona["purchase_price"])),
         subject_state=persona["market"]["state"],
@@ -374,9 +377,6 @@ async def seed_persona(
 
     pricing_ran = False
     if application.status is ApplicationStatus.READY_TO_PRICE:
-        if "occupancy_type" not in persona.get("missing_fields", []):
-            await _seed_representative_fico(db, application.id, persona["loan_number"])
-
         try:
             pricing_stage_result = await run_pricing_stage(db, application.id)
         except AppError as exc:

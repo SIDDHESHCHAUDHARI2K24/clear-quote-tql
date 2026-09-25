@@ -15,7 +15,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import ApplicationStatus, Occupancy, Strategy, UserRole
+from app.core.enums import ApplicationStatus, FieldSource, Occupancy, Strategy, UserRole
 from app.features.applications.assets.models import Asset, Employment
 from app.features.applications.credit.models import Liability
 from app.features.applications.housing.models import HousingHistory
@@ -26,15 +26,22 @@ from app.features.applications.models import (
     PartyRole,
 )
 from app.features.applications.service import ImportResult, import_from_los
+from app.features.applications.verification.models import FieldValue
 from app.features.auth.models import User
 from app.features.clients.models import Client
-from app.integrations.common.errors import LoanNotFoundError
+from app.integrations.common.errors import CreditPullFailedError, LoanNotFoundError
+from app.integrations.credit.models import CreditPullType, ProviderCreditReport
 from app.integrations.los.models import ProviderLosRecord
+
+_DEFAULT_EXPERIAN_SCORE = 780
 
 
 async def _make_application(
-    db_session: AsyncSession, *, loan_number: str, occupancy: Occupancy = Occupancy.INVESTMENT
+    db_session: AsyncSession, *, loan_number: str, strategy: Strategy | None = None
 ) -> Application:
+    """`occupancy` is never set here -- it's `NULL` until `import_from_los`
+    copies it from the LOS record (CQ-010 review round 1, finding #1),
+    matching the real intake state (`seed/loader.py` does the same)."""
     lo = User(
         email=f"lo-{uuid.uuid4()}@clearquote-demo.test",
         password_hash="not-a-real-hash",
@@ -55,8 +62,8 @@ async def _make_application(
     application = Application(
         client_id=client.id,
         lo_id=lo.id,
-        occupancy=occupancy,
-        strategy=Strategy.LTR if occupancy is Occupancy.INVESTMENT else None,
+        occupancy=None,
+        strategy=strategy,
         requested_price=Decimal("300000.00"),
         los_loan_guid=loan_number,
     )
@@ -69,6 +76,30 @@ async def _seed_los_record(
     db_session: AsyncSession, loan_number: str, payload: dict
 ) -> ProviderLosRecord:
     record = ProviderLosRecord(loan_number=loan_number, payload=payload)
+    db_session.add(record)
+    await db_session.flush()
+    return record
+
+
+async def _seed_credit_report(
+    db_session: AsyncSession,
+    loan_number: str,
+    *,
+    experian_score: int | None = _DEFAULT_EXPERIAN_SCORE,
+) -> ProviderCreditReport:
+    """`import_from_los` always runs a soft pull (review round 1, finding
+    #2) -- every test that calls it needs a seeded `provider_credit_reports`
+    row for `(loan_number, soft_pull)`, same as `seed/providers/
+    credit_reports.yaml` provides for the real 10 personas."""
+    record = ProviderCreditReport(
+        loan_number=loan_number,
+        pull_type=CreditPullType.SOFT_PULL,
+        experian_score=experian_score,
+        equifax_score=None,
+        transunion_score=None,
+        middle_score=experian_score or 0,
+        tradelines=[],
+    )
     db_session.add(record)
     await db_session.flush()
     return record
@@ -133,6 +164,7 @@ async def test_import_from_los_writes_all_five_tables_and_advances_status(
     loan_number = f"LOS-{uuid.uuid4().hex[:8]}"
     application = await _make_application(db_session, loan_number=loan_number)
     await _seed_los_record(db_session, loan_number, _FULL_PAYLOAD)
+    await _seed_credit_report(db_session, loan_number)
 
     result = await import_from_los(application.id, db_session)
 
@@ -192,25 +224,93 @@ async def test_import_from_los_writes_all_five_tables_and_advances_status(
     assert asset.verified_amount == Decimal("50000.00")
 
 
+async def test_import_from_los_copies_occupancy_from_los_record(
+    db_session: AsyncSession,
+) -> None:
+    """CQ-010 review round 1, finding #1: `applications.occupancy` is no
+    longer LO-entered at intake -- `import_from_los` is now the sole source
+    of truth, copying it straight from the LOS record's `occupancy_type`."""
+    loan_number = f"LOS-{uuid.uuid4().hex[:8]}"
+    application = await _make_application(db_session, loan_number=loan_number)
+    assert application.occupancy is None  # unset at intake
+    payload = dict(_FULL_PAYLOAD)
+    payload["occupancy_type"] = "Investment_Property"
+    await _seed_los_record(db_session, loan_number, payload)
+    await _seed_credit_report(db_session, loan_number)
+
+    result = await import_from_los(application.id, db_session)
+
+    assert result.occupancy is Occupancy.INVESTMENT
+    await db_session.refresh(application)
+    assert application.occupancy is Occupancy.INVESTMENT
+
+
+async def test_import_from_los_writes_representative_fico_from_soft_pull(
+    db_session: AsyncSession,
+) -> None:
+    """CQ-010 review round 1, finding #2: `import_from_los` runs a **soft**
+    credit pull (system-design.md: "Soft pull on import"; catalog: soft
+    pull populates Experian only) and writes the resulting score into
+    `field_values.representative_fico`."""
+    loan_number = f"LOS-{uuid.uuid4().hex[:8]}"
+    application = await _make_application(db_session, loan_number=loan_number)
+    await _seed_los_record(db_session, loan_number, _FULL_PAYLOAD)
+    await _seed_credit_report(db_session, loan_number, experian_score=742)
+
+    result = await import_from_los(application.id, db_session)
+
+    assert result.representative_fico == 742
+    field_value = (
+        await db_session.execute(
+            select(FieldValue).where(
+                FieldValue.application_id == application.id,
+                FieldValue.field_key == "representative_fico",
+            )
+        )
+    ).scalar_one()
+    assert field_value.value == 742
+    assert field_value.source is FieldSource.CREDIT_BUREAU
+
+
+async def test_import_from_los_raises_when_credit_report_missing(
+    db_session: AsyncSession,
+) -> None:
+    """No seeded `provider_credit_reports` row for this loan number/pull
+    type -- `import_from_los` lets `CreditPullFailedError` propagate rather
+    than silently skipping the soft pull."""
+    loan_number = f"LOS-{uuid.uuid4().hex[:8]}"
+    application = await _make_application(db_session, loan_number=loan_number)
+    await _seed_los_record(db_session, loan_number, _FULL_PAYLOAD)
+    # No _seed_credit_report call.
+
+    with pytest.raises(CreditPullFailedError):
+        await import_from_los(application.id, db_session)
+
+
 async def test_import_from_los_handles_missing_occupancy_type_without_error(
     db_session: AsyncSession,
 ) -> None:
-    """Persona 7's exact defect: `occupancy_type` is null on the LOS record.
-    `import_from_los` never reads `occupancy_type` (decision #2, plan.md --
-    `applications.occupancy` is already set at intake) so this must not
-    raise; the missing field only matters to CQ-013's later OB validation."""
+    """Persona 7's exact defect: `occupancy_type` is null on the LOS
+    record. `import_from_los` must not raise -- `applications.occupancy`
+    (nullable as of migration `e7b20ff388a7`) is simply left `NULL`, which
+    is exactly what lets the pipeline's later Validate stage raise "Cannot
+    price: missing Occupancy" (see `pricing/scenarios/ob_request.py` and
+    `pricing/enrichment/tests/test_enrichment.py` for that half)."""
     loan_number = f"LOS-{uuid.uuid4().hex[:8]}"
     application = await _make_application(db_session, loan_number=loan_number)
     payload = dict(_FULL_PAYLOAD)
     payload["occupancy_type"] = None
     payload["has_co_borrower"] = False
     await _seed_los_record(db_session, loan_number, payload)
+    await _seed_credit_report(db_session, loan_number)
 
     result = await import_from_los(application.id, db_session)
 
     assert result.parties_created == 1
+    assert result.occupancy is None
     await db_session.refresh(application)
     assert application.status is ApplicationStatus.VERIFYING
+    assert application.occupancy is None
 
 
 async def test_import_from_los_no_prior_address_leaves_single_housing_row(
@@ -220,15 +320,15 @@ async def test_import_from_los_no_prior_address_leaves_single_housing_row(
     address on file -- `housing_history_24mo` (CQ-012) then fails against
     this single row's total."""
     loan_number = f"LOS-{uuid.uuid4().hex[:8]}"
-    application = await _make_application(
-        db_session, loan_number=loan_number, occupancy=Occupancy.PRIMARY
-    )
+    application = await _make_application(db_session, loan_number=loan_number)
     payload = dict(_FULL_PAYLOAD)
+    payload["occupancy_type"] = "Primary_Residence"
     payload["current_residence_years"] = 1
     payload["current_residence_months"] = 2
     payload["previous_street_address"] = None
     payload["has_co_borrower"] = False
     await _seed_los_record(db_session, loan_number, payload)
+    await _seed_credit_report(db_session, loan_number)
 
     result = await import_from_los(application.id, db_session)
 

@@ -27,6 +27,7 @@ def _configure_env() -> None:
 _configure_env()
 
 import asyncio  # noqa: E402
+import sys  # noqa: E402
 import time  # noqa: E402
 from pathlib import Path  # noqa: E402
 from typing import Any  # noqa: E402
@@ -41,7 +42,9 @@ from seed.config import load_seed_config  # noqa: E402
 from seed.generators.background_applications import seed_background_applications  # noqa: E402
 from seed.generators.documents import ensure_demo_docs_bucket, get_s3_client  # noqa: E402
 from seed.loader import (  # noqa: E402
+    MissingStaffPasswordError,
     PersonaSeedResult,
+    _staff_password,  # noqa: E402
     load_persona_fixtures,
     seed_persona,
     seed_providers,
@@ -102,6 +105,15 @@ async def _seed_everything() -> dict[str, Any]:
 
 
 def main() -> None:
+    # Fail fast, before any destructive DB operation (review round 1,
+    # finding #3): a missing SEED_STAFF_PASSWORD should never leave cq_dev
+    # half-reset.
+    try:
+        _staff_password()
+    except MissingStaffPasswordError as exc:
+        print(f"demo-reset: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+
     start = time.monotonic()
     database_url = get_settings().database_url
 

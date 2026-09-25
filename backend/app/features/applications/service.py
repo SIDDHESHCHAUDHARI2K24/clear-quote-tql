@@ -5,16 +5,29 @@ Owned by CQ-010 (per the orchestrator's ownership split -- see
 exact function as its `import_application` activity (see that item's
 spec.md "Contracts" table): `application_id -> ImportResult`.
 
-Scope (deliberately narrow): given an `applications` row that already has
-`los_loan_guid`, `occupancy`, `strategy` and `requested_price` set (written
-by whoever created the row -- the LO-import UI, the apply wizard, or
-`seed/loader.py` for demo data), this function fetches the loan file from
-`LosClient` and writes the five tables the item's spec names:borrower/
-co-borrower `application_parties`, `housing_history`, `employment`,
-`liabilities` and `assets`. It does **not** create the `applications` row,
-does not touch `occupancy`/`strategy`/`purchase_price` (already known at
-intake), and does not write `field_values` (CQ-013's enrichment stage owns
-that). On success it flips `status` `intake -> verifying`.
+Given an `applications` row that already has `los_loan_guid`, `strategy` and
+`requested_price` set (written by whoever created the row -- the LO-import
+UI, the apply wizard, or `seed/loader.py` for demo data), this function
+fetches the loan file from `LosClient` and writes:
+
+- `application_parties`, `housing_history`, `employment`, `liabilities`,
+  `assets` (the item's original spec scope);
+- `applications.occupancy`, copied from the LOS record's `occupancy_type`
+  (review round 1, finding #1 -- previously this item decided occupancy was
+  already known at intake and left untouched; that silently broke persona 7,
+  Aisha Coleman's "missing Occupancy" defect, since her LOS record's
+  `occupancy_type` had nowhere to go. `applications.occupancy` is nullable
+  as of migration `e7b20ff388a7`, so a LOS record missing `occupancy_type`
+  leaves it `NULL`);
+- `field_values.representative_fico`, from a **soft** credit pull
+  (system-design.md: "Soft pull on import"; catalog: soft pull populates
+  Experian only) -- review round 1, finding #2. This is the one
+  `field_values` row this stage writes; every other pricing field stays
+  CQ-013's enrichment stage's job.
+
+Does not create the `applications` row, does not touch `strategy`/
+`purchase_price` (already known at intake). On success it flips `status`
+`intake -> verifying`.
 """
 
 from __future__ import annotations
@@ -25,7 +38,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import ApplicationStatus
+from app.core.enums import ApplicationStatus, FieldSource, Occupancy
 from app.features.applications.assets.models import Asset, Employment
 from app.features.applications.credit.models import Liability
 from app.features.applications.housing.models import HousingHistory, HousingStatus
@@ -36,6 +49,9 @@ from app.features.applications.models import (
     MaritalStatus,
     PartyRole,
 )
+from app.features.applications.verification.models import FieldValue
+from app.integrations.credit.mock import MockCreditClient
+from app.integrations.credit.models import CreditPullType
 from app.integrations.los.mock import MockLosClient
 from app.integrations.los.schemas import LoanFileDTO
 
@@ -56,6 +72,14 @@ _HOUSING_STATUS_MAP: dict[str, HousingStatus] = {
     "living rent-free": HousingStatus.RENT_FREE,
     "rent_free": HousingStatus.RENT_FREE,
 }
+# LoanFileDTO.occupancy_type values (data-field-catalog.md §5) -> our enum.
+# `None`/anything unrecognized (persona 7, Aisha Coleman's exact defect)
+# leaves `applications.occupancy` unset (`None`, the default supplied by
+# `_lookup` below).
+_OCCUPANCY_MAP: dict[str, Occupancy] = {
+    "investment_property": Occupancy.INVESTMENT,
+    "primary_residence": Occupancy.PRIMARY,
+}
 
 
 def _lookup(mapping: Mapping[str, object], raw: str | None, default: object) -> object:
@@ -75,6 +99,14 @@ class ImportResult:
     employment_rows_created: int
     liabilities_created: int
     assets_created: int
+    occupancy: Occupancy | None
+    """Copied from the LOS record's `occupancy_type`; `None` when that field
+    is missing (persona 7, Aisha Coleman)."""
+    representative_fico: int | None
+    """Experian score from the soft credit pull; `None` if the soft pull
+    itself returned no Experian score (still written as `None` here, not
+    silently dropped, so a caller can tell the difference from "never
+    pulled")."""
 
 
 def _build_borrower_party(loan_file: LoanFileDTO) -> ApplicationParty:
@@ -171,6 +203,23 @@ async def import_from_los(application_id: uuid.UUID, db: AsyncSession) -> Import
     los_client = MockLosClient(db)
     loan_file = await los_client.get_loan_file(application.los_loan_guid)
 
+    application.occupancy = _lookup(_OCCUPANCY_MAP, loan_file.occupancy_type, None)  # type: ignore[assignment]
+
+    credit_client = MockCreditClient(db)
+    credit_report = await credit_client.pull_credit(
+        application.los_loan_guid, CreditPullType.SOFT_PULL
+    )
+    representative_fico = credit_report.experian_score
+    if representative_fico is not None:
+        db.add(
+            FieldValue(
+                application_id=application_id,
+                field_key="representative_fico",
+                value=representative_fico,
+                source=FieldSource.CREDIT_BUREAU,
+            )
+        )
+
     parties: list[ApplicationParty] = [_build_borrower_party(loan_file)]
     co_borrower = _build_co_borrower_party(loan_file)
     if co_borrower is not None:
@@ -227,4 +276,6 @@ async def import_from_los(application_id: uuid.UUID, db: AsyncSession) -> Import
         employment_rows_created=len(loan_file.employment),
         liabilities_created=len(loan_file.liabilities),
         assets_created=len(loan_file.assets),
+        occupancy=application.occupancy,
+        representative_fico=representative_fico,
     )

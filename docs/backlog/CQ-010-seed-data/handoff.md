@@ -47,3 +47,15 @@ Append one entry per handoff, newest at the bottom. A new session reads spec.md,
 - **Next 3 steps:** None for this item. If a future item touches `seed/pricing_seam.py`'s call signatures again (e.g. CQ-011's real Temporal workflow), reconcile against this file's docstring.
 - **Open questions / blockers:** None.
 - **Verify state:** `make up && uv run pytest backend seed -q && make lint && time make demo-reset`.
+
+## Handoff 3 — 2026-09-25 — Claude agent (review round 1 fixes, item complete)
+
+- **Branch / last commit:** `cq-010-seed-data` @ (see `git log -1` after this handoff's commit)
+- **Stage:** 8 Commit (fixes for review round 1's major findings #1/#2/#3; pushed, CI recorded in post-dev.md).
+- **Done:** New migration `e7b20ff388a7` makes `applications.occupancy` nullable; `import_from_los` now copies occupancy from the LOS record and runs a real soft credit pull (writes `field_values.representative_fico`), deleting the old `_seed_representative_fico` seed-only shortcut; `pricing/scenarios/ob_request.py`/`pricing/enrichment/service.py` (CQ-013-owned, minimal edit per orchestrator) now let `Occupancy` genuinely surface as missing and map it to `flags.field_key="occupancy_type"`. Aisha Coleman now produces the exact "Cannot price: missing Occupancy" / `occupancy_type` flag three specs promise — verified live. No plaintext password anywhere in the tree any more (`SEED_STAFF_PASSWORD` env var, fails fast if unset). `make lint`/`make test` both green; `make demo-reset` ~1.3-3.0s, all 10 personas at their exact spec.md end status across two runs.
+- **In progress:** Nothing.
+- **Follow-ups for other items (minor findings #4/#5, left as-is per orchestrator):**
+  - #4: CQ-013's `provider_rents`/`provider_str_revenue` are looked up by `property.number_of_units`, not a bedroom count (the schema has no such column) — flag to CQ-013's owner if a second bedroom count is ever added.
+  - #5: CI's `backend` job doesn't run `uv run pytest seed` — orchestrator is handling this in the CI pass (`.github/workflows/ci.yml` is CQ-006-owned).
+- **Open questions / blockers:** None.
+- **Verify state:** `make up && uv run pytest backend seed -q && make lint && time make demo-reset` (ensure `SEED_STAFF_PASSWORD` is set in `.env` first).

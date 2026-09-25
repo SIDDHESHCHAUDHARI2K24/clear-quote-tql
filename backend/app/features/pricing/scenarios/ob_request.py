@@ -99,6 +99,22 @@ async def build_ob_search_request(
     is_investment = application.occupancy is Occupancy.INVESTMENT
     is_str = is_investment and application.strategy is Strategy.STR
 
+    # CQ-010 review round 1, finding #1: `applications.occupancy` is
+    # nullable (migration `e7b20ff388a7`) -- `NULL` until `import_from_los`
+    # copies it from the LOS record's `occupancy_type`, which is missing for
+    # persona 7 (Aisha Coleman). Every other default in this function still
+    # falls back to the primary-loan behavior when occupancy is unknown
+    # (`is_investment` stays `False`), but the OB `Occupancy` field itself
+    # must surface as genuinely missing, not silently default to
+    # `"PrimaryResidence"`, or `validate_ob_required_fields` could never
+    # raise "Cannot price: missing Occupancy" as designed.
+    if application.occupancy is Occupancy.INVESTMENT:
+        occupancy_ob_value: str | None = "InvestmentProperty"
+    elif application.occupancy is Occupancy.PRIMARY:
+        occupancy_ob_value = "PrimaryResidence"
+    else:
+        occupancy_ob_value = None
+
     down_payment_pct = overrides.down_payment_pct
     if down_payment_pct is None:
         down_payment_pct = (
@@ -133,7 +149,7 @@ async def build_ob_search_request(
         CLTV=ltv,
         HCLTV=ltv,
         RepresentativeFICO=fico,
-        Occupancy="InvestmentProperty" if is_investment else "PrimaryResidence",
+        Occupancy=occupancy_ob_value,
         PropertyType=(
             _PROPERTY_TYPE_OB_NAME.get(property_.property_type) if property_ is not None else None
         ),

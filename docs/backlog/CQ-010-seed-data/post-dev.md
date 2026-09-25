@@ -73,7 +73,7 @@ stack, not just by reading the post-dev log.
 | --- | --- | --- | --- | --- |
 | 1 | major | `docs/backlog/CQ-010-seed-data/plan.md:19-25` (decision #10), `seed/loader.py:272-290` | Persona 7 (Aisha Coleman) is promised identically in three docs — `docs/design/system-design.md:332` ("Cannot price: missing Occupancy"), this item's own `spec.md` persona table row 7, and `docs/backlog/CQ-012-verification-rules/spec.md:96` (which prescribes `write_flag(..., field_key="occupancy_type", ...)` by name and is itself unit-tested that way in `backend/app/features/applications/verification/tests/test_personas.py:96` — `assert flag.field_key == "occupancy_type"`). The actual seeded/live Aisha Coleman instead produces `flags.field_key = "RepresentativeFICO"` (confirmed live via `psql`: `aisha.coleman@... | pricing | RepresentativeFICO | ob_required_field | blocking`), i.e. "Cannot price: missing RepresentativeFICO". The technical claim ("Occupancy is non-nullable so it can't literally be missing") is correct against the current schema (`backend/app/features/applications/models.py:63`, `Mapped[Occupancy]` non-nullable) and against `ob_request.py:105` (`Occupancy` is always derived from that non-nullable column, never `None`) — but that constraint is itself a byproduct of this item's own earlier decision #2 (occupancy is LO-entered at intake, before `import_from_los` ever runs, so it's never sourced from the LOS import at all). Two of this item's own decisions combine to silently break a demo narrative that three separate specs promise word-for-word, with no Kaneo `needs-input` comment raised (AGENTS.md's gate for "big gaps") and no test anywhere that pins the flag text/field_key CQ-010 actually produces for this persona — a future regression to a third field would go undetected. | Either (a) get explicit sign-off (Kaneo comment) to formally retire the "missing Occupancy" wording project-wide and update `system-design.md` §"Seed data personas" + CQ-012's spec text to match `RepresentativeFICO`, adding a test in `seed/tests/` that pins Aisha's actual `flags.field_key`/message; or (b) make `applications.occupancy` nullable until the LO (or a real LOS-sourced value) sets it, so persona 7's LOS-side defect can propagate as originally designed. |
 | 2 | major | `seed/loader.py:272-290` (`_seed_representative_fico`) | `system-design.md:116` ("Soft pull on import; liabilities imported...") and the integrations table (`:231`, `CreditClient`: "Soft pull (Experian only) or hard pull (3 scores → middle)") both describe representative FICO as populated by a **soft** pull at import time, with a **hard** pull being a distinct, LO-triggered, consent-gated action. `_seed_representative_fico` instead calls `credit_client.pull_credit(loan_number, CreditPullType.HARD_PULL)` directly. More importantly, this function isn't part of `import_from_los` (this item's owned pipeline stage) or any CQ-013/CQ-011 stage — grep confirms `MockCreditClient.pull_credit` is called nowhere else in `backend/app` outside tests, meaning the **real** (non-seeded) Temporal pipeline (CQ-011, in flight) has no path today to ever populate `field_values.representative_fico`; `auto_price`/`validate_ob_required_fields` will always fail "Cannot price: missing RepresentativeFICO" for any real, non-seed-created application. This directly undercuts Decision D1's own stated guarantee ("demo-reset and the real pipeline agree") for this one field, and was decided-and-logged (plan.md decision #10, post-dev.md follow-up) rather than raised to Kaneo as the missing-pipeline-stage gap it actually is. | Charter a real "soft pull on import" step (ideally inside `import_from_los` or a small new owned service CQ-011 can wrap as an activity, per Decision D1's own pattern) that calls `CreditClient` with `SOFT_PULL`; have seeding rely on that same function instead of a seed-only helper using the wrong pull type. Flag this to CQ-011's owner now, since it's in flight and will otherwise wrap `import_from_los` without ever getting a FICO. |
-| 3 | major | `seed/users.yaml:19,27,35,43` | Plaintext password `ClearQuoteDemo!2026` is committed to the repo, reused verbatim across all 4 staff accounts (2 LO, Manager, Admin). The comment correctly notes it's never stored in the DB (only the bcrypt hash is), and login is unusable until CQ-014 — but once CQ-014 wires real login, this becomes a live, working, identical credential for every seeded staff account, visible to anyone with read access to the repo/git history. The review brief's convention check explicitly calls out "secrets committed" — this qualifies even though it's a demo password, since it will function as a real one after CQ-014. **CQ-014 should know:** this is the exact plaintext CQ-014's login flow will need to bcrypt-verify against; do not assume it's safe to reuse in any shared/public demo deployment without per-environment rotation or per-user variation. | Source the plaintext from an env var (`SEED_DEMO_PASSWORD`, default only for pure-local use) rather than a hardcoded literal in a committed YAML file, or generate a random per-seed password and print it once in the `demo-reset` summary instead of persisting it in git. |
+| 3 | major (FIXED, round 2) | `seed/users.yaml:19,27,35,43` (as of round 1) | A plaintext demo password was committed to the repo, reused verbatim across all 4 staff accounts (2 LO, Manager, Admin). Once CQ-014 wires real login, this would become a live, working, identical credential for every seeded staff account, visible to anyone with read access to the repo/git history. | **Fixed:** the plaintext no longer appears anywhere in the tree (grepped clean, docs included). `seed/loader.py::seed_users` now reads it from env `SEED_STAFF_PASSWORD` (`.env.example`, empty by default) and bcrypt-hashes it at seed time; `make demo-reset` fails fast with a clear message (before touching the DB) if the var is unset. `seed/users.yaml` carries no `password` field at all. |
 | 4 | minor | `backend/app/features/pricing/enrichment/service.py:172-177`, `seed/providers/rents.yaml`, `seed/providers/str_revenue.yaml` | `system-design.md:227-228` specifies RentCast/AirDNA lookups "by zip × beds", but CQ-013's `_enrich_str_revenue`/LTR equivalent query `provider_rents`/`provider_str_revenue` by `(zip, property.number_of_units)` — a different, unrelated concept (`number_of_units` is 1 for SFR regardless of bedroom count; `Property` has no beds column at all). CQ-010 correctly adapted its own fixtures to match the code it depends on (out of scope to fix CQ-013's lookup) and documented this as decision #11 — reasonable given item boundaries — but the underlying spec-vs-implementation mismatch in CQ-013 (already merged/in-review) was not raised to CQ-013's owner or logged as a follow-up; post-dev.md's Follow-ups section says "None outstanding." | File a Kaneo comment / follow-up against CQ-013 noting the beds-vs-number_of_units mismatch so a future item doesn't have to rediscover it when adding a second bedroom count to the persona set. |
 | 5 | minor | `.github/workflows/ci.yml` (CQ-006-owned) | CI's `backend` job runs `uv run pytest backend` only — confirmed via `gh run view --log` on both cited runs ("collected 209 items", no `seed` tests present). All 8 of this item's ACs are therefore verified only by local/manual runs (this table, above, and the author's own log), never continuously by CI. Disclosed transparently in post-dev.md's note, but not filed as a Kaneo follow-up against CQ-006. | Add a `uv run pytest seed` step (or a separate job with its own Postgres/MinIO services) to `ci.yml`, coordinating with CQ-006's owner since that file is out of this item's scope. |
 | — | none | `seed/providers/str_revenue.yaml` (Tampa, zip 33602) | Checked per the brief: the Tampa STR revenue fixture (`annual_revenue: "24000"`) is a raw provider **input**, not a typed output — DSCR 0.82 / cashflow -$360.53 / tax savings $24,275.78 are all computed downstream by `quote_engine` and independently confirmed via direct `psql` query against the live DB. Compliant with AGENTS.md's money-math-in-quote_engine-only rule. No finding. |
@@ -82,19 +82,45 @@ stack, not just by reading the post-dev log.
 
 Minor/nit count beyond the table above: 0 additional.
 
+## Review round 2 (fixes for round 1's findings #1/#2/#3)
+
+New migration: **`e7b20ff388a7`** ("applications occupancy nullable"),
+`down_revision = 8aa99c7f2577`. `alembic check` clean; `upgrade` /
+`downgrade -1` / `upgrade` cycle verified against the shared stack.
+`export_openapi.py` re-run: byte-identical `openapi.json` (no
+API-exposed schema references `occupancy`), so no `packages/api-client`
+regen was needed.
+
+| Finding | Fix | Evidence |
+| --- | --- | --- |
+| #1 (major) — Aisha Coleman doesn't produce "Cannot price: missing Occupancy" | `applications.occupancy` now nullable; `import_from_los` copies it from the LOS record (`None` for Aisha); `ob_request.py`'s `Occupancy` field is `None` (not defaulted) when unknown; `enrichment/service.py` maps that one field to `flags.field_key="occupancy_type"` | Live psql check after `make demo-reset`: `occupancy=None, status=needs_attention`, `activity_events.payload={'reason': 'Cannot price: missing Occupancy'}`, `flags: tab=pricing, field_key=occupancy_type, rule=ob_required_field, severity=blocking`. Pinned in `backend/app/features/pricing/enrichment/tests/test_occupancy_validation.py` (2 tests: exact message/field_key, and resolve-once-fixed). |
+| #2 (major) — no path to `representative_fico` for the real pipeline | `import_from_los` now runs a real soft credit pull and writes `field_values.representative_fico` itself; `seed/loader.py::_seed_representative_fico` deleted | `backend/app/features/applications/tests/test_service.py`: `test_import_from_los_writes_representative_fico_from_soft_pull`, `test_import_from_los_raises_when_credit_report_missing`, `test_import_from_los_copies_occupancy_from_los_record` |
+| #3 (major) — plaintext password committed | `seed/users.yaml`'s `password` field removed; `seed_users` reads `get_settings().seed_staff_password` (`.env`'s `SEED_STAFF_PASSWORD`, empty by default); `demo-reset` fails fast (before touching the DB) if unset | `grep -rn "ClearQuoteDemo" .` (docs included) → clean. `seed/tests/test_users_seeded.py::test_seed_users_fails_clearly_when_password_setting_unset`. Live: `make demo-reset` with the var unset printed the clear error and exited 1 without touching the schema. |
+
+Live re-verification, all 10 personas, after both fixes (`time make
+demo-reset`, run twice): `elapsed: 1.3s` / `1.3s` (well under 60s).
+`marcus_hale/kathleen_mcreynolds/priya_nair/daniel_ortiz/sam_reed/
+tom_lisa_brandt → priced`, `aisha_coleman/ben_ford → needs_attention`,
+`grace_kim → sent`, `luis_romero → option_selected` — identical both runs.
+
 ## How to test manually
 
 1. `make up` (if the shared stack is down).
-2. `make demo-reset` — prints a summary; every persona should land at its
+2. Set `SEED_STAFF_PASSWORD` in `.env` (see `.env.example`).
+3. `make demo-reset` — prints a summary; every persona should land at its
    spec.md "Seed end status".
-3. `uv run pytest backend seed -q`.
-4. `make lint` / `make test`.
+4. `uv run pytest backend seed -q`.
+5. `make lint` / `make test`.
 
 ## Follow-ups
 
-- None outstanding for this item. `seed/pricing_seam.py` calls CQ-013's
-  functions directly with no fallback branch to maintain.
-- If CQ-011's real Temporal workflow (still in progress) ever needs a
-  credit-pull activity, `seed/loader.py::_seed_representative_fico` is the
-  reference implementation for what that activity should do (same mock
-  client, same field_key).
+- Minor finding #4 (CQ-013's `provider_rents`/`provider_str_revenue` keyed
+  by `property.number_of_units`, not a bedroom count) — left as-is per
+  orchestrator's call; flag to CQ-013's owner if a second bedroom count
+  is ever added to the persona set.
+- Minor finding #5 (CI's `backend` job doesn't run `uv run pytest seed`) —
+  left as-is; orchestrator will handle in the CI pass (`.github/workflows/
+  ci.yml` is CQ-006-owned, out of this item's scope).
+- If CQ-011's real Temporal workflow (still in progress) wraps
+  `import_from_los` as its `import_application` activity, it now gets a
+  real soft-pull FICO for free — no separate credit-pull activity needed.
