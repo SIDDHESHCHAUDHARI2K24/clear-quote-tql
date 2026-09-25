@@ -145,8 +145,13 @@ class ReportRecommendation(BaseModel):
 
 
 class ReportMatch(BaseModel):
-    """Placeholder shape for CQ-023's match cards (data-field-catalog §11).
-    Always `[]` in CQ-021's own fixtures/tests."""
+    """CQ-023's match cards (data-field-catalog §11). Every money/rate field
+    is a decimal string, same convention as every other `ReportViewModel`
+    field (module docstring) -- `packages/ui/src/report/MatchCard.tsx` never
+    does arithmetic on these. Investment-only fields (`rent_estimate`,
+    `rent_label`, `monthly_cashflow`, `cap_rate_pct`, `year1_tax_savings`)
+    are `None` for primary matches (spec.md: "Primary matches omit rent,
+    cashflow, cap rate and tax savings")."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -157,6 +162,14 @@ class ReportMatch(BaseModel):
     deal_grade_badge: str
     property_tagline: str
     price: str
+    total_monthly_payment: str
+    rent_estimate: str | None
+    rent_label: str | None
+    monthly_cashflow: str | None
+    """May be negative."""
+    cash_to_close: str
+    cap_rate_pct: str | None
+    year1_tax_savings: str | None
 
 
 class ReportDisclosures(BaseModel):

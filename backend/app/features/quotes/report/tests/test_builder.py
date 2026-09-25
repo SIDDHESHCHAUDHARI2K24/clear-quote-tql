@@ -14,7 +14,7 @@ from decimal import Decimal
 from app.features.pricing.engine.quote_engine import compute_quote
 from app.features.pricing.engine.types import ConfigSnapshot, ScenarioInputs, StrategyType
 from app.features.quotes.report.builder import build_report_view_model
-from app.features.quotes.report.inputs import ReportInputs, ReportOptionInput
+from app.features.quotes.report.inputs import ReportInputs, ReportMatchInput, ReportOptionInput
 
 
 def _marcus_hale_inputs() -> ReportInputs:
@@ -158,6 +158,24 @@ def test_view_model_kathleen_mcreynolds_ltr_tbd() -> None:
         lo_nmls="NMLS #1933377",
         lo_phone="(813) 555-0100",
         lo_email="jordan.blake@clearquote-demo.test",
+        matches=[
+            ReportMatchInput(
+                matched_property_id="listing-1",
+                property_image_url="https://picsum.photos/seed/listing1/640/480",
+                property_address="102 Sample St, Davenport, FL 33896",
+                bed_bath_sqft="4 bd · 2 ba · 1,650 sqft",
+                deal_grade_badge="good_buy",
+                property_tagline="Turnkey Davenport investment opportunity",
+                price=Decimal("255000.00"),
+                total_monthly_payment=Decimal("2113.45"),
+                rent_estimate=Decimal("2250.00"),
+                rent_label="Market rent (LTR)",
+                monthly_cashflow=Decimal("136.55"),
+                cash_to_close=Decimal("70000.00"),
+                cap_rate_pct=Decimal("7.94"),
+                year1_tax_savings=Decimal("12345.67"),
+            ),
+        ],
     )
 
     view_model = build_report_view_model(inputs)
@@ -167,6 +185,18 @@ def test_view_model_kathleen_mcreynolds_ltr_tbd() -> None:
     assert view_model.options[0].cashflow is not None
     assert view_model.options[0].cashflow.rent_label == "Market rent (LTR)"
     assert view_model.options[0].cashflow.expense_ratio is None
+
+    assert len(view_model.matches) == 1
+    match = view_model.matches[0]
+    assert match.matched_property_id == "listing-1"
+    assert match.price == "255000.00"
+    assert match.total_monthly_payment == "2113.45"
+    assert match.rent_estimate == "2250.00"
+    assert match.rent_label == "Market rent (LTR)"
+    assert match.monthly_cashflow == "136.55"
+    assert match.cash_to_close == "70000.00"
+    assert match.cap_rate_pct == "7.94"
+    assert match.year1_tax_savings == "12345.67"
 
 
 def test_view_model_priya_nair_primary_has_no_investment_fields() -> None:
@@ -212,6 +242,24 @@ def test_view_model_priya_nair_primary_has_no_investment_fields() -> None:
         lo_nmls="NMLS #1933377",
         lo_phone="(813) 555-0100",
         lo_email="jordan.blake@clearquote-demo.test",
+        matches=[
+            ReportMatchInput(
+                matched_property_id="listing-2",
+                property_image_url="https://picsum.photos/seed/listing2/640/480",
+                property_address="18 Maple Ct, Carmel, IN 46032",
+                bed_bath_sqft="3 bd · 2 ba · 1,650 sqft",
+                deal_grade_badge="great_buy",
+                property_tagline="Turnkey Carmel opportunity",
+                price=Decimal("357000.00"),
+                total_monthly_payment=Decimal("2450.10"),
+                rent_estimate=None,
+                rent_label=None,
+                monthly_cashflow=None,
+                cash_to_close=Decimal("85000.00"),
+                cap_rate_pct=None,
+                year1_tax_savings=None,
+            ),
+        ],
     )
 
     view_model = build_report_view_model(inputs)
@@ -224,6 +272,18 @@ def test_view_model_priya_nair_primary_has_no_investment_fields() -> None:
     assert option.hero.year1_tax_savings is None
     assert view_model.disclosures.investment is None
     assert view_model.disclosures.tax is None
+
+    # AC5/spec.md: primary matches omit rent, cashflow, cap rate and tax
+    # savings, but still carry the payment/price/cash-to-close numbers.
+    match = view_model.matches[0]
+    assert match.price == "357000.00"
+    assert match.total_monthly_payment == "2450.10"
+    assert match.cash_to_close == "85000.00"
+    assert match.rent_estimate is None
+    assert match.rent_label is None
+    assert match.monthly_cashflow is None
+    assert match.cap_rate_pct is None
+    assert match.year1_tax_savings is None
 
 
 def test_options_are_recommended_first_regardless_of_input_order() -> None:
