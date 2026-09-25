@@ -167,7 +167,7 @@ These values match the compose ports pinned in CQ-003's spec; CQ-003 must not ch
 | AC2 | Command | `find backend/app apps packages alembic -maxdepth 2 \| sort` (diff against this spec) |
 | AC3 | Command | `pnpm ls -r --depth -1 --json \| jq '[.[].name]'` |
 | AC4 | Command | `uv sync && uv run python -c "import app"` |
-| AC5 | Command | `grep -E '^[A-Z_]+=' .env.example \| wc -l` (≥ 16) |
+| AC5 | Command | `grep -E '^[A-Z0-9_]+=' .env.example \| wc -l` (≥ 16) |
 | AC6 | Command | `make demo-reset; echo $?` |
 | AC7 | Command | `pre-commit run --all-files` |
 
