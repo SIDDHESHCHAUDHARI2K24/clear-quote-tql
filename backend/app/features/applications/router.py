@@ -6,6 +6,11 @@ commits (CQ-016/CQ-032 call that function, not this route, directly) —
 this route exists for the cases spec.md calls out explicitly: an idempotent
 re-trigger and this item's own endpoint tests. `POST .../pipeline/resume`
 is what CQ-028's "resolve flag" UI action calls.
+
+Both routes require a signed-in staff user and 404 (never 403, Decision
+#11's style) when `application_id` isn't in that user's `scope_applications`
+scope (phase-p2 merge, H3) — the automatic in-process trigger above bypasses
+this route entirely, so it isn't affected.
 """
 
 from __future__ import annotations
@@ -18,6 +23,8 @@ from temporalio.common import WorkflowIDReusePolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
 from temporalio.service import RPCError, RPCStatusCode
 
+from app.core.auth import get_scoped_application
+from app.features.applications.models import Application
 from app.features.applications.schemas import PipelineResumeResponse, PipelineStartResponse
 from app.workflows.application_pipeline import ApplicationPipelineWorkflow
 from app.workflows.client import get_temporal_client
@@ -31,6 +38,7 @@ router = APIRouter(tags=["applications"])
 async def start_pipeline(
     application_id: uuid.UUID,
     client: Client = Depends(get_temporal_client),
+    _application: Application = Depends(get_scoped_application),
 ) -> PipelineStartResponse:
     workflow_id = application_workflow_id(str(application_id))
     try:
@@ -54,6 +62,7 @@ async def start_pipeline(
 async def resume_pipeline(
     application_id: uuid.UUID,
     client: Client = Depends(get_temporal_client),
+    _application: Application = Depends(get_scoped_application),
 ) -> PipelineResumeResponse:
     workflow_id = application_workflow_id(str(application_id))
     handle = client.get_workflow_handle(workflow_id)
