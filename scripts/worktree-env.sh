@@ -1,14 +1,26 @@
 #!/usr/bin/env bash
-# Per-worktree environment for parallel P3/P4 workers (P3/P4 foundation,
-# docs/backlog/phase-p3-p4-foundation.md). Each worker/slot N gets its own
+# Per-worktree environment for parallel P3/P4 and P5/P6 workers (P3/P4
+# foundation, docs/backlog/phase-p3-p4-foundation.md; extended by the P5/P6
+# foundation, docs/backlog/phase-p5-p6-foundation.md). Each worker/slot N gets its own
 # Postgres databases, Valkey db, Temporal task queue and port range so N
 # worktrees can run `make demo-reset` + the API + both Next.js apps at the
 # same time against the one shared `make up` stack, without colliding.
 #
 # Usage: scripts/worktree-env.sh <slot>
+#   P3/P4 (docs/backlog/phase-p3-p4-plan.md "E2E recipe"):
 #   slot 1 = foundation, 2 = CQ-021, 3 = CQ-016, 4 = CQ-022, 5 = CQ-017,
 #   6 = CQ-023, 7 = CQ-024, 8 = CQ-018, 9 = CQ-019, 10 = CQ-020
-#   (docs/backlog/phase-p3-p4-plan.md "E2E recipe").
+#   P5/P6 (docs/backlog/phase-p5-p6-plan.md "Work units and waves"):
+#   slot 11 = P5/P6 foundation, 12 = CQ-025, 13 = CQ-027, 14 = CQ-028a,
+#   15 = CQ-029, 16 = CQ-030, 17 = CQ-031, 18 = CQ-032a, 19 = CQ-034,
+#   20 = CQ-026, 21 = CQ-028b, 22 = CQ-032b, 23 = CQ-033
+#
+# Slot N -> DBs cq_dev_s<N>/cq_test_s<N>, Valkey db N+2, API 8100+N,
+# LO console 3100+N, portal 3200+N, Temporal queue cq-s<N>. Valkey must run
+# with enough logical databases for db N+2 (infra/docker-compose.yml starts
+# it with `--databases 64`; an older container still on the default 16
+# fails the check below for slots >= 14 -- recreate it with
+# `docker compose -f infra/docker-compose.yml up -d valkey`).
 #
 # Writes (idempotent -- rerunning patches the same `KEY=value` lines in
 # place via `set_kv_in`, appends a line only if that key is missing, and
@@ -48,6 +60,19 @@ for protected in cq_dev cq_test cq_dev_p2 cq_test_p2; do
     exit 1
   fi
 done
+
+# Guard rail: the slot's Valkey db must exist on the shared Valkey. Skipped
+# (with a note) when the container isn't reachable, e.g. before `make up`.
+VALKEY_DATABASES="$(docker exec clear-quote-valkey-1 valkey-cli CONFIG GET databases 2>/dev/null | tail -n1 || true)"
+if [[ "$VALKEY_DATABASES" =~ ^[0-9]+$ ]]; then
+  if (( VALKEY_DB >= VALKEY_DATABASES )); then
+    echo "slot ${SLOT} needs Valkey db ${VALKEY_DB}, but the running Valkey has only ${VALKEY_DATABASES} databases (0-$((VALKEY_DATABASES - 1)))." >&2
+    echo "recreate it with the compose setting (--databases 64): docker compose -f infra/docker-compose.yml up -d valkey" >&2
+    exit 1
+  fi
+else
+  echo "note: could not read the Valkey databases count (is \`make up\` running?); skipping the db range check" >&2
+fi
 
 ENV_FILE="$REPO_ROOT/.env"
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -104,6 +129,15 @@ set_kv "DATABASE_URL" "postgresql+asyncpg://cq:cq@localhost:5432/${DEV_DB}"
 set_kv "TEST_DATABASE_URL" "postgresql+asyncpg://cq:cq@localhost:5432/${TEST_DB}"
 set_kv "VALKEY_URL" "redis://localhost:6379/${VALKEY_DB}"
 set_kv "TEMPORAL_TASK_QUEUE" "$TASK_QUEUE"
+# pytest's `valkey` fixture FLUSHDBs TEST_VALKEY_URL's db (default db 15,
+# shared by every worktree -- and equal to slot 13's dev db). With a 64-db
+# Valkey, give each slot its own test db 32+N instead.
+TEST_VALKEY_DB=$((SLOT + 32))
+if [[ "$VALKEY_DATABASES" =~ ^[0-9]+$ ]] && (( TEST_VALKEY_DB < VALKEY_DATABASES )); then
+  set_kv "TEST_VALKEY_URL" "redis://localhost:6379/${TEST_VALKEY_DB}"
+elif (( VALKEY_DB == 15 )); then
+  echo "warning: slot ${SLOT}'s Valkey db 15 is also pytest's default test db; recreate Valkey with 64 databases (see above) before running pytest and the dev stack together" >&2
+fi
 set_kv "CORS_ORIGINS" "http://localhost:${LO_PORT},http://localhost:${PORTAL_PORT}"
 
 if [[ -z "$(get_kv SECRET_KEY)" || "$(get_kv SECRET_KEY)" == "change-me" ]]; then

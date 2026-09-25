@@ -31,6 +31,9 @@ services:
 
   valkey:
     image: valkey/valkey:7-alpine
+    # 64 logical databases (default 16): `scripts/worktree-env.sh <slot>`
+    # gives slot N db N+2, and P5/P6 uses slots up to 23 (P5/P6 foundation).
+    command: ["valkey-server", "--databases", "64"]
     ports:
       - "6379:6379"
     healthcheck:
