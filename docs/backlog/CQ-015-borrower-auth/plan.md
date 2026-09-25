@@ -71,4 +71,4 @@ The quote email (CQ-020), report (CQ-022), borrower actions (CQ-024) and the who
 
 - [x] T1
 - [x] T2
-- [ ] T3
+- [x] T3
