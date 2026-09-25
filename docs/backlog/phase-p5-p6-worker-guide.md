@@ -116,6 +116,8 @@ Each lands as its own PR into phase-p5-p6. Shared lines in registry.py and the a
    Save screenshots (1280 px; also 375 px for portal pages) to docs/backlog/{FOLDER}/evidence/.
 5. Kill the background processes **by PID**. Never use `pkill -f` patterns, because they can kill another slot's worker.
 
+Start the API, worker and dev servers with the Bash tool's `run_in_background`, not `nohup … &`. Processes started with a plain `&` can be reaped when the tool call returns; the Temporal worker died this way mid-suite. Never run `pkill -f app.workflows.worker`, because it stops every slot's worker.
+
 After every `make demo-reset`, restart the API and worker. Their pooled asyncpg connections cache type OIDs from the dropped database, so the first request fails with `cache lookup failed for type`.
 
 {E2E_NOTE}
