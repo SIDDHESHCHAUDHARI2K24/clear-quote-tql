@@ -46,10 +46,34 @@ Both Next.js apps (`lo-console` on 3010, `borrower-portal` on 3020) now boot on 
 
 ## Review findings (stage 6)
 
-_(left for the fresh-subagent reviewer — stage 6 has not run yet)_
+Fresh-subagent review, 2026-09-25. Verdict: **APPROVE** (no critical/major findings).
 
-| Severity | Finding | Resolution |
-| --- | --- | --- |
+Re-ran verification (all pass, matching the claims in this file):
+
+| Command | Result |
+| --- | --- |
+| `pnpm -r test` | 4 projects, 10 test files, 34 tests, all green |
+| `pnpm -r exec tsc --noEmit` | Clean, no output |
+| `pnpm -r run lint` (eslint) | 0 errors (same pre-existing "Pages directory cannot be found" notices on non-Next packages) |
+| `pnpm exec prettier --check .` | All matched files use Prettier code style |
+| `npx react-doctor -y --blocking error` | Exit 0; Score 90/100; 1 Accessibility warning (`prefer-html-dialog` on `Overlay.tsx:43`), 0 errors |
+| `make lint` | Exit 0 (ruff, ruff format, mypy, eslint, tsc, prettier all pass) |
+| `make test` | Exit 0 (pytest + `pnpm -r test`) |
+| `make api-client` | Exit 0; prints the "not found yet (CQ-004)" fallback line, regenerates `schema.d.ts` from the checked-in stub with the pinned `// GENERATED FILE` banner intact; `git status` shows no diff after regeneration (output is reproducible / not hand-edited) |
+| `pnpm --filter lo-console dev` + `curl localhost:3010/`, `/gallery` | Both 200 |
+| `pnpm --filter borrower-portal dev` + `curl localhost:3020/`, `/gallery` | Both 200 |
+| `grep -- "--color-navy-500\|--color-sage-500\|--status-danger" tokens.css` | All 3 present (AC3) |
+| Dev servers stopped afterward | Confirmed ports 3010/3020 free |
+
+Spot-checked contracts: `ApplicationStatus` (12 values) and `SourceBadgeSource`/`FieldSource` (12 values) in `packages/ui/src/types.ts` match `docs/backlog/CQ-007-data-model/spec.md` lines 40 and 50 exactly, including the `StatusPill` tone map. The `/health` OpenAPI stub's shape (`status`/`checks.{database,valkey,minio,temporal}`, 200/503) matches `docs/backlog/CQ-004-backend-skeleton/spec.md`'s pinned response body exactly. `make api-client`'s fallback (Makefile lines checking for `backend/scripts/export_openapi.py`) will switch to the real export automatically once CQ-004 lands — no code change needed, confirmed by reading the Makefile logic. Grepped the whole frontend tree for `parseFloat`/`parseInt`/`Number(` — none found; `MoneyInput`/`PercentInput` only ever pass through the raw string from `e.target.value`, confirmed by their tests asserting the exact typed string with no reformatting.
+
+| # | Severity | file:line | Finding | Suggested fix |
+| --- | --- | --- | --- | --- |
+| 1 | minor | `packages/ui/src/components/Overlay/Overlay.tsx:22-67` | `Overlay` implements Escape-to-close but has no focus trap: `Tab`/`Shift+Tab` can move focus to elements behind the backdrop, and focus is not moved into the dialog on open or restored to the trigger on close. Not covered by react-doctor (which only flagged `prefer-html-dialog`) or by `Overlay.test.tsx`. Not an AC violation today (AC4 only pins the prop signature), but CQ-018 builds the real Add/Edit quote overlay on top of this primitive, so the gap should be closed before then. | Add a simple focus trap (move focus to the panel/first focusable child on open, cycle Tab/Shift+Tab within the dialog, restore focus to the trigger element on close) or adopt native `<dialog>`/`showModal()` per react-doctor's suggestion. |
+| 2 | minor | `packages/ui/src/components/Overlay/Overlay.test.tsx` | No test asserts that pressing `Escape` calls `onClose`, even though the component implements it (`Overlay.tsx:25-27`). | Add a `userEvent.keyboard("{Escape}")` test. |
+| 3 | minor | `packages/ui/src/components/Tabs/Tabs.tsx:39-67` | Tabs use `role="tablist"`/`role="tab"` but every tab is a separately-tabbable native `<button>` with no roving-tabindex/arrow-key navigation, so the implementation doesn't match the ARIA tabs authoring pattern implied by those roles (screen readers may announce arrow-key support that isn't there). Keyboard operation still works via `Tab` + `Enter`/`Space` (native button semantics). | Add left/right arrow-key handling with a single tabbable tab (roving `tabIndex`), or drop the `tablist`/`tab` roles if the simpler interaction model is intentional for P0. |
+| 4 | minor | `apps/lo-console/src/app/page.tsx:18-25`, `apps/borrower-portal/src/app/page.tsx` (same) | `api.GET("/health")` resolves (does not reject) on a `503` "degraded" response from `openapi-fetch`, since only network-level failures reject the promise. The `.then()` branch runs for any resolved response, so a degraded backend would still render "API reachable." AC8 only requires "reachable"/"unreachable" without throwing regardless of whether the backend is running, and both existing tests (resolved 200 / rejected network error) pass, so this isn't an AC failure — but it's a latent correctness gap for later screens that display health status. | Check the response's `error`/`response.ok` (or HTTP status) before deciding "reachable," not just promise resolution. |
+| 5 | nit | `apps/lo-console/src/app/gallery/page.test.tsx:42-44` (and borrower-portal's copy) | The gallery integration test asserts only that "Encompass" text is present and that `SOURCE_BADGE_SOURCES.length === 12`, rather than asserting all 12 source labels are actually rendered (unlike the `StatusPill` loop directly above it). AC6's dedicated `SourceBadge.test.tsx` already covers all 12 values at the unit level, so this doesn't leave AC7 unverified overall, just weaker than it looks. | Loop over `SOURCE_BADGE_SOURCES` the same way the `StatusPill` assertion above it does. |
 
 ## How to test manually
 
