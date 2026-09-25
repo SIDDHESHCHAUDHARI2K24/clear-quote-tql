@@ -1,0 +1,88 @@
+key: priya_nair
+first_name: Priya
+last_name: Nair
+email: priya.nair@clearquote-demo.test
+occupancy: primary
+strategy: null
+purchase_price: "420000.00"
+down_payment_pct: "0.20"
+ppp_years: 0
+fico: 760
+beds: null
+loan_number: LOS-1000003
+current_residence_months: 48
+missing_fields: []
+pipeline_end_status: priced
+seed_end_status: priced
+market:
+  city: Carmel
+  state: IN
+  zip: "46032"
+  county: Hamilton
+property_type: single_family
+vesting: personal_name
+llc_entity_name: null
+co_borrower: null
+fico_bureau_scores:
+  experian: 762
+  equifax: 759
+  transunion: 760
+  middle: 760
+los_record:
+  borrower_first_name: Priya
+  borrower_last_name: Nair
+  borrower_full_name: Priya Nair
+  borrower_ssn: "100011003"
+  borrower_dob: "1988-02-17"
+  marital_status: Married
+  dependents_count: 1
+  borrower_email: priya.nair@clearquote-demo.test
+  borrower_cell_phone: "3175553003"
+  borrower_home_phone: null
+  business_vesting: Personal Name
+  llc_entity_name: null
+  current_street_address: 500 Main St
+  current_city: Carmel
+  current_state: IN
+  current_zip: "46032"
+  current_housing_status: Rent
+  current_residence_years: 4
+  current_residence_months: 0
+  vom_completed: true
+  has_subject_property: true
+  property_address_status: Specific_Address
+  subject_street_address: 18 Maple Ct
+  subject_city: Carmel
+  subject_state: IN
+  subject_zip: "46032"
+  subject_county: Hamilton
+  property_type: Single_Family
+  number_of_units: 1
+  loan_purpose: Purchase
+  occupancy_type: Primary_Residence
+  investment_strategy: null
+  loan_program_name: Conventional 30 YR Fixed
+  amortization_term_years: 30
+  amortization_type: Fixed
+  purchase_price: "420000.00"
+  appraised_value: "420000.00"
+  down_payment_pct: "0.20"
+  prepayment_penalty_term: None
+  automated_uw_system: DU
+  lead_source: Employee_Loan
+  has_co_borrower: false
+  no_co_applicant_check: false
+  employment:
+    - employer_name: Cummins Inc
+      monthly_income: "11000.00"
+      years_at_job: "4.0"
+      self_employed: false
+  liabilities:
+    - creditor_name: Wells Fargo
+      account_type: Auto Loan
+      monthly_payment: "300.00"
+      balance: "9000.00"
+  assets:
+    - account_type: Checking
+      institution: Chase Bank
+      verified_amount: "110000.00"

@@ -66,7 +66,12 @@ class RuleResult(BaseModel):
 class VerificationContext(BaseModel):
     """Everything `evaluate_rules` needs, assembled by `service._build_context`."""
 
-    occupancy: Occupancy
+    occupancy: Occupancy | None
+    """`None` until `import_from_los` copies it from the LOS record (CQ-010
+    review round 1, finding #1) -- e.g. persona 7, Aisha Coleman, whose LOS
+    record has no `occupancy_type`. `dti_primary` (the only rule that reads
+    this) already self-skips unless `occupancy == primary`, so `None` is
+    handled the same as any non-primary occupancy."""
     parties: list[PartySnapshot]
     housing_history: list[HousingSnapshot]
     assets_total: Decimal

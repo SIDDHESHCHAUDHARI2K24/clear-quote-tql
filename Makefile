@@ -22,6 +22,7 @@ lint:
 
 test:
 	uv run pytest backend
+	uv run pytest seed
 	pnpm -r run test
 
 # backend/scripts/export_openapi.py (CQ-004) overwrites
@@ -31,9 +32,11 @@ api-client:
 	uv run python backend/scripts/export_openapi.py
 	pnpm --filter @cq/api-client run generate
 
-# CQ-010 replaces this body with the real demo reset (drop DB, migrate, seed).
+# Drops/recreates cq_dev's public schema, migrates, seeds personas +
+# background data + sample docs. Never touches cq_test or the temporal DB
+# (separate databases on the same shared Postgres). Budget: under 60s (AC1).
 demo-reset:
-	@echo "demo-reset: not implemented until CQ-010"
+	uv run python -m seed.reset
 
 # Dev server, port 8000 is pinned for this project (CQ-004).
 api:

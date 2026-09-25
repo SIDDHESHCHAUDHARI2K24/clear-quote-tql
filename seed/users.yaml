@@ -1,0 +1,44 @@
+# CQ-010 spec scope item 6: 2 LO, 1 Manager, 1 Admin. Login only becomes
+# usable in CQ-014 -- this item only inserts the rows and bcrypt hashes.
+#
+# Review round 1, finding #3: no plaintext password lives here (or anywhere
+# else in the repo) -- `seed/loader.py::seed_users` reads the shared demo
+# password from env `SEED_STAFF_PASSWORD` (see `.env.example`) and bcrypt-
+# hashes it once per user at seed time. `make demo-reset` fails with a
+# clear message if that env var is unset, rather than silently seeding an
+# unusable/guessable password.
+#
+# Jordan Lee's `id` is pinned to match `DEV_LO_ID`'s default
+# (backend/conftest.py, .env.example) -- CQ-013's pricing routes' stub auth
+# (`pricing.scenarios.deps.get_current_lo_stub`) returns this id, so a
+# developer running the API locally against a freshly-`demo-reset` database
+# has a real `users` row behind it.
+- key: lo_jordan
+  id: "00000000-0000-0000-0000-000000000001"
+  email: jordan.lee@clearquote-demo.test
+  full_name: Jordan Lee
+  role: lo
+  nmls: "1234567"
+  title: Loan Officer
+  phone: "8135550101"
+- key: lo_morgan
+  email: morgan.reyes@clearquote-demo.test
+  full_name: Morgan Reyes
+  role: lo
+  nmls: "1234568"
+  title: Loan Officer
+  phone: "8135550102"
+- key: manager_casey
+  email: casey.nguyen@clearquote-demo.test
+  full_name: Casey Nguyen
+  role: manager
+  nmls: "1234569"
+  title: Branch Manager
+  phone: "8135550103"
+- key: admin_riley
+  email: riley.admin@clearquote-demo.test
+  full_name: Riley Admin
+  role: admin
+  nmls: null
+  title: System Administrator
+  phone: "8135550104"

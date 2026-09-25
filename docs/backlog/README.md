@@ -15,8 +15,8 @@ Status here is updated by the agent at stage 8 and by the human at merge.
 | [CQ-007](CQ-007-data-model/spec.md) | Data model & migrations | P1 | CQ-004 | In Review |
 | [CQ-008](CQ-008-quote-engine/spec.md) | Quote engine | P1 | CQ-004 | In Review |
 | [CQ-009](CQ-009-mock-integrations/spec.md) | Mock integrations | P1 | CQ-007 | In Review |
-| [CQ-010](CQ-010-seed-data/spec.md) | Seed data & demo reset | P1 | CQ-008, CQ-009 | In Progress |
-| [CQ-011](CQ-011-temporal-pipeline/spec.md) | Temporal pipeline | P1 | CQ-009, CQ-012, CQ-013 | To Do |
+| [CQ-010](CQ-010-seed-data/spec.md) | Seed data & demo reset | P1 | CQ-008, CQ-009 | In Review |
+| [CQ-011](CQ-011-temporal-pipeline/spec.md) | Temporal pipeline | P1 | CQ-009, CQ-012, CQ-013 | In Progress |
 | [CQ-012](CQ-012-verification-rules/spec.md) | Verification rules | P1 | CQ-007 | In Review |
 | [CQ-013](CQ-013-pricing-service/spec.md) | Pricing service & API | P1 | CQ-008, CQ-009 | In Review |
 | [CQ-014](CQ-014-staff-auth/spec.md) | Staff auth | P2 | CQ-004, CQ-007 | To Do |

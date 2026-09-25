@@ -12,7 +12,7 @@ Only CQ-001 … CQ-013 plus the CI clean-up pass. Nothing from `phase-p2` or any
 | --- | --- | --- |
 | G1 | All 13 items merged into `phase-p0-p1` | `git log phase-p0-p1` has a merge commit for each of `cq-001` … `cq-013` |
 | G2 | Every item reviewed | Each `post-dev.md` has a fresh-reviewer section with no open critical/major finding; acceptance checklist filled with evidence |
-| G3 | CI clean-up pass merged | CQ-003: `minio-init` no longer an artificial `depends_on` of `temporal-ui`. CQ-006: AC2 evidence updated; actions bumped off Node-20 majors; run has no deprecation annotations |
+| G3 | CI clean-up pass merged | CQ-003: `minio-init` no longer an artificial `depends_on` of `temporal-ui`. CQ-006: AC2 evidence updated; actions bumped off Node-20 majors; run has no deprecation annotations. CI also runs `pytest seed` (CQ-010 tests) |
 | G4 | Whole-phase integration review | One fresh subagent reviews `main...phase-p0-p1` as a whole: cross-item contracts, spec conformance, AGENTS.md rules (Decimal money only in `quote_engine`, mocks only, primary loans hide investment fields), secrets. No open critical/major |
 | G5 | Clean-checkout verification | In a fresh clone of `phase-p0-p1`: `make up`, `make lint`, `make test`, `alembic upgrade head` → `downgrade base` → `upgrade head`, `make api-client` produces no diff, `make demo-reset` under 60 s with every persona in its expected status. Output recorded below |
 | G6 | CI green | Latest push run on `phase-p0-p1` and PR #1 checks green |
@@ -37,6 +37,8 @@ Fix forward on a new branch from `main`, review, and merge through a PR. A rever
 - CQ-005/CQ-004: declare the 503 response on `/health` in the OpenAPI schema.
 - CQ-009: property-match ranking is a price proxy until CQ-023.
 - CQ-013: scenarios snapshot `ConfigSnapshot()` defaults, not the `settings` table (no loader yet); HOA is always $0 until a source exists.
+- CQ-010/CQ-012: reserves-months choice treats NULL occupancy as investment implicitly (`verification/service.py`); make it explicit.
+- CQ-010: a plaintext demo staff password exists in old commits of the public `cq-010-seed-data` branch (`ea72560`, `a036651`); never reuse it as `SEED_STAFF_PASSWORD`.
 
 ## Verification record
 
