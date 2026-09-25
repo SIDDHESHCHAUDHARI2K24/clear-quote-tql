@@ -1,5 +1,5 @@
 """AC8 support: `create_user` — the single entry point `scripts/create_user.py`
-and `seed_dev_users` both use to make a `User` row.
+uses to make a `User` row.
 """
 
 import pytest
