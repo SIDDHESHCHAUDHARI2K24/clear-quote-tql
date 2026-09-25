@@ -1,6 +1,6 @@
-import { StubPage } from "../../../features/shell";
+import { ApplyWizard } from "../../../features/apply";
 
-// P5/P6 foundation stub; CQ-032 builds the four-tab apply wizard.
+// CQ-032: the four-tab apply wizard (spec.md).
 export default function ApplyPage() {
-  return <StubPage title="Apply" item="CQ-032" />;
+  return <ApplyWizard />;
 }

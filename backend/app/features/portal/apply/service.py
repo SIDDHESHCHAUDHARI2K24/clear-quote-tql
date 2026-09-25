@@ -19,6 +19,7 @@ from collections.abc import Awaitable, Callable
 from decimal import Decimal
 from typing import Any, cast
 
+from cryptography.fernet import InvalidToken
 from redis.asyncio import Redis
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -441,6 +442,13 @@ async def _build_property(
     )
 
 
+class _UndecryptableSsn(Exception):
+    """Internal signal (CQ-032b review follow-up 1): a stored SSN
+    ciphertext could not be decrypted, e.g. after a key rotation or a
+    corrupted value. Caught in `submit()` before any writes so the
+    borrower is asked to re-enter the SSN instead of a 500."""
+
+
 def _plain_ssn(person: PersonFields) -> str:
     """The person's SSN for the party row (whose `EncryptedString` column
     re-encrypts it): from the draft's ciphertext (decision 25), or a plain
@@ -449,7 +457,51 @@ def _plain_ssn(person: PersonFields) -> str:
         return person.ssn
     if person.ssn_encrypted is None:  # validation guarantees one of them
         raise ValidationAppError("An SSN is missing.")
-    return decrypt_str(person.ssn_encrypted)
+    try:
+        return decrypt_str(person.ssn_encrypted)
+    except InvalidToken as exc:
+        raise _UndecryptableSsn from exc
+
+
+async def _drop_bad_ssn_ciphertext(
+    db: AsyncSession,
+    draft: ApplicationDraft,
+    data: dict[str, Any],
+    ssn_field_errors: dict[str, str],
+) -> None:
+    """Clears a corrupted `ssn_encrypted`/`ssn_last4` (CQ-032b review
+    follow-up 1) so the next `GET` shows `ssn_set: false` and the borrower
+    is asked for the SSN again, rather than hitting the same 500-turned-422
+    forever."""
+    you = dict(data.get(TabName.YOU.value) or {})
+    if "ssn" in ssn_field_errors:
+        you.pop(SSN_ENCRYPTED_KEY, None)
+        you.pop(SSN_LAST4_KEY, None)
+    if "co_borrower.ssn" in ssn_field_errors:
+        co = dict(you.get("co_borrower") or {})
+        co.pop(SSN_ENCRYPTED_KEY, None)
+        co.pop(SSN_LAST4_KEY, None)
+        you["co_borrower"] = co
+    new_data = {**data, TabName.YOU.value: you}
+    await _store_data(db, draft, new_data)
+    await db.commit()
+
+
+def _check_ssn_decryptable(you: YouTab) -> dict[str, str]:
+    """Dry-runs `_plain_ssn` for the borrower and, when present, the
+    co-borrower. Returns `{path: message}` for whichever ciphertext could
+    not be decrypted (empty when both are fine)."""
+    errors: dict[str, str] = {}
+    try:
+        _plain_ssn(you)
+    except _UndecryptableSsn:
+        errors["ssn"] = MSG_SSN
+    if you.has_co_borrower and you.co_borrower is not None:
+        try:
+            _plain_ssn(you.co_borrower)
+        except _UndecryptableSsn:
+            errors["co_borrower.ssn"] = MSG_SSN
+    return errors
 
 
 def _party(
@@ -608,18 +660,41 @@ async def submit(
                 "first_invalid_tab": first_incomplete_tab(failures).value,
             },
         )
+    you = cast(YouTab, parsed[TabName.YOU])
+    prop = cast(PropertyTab, parsed[TabName.PROPERTY])
+    income = cast(IncomeTab, parsed[TabName.INCOME])
+    consent = cast(ConsentTab, parsed[TabName.CONSENT])
+
+    # CQ-032b review follow-up 1: a stored SSN ciphertext that no longer
+    # decrypts (e.g. a rotated key) must not 500 out of `_party()` after
+    # the application row is already staged. Checked here, before any
+    # write, so a failure only clears the bad ciphertext and reports it.
+    ssn_errors = _check_ssn_decryptable(you)
+    if ssn_errors:
+        await _drop_bad_ssn_ciphertext(db, draft, data, ssn_errors)
+        raise ValidationAppError(
+            "We couldn't read your saved SSN. Please re-enter it.",
+            details={
+                "field_errors": {TabName.YOU.value: ssn_errors},
+                "first_invalid_tab": TabName.YOU.value,
+            },
+        )
+
     # Decision 27: several applications are fine, but at most one submit
     # per borrower per 10 minutes. Checked here, counted only once the
     # application commits, so a 422/409/storage failure never locks the
     # borrower out. (One open draft per borrower plus the row lock mean
     # two submits cannot race past this check.)
     rate_key = f"rl:borrower:apply_submit:{account.id}"
-    if int(await valkey.get(rate_key) or 0) >= SUBMIT_LIMIT:
+    try:
+        rate_limited = int(await valkey.get(rate_key) or 0) >= SUBMIT_LIMIT
+    except Exception:  # CQ-032b review follow-up 2: fail open, like the
+        # post-commit `hit()` below -- a Valkey outage must not block a
+        # submit, only skip counting it.
+        logger.warning("Could not check the submit rate limit for %s", account.id, exc_info=True)
+        rate_limited = False
+    if rate_limited:
         raise RateLimitedError("You just submitted an application. Try again in a few minutes.")
-    you = cast(YouTab, parsed[TabName.YOU])
-    prop = cast(PropertyTab, parsed[TabName.PROPERTY])
-    income = cast(IncomeTab, parsed[TabName.INCOME])
-    consent = cast(ConsentTab, parsed[TabName.CONSENT])
 
     client = await db.get(Client, account.client_id)
     if client is None:
@@ -795,7 +870,8 @@ async def submit(
     try:
         await hit(valkey, rate_key, limit=SUBMIT_LIMIT, window_seconds=SUBMIT_WINDOW_SECONDS)
     except Exception:  # committed: a Valkey hiccup must not fail the submit
-        logger.warning("Could not count the submit for %s", account_email, exc_info=True)
+        # CQ-032b review follow-up 3: log the account id, not the email.
+        logger.warning("Could not count the submit for %s", account.id, exc_info=True)
 
     # Decision 17: the workflow starts as soon as the application exists,
     # before anything that could still fail.
