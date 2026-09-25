@@ -38,8 +38,12 @@ Fix forward on a new branch from `main`, review, and merge through a PR. A rever
 - CQ-009: property-match ranking is a price proxy until CQ-023.
 - CQ-013: scenarios snapshot `ConfigSnapshot()` defaults, not the `settings` table (no loader yet); HOA is always $0 until a source exists.
 - CQ-010/CQ-012: reserves-months choice treats NULL occupancy as investment implicitly (`verification/service.py`); make it explicit.
-- CQ-010: a plaintext demo staff password exists in old commits of the public `cq-010-seed-data` branch (`ea72560`, `a036651`); never reuse it as `SEED_STAFF_PASSWORD`.
+- CQ-010: a plaintext demo staff password exists in old commits (`ea72560`, `a036651`) that are part of `phase-p0-p1`'s history and will be in `main`'s history after the merge. Human decision (2026-09-25): accept it as burned (already public, never a working login) and never reuse it as `SEED_STAFF_PASSWORD`.
 - CQ-011: `worker.py` duplicates `alembic/env.py`'s model import list with no drift check; `pipeline.enriched` is reused for three activities (coarse for the future timeline UI); pipeline endpoints have no auth until CQ-014.
+
+## G4 result
+
+Whole-phase review: `docs/backlog/phase-p0-p1-review.md`. First run FAIL on two majors: (1) stale api-client after CQ-011 — fixed in the CI clean-up pass together with a CI drift guard; (2) demo password in history — accepted by the human as above.
 
 ## Verification record
 
