@@ -99,4 +99,4 @@ Phase 2 was merged with Phase 1 on 2026-09-25 (see `docs/backlog/phase-p2-merge-
 - CQ-035: uvicorn `--proxy-headers --forwarded-allow-ips` so per-IP limits see real client IPs; same-site cookie setup across Railway domains.
 - Concurrency test for a double sign-up verify, and a `lower(email)` index on `clients`.
 - CQ-020 and CQ-022: the quote email links to the portal report, which requires sign-in; `quote_packages.report_token` stays an opaque URL id.
-- CQ-010: call `seed_dev_users` / `seed_dev_borrowers` from `make demo-reset` so personas get portal accounts.
+- ~~CQ-010: call `seed_dev_users` / `seed_dev_borrowers` from `make demo-reset` so personas get portal accounts.~~ Done at the merge to main: `make demo-reset` creates persona borrower accounts when `SEED_BORROWER_PASSWORD` is set.

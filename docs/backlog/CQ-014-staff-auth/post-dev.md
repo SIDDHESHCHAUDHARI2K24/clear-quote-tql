@@ -69,5 +69,5 @@ Phase 2 was merged with Phase 1 on 2026-09-25 (see `docs/backlog/phase-p2-merge-
 ## Follow-ups
 
 - CQ-035: the console and API on different Railway domains need a same-site setup (Next rewrites/proxy) for the session cookie (plan Decision #12).
-- CQ-010: call `create_user` / `seed_dev_users` from `make demo-reset`.
+- ~~CQ-010: call `create_user` / `seed_dev_users` from `make demo-reset`.~~ Done at the merge to main: `make demo-reset` seeds staff itself (see "After merge to main").
 - P1 merge: if P1 adds its own email sender, fold it into `notifications/email`.
