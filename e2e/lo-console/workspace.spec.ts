@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { applicationIdByClientEmail, flushLoginRateLimit } from "../helpers/db";
+import { applicationIdByClientEmail, execSql, flushLoginRateLimit } from "../helpers/db";
 import { loConsoleApiBaseUrl } from "../helpers/env";
 import { staffLogin } from "../helpers/staffLogin";
 
@@ -87,6 +87,25 @@ test("AC8: the header stays visible while scrolling, at 1280px and 1440px", asyn
     await expect(page.getByText("Priya Nair")).toBeInViewport();
     await page.screenshot({ path: path.join(EVIDENCE_DIR, `header-${width}.png`) });
   }
+});
+
+// Withdrawn is terminal (`patch_application_status` 409s on any further
+// PATCH from a non-terminal status), and only `applications.status` itself
+// changes (plus one activity event) -- but leaving Sam Reed withdrawn
+// leaks into `portal-home.spec.ts`'s later "pending credit-check consent"
+// test, which needs his application still active (a `stage is
+// PortalStage.CLOSED` application always gets `next_action = NONE`, so the
+// pending consent it inserts for him would never render a banner).
+// Restore his original seeded status (seed/personas/p05_sam_reed.yaml:
+// `pipeline_end_status: priced`) directly -- there's no "un-withdraw"
+// endpoint, since that's not a real product flow. In `afterAll`, not
+// inline at the end of the test body (review finding): a failed/timed-out
+// assertion between the withdraw click and the end of the test would
+// otherwise skip this restore and leave Sam Reed withdrawn for every
+// later run until a fresh `make demo-reset`.
+test.afterAll(() => {
+  const applicationId = applicationIdByClientEmail("sam.reed@clearquote-demo.test");
+  execSql(`update applications set status = 'priced' where id = '${applicationId}';`);
 });
 
 test("AC6: withdrawing an application sets status Withdrawn and hides the actions menu", async ({

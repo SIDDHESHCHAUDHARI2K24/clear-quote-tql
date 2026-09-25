@@ -55,6 +55,17 @@ function psql(sql: string): string {
   ).trim();
 }
 
+// Runs a write statement (UPDATE/DELETE/INSERT) directly against this
+// worktree's Postgres via `docker compose exec psql` -- for spec cleanup
+// only (e.g. a full-suite `afterAll` that undoes a shared persona's own
+// mutation so a later spec file sees her original seeded state; see
+// `aisha-occupancy-resume.spec.ts` and `apply-wizard-resume.spec.ts`).
+// Discards any returned rows -- use a real `pg` query via `getPool()`
+// instead if you need the result.
+export function execSql(sql: string): void {
+  psql(sql);
+}
+
 // Returns the application id for the (single) application belonging to the
 // client with this email -- every seeded persona (seed/personas/*.yaml) has
 // exactly one.

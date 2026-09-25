@@ -1,7 +1,22 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { flushLoginRateLimit } from "../helpers/db";
 import { staffLogin } from "../helpers/staffLogin";
+
+/**
+ * `ApplicationsFilterBar`'s own root -- the filter bar's `Status`
+ * `MultiSelect` trigger and `ApplicationsTable`'s sortable `Status` column
+ * header button both have an accessible name starting with "Status", so
+ * every locator that means the filter goes through this scope instead of
+ * `page.getByRole("button", { name: /^Status/ })` directly.
+ */
+function applicationsFilterBar(page: Page) {
+  return page
+    .getByLabel("Search")
+    .locator(
+      "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' rounded-md ')]",
+    );
+}
 
 // CQ-027 spec.md AC6: filters live in the URL, survive reload and back
 // navigation, and "Clear filters" resets the URL. Needs `.env`'s
@@ -25,7 +40,12 @@ test("filter bar, sortable table and pagination render for a Manager", async ({ 
   await page.goto("/applications");
   await expect(page.getByRole("heading", { level: 1, name: "Applications" })).toBeVisible();
   await expect(page.getByLabel("Search")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Status/ })).toBeVisible();
+  // Scoped to the filter bar -- `ApplicationsTable`'s sortable "Status"
+  // column header is also a `button` named "Status", so an unscoped
+  // `getByRole("button", { name: /^Status/ })` is a strict-mode violation
+  // (two matches) once the table has rows.
+  const filterBar = applicationsFilterBar(page);
+  await expect(filterBar.getByRole("button", { name: /^Status/ })).toBeVisible();
   await expect(page.getByRole("group", { name: "Strategy" })).toBeVisible();
   await expect(page.getByLabel("State")).toBeVisible();
   await expect(page.getByRole("radiogroup", { name: "Property" })).toBeVisible();
@@ -49,7 +69,9 @@ test("a status filter updates the URL and survives reload and back navigation", 
   // Aisha alone isn't guaranteed onto page 1 -- add the search filter too
   // (AC1's "three combined filters") to make the result deterministic.
   await page.getByLabel("Search").fill("aisha");
-  await page.getByRole("button", { name: /^Status/ }).click();
+  await applicationsFilterBar(page)
+    .getByRole("button", { name: /^Status/ })
+    .click();
   // A plain `.click()`, not `.check()`: the checkbox is fully controlled by
   // the URL (no local state), so it only reflects `checked` once
   // `router.push` round-trips -- `.check()`'s own post-click assertion

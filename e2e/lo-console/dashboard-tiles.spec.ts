@@ -1,9 +1,6 @@
-import { execFileSync } from "node:child_process";
-import path from "node:path";
-
 import { expect, test } from "@playwright/test";
 
-import { applicationIdByClientEmail, flushLoginRateLimit } from "../helpers/db";
+import { flushLoginRateLimit } from "../helpers/db";
 import { staffLogin } from "../helpers/staffLogin";
 
 // CQ-025 spec.md. Needs `.env`'s SEED_STAFF_PASSWORD and `make
@@ -11,7 +8,6 @@ import { staffLogin } from "../helpers/staffLogin";
 const password = process.env.SEED_STAFF_PASSWORD;
 const ADMIN = "riley.admin@clearquote-demo.test";
 const EVIDENCE = "docs/backlog/evidence/CQ-025-dashboard";
-const REPO_ROOT = path.resolve(__dirname, "../..");
 
 test.skip(!password, "SEED_STAFF_PASSWORD not set -- run make demo-reset and export it first");
 
@@ -20,28 +16,6 @@ test.describe.configure({ mode: "serial" });
 test.beforeEach(() => {
   flushLoginRateLimit();
 });
-
-function psql(sql: string): void {
-  execFileSync(
-    "docker",
-    [
-      "compose",
-      "-f",
-      "infra/docker-compose.yml",
-      "exec",
-      "-T",
-      "postgres",
-      "psql",
-      "-U",
-      "cq",
-      "-d",
-      process.env.DATABASE_URL!.split("/").pop()!,
-      "-c",
-      sql,
-    ],
-    { cwd: REPO_ROOT },
-  );
-}
 
 test("tiles are links with the spec.md query parameters", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -139,27 +113,15 @@ test("Aisha, Luis and Grace show up in the right lists with their reasons (AC3)"
   await expect(stale.getByText("Grace Kim")).toBeVisible();
 });
 
-test("resolving a flag directly in the DB removes the application from the attention list (AC5 -- pending, re-check once CQ-028 exists)", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await staffLogin(page, ADMIN, password!);
-
-  const attention = page
-    .getByRole("heading", { level: 3, name: "Needs your attention" })
-    .locator("xpath=ancestor::section");
-  await expect(attention.getByText("Aisha Coleman")).toBeVisible();
-
-  // CQ-028's real re-verify endpoint doesn't exist yet -- resolve directly
-  // in the DB, per the coordinator's E2E note, mirroring what a real
-  // re-verify would do once all of an application's blocking flags clear
-  // (resolve the flag, move the status off NeedsAttention).
-  const applicationId = applicationIdByClientEmail("aisha.coleman@clearquote-demo.test");
-  psql(`update flags set resolved_at = now() where application_id = '${applicationId}';`);
-  psql(`update applications set status = 'ready_to_price' where id = '${applicationId}';`);
-
-  // 30s poll would eventually pick this up; reload to assert deterministically.
-  await page.reload();
-  await expect(page.getByRole("heading", { level: 1, name: "Dashboard" })).toBeVisible();
-  await expect(attention.getByText("Aisha Coleman")).toHaveCount(0);
-});
+// AC5 ("resolving Aisha's flag removes her from the attention list") used
+// to be covered here with a direct DB mutation, as a stand-in for CQ-028's
+// real re-verify endpoint before CQ-028 existed. CQ-028 has since merged,
+// so that workaround is stale -- and because `test.describe.configure({
+// mode: "serial" })` only serializes within this file, the direct DB
+// mutation used to leak into `workspace.spec.ts`'s later Aisha Coleman
+// test in the same full-suite run (both files share the seeded Aisha
+// Coleman persona). AC5 is now covered end-to-end, through the real UI
+// and pipeline, by `e2e/lo-console/aisha-occupancy-resume.spec.ts`'s
+// "AC1: setting Aisha's occupancy resumes the pipeline to Priced and
+// clears her from the dashboard" (see its own comment for the CQ-025/
+// CQ-028 cross-reference).

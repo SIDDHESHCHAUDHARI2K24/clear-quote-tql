@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { applicationIdByClientEmail, flushLoginRateLimit } from "../helpers/db";
+import { applicationIdByClientEmail, execSql, flushLoginRateLimit } from "../helpers/db";
 import { staffLogin } from "../helpers/staffLogin";
 
 // CQ-028 spec.md AC1: "Aisha Coleman: setting occupancy clears her flag, the
@@ -29,6 +29,57 @@ test.describe.configure({ mode: "serial" });
 
 test.beforeEach(() => {
   flushLoginRateLimit();
+});
+
+// This test permanently resolves Aisha's blocking flag and prices her
+// application for real (the whole point of AC1) -- but several other
+// specs in a full-suite run (`dashboard-tiles.spec.ts`'s AC3,
+// `workspace.spec.ts`'s AC4, `applications-list.spec.ts`'s status-filter
+// test, `portal-home.spec.ts`'s AC1/AC2) still assert her *original*
+// seeded state (`needs_attention`, missing occupancy, the "Cannot price:
+// missing Occupancy" flag). This file runs first alphabetically in
+// `e2e/lo-console`, ahead of all of those, so without this `afterAll` her
+// resumed-to-Priced state would leak into every one of them. Restores
+// exactly the columns those specs read: `write_flag`/`resolve_flag`
+// (verification/service.py) only ever set `resolved_at` on the existing
+// row, never delete it, so re-opening it (not fabricating a new one)
+// reproduces the original unresolved "missing Occupancy" flag exactly.
+// Scoped to the exact `(field_key, rule)` the OB-required-field validator
+// uses for occupancy (`enrichment/service.py`'s `_flag_field_key("Occupancy")`
+// == `"occupancy_type"`, `_OB_REQUIRED_FLAG_RULE` == `"ob_required_field"`)
+// rather than every resolved flag on the application: `validate_ob_
+// required_fields` calls `resolve_flag` for every field in `ALWAYS_
+// REQUIRED` on each successful run, so if the real pipeline this test
+// triggers ever raises-then-resolves a flag for some other field along
+// the way, a blanket "any resolved flag" restore would incorrectly reopen
+// that one too.
+// Leftover `scenarios`/`quotes`/`activity_events` rows from the real
+// pipeline run stay in place -- nothing else in the suite asserts their
+// absence for Aisha.
+//
+// `updated_at` also needs resetting by hand: it's an ORM-level
+// `onupdate=func.now()` (applications/models.py), not a DB trigger, so
+// this raw SQL restore doesn't touch it, and it's left at the real
+// pipeline's (very recent) timestamp. `dashboard/service.py`'s
+// `_build_attention` sorts the attention list `updated_at.asc()` with a
+// `limit(10)` -- her *originally* seeded `updated_at` is one of the
+// earliest of any `needs_attention` row (personas seed before the 200
+// background applications), so a stale recent timestamp would silently
+// sort her out of that top-10 window and fail `dashboard-tiles.spec.ts`'s
+// AC3. `'epoch'` guarantees she sorts first, same as (or earlier than)
+// her real seeded position.
+test.afterAll(() => {
+  const applicationId = applicationIdByClientEmail("aisha.coleman@clearquote-demo.test");
+  execSql(
+    `update applications set status = 'needs_attention', occupancy = null, ` +
+      `last_pipeline_stage = null, recommended_quote_id = null, updated_at = 'epoch' ` +
+      `where id = '${applicationId}';`,
+  );
+  execSql(
+    `update flags set resolved_at = null where application_id = '${applicationId}' ` +
+      `and field_key = 'occupancy_type' and rule = 'ob_required_field' ` +
+      `and resolved_at is not null;`,
+  );
 });
 
 test("AC1: setting Aisha's occupancy resumes the pipeline to Priced and clears her from the dashboard", async ({
