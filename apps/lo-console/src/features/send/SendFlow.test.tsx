@@ -27,6 +27,7 @@ import type { ScenariosView } from "../quote-builder/api";
 import packageFixture from "./__fixtures__/package-marcus-hale.json";
 import type { Readiness, SendPackage, SendStatus, SentVersion } from "./api";
 import { SendTab } from "./SendTab";
+import { SEND_POLL_MAX_MS, SEND_TOO_LONG_MESSAGE } from "./useSendFlow";
 import { SEND_IN_PROGRESS_MESSAGE } from "./useSendTab";
 
 const pkg = packageFixture as SendPackage;
@@ -319,6 +320,37 @@ describe("Send flow (CQ-020)", () => {
       await within(dialog).findByTestId("send-failed", {}, { timeout: 10_000 }),
     ).toHaveTextContent("Couldn't check the send's progress (Sign in again)");
     expect(screen.getByLabelText("Note to the borrower (optional)")).toBeEnabled();
+  }, 15_000);
+
+  it("a send that stays in flight too long stops polling with a clear message", async () => {
+    serve({ statuses: [status("idle")] });
+    const served = getMock.getMockImplementation()!;
+    getMock.mockImplementation((path: string) =>
+      path.endsWith("/send-status") && postMock.mock.calls.length > 0
+        ? Promise.resolve(ok(status("queued")))
+        : served(path),
+    );
+    postMock.mockResolvedValue(
+      ok({ package_id: pkg.id, workflow_id: "send-package-x", status: "queued" }, 202),
+    );
+    const realNow = Date.now.bind(Date);
+    let skew = 0;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => realNow() + skew);
+    try {
+      render(<SendTab />);
+      const dialog = await openDialogAndSend();
+      await waitFor(() => expect(sendStatusCalls()).toBeGreaterThan(2), SLOW);
+      skew = SEND_POLL_MAX_MS + 1_000;
+      expect(await within(dialog).findByTestId("send-failed", {}, SLOW)).toHaveTextContent(
+        SEND_TOO_LONG_MESSAGE,
+      );
+      const calls = sendStatusCalls();
+      await new Promise((resolve) => setTimeout(resolve, 1_200));
+      expect(sendStatusCalls()).toBe(calls);
+      expect(screen.getByLabelText("Note to the borrower (optional)")).toBeEnabled();
+    } finally {
+      nowSpy.mockRestore();
+    }
   }, 15_000);
 });
 

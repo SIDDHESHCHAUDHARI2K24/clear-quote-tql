@@ -16,6 +16,12 @@ import {
 export const SEND_POLL_MS = 500;
 /** Consecutive failed status reads before the tab gives up (about 5 s). */
 export const SEND_POLL_MAX_FAILURES = 10;
+/** How long the tab follows one send before it stops polling (plan.md
+ * Decision 23). A send takes seconds; the server itself reports a dead
+ * send as `failed`, and Temporal ends one after 10 minutes. */
+export const SEND_POLL_MAX_MS = 2 * 60 * 1000;
+export const SEND_TOO_LONG_MESSAGE =
+  "The send is taking longer than expected. Reload the page to see whether it went out.";
 
 export type RunningStep = Extract<SendStep, "queued" | "rendering" | "emailing">;
 
@@ -74,6 +80,8 @@ export function useSendFlow(
   }, [packageId]);
   /** Consecutive failed `send-status` reads while polling. */
   const failedPolls = useRef(0);
+  /** When the tab started following the current send (`Date.now()`). */
+  const pollingSince = useRef(0);
 
   const loadVersions = useCallback(async (forPackageId: string) => {
     const result = await fetchSentVersions(forPackageId);
@@ -111,6 +119,8 @@ export function useSendFlow(
   useEffect(() => {
     if (phase.kind !== "running" || packageId === null) return;
     const forPackageId = packageId;
+    // Tick 0 is a send just started or picked up: its clock starts now.
+    if (phase.tick === 0) pollingSince.current = Date.now();
     let active = true;
     const timer = setTimeout(async () => {
       const status = await fetchSendStatus(forPackageId);
@@ -133,6 +143,10 @@ export function useSendFlow(
       failedPolls.current = 0;
       const { status: step, error, recipient_email: recipient } = status.data;
       if (isRunningStep(step)) {
+        if (Date.now() - pollingSince.current > SEND_POLL_MAX_MS) {
+          setPhase({ kind: "failed", message: SEND_TOO_LONG_MESSAGE });
+          return;
+        }
         setPhase({ kind: "running", step, tick: phase.tick + 1 });
       } else if (step === "done") {
         setPhase({ kind: "done", recipient });
