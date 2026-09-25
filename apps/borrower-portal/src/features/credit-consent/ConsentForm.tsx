@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 import { Button, extractErrorMessage } from "@cq/ui";
@@ -14,6 +14,22 @@ const REASON_MAX_LENGTH = 1000;
 interface ConsentFormProps {
   consent: PortalConsent;
   onDecided: (consent: PortalConsent) => void;
+  /** A 409 from accept or decline: the request changed under the borrower
+   * (decided elsewhere, expired, or new text). The page re-fetches it. */
+  onStale: () => void;
+  /** A 401: the session ended; the page sends the borrower to login. */
+  onUnauthorized: () => void;
+  /** Shown above the form after a re-fetch left the request pending. */
+  notice?: string | null;
+}
+
+/** The API error code, e.g. `NAME_MISMATCH`, from an error body. */
+function errorCode(error: unknown): string | null {
+  if (typeof error !== "object" || error === null || !("error" in error)) return null;
+  const inner = (error as { error?: unknown }).error;
+  if (typeof inner !== "object" || inner === null || !("code" in inner)) return null;
+  const code = (inner as { code?: unknown }).code;
+  return typeof code === "string" ? code : null;
 }
 
 function ConsentText({ consent, headingId }: { consent: PortalConsent; headingId: string }) {
@@ -54,12 +70,21 @@ interface DeclinePanelProps {
   consentId: string;
   disabled: boolean;
   onDecided: (consent: PortalConsent) => void;
+  onStale: () => void;
+  onUnauthorized: () => void;
   onError: (message: string) => void;
 }
 
 /** "Decline" reveals an optional reason and a confirm button, so a stray
  * tap never declines. */
-function DeclinePanel({ consentId, disabled, onDecided, onError }: DeclinePanelProps) {
+function DeclinePanel({
+  consentId,
+  disabled,
+  onDecided,
+  onStale,
+  onUnauthorized,
+  onError,
+}: DeclinePanelProps) {
   const reasonId = useId();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -68,9 +93,17 @@ function DeclinePanel({ consentId, disabled, onDecided, onError }: DeclinePanelP
   async function confirmDecline() {
     setPending(true);
     try {
-      const { data, error } = await declineConsent(consentId, reason);
+      const { data, error, response } = await declineConsent(consentId, reason);
       if (data) {
         onDecided(data);
+        return;
+      }
+      if (response.status === 401) {
+        onUnauthorized();
+        return;
+      }
+      if (response.status === 409) {
+        onStale();
         return;
       }
       onError(extractErrorMessage(error, GENERIC_ERROR));
@@ -127,7 +160,13 @@ function validate(checked: boolean, name: string) {
  * Decline. Errors are linked to their inputs with `aria-describedby` and
  * `aria-invalid`; the first invalid input takes focus (AC7).
  */
-export function ConsentForm({ consent, onDecided }: ConsentFormProps) {
+export function ConsentForm({
+  consent,
+  onDecided,
+  onStale,
+  onUnauthorized,
+  notice = null,
+}: ConsentFormProps) {
   const baseId = useId();
   const ids = {
     heading: `${baseId}-heading`,
@@ -147,6 +186,16 @@ export function ConsentForm({ consent, onDecided }: ConsentFormProps) {
   });
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // Set on NAME_MISMATCH: the input is disabled while pending, so it takes
+  // focus once the submit settles and re-enables it.
+  const focusNameOnSettle = useRef(false);
+
+  useEffect(() => {
+    if (!pending && focusNameOnSettle.current) {
+      focusNameOnSettle.current = false;
+      nameRef.current?.focus();
+    }
+  }, [pending]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -163,9 +212,25 @@ export function ConsentForm({ consent, onDecided }: ConsentFormProps) {
     }
     setPending(true);
     try {
-      const { data, error } = await acceptConsent(consent.id, typedName.trim());
+      const { data, error, response } = await acceptConsent(consent.id, typedName.trim(), {
+        version: consent.text.version,
+        sha256: consent.text.sha256,
+      });
       if (data) {
         onDecided(data);
+        return;
+      }
+      if (response.status === 401) {
+        onUnauthorized();
+        return;
+      }
+      if (response.status === 409) {
+        onStale();
+        return;
+      }
+      if (errorCode(error) === "NAME_MISMATCH") {
+        setErrors({ checkbox: null, name: extractErrorMessage(error, GENERIC_ERROR) });
+        focusNameOnSettle.current = true;
         return;
       }
       setServerError(extractErrorMessage(error, GENERIC_ERROR));
@@ -185,6 +250,12 @@ export function ConsentForm({ consent, onDecided }: ConsentFormProps) {
           credit check to finalize your pre-approval.
         </p>
       </header>
+
+      {notice && (
+        <p role="status" className="rounded-md bg-neutral-100 p-3 text-sm text-navy-900">
+          {notice}
+        </p>
+      )}
 
       <ConsentText consent={consent} headingId={ids.heading} />
 
@@ -209,8 +280,7 @@ export function ConsentForm({ consent, onDecided }: ConsentFormProps) {
               className="mt-1 h-5 w-5 shrink-0"
             />
             <label htmlFor={ids.checkbox} className="text-sm text-navy-900">
-              I authorize Clear Quote to obtain my credit report from Experian, Equifax and
-              TransUnion as described above.
+              {consent.text.authorization}
             </label>
           </div>
           <FieldError id={ids.checkboxError} message={errors.checkbox} />
@@ -255,6 +325,8 @@ export function ConsentForm({ consent, onDecided }: ConsentFormProps) {
             consentId={consent.id}
             disabled={pending}
             onDecided={onDecided}
+            onStale={onStale}
+            onUnauthorized={onUnauthorized}
             onError={setServerError}
           />
         </div>

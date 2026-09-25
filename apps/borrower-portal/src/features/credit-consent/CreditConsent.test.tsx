@@ -35,6 +35,7 @@ const PENDING: PortalConsent = {
   text: {
     version: "hard_pull_v1",
     body: "Who is asking: Clear Quote.\n\nWhich bureaus: Experian, Equifax and TransUnion.",
+    authorization: "I authorize Clear Quote to obtain my credit report as described above.",
     sha256: "abc",
   },
   fico_after_pull: null,
@@ -44,10 +45,10 @@ function ok(data: unknown) {
   return { data, error: undefined, response: { status: 200 } };
 }
 
-function fail(status: number, message = "Nope") {
+function fail(status: number, message = "Nope", code = "X") {
   return {
     data: undefined,
-    error: { error: { code: "X", message, details: {} } },
+    error: { error: { code, message, details: {} } },
     response: { status },
   };
 }
@@ -115,17 +116,17 @@ describe("CreditConsent", () => {
 
     expect(postMock).toHaveBeenCalledWith("/api/v1/portal/consents/{consent_id}/accept", {
       params: { path: { consent_id: CONSENT_ID } },
-      body: { typed_name: "Tom Brandt" },
+      body: { typed_name: "Tom Brandt", text_version: "hard_pull_v1", text_sha256: "abc" },
     });
     expect(
       await screen.findByRole("heading", { name: "Credit check authorized" }),
     ).toBeInTheDocument();
   });
 
-  it("shows the server's error, e.g. a name mismatch", async () => {
+  it("puts a name mismatch on the name field (NAME_MISMATCH)", async () => {
     const user = userEvent.setup();
     postMock.mockResolvedValueOnce(
-      fail(422, "The typed name must match your full name on the application."),
+      fail(422, "The typed name must match your full name on the application.", "NAME_MISMATCH"),
     );
     renderPage();
 
@@ -133,7 +134,95 @@ describe("CreditConsent", () => {
     await user.type(screen.getByLabelText("Type your full name to sign"), "Someone Else");
     await user.click(screen.getByRole("button", { name: "Authorize" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/must match your full name/);
+    const name = screen.getByLabelText("Type your full name to sign");
+    await vi.waitFor(() => expect(name).toHaveAttribute("aria-invalid", "true"));
+    expect(name).toHaveAccessibleDescription(/must match your full name/);
+    expect(name).toHaveFocus();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("shows other server errors in an alert", async () => {
+    const user = userEvent.setup();
+    postMock.mockResolvedValueOnce(fail(502, "The credit bureau could not be reached."));
+    renderPage();
+
+    await user.click(await screen.findByRole("checkbox", { name: /I authorize/ }));
+    await user.type(screen.getByLabelText("Type your full name to sign"), "Tom Brandt");
+    await user.click(screen.getByRole("button", { name: "Authorize" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not be reached/);
+  });
+
+  it("labels the checkbox with the versioned authorization sentence", async () => {
+    renderPage();
+    expect(
+      await screen.findByRole("checkbox", {
+        name: "I authorize Clear Quote to obtain my credit report as described above.",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("re-fetches and shows the outcome on a 409 from accept", async () => {
+    const user = userEvent.setup();
+    postMock.mockResolvedValueOnce(fail(409, "Already declined", "CONSENT_CLOSED"));
+    renderPage();
+    getMock.mockResolvedValueOnce(
+      ok({ ...PENDING, status: "declined", decided_at: "2026-09-21T12:00:00Z" }),
+    );
+
+    await user.click(await screen.findByRole("checkbox", { name: /I authorize/ }));
+    await user.type(screen.getByLabelText("Type your full name to sign"), "Tom Brandt");
+    await user.click(screen.getByRole("button", { name: "Authorize" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Credit check declined" }),
+    ).toBeInTheDocument();
+    expect(getMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("re-fetches and shows the outcome on a 409 from decline", async () => {
+    const user = userEvent.setup();
+    postMock.mockResolvedValueOnce(fail(409, "Expired", "CONSENT_EXPIRED"));
+    renderPage();
+    getMock.mockResolvedValueOnce(ok({ ...PENDING, status: "expired" }));
+
+    await user.click(await screen.findByRole("button", { name: "Decline" }));
+    await user.click(screen.getByRole("button", { name: "Confirm decline" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "This request has expired" }),
+    ).toBeInTheDocument();
+    expect(getMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows the updated text with a notice when the text changed (409)", async () => {
+    const user = userEvent.setup();
+    postMock.mockResolvedValueOnce(fail(409, "Text changed", "CONSENT_TEXT_CHANGED"));
+    renderPage();
+    getMock.mockResolvedValueOnce(ok({ ...PENDING, text: { ...PENDING.text, sha256: "def" } }));
+
+    await user.click(await screen.findByRole("checkbox", { name: /I authorize/ }));
+    await user.type(screen.getByLabelText("Type your full name to sign"), "Tom Brandt");
+    await user.click(screen.getByRole("button", { name: "Authorize" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(/changed since you opened it/);
+    expect(screen.getByRole("checkbox", { name: /I authorize/ })).not.toBeChecked();
+  });
+
+  it("sends a signed-out accept to login and back to this request (401)", async () => {
+    const user = userEvent.setup();
+    postMock.mockResolvedValueOnce(fail(401, "Not signed in")).mockResolvedValueOnce(ok(null));
+    renderPage();
+
+    await user.click(await screen.findByRole("checkbox", { name: /I authorize/ }));
+    await user.type(screen.getByLabelText("Type your full name to sign"), "Tom Brandt");
+    await user.click(screen.getByRole("button", { name: "Authorize" }));
+
+    await vi.waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith(
+        `/login?next=${encodeURIComponent(`/tasks/credit-check/${CONSENT_ID}`)}`,
+      ),
+    );
   });
 
   it("declines with an optional reason after a confirm step", async () => {

@@ -23,7 +23,12 @@ class ConsentLoOut(BaseModel):
 class ConsentTextOut(BaseModel):
     version: str
     body: str
+    """The paragraphs above the checkbox."""
+    authorization: str
+    """The checkbox sentence ("I authorize ..."), part of the versioned text."""
     sha256: str
+    """SHA-256 of the whole versioned text (`body` + blank line +
+    `authorization`); echoed back as `text_sha256` on accept."""
 
 
 class PortalConsentOut(BaseModel):
@@ -44,6 +49,11 @@ class PortalConsentOut(BaseModel):
 
 class ConsentAcceptRequest(BaseModel):
     typed_name: str = Field(min_length=1, max_length=TYPED_NAME_MAX)
+    text_version: str = Field(min_length=1, max_length=64)
+    """The consent text version the borrower was shown."""
+    text_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    """`text.sha256` from the GET the borrower read; a mismatch with the
+    version being accepted is 409 `CONSENT_TEXT_CHANGED` (hardening m2)."""
 
 
 class ConsentDeclineRequest(BaseModel):

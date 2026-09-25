@@ -24,7 +24,11 @@ from app.features.borrower.consent.models import Consent, ConsentStatus
 from app.features.clients.models import Client
 from app.features.notifications.email import service as email_service
 from app.features.notifications.outbox.models import OutboxEmail
-from app.features.portal.consents.consent_text import HARD_PULL_TEXT_V1
+from app.features.portal.consents.consent_text import (
+    HARD_PULL_AUTHORIZATION_V1,
+    HARD_PULL_TEXT_V1,
+    HARD_PULL_TEXT_VERSION,
+)
 from app.integrations.common.models import IntegrationCall
 from conftest import BorrowerSession, StaffSession
 
@@ -96,6 +100,16 @@ async def _events(db: AsyncSession, app: Application, type_: str) -> list[Activi
     )
 
 
+def _accept_body(typed_name: str) -> dict[str, str]:
+    """The accept body the portal sends: the typed name plus the version and
+    SHA-256 of the text it displayed (hardening m2)."""
+    return {
+        "typed_name": typed_name,
+        "text_version": HARD_PULL_TEXT_VERSION,
+        "text_sha256": hashlib.sha256(HARD_PULL_TEXT_V1.encode()).hexdigest(),
+    }
+
+
 def _freeze(monkeypatch: pytest.MonkeyPatch, instant: Any) -> None:
     settings = get_settings().model_copy(update={"clock_now": instant.isoformat()})
     monkeypatch.setattr(clock, "get_settings", lambda: settings)
@@ -123,21 +137,23 @@ async def test_hard_pull_consent_flow(
     body = read.json()
     assert body["status"] == "pending"
     assert body["text"]["version"] == "hard_pull_v1"
-    assert body["text"]["body"] == HARD_PULL_TEXT_V1
+    assert body["text"]["body"] + "\n\n" + body["text"]["authorization"] == HARD_PULL_TEXT_V1
+    assert body["text"]["authorization"] == HARD_PULL_AUTHORIZATION_V1
+    assert body["text"]["sha256"] == hashlib.sha256(HARD_PULL_TEXT_V1.encode()).hexdigest()
     for needle in ("Experian", "Equifax", "TransUnion", "hard inquiry"):
         assert needle in body["text"]["body"]
     assert body["borrower_name"] == "Tom Brandt"
     assert body["lo"]["name"]
 
     wrong = await client.post(
-        f"/api/v1/portal/consents/{consent_id}/accept", json={"typed_name": "Lisa Brandt"}
+        f"/api/v1/portal/consents/{consent_id}/accept", json=_accept_body("Lisa Brandt")
     )
     assert wrong.status_code == 422
     assert wrong.json()["error"]["code"] == "NAME_MISMATCH"
 
     accepted = await client.post(
         f"/api/v1/portal/consents/{consent_id}/accept",
-        json={"typed_name": "  tom   BRANDT "},
+        json=_accept_body("  tom   BRANDT "),
         headers={"user-agent": "pytest-browser/1.0"},
     )
 
@@ -217,7 +233,7 @@ async def test_hard_pull_decline(
 
     # A declined request cannot then be accepted.
     again = await client.post(
-        f"/api/v1/portal/consents/{consent_id}/accept", json={"typed_name": "Tom Brandt"}
+        f"/api/v1/portal/consents/{consent_id}/accept", json=_accept_body("Tom Brandt")
     )
     assert again.status_code == 409
 
@@ -246,9 +262,7 @@ async def test_consent_isolation(
 
     base = f"/api/v1/portal/consents/{consent_id}"
     assert (await client.get(base)).status_code == 404
-    assert (
-        await client.post(f"{base}/accept", json={"typed_name": "Tom Brandt"})
-    ).status_code == 404
+    assert (await client.post(f"{base}/accept", json=_accept_body("Tom Brandt"))).status_code == 404
     assert (await client.post(f"{base}/decline", json={})).status_code == 404
     unknown = "00000000-0000-0000-0000-000000000000"
     assert (await client.get(f"/api/v1/portal/consents/{unknown}")).status_code == 404
@@ -278,7 +292,7 @@ async def test_consent_expiry(
     _freeze(monkeypatch, row.requested_at + timedelta(days=15))
 
     accept = await client.post(
-        f"/api/v1/portal/consents/{consent_id}/accept", json={"typed_name": "Tom Brandt"}
+        f"/api/v1/portal/consents/{consent_id}/accept", json=_accept_body("Tom Brandt")
     )
 
     assert accept.status_code == 409
@@ -329,8 +343,8 @@ async def test_consent_accept_idempotent(
     sent.clear()
     url = f"/api/v1/portal/consents/{consent_id}/accept"
 
-    first = await client.post(url, json={"typed_name": "Tom Brandt"})
-    second = await client.post(url, json={"typed_name": "Tom Brandt"})
+    first = await client.post(url, json=_accept_body("Tom Brandt"))
+    second = await client.post(url, json=_accept_body("Tom Brandt"))
 
     assert first.status_code == 200 and second.status_code == 200
     assert second.json()["status"] == "accepted"

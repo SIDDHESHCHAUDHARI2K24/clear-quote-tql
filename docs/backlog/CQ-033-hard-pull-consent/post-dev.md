@@ -52,3 +52,33 @@ A hard credit pull now runs only after the borrower authorizes it in the portal.
 
 - The E2E needs the API's `PORTAL_BASE_URL` to point at the slot's portal, or the emailed link goes to :3020.
 - The LO console Credit tab (CQ-028b) renders the states from the Credit section, so no LO-console change is needed here (E11).
+
+## Hardening round (branch `cq-033-consent-hardening`)
+
+Fixes for the minors the CQ-033 review left open (after PR #24). Every fix has a test written first.
+
+| Item | Fix | Evidence |
+| --- | --- | --- |
+| Lock upgrade | `sections/credit.py` `request_hard_pull` no longer takes a second `FOR UPDATE` on the application. The router's `lock_application` (`FOR NO KEY UPDATE`) already serialises it, and the 409-while-pending check runs under that lock. | `test_consent_hardening.py::test_request_hard_pull_takes_no_second_for_update` records every application lock taken by the request (all `FOR NO KEY UPDATE`); a second request gets 409 |
+| m1 lock order | Accept locks the application's quotes first (`lock_application_quotes`: `select(Quote.id)` via the scenarios join, `with_for_update(of=Quote)`), then takes `lock_application`. This matches CQ-030's `mark_stale` order (quotes → versions → applications). The order is documented in the `hard_pull.py` and `service.py` docstrings. | `test_accept_locks_quotes_before_the_application` uses a statement spy on a bucket-crossing pull and checks the order: quotes lock, then application lock, then `UPDATE quotes` |
+| m2 text proof | The checkbox sentence is now the last paragraph of `hard_pull_v1`, so the hash covers it. It was changed in place because this is pre-release and no v1 decision exists outside the rebuildable demo DBs. The GET returns `text.body`, `text.authorization` and `text.sha256`, where `sha256` hashes the whole text. Accept requires `text_version` and `text_sha256`; if either mismatches it returns 409 `CONSENT_TEXT_CHANGED` and records nothing. The portal labels the checkbox with `authorization` and sends back the sha it displayed. | `test_accept_rejects_a_changed_text` (wrong hash or version → 409, missing fields → 422, row still pending, no pull; the good hash is stored); `test_hard_pull_consent_flow` (body + authorization = v1 text, sha); Vitest "labels the checkbox with the versioned authorization sentence" and the accept-body assertion |
+| m3 expiry race | `_expire_if_due` is now a conditional `UPDATE … WHERE id AND status = pending AND expires_at <= now`, followed by a re-read. It never overwrites an accepted or declined row. | `test_expiry_never_overwrites_a_decision[accepted/declined]` |
+| m6 one consent per pull | `perform_hard_pull(db, application_id, *, consent_id)` requires that consent to be an accepted `hard_pull` consent of the same application (`HARD_PULL_CONSENT_REQUIRED`). If a `credit.hard_pull_completed` event already names the consent, it raises `HARD_PULL_CONSENT_USED`. The completed event's payload records `consent_id`. | `test_hard_pull.py::test_hard_pull_requires_consent` (AC2 direct: pending, declined and unknown ids are refused, nothing written), `test_hard_pull_uses_each_consent_once`, `test_hard_pull_writes_middle_score` (payload `consent_id`) |
+| m5 duplicate tradelines | Candidates are now a list per (creditor, type) key, and each matched row is popped, so two Chase cards remain two accounts. | `test_tradelines_with_same_creditor_and_type_stay_separate` (two imported Chase cards take 111/222, and a third line is added as 333) |
+| m4 provider failure (partial) | On an `IntegrationError`, the decision is rolled back, so the request stays pending and can be retried. A `credit.hard_pull_failed` event (consent id, error code) and the LO email "Credit check could not be completed" are then committed in a separate transaction, and the bureau error (502) is re-raised. The LO is emailed once per consent, and a failure while recording is logged without masking the 502 (code-review lows 1 and 2). | `test_provider_failure_keeps_the_request_pending` (forced failure through `set_forced_failure("credit")`: 502, row pending, 1 failed event, 1 LO email; a second failure adds an event but no email; after recovery a retry returns 200 with 1 completed event) |
+| m7 portal | A 409 from accept or decline re-fetches the request and shows the outcome. If the request is still pending (text changed), the form remounts with a notice. A 401 on accept or decline goes to `/login?next=…`. `NAME_MISMATCH` sets the name field's error (`aria-invalid`, `aria-describedby`) and focuses it once the submit settles. | `CreditConsent.test.tsx`: 14 tests, including 409 accept → declined outcome, 409 decline → expired outcome, text-changed notice with the checkbox cleared, 401 accept → login, NAME_MISMATCH on the field |
+| Nit: concurrent double accept | Two accepts are sent at once, each through its own session, against committed rows. | `test_consent_concurrency.py::test_concurrent_double_accept_pulls_once` (both 200/accepted, 1 hard-pull integration call, 1 completed event, 1 LO email) |
+
+**Code review (medium):** no critical or major findings. The two lows in `_record_pull_failure` (the recording could mask the 502; one email per retry) are fixed as described above.
+
+**Test log**
+
+| Check | Result |
+| --- | --- |
+| `make lint` (ruff, mypy, eslint, tsc, prettier) | clean |
+| `make test` | backend 756 passed, seed 32 passed; portal 126, lo-console 108, ui 163, api-client 2 passed |
+| consents + credit tests ×3 (`portal/consents`, `applications/credit`, `sections/tests/test_credit.py`) | 24 passed, 24 passed, 24 passed |
+| react-doctor (borrower-portal) | 100/100 |
+| Slot-26 E2E: `make demo-reset`, API with `PORTAL_BASE_URL=http://localhost:3226`, worker, portal on 3226, `e2e/borrower-portal/credit-consent.spec.ts` | 1 passed |
+
+**Follow-up (logged, not fixed):** `notifications/email/service.send_email` sends over SMTP before the caller commits. This is a shared issue with every caller: if the commit fails after the send, the email has gone out without its outbox row or decision. In the failure path the email is sent after the decision has been rolled back, so it matches what was committed. The fix belongs in the shared email service, for example sending after commit from the outbox.

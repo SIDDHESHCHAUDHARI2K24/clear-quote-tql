@@ -40,3 +40,18 @@ def declined_html(*, borrower_name: str, reason: str | None, link: str) -> str:
         f"{why}"
         f'<p><a href="{href}" style="color:#1d4ed8;">Open the Credit tab</a></p>'
     )
+
+
+def failed_subject() -> str:
+    return "Credit check could not be completed"
+
+
+def failed_html(*, borrower_name: str, link: str) -> str:
+    name = html.escape(borrower_name)
+    href = html.escape(link, quote=True)
+    return _wrap(
+        f"<p>{name} authorized the hard credit check, but the credit bureau could not be "
+        "reached. No credit pull was made and the request is still open, so the borrower "
+        "can try again.</p>"
+        f'<p><a href="{href}" style="color:#1d4ed8;">Open the Credit tab</a></p>'
+    )

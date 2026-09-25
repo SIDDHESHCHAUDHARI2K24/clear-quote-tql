@@ -12,11 +12,17 @@ export function fetchConsent(consentId: string) {
 }
 
 /** `POST /api/v1/portal/consents/{id}/accept` — records the signed decision
- * and runs the hard pull server-side. */
-export function acceptConsent(consentId: string, typedName: string) {
+ * and runs the hard pull server-side. Echoes the version and SHA-256 of the
+ * text the borrower was shown, so the stored hash proves what they saw
+ * (409 `CONSENT_TEXT_CHANGED` if it no longer matches). */
+export function acceptConsent(
+  consentId: string,
+  typedName: string,
+  text: Pick<PortalConsent["text"], "version" | "sha256">,
+) {
   return api.POST("/api/v1/portal/consents/{consent_id}/accept", {
     params: { path: { consent_id: consentId } },
-    body: { typed_name: typedName },
+    body: { typed_name: typedName, text_version: text.version, text_sha256: text.sha256 },
   });
 }
 

@@ -1,9 +1,10 @@
 """The consent-gated hard credit pull (CQ-033).
 
 `perform_hard_pull` is the only code path that asks the credit bureau for a
-hard pull. It refuses -- raises, logs, writes nothing -- unless an
-`accepted` `hard_pull` consent exists for the application (AC2); the check
-lives here, not only in the portal UI or router.
+hard pull. It refuses -- raises, logs, writes nothing -- unless the given
+`consent_id` is an `accepted` `hard_pull` consent of that application that
+no earlier pull has used (AC2; hardening m6 ties each pull to exactly one
+consent). The check lives here, not only in the portal UI or router.
 
 On success it (plan.md decisions 3-5, 13):
 1. pulls `CreditPullType.HARD_PULL` for the application's credit key (the
@@ -15,10 +16,13 @@ On success it (plan.md decisions 3-5, 13):
    LO-edited rows;
 4. re-runs the verification rules (`run_and_persist`, same transaction);
 5. marks the application's quotes stale if the FICO bracket changed (E12);
-6. writes a `credit.hard_pull_completed` activity event.
+6. writes a `credit.hard_pull_completed` activity event whose payload
+   carries the `consent_id` it consumed.
 
-Nothing here commits; the caller owns the transaction (and should hold
-`lock_application`).
+Nothing here commits; the caller owns the transaction. Lock order (m1):
+the caller locks the application's quotes (`lock_application_quotes`)
+BEFORE `lock_application`, matching CQ-030's `mark_stale` order (quotes ->
+versions -> applications), because step 5 may UPDATE those quotes.
 """
 
 from __future__ import annotations
@@ -40,9 +44,12 @@ from app.features.applications.credit.models import Liability
 from app.features.applications.models import Application
 from app.features.applications.sections import events, provenance
 from app.features.applications.sections.service import fico_bracket
+from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.models import FieldValue
 from app.features.applications.verification.service import run_and_persist
 from app.features.borrower.consent.models import Consent, ConsentStatus, ConsentType
+from app.features.pricing.scenarios.models import Scenario
+from app.features.quotes.builder.models import Quote
 from app.features.quotes.stale.service import mark_application_quotes_stale
 from app.integrations.credit.mock import MockCreditClient, portal_credit_key
 from app.integrations.credit.models import CreditPullType
@@ -53,11 +60,16 @@ logger = logging.getLogger(__name__)
 HARD_PULL_SOURCE_REF = "hard_pull"
 HARD_PULL_TYPE_VALUE = "Hard_Pull"
 HARD_PULL_COMPLETED = "credit.hard_pull_completed"
+HARD_PULL_FAILED = "credit.hard_pull_failed"
 _ZERO = Decimal("0.00")
 
 
 class HardPullConsentRequiredError(ConflictError):
     code = "HARD_PULL_CONSENT_REQUIRED"
+
+
+class HardPullConsentUsedError(ConflictError):
+    code = "HARD_PULL_CONSENT_USED"
 
 
 @dataclass(frozen=True)
@@ -76,14 +88,45 @@ def credit_key(application: Application) -> str:
     return application.los_loan_guid or portal_credit_key(application.id)
 
 
-async def has_accepted_consent(db: AsyncSession, application_id: uuid.UUID) -> bool:
+async def lock_application_quotes(db: AsyncSession, application_id: uuid.UUID) -> None:
+    """Locks the application's quotes `FOR UPDATE` until the transaction
+    ends. Take it BEFORE `lock_application` (lock order, see module doc)."""
+    await db.execute(
+        select(Quote.id)
+        .join(Scenario, Quote.scenario_id == Scenario.id)
+        .where(Scenario.application_id == application_id)
+        .order_by(Quote.id)
+        .with_for_update(of=Quote)
+    )
+
+
+async def is_accepted_consent(
+    db: AsyncSession, application_id: uuid.UUID, consent_id: uuid.UUID
+) -> bool:
     found = (
         await db.execute(
-            select(Consent.id)
-            .where(
+            select(Consent.id).where(
+                Consent.id == consent_id,
                 Consent.application_id == application_id,
                 Consent.type == ConsentType.HARD_PULL,
                 Consent.status == ConsentStatus.ACCEPTED,
+            )
+        )
+    ).scalar_one_or_none()
+    return found is not None
+
+
+async def consent_already_used(
+    db: AsyncSession, application_id: uuid.UUID, consent_id: uuid.UUID
+) -> bool:
+    """True when a `credit.hard_pull_completed` event already names it."""
+    found = (
+        await db.execute(
+            select(ActivityEvent.id)
+            .where(
+                ActivityEvent.application_id == application_id,
+                ActivityEvent.type == HARD_PULL_COMPLETED,
+                ActivityEvent.payload["consent_id"].astext == str(consent_id),
             )
             .limit(1)
         )
@@ -166,11 +209,14 @@ async def _refresh_liabilities(
         prefix = f"liabilities.{row.id}."
         return any(key.startswith(prefix) for key in overrides)
 
-    candidates = {
-        (_norm(row.creditor_name), _norm(row.account_type)): row
-        for row in rows
-        if not _protected(row)
-    }
+    # A list per key (hardening m5): two cards with one creditor and type
+    # are two accounts. Each matched row is popped, so it takes one line.
+    candidates: dict[tuple[str, str], list[Liability]] = {}
+    for row in rows:
+        if not _protected(row):
+            candidates.setdefault((_norm(row.creditor_name), _norm(row.account_type)), []).append(
+                row
+            )
     protected_keys = {
         (_norm(row.creditor_name), _norm(row.account_type)) for row in rows if _protected(row)
     }
@@ -185,8 +231,9 @@ async def _refresh_liabilities(
         key = (_norm(creditor), _norm(account_type))
         payment = _amount(line.get("monthly_payment"))
         balance = _amount(line.get("balance"))
-        row = candidates.get(key)
-        if row is not None:
+        matches = candidates.get(key)
+        if matches:
+            row = matches.pop(0)
             changed = False
             if payment is not None and payment != row.monthly_payment:
                 row.monthly_payment = payment
@@ -210,7 +257,6 @@ async def _refresh_liabilities(
             balance=balance if balance is not None else _ZERO,
         )
         db.add(new_row)
-        candidates[key] = new_row
         added += 1
     await db.flush()
     return updated, added
@@ -220,20 +266,33 @@ async def perform_hard_pull(
     db: AsyncSession,
     application_id: uuid.UUID,
     *,
+    consent_id: uuid.UUID,
     credit_client: CreditClient | None = None,
 ) -> HardPullResult:
-    """Runs the hard pull for `application_id`; see the module docstring.
+    """Runs the hard pull for `application_id` under `consent_id`; see the
+    module docstring.
 
-    Raises `HardPullConsentRequiredError` (409) before any provider call or
-    write unless an accepted `hard_pull` consent exists (AC2)."""
-    if not await has_accepted_consent(db, application_id):
+    Before any provider call or write it raises (409)
+    `HardPullConsentRequiredError` unless `consent_id` is an accepted
+    `hard_pull` consent of this application (AC2), and
+    `HardPullConsentUsedError` if an earlier pull already used it (m6)."""
+    if not await is_accepted_consent(db, application_id, consent_id):
         logger.warning(
-            "Refused hard pull for application %s: no accepted hard_pull consent",
+            "Refused hard pull for application %s: consent %s is not an accepted "
+            "hard_pull consent of it",
             application_id,
+            consent_id,
         )
         raise HardPullConsentRequiredError(
             "A hard credit pull needs the borrower's accepted consent first."
         )
+    if await consent_already_used(db, application_id, consent_id):
+        logger.warning(
+            "Refused hard pull for application %s: consent %s was already used",
+            application_id,
+            consent_id,
+        )
+        raise HardPullConsentUsedError("This consent was already used for a hard credit pull.")
     application = await db.get(Application, application_id)
     if application is None:
         raise NotFoundError("Application not found.")
@@ -265,6 +324,7 @@ async def perform_hard_pull(
         actor=events.SYSTEM_ACTOR,
         type=HARD_PULL_COMPLETED,
         payload={
+            "consent_id": str(consent_id),
             "field_key": "representative_fico",
             "fico": fico,
             "previous_fico": previous_fico,
