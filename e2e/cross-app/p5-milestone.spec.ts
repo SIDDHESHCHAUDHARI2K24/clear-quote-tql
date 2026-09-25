@@ -145,11 +145,18 @@ test("P5 milestone: Manager dashboard tiles match the seed, then resolving Aisha
 
   // -- Tile counts, computed independently via SQL (dashboard/service.py's
   // own tile queries, mirrored here) -------------------------------------
-  const [clients, applications, preApprovalsSent, withProperty, awaitingReview, needsAttention, staleQuotes] =
-    await Promise.all([
-      scalar(`select count(distinct client_id) from applications`),
-      scalar(`select count(*) from applications where status not in ('withdrawn', 'closed')`),
-      scalar(`
+  const [
+    clients,
+    applications,
+    preApprovalsSent,
+    withProperty,
+    awaitingReview,
+    needsAttention,
+    staleQuotes,
+  ] = await Promise.all([
+    scalar(`select count(distinct client_id) from applications`),
+    scalar(`select count(*) from applications where status not in ('withdrawn', 'closed')`),
+    scalar(`
         select count(*) from applications a
         where a.status in ('sent', 'viewed', 'inquiry', 'option_selected')
            or (
@@ -160,15 +167,17 @@ test("P5 milestone: Manager dashboard tiles match the seed, then resolving Aisha
              )
            )
       `),
-      scalar(
-        `select count(distinct a.id) from applications a ` +
-          `join properties p on p.application_id = a.id ` +
-          `where p.address_status = 'specific_address'`,
-      ),
-      scalar(`select count(*) from applications where status in ('priced', 'inquiry', 'option_selected')`),
-      scalar(`select count(*) from applications where status = 'needs_attention'`),
-      scalar(`select count(*) from applications where status = 'stale'`),
-    ]);
+    scalar(
+      `select count(distinct a.id) from applications a ` +
+        `join properties p on p.application_id = a.id ` +
+        `where p.address_status = 'specific_address'`,
+    ),
+    scalar(
+      `select count(*) from applications where status in ('priced', 'inquiry', 'option_selected')`,
+    ),
+    scalar(`select count(*) from applications where status = 'needs_attention'`),
+    scalar(`select count(*) from applications where status = 'stale'`),
+  ]);
 
   const expectedByTileLabel: Record<string, number> = {
     Clients: clients,
@@ -228,7 +237,9 @@ test("P5 milestone: Manager dashboard tiles match the seed, then resolving Aisha
   await expect(loPage.getByRole("heading", { name: "Property" })).toBeVisible();
   await expect(loPage.getByText("Occupancy", { exact: true })).toBeVisible();
 
-  const loanCard = loPage.locator("section", { has: loPage.getByRole("heading", { name: "Loan" }) });
+  const loanCard = loPage.locator("section", {
+    has: loPage.getByRole("heading", { name: "Loan" }),
+  });
   await loanCard.getByRole("button", { name: "Edit" }).first().click();
   await loPage.getByLabel("Occupancy").selectOption("investment");
   await loPage.getByRole("button", { name: "Save" }).click();
@@ -246,7 +257,10 @@ test("P5 milestone: Manager dashboard tiles match the seed, then resolving Aisha
     has: loPage.getByRole("heading", { name: "Needs your attention" }),
   });
   await expect(attention.getByText("Aisha Coleman")).toHaveCount(0);
-  await loPage.screenshot({ path: `${EVIDENCE_DIR}/p5-milestone-dashboard-after.png`, fullPage: true });
+  await loPage.screenshot({
+    path: `${EVIDENCE_DIR}/p5-milestone-dashboard-after.png`,
+    fullPage: true,
+  });
 
   await loContext.close();
 });
