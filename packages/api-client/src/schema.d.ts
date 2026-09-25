@@ -400,6 +400,245 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/applications/{application_id}/sections/{tab}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Section */
+        get: operations["get_section_api_v1_applications__application_id__sections__tab__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/fields/{field_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Field */
+        put: operations["put_field_api_v1_applications__application_id__fields__field_key__put"];
+        post?: never;
+        /** Revert Field */
+        delete: operations["revert_field_api_v1_applications__application_id__fields__field_key__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/parties/{party_id}/ssn-reveal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reveal Ssn */
+        post: operations["reveal_ssn_api_v1_applications__application_id__parties__party_id__ssn_reveal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/housing_history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Housing */
+        post: operations["add_housing_api_v1_applications__application_id__housing_history_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/housing_history/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Housing */
+        patch: operations["patch_housing_api_v1_applications__application_id__housing_history__row_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/parties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Party */
+        post: operations["add_party_api_v1_applications__application_id__parties_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/parties/{party_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Party */
+        patch: operations["patch_party_api_v1_applications__application_id__parties__party_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/liabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Liability */
+        post: operations["add_liability_api_v1_applications__application_id__liabilities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/liabilities/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Liability */
+        patch: operations["patch_liability_api_v1_applications__application_id__liabilities__row_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/credit/import-liabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Liabilities */
+        post: operations["import_liabilities_api_v1_applications__application_id__credit_import_liabilities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/credit/hard-pull-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Hard Pull */
+        post: operations["request_hard_pull_api_v1_applications__application_id__credit_hard_pull_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/property": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Property */
+        patch: operations["patch_property_api_v1_applications__application_id__property_patch"];
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Document */
+        patch: operations["patch_document_api_v1_applications__application_id__documents__document_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/reference/metros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Metros */
+        get: operations["list_metros_api_v1_reference_metros_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -421,6 +660,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AddressInput */
+        AddressInput: {
+            /** Street Address */
+            street_address: string;
+            /** City */
+            city: string;
+            /** State */
+            state: string;
+            /** Zip */
+            zip: string;
+            /** County */
+            county?: string | null;
+        };
         /**
          * ApplicationStatus
          * @description Mirrors the application status machine in `system-design.md`,
@@ -470,6 +722,30 @@ export interface components {
          * @enum {string}
          */
         ApplicationTab: "borrowers" | "housing" | "credit" | "assets" | "property" | "pricing" | "send";
+        /** AssetsSummary */
+        AssetsSummary: {
+            /** Verified Assets Total */
+            verified_assets_total: string;
+            /** Reserves Months */
+            reserves_months: number;
+            /** Reserves Required */
+            reserves_required: string | null;
+            /** Cash To Close */
+            cash_to_close: string | null;
+            /** Required Funds */
+            required_funds: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "sufficient" | "insufficient" | "awaiting_pricing";
+            /** Income Applicable */
+            income_applicable: boolean;
+            /** Monthly Income Total */
+            monthly_income_total: string | null;
+            /** Documents */
+            documents: components["schemas"]["DocumentItem"][];
+        };
         /** AutoQuoteResponse */
         AutoQuoteResponse: {
             par: components["schemas"]["QuoteRead"];
@@ -751,6 +1027,35 @@ export interface components {
                 ][]
             ][];
         };
+        /**
+         * ConsentStatus
+         * @enum {string}
+         */
+        ConsentStatus: "pending" | "accepted" | "declined" | "expired";
+        /**
+         * ConsentSummary
+         * @description E11: latest hard-pull consent request (CQ-033 fills the decision).
+         */
+        ConsentSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            status: components["schemas"]["ConsentStatus"];
+            /** Requested At */
+            requested_at: string | null;
+            /** Requested By */
+            requested_by: string | null;
+            /** Expires At */
+            expires_at: string | null;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decline Reason */
+            decline_reason: string | null;
+            /** Fico After Pull */
+            fico_after_pull: number | null;
+        };
         /** CostSegTable */
         CostSegTable: {
             /** Purchase Price */
@@ -774,12 +1079,59 @@ export interface components {
             /** Year One Tax Savings */
             year_one_tax_savings: string;
         };
+        /** CreditSummary */
+        CreditSummary: {
+            /** Representative Fico */
+            representative_fico: number | null;
+            /** Fico Bracket */
+            fico_bracket: string | null;
+            /** Pull Type */
+            pull_type: ("soft_pull" | "hard_pull") | null;
+            /** Pulled At */
+            pulled_at: string | null;
+            /** Liabilities Monthly Total */
+            liabilities_monthly_total: string;
+            /** Dti Applicable */
+            dti_applicable: boolean;
+            /** Dti */
+            dti: string | null;
+            /**
+             * Dti Status
+             * @enum {string}
+             */
+            dti_status: "ok" | "awaiting_pricing" | "no_income" | "not_applicable";
+            consent: components["schemas"]["ConsentSummary"] | null;
+        };
         /**
          * DSCRBucket
          * @description DSCR classification bucket. Boundaries are inclusive on the lower edge.
          * @enum {string}
          */
         DSCRBucket: "BELOW_1_00" | "ONE_TO_1_25" | "GE_1_25";
+        /** DocumentItem */
+        DocumentItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Doc Type */
+            doc_type: string;
+            /** Received */
+            received: boolean;
+            /** Received At */
+            received_at: string | null;
+        };
+        /** DocumentPatch */
+        DocumentPatch: {
+            /** Received */
+            received: boolean;
+        };
+        /** FieldEditRequest */
+        FieldEditRequest: {
+            /** Value */
+            value: string | number | boolean | string[] | null;
+        };
         /**
          * FieldSource
          * @description Drives the source badge + "revert to source" UI on `field_values`.
@@ -821,10 +1173,24 @@ export interface components {
             /** Overridden At */
             overridden_at: string | null;
         };
+        /**
+         * FlagSeverity
+         * @description Decision: `blocking` halts pipeline progression (Verifying ->
+         *     NeedsAttention) and blocks Send; `warning` is a visible tab count only;
+         *     `info` is reserved for auto-fix outcomes and never becomes a `flags`
+         *     row.
+         * @enum {string}
+         */
+        FlagSeverity: "info" | "warning" | "blocking";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HardPullRequestResponse */
+        HardPullRequestResponse: {
+            consent: components["schemas"]["ConsentSummary"];
+            section: components["schemas"]["SectionResponse"];
         };
         /** HealthReport */
         HealthReport: {
@@ -853,6 +1219,59 @@ export interface components {
             /** Year1 Tax Savings Monthly */
             year1_tax_savings_monthly: string | null;
         };
+        /** HousingCreate */
+        HousingCreate: {
+            /** Street Address */
+            street_address: string;
+            /** City */
+            city: string;
+            /** State */
+            state: string;
+            /** Zip */
+            zip: string;
+            housing_status: components["schemas"]["HousingStatus"];
+            /** Residence Years */
+            residence_years: number;
+            /** Residence Months */
+            residence_months: number;
+            /**
+             * Vom Completed
+             * @default false
+             */
+            vom_completed: boolean;
+        };
+        /** HousingPatch */
+        HousingPatch: {
+            /** Street Address */
+            street_address?: string | null;
+            /** City */
+            city?: string | null;
+            /** State */
+            state?: string | null;
+            /** Zip */
+            zip?: string | null;
+            housing_status?: components["schemas"]["HousingStatus"] | null;
+            /** Residence Years */
+            residence_years?: number | null;
+            /** Residence Months */
+            residence_months?: number | null;
+            /** Vom Completed */
+            vom_completed?: boolean | null;
+        };
+        /**
+         * HousingStatus
+         * @enum {string}
+         */
+        HousingStatus: "own" | "rent" | "rent_free";
+        /** HousingSummary */
+        HousingSummary: {
+            /** Total Months */
+            total_months: number;
+            /** Required Months */
+            required_months: number;
+            /** Meets Requirement */
+            meets_requirement: boolean;
+        };
         /** LatestApplicationOut */
         LatestApplicationOut: {
             /**
@@ -862,6 +1281,28 @@ export interface components {
             id: string;
             /** Status */
             status: string;
+        };
+        /** LiabilityCreate */
+        LiabilityCreate: {
+            /** Creditor Name */
+            creditor_name: string;
+            /** Account Type */
+            account_type: string;
+            /** Monthly Payment */
+            monthly_payment: number | string;
+            /** Balance */
+            balance: number | string;
+        };
+        /** LiabilityPatch */
+        LiabilityPatch: {
+            /** Creditor Name */
+            creditor_name?: string | null;
+            /** Account Type */
+            account_type?: string | null;
+            /** Monthly Payment */
+            monthly_payment?: number | string | null;
+            /** Balance */
+            balance?: number | string | null;
         };
         /** LocationResponse */
         LocationResponse: {
@@ -914,6 +1355,11 @@ export interface components {
             /** Year1 Tax Savings */
             year1_tax_savings: string | null;
         };
+        /** MetrosResponse */
+        MetrosResponse: {
+            /** States */
+            states: components["schemas"]["StateMetros"][];
+        };
         /**
          * Occupancy
          * @description Per override O2: Primary, LTR or STR only — no `second_home`.
@@ -926,6 +1372,57 @@ export interface components {
             challenge_id: string;
             /** Code */
             code: string;
+        };
+        /**
+         * PartyCreate
+         * @description Adds the co-borrower (the only party the LO can add).
+         */
+        PartyCreate: {
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /** Ssn */
+            ssn?: string | null;
+            /** Dob */
+            dob?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Cell Phone */
+            cell_phone?: string | null;
+            /** Home Phone */
+            home_phone?: string | null;
+            /** Work Phone */
+            work_phone?: string | null;
+        };
+        /** PartyPatch */
+        PartyPatch: {
+            /** First Name */
+            first_name?: string | null;
+            /** Last Name */
+            last_name?: string | null;
+            /** Ssn */
+            ssn?: string | null;
+            /** Dob */
+            dob?: string | null;
+            /** Marital Status */
+            marital_status?: string | null;
+            /** Dependents Count */
+            dependents_count?: number | null;
+            /** Email */
+            email?: string | null;
+            /** Cell Phone */
+            cell_phone?: string | null;
+            /** Home Phone */
+            home_phone?: string | null;
+            /** Work Phone */
+            work_phone?: string | null;
+            /** Business Vesting */
+            business_vesting?: string | null;
+            /** Llc Entity Name */
+            llc_entity_name?: string | null;
+            /** No Co Applicant Check */
+            no_co_applicant_check?: boolean | null;
         };
         /** PipelineResumeResponse */
         PipelineResumeResponse: {
@@ -1032,6 +1529,40 @@ export interface components {
             /** Is Buydown Rate */
             is_buydown_rate: boolean;
         };
+        /**
+         * PropertyPatch
+         * @description Every key optional; `address` and `tbd=true` are mutually exclusive.
+         */
+        PropertyPatch: {
+            address?: components["schemas"]["AddressInput"] | null;
+            /** Tbd */
+            tbd?: boolean | null;
+            /** Recommend Matches */
+            recommend_matches?: boolean | null;
+            /** Buy Box States */
+            buy_box_states?: string[] | null;
+            /** Buy Box Metros */
+            buy_box_metros?: string[] | null;
+            property_type?: components["schemas"]["PropertyType"] | null;
+            /** Number Of Units */
+            number_of_units?: number | null;
+        };
+        /** PropertySummary */
+        PropertySummary: {
+            /** Tbd */
+            tbd: boolean;
+            /** Recommend Matches */
+            recommend_matches: boolean;
+            /** Buy Box States */
+            buy_box_states: string[];
+            /** Buy Box Metros */
+            buy_box_metros: string[];
+        };
+        /**
+         * PropertyType
+         * @enum {string}
+         */
+        PropertyType: "single_family" | "two_to_four_unit" | "condo" | "townhome";
         /** QuotePreviewRequest */
         QuotePreviewRequest: {
             /** Purchase Price */
@@ -1313,6 +1844,13 @@ export interface components {
          * @enum {string}
          */
         ReportStrategy: "primary" | "ltr" | "str";
+        /** ResumeResult */
+        ResumeResult: {
+            /** Requested */
+            requested: boolean;
+            /** Reason */
+            reason: string;
+        };
         /**
          * ScenarioCreateRequest
          * @description The LO-owned pricing inputs (system-design's "only inputs the LO
@@ -1356,6 +1894,95 @@ export interface components {
             /** Quotes */
             quotes: components["schemas"]["QuoteRead"][];
         };
+        /** SectionField */
+        SectionField: {
+            /** Field Key */
+            field_key: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: string | number | boolean | string[] | null;
+            source: components["schemas"]["FieldSource"];
+            /** Overridden */
+            overridden: boolean;
+            /** Original Value */
+            original_value?: string | number | boolean | string[] | null;
+            /**
+             * Editable
+             * @default true
+             */
+            editable: boolean;
+        };
+        /** SectionFlag */
+        SectionFlag: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            tab: components["schemas"]["ApplicationTab"];
+            /** Field Key */
+            field_key: string;
+            /** Rule */
+            rule: string;
+            severity: components["schemas"]["FlagSeverity"];
+            /** Message */
+            message: string | null;
+        };
+        /** SectionRecord */
+        SectionRecord: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "party" | "housing_history" | "liability" | "asset" | "employment" | "document" | "property" | "loan" | "credit";
+            /** Id */
+            id: string | null;
+            /** Role */
+            role?: string | null;
+            /**
+             * Manual
+             * @default false
+             */
+            manual: boolean;
+            /** Fields */
+            fields: components["schemas"]["SectionField"][];
+        };
+        /** SectionResponse */
+        SectionResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            tab: components["schemas"]["SectionTab"];
+            status: components["schemas"]["ApplicationStatus"];
+            occupancy: components["schemas"]["Occupancy"] | null;
+            /** Records */
+            records: components["schemas"]["SectionRecord"][];
+            /** Flags */
+            flags: components["schemas"]["SectionFlag"][];
+            housing?: components["schemas"]["HousingSummary"] | null;
+            credit?: components["schemas"]["CreditSummary"] | null;
+            assets?: components["schemas"]["AssetsSummary"] | null;
+            property?: components["schemas"]["PropertySummary"] | null;
+            resume?: components["schemas"]["ResumeResult"] | null;
+        };
+        /**
+         * SectionTab
+         * @enum {string}
+         */
+        SectionTab: "borrowers" | "housing" | "credit" | "assets" | "property";
+        /** SsnRevealResponse */
+        SsnRevealResponse: {
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Ssn */
+            ssn: string | null;
+        };
         /** StaffLoginRequest */
         StaffLoginRequest: {
             /** Email */
@@ -1381,6 +2008,13 @@ export interface components {
             title: string | null;
             /** Phone */
             phone: string | null;
+        };
+        /** StateMetros */
+        StateMetros: {
+            /** State */
+            state: string;
+            /** Metros */
+            metros: string[];
         };
         /**
          * StatusPatchRequest
@@ -2199,6 +2833,547 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortalReportActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_section_api_v1_applications__application_id__sections__tab__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tab: components["schemas"]["SectionTab"];
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_field_api_v1_applications__application_id__fields__field_key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_key: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revert_field_api_v1_applications__application_id__fields__field_key__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_key: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reveal_ssn_api_v1_applications__application_id__parties__party_id__ssn_reveal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party_id: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SsnRevealResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_housing_api_v1_applications__application_id__housing_history_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HousingCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_housing_api_v1_applications__application_id__housing_history__row_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HousingPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_party_api_v1_applications__application_id__parties_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_party_api_v1_applications__application_id__parties__party_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party_id: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartyPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_liability_api_v1_applications__application_id__liabilities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LiabilityCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_liability_api_v1_applications__application_id__liabilities__row_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LiabilityPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_liabilities_api_v1_applications__application_id__credit_import_liabilities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_hard_pull_api_v1_applications__application_id__credit_hard_pull_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HardPullRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_property_api_v1_applications__application_id__property_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_document_api_v1_applications__application_id__documents__document_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_metros_api_v1_reference_metros_get: {
+        parameters: {
+            query: {
+                /** @description Comma-separated state codes, e.g. FL,NC */
+                states: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetrosResponse"];
                 };
             };
             /** @description Validation Error */

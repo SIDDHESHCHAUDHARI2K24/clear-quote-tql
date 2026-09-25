@@ -33,19 +33,20 @@ from app.features.pricing.scenarios.models import Scenario
 from app.features.quotes.builder.models import Quote
 from app.workflows.application_pipeline import ApplicationPipelineWorkflow
 from app.workflows.constants import APPLICATION_PIPELINE_TASK_QUEUE, application_workflow_id
-from app.workflows.tests.conftest import (  # noqa: F401 - pytest fixtures
-    activities_session_factory,
-    bind_activities_to_test_session,
-    make_persona_application,
-    seed_dscr_curve_all_buckets,
-    seed_market_rent,
-    seed_tax_rate,
-    temporal_client,
-    temporal_env,
-    temporal_worker,
-    wait_for_status,
-)
+from app.workflows.tests import conftest as workflow_fixtures  # noqa: E402
 from conftest import StaffSession
+
+# CQ-011's workflow fixtures, re-exported so pytest finds them in this module.
+activities_session_factory = workflow_fixtures.activities_session_factory
+bind_activities_to_test_session = workflow_fixtures.bind_activities_to_test_session
+make_persona_application = workflow_fixtures.make_persona_application
+seed_dscr_curve_all_buckets = workflow_fixtures.seed_dscr_curve_all_buckets
+seed_market_rent = workflow_fixtures.seed_market_rent
+seed_tax_rate = workflow_fixtures.seed_tax_rate
+temporal_client = workflow_fixtures.temporal_client
+temporal_env = workflow_fixtures.temporal_env
+temporal_worker = workflow_fixtures.temporal_worker
+wait_for_status = workflow_fixtures.wait_for_status
 
 pytestmark = pytest.mark.usefixtures("temporal_worker")
 

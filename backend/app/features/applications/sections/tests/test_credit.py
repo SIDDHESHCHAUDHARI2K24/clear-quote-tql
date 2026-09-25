@@ -25,6 +25,11 @@ from app.features.notifications.outbox.models import OutboxEmail
 MakeApp = Callable[..., Awaitable[Application]]
 
 
+def _p(event: ActivityEvent) -> dict[str, Any]:
+    assert isinstance(event.payload, dict)
+    return event.payload
+
+
 @pytest.fixture
 def sent(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, str]]:
     outbox: list[dict[str, str]] = []
@@ -115,7 +120,7 @@ async def test_import_liabilities_event(
         .scalars()
         .all()
     )
-    assert event.payload["imported"] == 1  # type: ignore[index]
+    assert _p(event)["imported"] == 1
 
 
 async def test_hard_pull_request_once(

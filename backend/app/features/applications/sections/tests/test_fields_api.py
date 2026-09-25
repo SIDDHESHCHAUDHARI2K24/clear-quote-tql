@@ -20,6 +20,11 @@ from conftest import StaffSession
 MakeApp = Callable[..., Awaitable[Application]]
 
 
+def _p(event: ActivityEvent) -> dict[str, Any]:
+    assert isinstance(event.payload, dict)
+    return event.payload
+
+
 def _field(section: dict[str, Any], field_key: str) -> dict[str, Any]:
     for record in section["records"]:
         for field in record["fields"]:
@@ -65,14 +70,11 @@ async def test_edit_audit_events(
     assert field["overridden"] is False
     assert field["source"] == "encompass"
 
-    types = [
-        (e.type, (e.payload or {}).get("field_key"), e.actor)
-        for e in await _events(db_session, app.id)
-    ]  # type: ignore[union-attr]
+    types = [(e.type, _p(e).get("field_key"), e.actor) for e in await _events(db_session, app.id)]
     assert ("field.edited", "borrower_work_phone", str(staff.user.id)) in types
     assert ("field.reverted", "borrower_work_phone", str(staff.user.id)) in types
     edited_event = next(e for e in await _events(db_session, app.id) if e.type == "field.edited")
-    assert edited_event.payload["message"] == "Edited Work phone"  # type: ignore[index]
+    assert _p(edited_event)["message"] == "Edited Work phone"
 
 
 async def test_revert_without_edit_404(client: AsyncClient, make_app: MakeApp) -> None:
@@ -191,8 +193,8 @@ async def test_ssn_reveal_writes_event(
     assert response.json() == {"party_id": party_id, "ssn": "123456789"}
     assert response.headers["cache-control"] == "no-store"
     [event] = [e for e in await _events(db_session, app.id) if e.type == "ssn.revealed"]
-    assert event.payload["field_key"] == "borrower_ssn"  # type: ignore[index]
-    assert "123456789" not in str(event.payload)
+    assert _p(event)["field_key"] == "borrower_ssn"
+    assert "123456789" not in str(_p(event))
 
 
 async def test_ssn_edit_event_is_masked(
@@ -209,8 +211,8 @@ async def test_ssn_edit_event_is_masked(
     assert _field(body, "borrower_ssn")["value"] == "***-**-3333"
     assert _field(body, "borrower_ssn")["original_value"] == "***-**-6789"
     [event] = [e for e in await _events(db_session, app.id) if e.type == "field.edited"]
-    assert "111223333" not in str(event.payload)
-    assert "123456789" not in str(event.payload)
+    assert "111223333" not in str(_p(event))
+    assert "123456789" not in str(_p(event))
 
 
 async def test_field_values_routes_write_events(
@@ -223,10 +225,7 @@ async def test_field_values_routes_write_events(
     assert (await client.patch(url, json={"value": "125.00"})).status_code == 200
     assert (await client.post(f"{url}/revert")).status_code == 200
 
-    types = [
-        (e.type, (e.payload or {}).get("field_key"))  # type: ignore[union-attr]
-        for e in await _events(db_session, app.id)
-    ]
+    types = [(e.type, _p(e).get("field_key")) for e in await _events(db_session, app.id)]
     assert ("field.edited", "hoa_fee_monthly") in types
     assert ("field.reverted", "hoa_fee_monthly") in types
     # The provenance store never collides with the pricing row.
