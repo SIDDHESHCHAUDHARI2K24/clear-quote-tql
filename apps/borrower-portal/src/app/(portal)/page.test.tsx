@@ -20,7 +20,6 @@ vi.mock("next/navigation", () => ({
 
 import { BorrowerSessionProvider } from "../../features/shell";
 import HomePage from "./page";
-import SupportPage from "./support/page";
 import ApplyPage from "./apply/page";
 import CreditCheckTaskPage from "./tasks/credit-check/[id]/page";
 
@@ -65,9 +64,10 @@ describe("(portal) home placeholder", () => {
   });
 });
 
+// CQ-034 built `/support` (no longer a stub) -- its own tests live in
+// `src/features/support/SupportForm.test.tsx`.
 describe("(portal) stub pages", () => {
   it.each([
-    ["Support", SupportPage, "CQ-034"],
     ["Apply", ApplyPage, "CQ-032"],
     ["Credit check", CreditCheckTaskPage, "CQ-033"],
   ])("%s says which item builds it", (title, Page, item) => {

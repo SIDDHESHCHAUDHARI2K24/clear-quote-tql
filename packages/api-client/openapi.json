@@ -1215,6 +1215,65 @@
         }
       }
     },
+    "/api/v1/portal/support": {
+      "post": {
+        "tags": [
+          "portal-support"
+        ],
+        "summary": "Submit Support",
+        "operationId": "submit_support_api_v1_portal_support_post",
+        "parameters": [
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportRequestCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportRequestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -1505,6 +1564,17 @@
             "type": "string",
             "title": "First Name"
           },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
           "latest_application": {
             "anyOf": [
               {
@@ -1523,6 +1593,7 @@
           "client_id",
           "full_name",
           "first_name",
+          "phone",
           "latest_application"
         ],
         "title": "BorrowerMeOut"
@@ -2644,6 +2715,14 @@
         ],
         "title": "PortalReportResponse",
         "description": "`ReportViewModel` plus the two fields only a live request can answer:\n`borrower_action` (from `QuotePackageVersion.borrower_action`, `None`\nuntil CQ-024) and `newest_report_token` (set only when this version is\nsuperseded, per spec.md's \"SupersededBanner ... a link to the newest\nversion\")."
+      },
+      "PreferredContact": {
+        "type": "string",
+        "enum": [
+          "email",
+          "phone"
+        ],
+        "title": "PreferredContact"
       },
       "PricedProductRow-Input": {
         "properties": {
@@ -4037,6 +4116,97 @@
         ],
         "title": "StrategyType",
         "description": "The engine's single occupancy/strategy field.\n\nMapping from `applications.occupancy` + `applications.strategy` (CQ-007)\nonto this enum is CQ-013's job, not this item's."
+      },
+      "SupportLoContact": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "phone"
+        ],
+        "title": "SupportLoContact"
+      },
+      "SupportRequestCreate": {
+        "properties": {
+          "topic": {
+            "$ref": "#/components/schemas/SupportTopic"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Message"
+          },
+          "preferred_contact": {
+            "$ref": "#/components/schemas/PreferredContact"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "message",
+          "preferred_contact"
+        ],
+        "title": "SupportRequestCreate"
+      },
+      "SupportRequestResponse": {
+        "properties": {
+          "reference": {
+            "type": "string",
+            "title": "Reference"
+          },
+          "lo": {
+            "$ref": "#/components/schemas/SupportLoContact"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reference",
+          "lo"
+        ],
+        "title": "SupportRequestResponse"
+      },
+      "SupportTopic": {
+        "type": "string",
+        "enum": [
+          "application",
+          "quote",
+          "documents",
+          "other"
+        ],
+        "title": "SupportTopic"
       },
       "TabStateResponse": {
         "properties": {
