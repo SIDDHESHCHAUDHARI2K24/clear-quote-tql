@@ -1,0 +1,16 @@
+{
+  "id": "9d1c7f7e-5a2b-4c1e-9f3a-2b6f0c1d4e01",
+  "application_id": "b68af658-85fb-46c4-bd77-de630273046f",
+  "quote_ids": [
+    "5c63111e-f990-4d88-9d75-0f522986e001",
+    "8c2ca5b5-f387-40cb-ac00-f8d19141cd32",
+    "14be5dee-1ca7-43db-a28a-e98a398f8a68"
+  ],
+  "recommended_quote_id": "5c63111e-f990-4d88-9d75-0f522986e001",
+  "recommendation_text": "25% down · Par pricing at 7.625%, 5-year prepay. It balances your monthly payment and cash needed at closing.",
+  "lo_note": null,
+  "recipient_email": "marcus.hale@clearquote-demo.test",
+  "attachments": ["Pre-approval letter (PDF)"],
+  "sent_at": null,
+  "updated_at": "2026-09-25T17:00:00Z"
+}
