@@ -88,6 +88,10 @@ This worktree's `.env` (gitignored, per-checkout) was already present from hando
 4. `uv run pytest backend/app/workflows -q` for the full time-skipping suite (no real Temporal needed).
 5. `make demo-reset` then `make api` + `make worker` for a full real round trip against the seeded personas.
 
+## CI
+
+Pushed to `origin/cq-011-temporal-pipeline`. GitHub Actions run [`36114014423`](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36114014423): **success** — `backend` job (ruff check, ruff format --check, mypy, `uv run pytest backend`) green in 55s; `frontend` job (`pnpm -r run lint`, `pnpm -r run typecheck`, `pnpm exec prettier --check .`, `pnpm -r run test`) green in 32s.
+
 ## Follow-ups
 
 - plan.md Decision #5's `activity_events` type reuse (`pipeline.enriched` for 3 different activities) is functionally correct but coarse for a real audit timeline UI — CQ-016/028/029 owners may want finer-grained types later; adding new ones is additive/safe (no rename).
