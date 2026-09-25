@@ -7,12 +7,13 @@ down payment % and $, and PPP years all come from the application's
 when set, else the most-recently-created `Scenario`, else `None` when no
 scenario exists yet. Down payment $ is `quote_engine.compute_quote`'s own
 `down_payment_amount` field (AGENTS.md: "Money math lives only in
-`quote_engine`") -- CQ-021 landed that field on `QuoteComputation` while
-this item was in flight, so what started as a same-formula local copy
-(logged in an earlier revision of this docstring/plan.md decision #4) now
-calls the engine directly, with a same-formula fallback only for a
-scenario the engine can't price yet (see `_scenario_numbers`). Note rate
-is the recommended `Quote.rate` verbatim, never re-derived.
+`quote_engine`"). PR review round 1 (MAJOR 2): an earlier revision kept a
+same-formula local fallback for a scenario the engine's `LtvOutOfRangeError`
+guard rejects (one that was created but never successfully priced) --
+removed; that case now returns `None` for `down_payment_amount` (the UI
+already renders "—" for a null header number) rather than a second,
+independently-maintained copy of engine math anywhere in this file. Note
+rate is the recommended `Quote.rate` verbatim, never re-derived.
 """
 
 from __future__ import annotations
@@ -20,8 +21,9 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,8 +45,6 @@ from app.features.pricing.engine.quote_engine import LtvOutOfRangeError, compute
 from app.features.pricing.engine.types import ConfigSnapshot, ScenarioInputs
 from app.features.pricing.scenarios.models import Scenario
 from app.features.quotes.builder.models import Quote
-
-_CENT = Decimal("0.01")
 
 # spec.md "Application status machine": statuses reachable only once
 # `draft_quote_set` has run at least once -- the default-tab rule's "status
@@ -76,16 +76,6 @@ class _CurrentScenarioNumbers:
     ppp_years: int | None
 
 
-def _down_payment_amount_fallback(purchase_price: Decimal, down_payment_pct: Decimal) -> Decimal:
-    """`purchase_price * down_payment_pct`, rounded half-up to cents -- the
-    exact formula/rounding `quote_engine.compute_quote` uses for its own
-    `down_payment_amount` field. Used only when `compute_quote` itself
-    can't run for this scenario yet (`_scenario_numbers`'s `LtvOutOfRangeError`
-    catch) -- down payment $ is well-defined independent of the LTV guard
-    that blocks the rest of the engine's output."""
-    return (purchase_price * down_payment_pct).quantize(_CENT, rounding=ROUND_HALF_UP)
-
-
 async def _current_scenario(db: AsyncSession, application: Application) -> Scenario | None:
     if application.recommended_quote_id is not None:
         quote = await db.get(Quote, application.recommended_quote_id)
@@ -102,26 +92,38 @@ async def _current_scenario(db: AsyncSession, application: Application) -> Scena
     return (await db.execute(stmt)).scalars().first()
 
 
-def _down_payment_amount(scenario: Scenario, inputs: ScenarioInputs) -> Decimal:
-    config = (
-        ConfigSnapshot.model_validate(scenario.config_snapshot)
-        if isinstance(scenario.config_snapshot, dict)
-        else ConfigSnapshot()
-    )
+def _down_payment_amount(scenario: Scenario, inputs: ScenarioInputs) -> Decimal | None:
+    """`quote_engine.compute_quote(...).down_payment_amount` for this
+    scenario, or `None` (PR review round 1, MAJOR 2 -- no local fallback
+    formula) when the engine can't price it yet: a scenario created but
+    never successfully priced can carry a down payment % whose implied LTV
+    trips `compute_quote`'s own guard (`LtvOutOfRangeError`) before any
+    quote exists for it. A malformed `config_snapshot` degrades to the
+    engine's own defaults rather than failing the whole summary."""
+    try:
+        config = (
+            ConfigSnapshot.model_validate(scenario.config_snapshot)
+            if isinstance(scenario.config_snapshot, dict)
+            else ConfigSnapshot()
+        )
+    except ValidationError:
+        config = ConfigSnapshot()
     try:
         return compute_quote(inputs, config).down_payment_amount
     except LtvOutOfRangeError:
-        # A scenario that was created but never successfully priced (e.g.
-        # its down payment % implies an LTV the engine rejects before any
-        # quote exists for it) -- fall back to the same formula/rounding
-        # rather than 500ing the whole summary over an unrelated field.
-        return _down_payment_amount_fallback(inputs.purchase_price, inputs.down_payment_pct)
+        return None
 
 
 def _scenario_numbers(scenario: Scenario | None) -> _CurrentScenarioNumbers:
     if scenario is None or not isinstance(scenario.inputs, dict):
         return _CurrentScenarioNumbers(None, None, None, None)
-    inputs = ScenarioInputs.model_validate(scenario.inputs)
+    try:
+        inputs = ScenarioInputs.model_validate(scenario.inputs)
+    except ValidationError:
+        # PR review round 1 (minor): a malformed/corrupted `scenario.inputs`
+        # row degrades to null header numbers instead of 500ing the whole
+        # summary endpoint.
+        return _CurrentScenarioNumbers(None, None, None, None)
     ppp_years = scenario.inputs.get("prepayment_penalty_years")
     return _CurrentScenarioNumbers(
         purchasing_power=inputs.purchase_price,

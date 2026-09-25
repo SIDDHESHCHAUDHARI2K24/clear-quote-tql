@@ -1395,8 +1395,8 @@
     "semantic_hash": ""
   },
   "packages/ui/src/components/Overlay/Overlay.test.tsx": {
-    "mtime": 1790337130.3277678,
-    "ast_hash": "bf3de95af9eebf2bf2e57eff7eae044e",
+    "mtime": 1790340188.7022443,
+    "ast_hash": "ebb45ae9fde2738829872230a24da8d7",
     "semantic_hash": ""
   },
   "packages/ui/src/components/Overlay/Overlay.tsx": {
@@ -1990,8 +1990,8 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/post-dev.md": {
-    "mtime": 1790339384.0576315,
-    "ast_hash": "1bece5f1056624b9109c9dd9e62e7754",
+    "mtime": 1790340679.6326396,
+    "ast_hash": "2c2b6b32b1eda0de8e005e806684a54a",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/spec.md": {
@@ -3410,23 +3410,23 @@
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/PipelineBanner.test.tsx": {
-    "mtime": 1790336970.1604311,
-    "ast_hash": "94ae0e365a4cc473f2072fc84f8d81c9",
+    "mtime": 1790340287.2311895,
+    "ast_hash": "50d6baab3752b6313d50287659cbb96c",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/PipelineBanner.tsx": {
-    "mtime": 1790336776.307263,
-    "ast_hash": "4e6c360e47613db5d672852b55cffe34",
+    "mtime": 1790340271.9814239,
+    "ast_hash": "9f99866718b763af33a25bf08170bc6e",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/StatusActionsMenu.test.tsx": {
-    "mtime": 1790339241.4125469,
-    "ast_hash": "ab45850d149d21074a8449eccee54ee5",
+    "mtime": 1790340244.2645068,
+    "ast_hash": "306e7f8bbffa8c9a2bffe537303dced6",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/StatusActionsMenu.tsx": {
-    "mtime": 1790339212.2081912,
-    "ast_hash": "6077c29184b236f6648c30a90361847d",
+    "mtime": 1790340222.9705818,
+    "ast_hash": "816d21bdfaff91a67feb50b23dbad65b",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/TabRail.test.tsx": {
@@ -3475,8 +3475,8 @@
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/pipeline.ts": {
-    "mtime": 1790336691.7104704,
-    "ast_hash": "2ddd374f598e06425b2b7afcf591f42e",
+    "mtime": 1790340263.149191,
+    "ast_hash": "7bb2b1f7acb26847c4ce119620cdf766",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/test-fixtures.ts": {
@@ -3500,8 +3500,8 @@
     "semantic_hash": ""
   },
   "backend/app/features/applications/summary/service.py": {
-    "mtime": 1790339065.3766913,
-    "ast_hash": "49a3e9b20ca2af449db69afdaba367ff",
+    "mtime": 1790340094.1504407,
+    "ast_hash": "c719e13610fb73bd8d8a82e5e1855b9f",
     "semantic_hash": ""
   },
   "backend/app/features/applications/summary/tests/__init__.py": {
@@ -3520,8 +3520,8 @@
     "semantic_hash": ""
   },
   "backend/app/features/applications/summary/tests/test_service.py": {
-    "mtime": 1790339085.7648883,
-    "ast_hash": "a499ef2a06e893d52f09d9863da7cf76",
+    "mtime": 1790340160.1975052,
+    "ast_hash": "b2362418e189f872de450536ed3d1c96",
     "semantic_hash": ""
   },
   "backend/app/workflows/tests/test_pipeline_stage_writes.py": {
@@ -3545,13 +3545,13 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/evidence/header-1280.png": {
-    "mtime": 1790339332.7606387,
+    "mtime": 1790340610.2624657,
     "ast_hash": "388d2bdd48a0fe30d59f24b67c2f281b",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/evidence/header-1440.png": {
-    "mtime": 1790339332.8424094,
-    "ast_hash": "a2f51782796451120ab10f6488d39f0f",
+    "mtime": 1790340610.3445487,
+    "ast_hash": "b25898e63566d649ab1de59f56593b1a",
     "semantic_hash": ""
   }
 }

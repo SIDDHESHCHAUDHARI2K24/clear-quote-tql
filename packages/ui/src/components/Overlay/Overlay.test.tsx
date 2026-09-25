@@ -41,6 +41,20 @@ describe("Overlay", () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
+  it("calls onClose when Escape is pressed", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Overlay isOpen onClose={onClose} title="Edit quote">
+        Body
+      </Overlay>,
+    );
+
+    await user.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("moves focus into the dialog when it opens", () => {
     render(
       <Overlay isOpen onClose={vi.fn()} title="Edit quote">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button, Overlay, extractErrorMessage } from "@cq/ui";
 
@@ -25,6 +25,31 @@ export function StatusActionsMenu() {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // PR review round 1 (minor): click-outside and Escape both close the
+  // dropdown (not just picking a menu item). `menuRef` wraps the trigger
+  // button too, not just the floating menu, so a click that re-toggles the
+  // trigger isn't also seen as an "outside" click that would otherwise
+  // immediately reopen it.
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function onPointerDown(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
   if (state.kind !== "ready" || TERMINAL_STATUSES.has(state.summary.status)) {
     return null;
@@ -68,7 +93,7 @@ export function StatusActionsMenu() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={menuRef}>
       <Button
         variant="secondary"
         onClick={() => setMenuOpen((open) => !open)}

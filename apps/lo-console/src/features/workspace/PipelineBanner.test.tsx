@@ -66,4 +66,20 @@ describe("PipelineBanner (AC7)", () => {
     await waitFor(() => expect(getMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
+
+  it("PR review round 1 (minor): shows an Import failed banner when status is still intake but the stage reached a terminal value", async () => {
+    getMock.mockResolvedValueOnce({
+      data: makeSummary({ status: "intake", last_pipeline_stage: "needs_attention" }),
+      response: { status: 200 },
+    });
+
+    render(
+      <WorkspaceProvider applicationId={APPLICATION_ID}>
+        <PipelineBanner />
+      </WorkspaceProvider>,
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Import failed. Contact support.");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
 });

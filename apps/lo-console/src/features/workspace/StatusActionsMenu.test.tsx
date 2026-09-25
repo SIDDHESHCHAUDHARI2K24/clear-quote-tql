@@ -87,4 +87,52 @@ describe("StatusActionsMenu (AC6)", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Application is already withdrawn.");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
+
+  it("closes the dropdown on an outside click", async () => {
+    const user = userEvent.setup();
+    getMock.mockResolvedValueOnce({
+      data: makeSummary({ status: "priced" }),
+      response: { status: 200 },
+    });
+    render(
+      <div>
+        <span>Outside</span>
+        <WorkspaceProvider applicationId={APPLICATION_ID}>
+          <StatusActionsMenu />
+        </WorkspaceProvider>
+      </div>,
+    );
+    await waitFor(() => expect(getMock).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getByRole("button", { name: "Actions" }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Outside"));
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("closes the dropdown on Escape", async () => {
+    const user = userEvent.setup();
+    await renderReady({ status: "priced" });
+
+    await user.click(screen.getByRole("button", { name: "Actions" }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("re-clicking the Actions trigger toggles the dropdown closed (not reopened by the outside-click handler)", async () => {
+    const user = userEvent.setup();
+    await renderReady({ status: "priced" });
+
+    const trigger = screen.getByRole("button", { name: "Actions" });
+    await user.click(trigger);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    await user.click(trigger);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
 });
