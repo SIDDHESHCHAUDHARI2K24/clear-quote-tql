@@ -8,6 +8,7 @@ Decision 1).
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from sqlalchemy import select
@@ -18,7 +19,6 @@ from temporalio.common import WorkflowIDReusePolicy
 from temporalio.service import RPCError, RPCStatusCode
 
 from app.core import storage
-from app.core.enums import ApplicationStatus, ApplicationTab
 from app.core.errors import AppError, ConflictError, NotFoundError
 from app.features.applications.models import Application
 from app.features.clients.models import Client
@@ -31,12 +31,14 @@ from app.features.quotes.send.models import (
     QuotePackageVersion,
 )
 from app.features.quotes.send.models import SendStatus as SendStep
-from app.features.quotes.send.readiness import package_blockers
+from app.features.quotes.send.readiness import send_blockers
 from app.features.quotes.send.schemas import ReadinessBlocker
+from app.workflows.client import TemporalProvider
 from app.workflows.constants import APPLICATION_PIPELINE_TASK_QUEUE, send_workflow_id
-from app.workflows.send_quote_package import SendQuotePackageWorkflow
+from app.workflows.retry_policies import SEND_EXECUTION_TIMEOUT
+from app.workflows.send_quote_package import STOPPED_FAILURE, SendQuotePackageWorkflow
 
-_CLOSED_STATUSES = {ApplicationStatus.WITHDRAWN, ApplicationStatus.CLOSED}
+logger = logging.getLogger(__name__)
 
 
 class PackageNotReadyConflict(ConflictError):
@@ -69,31 +71,60 @@ async def _workflow_running(temporal: TemporalClient, workflow_id: str) -> bool:
     return description.status == WorkflowExecutionStatus.RUNNING
 
 
-async def _blockers(
-    db: AsyncSession, package: QuotePackage, application: Application
-) -> list[ReadinessBlocker]:
-    blockers = [
-        ReadinessBlocker(code=b.code, message=b.message, tab=b.tab)
-        for b in await package_blockers(db, package)
-    ]
-    if application.status in _CLOSED_STATUSES:
-        blockers.insert(
-            0,
-            ReadinessBlocker(
-                code="application_closed",
-                message=f"The application is {application.status.value}",
-                tab=ApplicationTab.SEND.value,
-            ),
+async def _send_is_alive(temporal: TemporalClient, workflow_id: str) -> bool:
+    """False only when Temporal says the workflow is gone (finished without
+    writing `done`/`failed`: terminated, timed out, never started). When
+    Temporal can't be reached, the send is given the benefit of the doubt."""
+    try:
+        return await _workflow_running(temporal, workflow_id)
+    except Exception:
+        logger.warning("Could not check send workflow %s", workflow_id, exc_info=True)
+        return True
+
+
+async def reconcile_send(
+    db: AsyncSession, package: QuotePackage, temporal: TemporalProvider
+) -> QuotePackage:
+    """plan.md Decision 23: a package whose send looks in flight but whose
+    workflow is gone (terminated, cancelled before it ran, timed out with no
+    worker) is marked `failed`, so it never stays locked. Returns the
+    package re-read from the DB. Does not commit: the caller does, together
+    with whatever else it writes. Takes the row lock only when it has to
+    write (a caller that already holds it keeps it)."""
+    package = (
+        await db.execute(
+            select(QuotePackage)
+            .where(QuotePackage.id == package.id)
+            .execution_options(populate_existing=True)
         )
-    return blockers
+    ).scalar_one()
+    workflow_id = package.send_workflow_id
+    if package.send_status not in IN_FLIGHT_SEND_STATUSES or workflow_id is None:
+        return package
+    if await _send_is_alive(await temporal(), workflow_id):
+        return package
+    package = await _lock_package(db, package.id)
+    if package.send_workflow_id == workflow_id and package.send_status in IN_FLIGHT_SEND_STATUSES:
+        logger.warning("Send %s is gone from Temporal; marking it failed", workflow_id)
+        package.send_status = SendStep.FAILED.value
+        package.send_error = STOPPED_FAILURE
+        await db.flush()
+    return package
 
 
 async def start_send(
     db: AsyncSession, package: QuotePackage, temporal: TemporalClient
 ) -> SendStarted:
     """`POST /packages/{id}/send`: 409 with the blocker list when not ready
-    (AC4, nothing is written or started); otherwise records the new
-    workflow id as `queued` and starts the workflow (plan.md Decision 9)."""
+    (AC4, nothing is written or started); otherwise starts the workflow
+    and records its id as `queued` (plan.md Decision 9).
+
+    plan.md Decision 22: the workflow is started *while the package row
+    lock is held*, and the new id is committed only after Temporal has
+    accepted it. A second POST waiting on the lock therefore always finds a
+    workflow Temporal knows about, so it answers with that id instead of
+    minting a second send. (Freeze also refuses a run that isn't the
+    package's current send, as a second line of defence.)"""
     package = await _lock_package(db, package.id)
     if (
         package.send_status in IN_FLIGHT_SEND_STATUSES
@@ -108,21 +139,19 @@ async def start_send(
             status=package.send_status,  # type: ignore[arg-type]
         )
 
-    application = await db.get(Application, package.application_id)
-    assert application is not None
-    blockers = await _blockers(db, package, application)
+    blockers = await send_blockers(db, package)
     if blockers:
         raise PackageNotReadyConflict(
             "The package isn't ready to send.",
-            details={"blockers": [b.model_dump() for b in blockers]},
+            details={
+                "blockers": [
+                    ReadinessBlocker(code=b.code, message=b.message, tab=b.tab).model_dump()
+                    for b in blockers
+                ]
+            },
         )
 
     workflow_id = send_workflow_id(str(package.id), uuid.uuid4().hex)
-    package.send_workflow_id = workflow_id
-    package.send_status = SendStep.QUEUED.value
-    package.send_error = None
-    await db.commit()
-
     try:
         await temporal.start_workflow(
             SendQuotePackageWorkflow.run,
@@ -130,14 +159,20 @@ async def start_send(
             id=workflow_id,
             task_queue=APPLICATION_PIPELINE_TASK_QUEUE,
             id_reuse_policy=WorkflowIDReusePolicy.REJECT_DUPLICATE,
+            execution_timeout=SEND_EXECUTION_TIMEOUT,
         )
     except Exception as exc:
-        package = await _lock_package(db, package.id)
-        if package.send_workflow_id == workflow_id:
-            package.send_status = SendStep.FAILED.value
-            package.send_error = "The send could not be started."
+        # Still under the lock: nothing else wrote the package meanwhile.
+        package.send_workflow_id = workflow_id
+        package.send_status = SendStep.FAILED.value
+        package.send_error = "The send could not be started."
         await db.commit()
         raise SendUnavailableError("The send could not be started. Try again.") from exc
+    # Freeze waits on this lock, so it always sees the committed id.
+    package.send_workflow_id = workflow_id
+    package.send_status = SendStep.QUEUED.value
+    package.send_error = None
+    await db.commit()
     return SendStarted(package_id=package.id, workflow_id=workflow_id, status="queued")
 
 
@@ -149,8 +184,14 @@ async def _recipient(db: AsyncSession, package: QuotePackage) -> str | None:
     return email.strip() or None
 
 
-async def send_status(db: AsyncSession, package: QuotePackage) -> SendStatus:
-    await db.refresh(package)
+async def send_status(
+    db: AsyncSession, package: QuotePackage, temporal: TemporalProvider
+) -> SendStatus:
+    """`GET /send-status`. DB-backed (plan.md Decision 7); asks Temporal
+    only while the send looks in flight, to report a dead one as `failed`
+    (Decision 23)."""
+    package = await reconcile_send(db, package, temporal)
+    await db.commit()  # keeps a `failed` it wrote; ends the read
     version = None
     if package.send_workflow_id is not None:
         version = (

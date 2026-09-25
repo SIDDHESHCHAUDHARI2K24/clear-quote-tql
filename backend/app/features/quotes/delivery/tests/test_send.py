@@ -41,6 +41,8 @@ from app.features.quotes.pdf.service import build_letter_context
 from app.features.quotes.send.models import QuotePackage, QuotePackageVersion
 from app.integrations.crm.models import CrmEvent
 from app.workflows import send_activities
+from app.workflows.constants import send_workflow_id
+from app.workflows.send_quote_package import SendQuotePackageWorkflow
 from conftest import BorrowerSession, StaffSession
 
 from .conftest import SentMail
@@ -648,21 +650,37 @@ async def test_put_on_sent_package_reopens_draft(
 
 
 async def test_put_during_send_is_409(
-    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_staff_session: MakeStaff,
+    temporal_client_override: Client,
+    send_queue: str,
 ) -> None:
+    """A PUT while the send's workflow is still running is refused (a dead
+    send doesn't block it: `test_put_after_a_terminated_send_saves`)."""
     application_id, package = await _ready_package(client, db_session, make_staff_session)
-    await db_session.execute(
-        update(QuotePackage)
-        .where(QuotePackage.id == uuid.UUID(package["id"]))
-        .values(send_status="rendering", send_workflow_id="send-package-x")
+    workflow_id = send_workflow_id(package["id"], "running")
+    handle = await temporal_client_override.start_workflow(
+        SendQuotePackageWorkflow.run, package["id"], id=workflow_id, task_queue=send_queue
     )
-    await db_session.commit()
-    response = await client.put(
-        f"/api/v1/applications/{application_id}/package",
-        json={"quote_ids": package["quote_ids"], "recommended_quote_id": package["quote_ids"][0]},
-    )
-    assert response.status_code == 409
-    assert response.json()["error"]["code"] == "SEND_IN_PROGRESS"
+    try:
+        await db_session.execute(
+            update(QuotePackage)
+            .where(QuotePackage.id == uuid.UUID(package["id"]))
+            .values(send_status="rendering", send_workflow_id=workflow_id)
+        )
+        await db_session.commit()
+        response = await client.put(
+            f"/api/v1/applications/{application_id}/package",
+            json={
+                "quote_ids": package["quote_ids"],
+                "recommended_quote_id": package["quote_ids"][0],
+            },
+        )
+        assert response.status_code == 409
+        assert response.json()["error"]["code"] == "SEND_IN_PROGRESS"
+    finally:
+        await handle.terminate("test cleanup")
 
 
 async def test_record_links_the_answered_inquiry(

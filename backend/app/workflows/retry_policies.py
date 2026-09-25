@@ -41,7 +41,9 @@ DEFAULT_RETRY_POLICY = RetryPolicy(non_retryable_error_types=NON_RETRYABLE_ERROR
 
 # CQ-020 (plan.md Decision 15): the SendQuotePackage activities. Bounded so a
 # broken SMTP/MinIO ends in `send_status = failed` instead of retrying
-# forever; `PackageNotReadyError` (Freeze found blockers) is final. CRM's
+# forever; `PackageNotReadyError` (Freeze found blockers) and
+# `SendSupersededError` (a newer send owns the package, Decision 22) are
+# final. CRM's
 # `ProviderUnavailableError` stays retryable here, unlike the pipeline: the
 # email has already gone out by the Record step.
 SEND_RETRY_POLICY = RetryPolicy(
@@ -49,5 +51,10 @@ SEND_RETRY_POLICY = RetryPolicy(
     backoff_coefficient=2.0,
     maximum_interval=timedelta(seconds=30),
     maximum_attempts=5,
-    non_retryable_error_types=["PackageNotReadyError"],
+    non_retryable_error_types=["PackageNotReadyError", "SendSupersededError"],
 )
+
+# CQ-020 (plan.md Decision 23): a send that hasn't finished in 10 minutes
+# (no worker running, a worker stuck) is ended by Temporal, so the package
+# can't stay "sending" forever; the API then reports it `failed`.
+SEND_EXECUTION_TIMEOUT = timedelta(minutes=10)

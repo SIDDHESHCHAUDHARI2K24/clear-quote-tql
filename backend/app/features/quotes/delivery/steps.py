@@ -7,7 +7,9 @@ retry -- including one on a different worker after a crash -- never
 duplicates a version, a PDF, an email or an event:
 
 - `freeze` -- key: `quote_package_versions.send_workflow_id`. Writes the
-  version (token, `sent_at`, `expires_at`) and the package's `sent_at`.
+  version (token, `sent_at`, `expires_at`) and the package's `sent_at`. A
+  run that is no longer the package's current send stops here
+  (`SendSupersededError`, plan.md Decision 22).
 - `render_letter` -- key: the version's `letter_key` object exists. Writes
   the PDF to MinIO and `letter_key`.
 - `email_borrower` -- key: the `outbox_email_id` row is `sent`. Writes the
@@ -42,7 +44,7 @@ from app.features.portal.reports.versions import freeze_package_version
 from app.features.quotes.delivery.email_template import render_borrower_email
 from app.features.quotes.pdf.service import render_letter_pdf, render_package_letter
 from app.features.quotes.send.models import QuotePackage, QuotePackageVersion, SendStatus
-from app.features.quotes.send.readiness import package_blockers
+from app.features.quotes.send.readiness import send_blockers
 from app.integrations.crm.mock import MockCrmClient
 
 SENT_EVENT_TYPE = "quote.sent"
@@ -50,6 +52,16 @@ SENT_EVENT_TYPE = "quote.sent"
 CRM_EVENT_TYPE = "quote.sent"
 LETTER_FILENAME = "preapproval-letter.pdf"
 _ACTOR_SYSTEM = "system"
+
+
+class SendSupersededError(AppError):
+    """Freeze found the package's `send_workflow_id` pointing at another
+    run: this one was superseded before it froze anything (plan.md Decision
+    22). Non-retryable; the workflow ends quietly without touching the
+    package, which belongs to the newer send."""
+
+    code = "SEND_SUPERSEDED"
+    status_code = 409
 
 
 class PackageNotReadyError(AppError):
@@ -109,8 +121,12 @@ async def freeze(db: AsyncSession, package_id: uuid.UUID, workflow_id: str) -> u
     ).scalar_one_or_none()
     if existing is not None:
         return existing
+    if package.send_workflow_id != workflow_id:
+        raise SendSupersededError(
+            f"Send {workflow_id} was superseded by {package.send_workflow_id}"
+        )
 
-    blockers = await package_blockers(db, package)
+    blockers = await send_blockers(db, package)
     if blockers:
         raise PackageNotReadyError("; ".join(b.message for b in blockers))
 
@@ -118,9 +134,10 @@ async def freeze(db: AsyncSession, package_id: uuid.UUID, workflow_id: str) -> u
     version = await freeze_package_version(db, package=package, sent_at=datetime.now(UTC))
     version.send_workflow_id = workflow_id
     # M3 (plan.md Decision 2): the package's current content *is* the newest
-    # sent version from here on; a later PUT reopens it as a draft.
+    # sent version from here on; a later PUT reopens it as a draft. The
+    # package's own `expires_at` (the draft's 7 days) stays: D2 puts the
+    # 21-day report expiry on the version only.
     package.sent_at = version.sent_at
-    package.expires_at = version.expires_at
     await db.flush()
     version_id = version.id
     await db.commit()
@@ -136,16 +153,18 @@ def _snapshot(version: QuotePackageVersion) -> dict[str, Any]:
 def _frozen_package(package: QuotePackage, snapshot: dict[str, Any]) -> QuotePackage:
     """A transient (never added to the session) package holding the
     snapshot's quotes, so the letter shows exactly what was frozen even if
-    the working package changed after Freeze (plan.md Decision 11)."""
+    the working package changed after Freeze (plan.md Decision 11) --
+    quotes, recommendation text and LO note alike."""
     options = snapshot.get("options") or []
     recommended = next((o["quote_id"] for o in options if o.get("recommended")), None)
+    recommendation = snapshot.get("recommendation") or {}
     return QuotePackage(
         id=package.id,
         application_id=package.application_id,
         quote_ids=[uuid.UUID(o["quote_id"]) for o in options],
         recommended_quote_id=uuid.UUID(recommended) if recommended else None,
-        lo_note=package.lo_note,
-        recommendation_text=package.recommendation_text,
+        lo_note=recommendation.get("lo_note"),
+        recommendation_text=recommendation.get("text"),
     )
 
 
@@ -280,8 +299,9 @@ async def record(db: AsyncSession, version_id: uuid.UUID, workflow_id: str) -> N
             {
                 "application_id": str(application.id),
                 "package_id": str(package.id),
+                "version_id": str(version.id),
                 "version": version.version,
-                "report_url": report_url(version.report_token),
+                # Never the report URL: its token selects a borrower's report.
                 "in_reply_to_inquiry": in_reply_to_inquiry,
             },
         )

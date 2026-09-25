@@ -16,7 +16,7 @@ from app.core.db import get_db
 from app.features.quotes.delivery.schemas import SendStarted, SendStatus, SentVersion
 from app.features.quotes.delivery.service import letter_pdf, list_versions, send_status, start_send
 from app.features.quotes.send.service import get_scoped_package
-from app.workflows.client import get_temporal_client
+from app.workflows.client import TemporalProvider, get_temporal_client, get_temporal_provider
 
 router = APIRouter(tags=["send"])
 
@@ -39,10 +39,13 @@ async def post_send(
 
 @router.get("/packages/{package_id}/send-status", response_model=SendStatus)
 async def get_send_status(
-    package_id: uuid.UUID, user: CurrentStaff, db: AsyncSession = Depends(get_db)
+    package_id: uuid.UUID,
+    user: CurrentStaff,
+    db: AsyncSession = Depends(get_db),
+    temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SendStatus:
     package = await get_scoped_package(db, package_id, user)
-    return await send_status(db, package)
+    return await send_status(db, package, temporal)
 
 
 @router.get("/packages/{package_id}/versions", response_model=list[SentVersion])

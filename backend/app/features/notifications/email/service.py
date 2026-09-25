@@ -115,7 +115,7 @@ async def send_email(
     try:
         await smtp_send(to=to, subject=subject, html=html)
     except Exception:
-        logger.exception("Failed to send email to %s", to)
+        logger.exception("Failed to send outbox email %s", outbox_email.id)
         outbox_email.status = EmailStatus.FAILED
     else:
         outbox_email.status = EmailStatus.SENT
@@ -146,7 +146,8 @@ async def deliver_outbox_email(
             attachments=attachments,
         )
     except Exception:
-        logger.exception("Failed to send email to %s", outbox_email.to_email)
+        # The outbox id, never the address: logs must not carry borrower PII.
+        logger.exception("Failed to send outbox email %s", outbox_email.id)
         outbox_email.status = EmailStatus.FAILED
         await db.flush()
         raise
