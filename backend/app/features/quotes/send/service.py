@@ -119,12 +119,16 @@ async def new_default_package(db: AsyncSession, application: Application) -> Quo
     """Builds (and flushes) the default draft; the caller commits. Also used
     by the seed's `apply_send_fixture`, so seeded packages follow the same
     rule."""
-    # `quote_ids` starts `[]`, not unset: `_apply_default_selection` below
-    # runs a query first (`default_package_selection`), and a query
-    # autoflushes this pending INSERT -- `quote_ids` is NOT NULL, so it
-    # must already be a valid value before that happens.
+    # `quote_ids`/`lo_edited` start out explicit, not unset:
+    # `_apply_default_selection` below runs a query first
+    # (`default_package_selection`), and a query autoflushes this pending
+    # INSERT -- both are NOT NULL, so they must already be valid values
+    # before that happens.
     package = QuotePackage(
-        application_id=application.id, quote_ids=[], report_token=secrets.token_urlsafe(24)
+        application_id=application.id,
+        quote_ids=[],
+        lo_edited=False,
+        report_token=secrets.token_urlsafe(24),
     )
     db.add(package)
     await _apply_default_selection(db, application, package)
@@ -192,22 +196,38 @@ async def sync_draft_recommendation(
     await db.flush()
 
 
+def _is_untouched_empty_draft(package: QuotePackage) -> bool:
+    """M5's empty draft (created before any quote existed) vs. one the LO
+    emptied on purpose (unticked every quote and saved `quote_ids: []`) --
+    only the former should get refilled. `lo_edited` (post-merge review,
+    code-review follow-up on M5) is set for good the first time
+    `update_package` runs; a timestamp comparison was tried first and
+    dropped -- Postgres's `now()` is transaction-start time, so `created_at
+    == updated_at` can't tell a create and a later write apart when both
+    land in the same transaction, as they do under this codebase's
+    `db_session` test fixture."""
+    return not package.quote_ids and not package.lo_edited
+
+
 async def get_or_create_package(db: AsyncSession, application: Application) -> QuotePackage:
     """Decision 2: the newest `quote_packages` row is the working package,
     creating the default draft on the first call.
 
     Code review M5: the Send tab can be opened before any quote is priced,
     leaving an unsent draft with `quote_ids=[]` forever -- once quotes
-    exist, re-apply the default to that empty draft instead of returning
-    it empty."""
+    exist, re-apply the default to that *untouched* empty draft instead of
+    returning it empty. An LO-emptied draft (`_is_untouched_empty_draft`
+    is false once it's had any write) is left alone."""
     package = await _newest_package(db, application.id)
-    if package is not None and (package.sent_at is not None or package.quote_ids):
+    if package is not None and (
+        package.sent_at is not None or not _is_untouched_empty_draft(package)
+    ):
         return package
     application = await lock_application(db, application.id)
     package = await _newest_package(db, application.id)
     if package is None:
         package = await new_default_package(db, application)
-    elif package.sent_at is None and not package.quote_ids:
+    elif package.sent_at is None and _is_untouched_empty_draft(package):
         await _apply_default_selection(db, application, package)
         await db.flush()
     await db.commit()
@@ -312,6 +332,10 @@ async def update_package(
     package.recommended_quote_id = recommended
     note = (body.lo_note or "").strip()
     package.lo_note = note or None
+    # code-review follow-up on M5: a real PUT, even one that empties the
+    # draft, must stick -- the next GET must not treat it as still
+    # untouched and refill it.
+    package.lo_edited = True
 
     if recommended is not None and application.recommended_quote_id != recommended:
         previous = application.recommended_quote_id

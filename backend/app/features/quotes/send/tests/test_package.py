@@ -387,3 +387,27 @@ async def test_get_or_create_package_reapplies_default_to_an_empty_unsent_draft(
         )
     ).scalar_one()
     assert count == 1  # reused the empty draft row instead of creating a second
+
+
+async def test_a_deliberately_emptied_draft_is_not_refilled(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """Code-review follow-up on M5: an LO who unticks every quote and saves
+    (`PUT quote_ids: []`) must not have the default put back on the next
+    load -- only a draft that has *never* been written to (M5's actual
+    case: opened before any quote was priced) gets refilled."""
+    ids = await _seed(db_session, "marcus_hale")
+    application_id = ids["marcus_hale"]
+    await make_staff_session(role=UserRole.MANAGER)
+    await _package(client, application_id)  # creates the real default draft
+
+    response = await client.put(
+        f"/api/v1/applications/{application_id}/package",
+        json={"quote_ids": [], "recommended_quote_id": None},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["quote_ids"] == []
+
+    after = await _package(client, application_id)
+    assert after["quote_ids"] == []
+    assert after["recommended_quote_id"] is None
