@@ -11,7 +11,7 @@ import { isPublicPath } from "@cq/ui";
 // on a 401.
 const SESSION_COOKIE = "cq_borrower_session";
 
-const PUBLIC_PATHS = new Set(["/login", "/signup", "/gallery"]);
+const PUBLIC_PATHS = new Set(["/login", "/signup", "/gallery", "/gallery/report"]);
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

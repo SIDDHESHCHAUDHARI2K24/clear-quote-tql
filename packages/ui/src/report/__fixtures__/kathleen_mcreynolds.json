@@ -1,0 +1,212 @@
+{
+  "header": {
+    "first_name": "Kathleen",
+    "property_label": "Property to be determined",
+    "purchase_price": "300000.00",
+    "prepared_at": "2026-09-25",
+    "rates_as_of": "2026-09-25",
+    "expires_at": "2026-10-16",
+    "expired": false,
+    "superseded": false
+  },
+  "strategy": "ltr",
+  "options": [
+    {
+      "quote_id": "kathleen-par",
+      "label": "Par",
+      "recommended": true,
+      "rate": "7.250",
+      "points_pct": "0.000",
+      "points_amount": "0.00",
+      "down_payment_pct": "25.00",
+      "prepay_label": "5-year prepayment penalty",
+      "hero": {
+        "monthly_payment": "1882.40",
+        "cash_to_close": "82074.95",
+        "loan_amount": null,
+        "monthly_cashflow": "367.60",
+        "year1_tax_savings": "21294.55",
+        "year1_tax_savings_monthly": "1775"
+      },
+      "breakdown": {
+        "payment_lines": [
+          {
+            "label": "Principal & interest",
+            "amount": "1534.90"
+          },
+          {
+            "label": "Property taxes",
+            "amount": "222.50"
+          },
+          {
+            "label": "Homeowners insurance",
+            "amount": "125.00"
+          }
+        ],
+        "payment_total": "1882.40",
+        "cash_to_close_lines": [
+          {
+            "label": "Down payment",
+            "amount": "75000.00"
+          },
+          {
+            "label": "Lender fees",
+            "amount": "1790.00"
+          },
+          {
+            "label": "Discount points",
+            "amount": "0.00"
+          },
+          {
+            "label": "Title & escrow",
+            "amount": "2100.00"
+          },
+          {
+            "label": "Prepaid interest",
+            "amount": "767.45"
+          },
+          {
+            "label": "Prepaid insurance",
+            "amount": "1750.00"
+          },
+          {
+            "label": "Prepaid taxes",
+            "amount": "667.50"
+          }
+        ],
+        "cash_to_close_total": "82074.95"
+      },
+      "cashflow": {
+        "rent_label": "Market rent (LTR)",
+        "gross_amount": "2250.00",
+        "expense_ratio": null,
+        "qualifying_rent": "2250.00",
+        "pitia": "1882.40",
+        "monthly_cashflow": "367.60",
+        "annual_cashflow": "4411.24",
+        "dscr": "1.20",
+        "cap_rate_pct": "6.75",
+        "monthly_cashflow_incl_tax": "2142.15"
+      },
+      "cost_seg": {
+        "purchase_price": "300000.00",
+        "land_allocation_pct": "20.00",
+        "land_value_allocation": "60000.00",
+        "depreciable_building_basis": "240000.00",
+        "accelerated_property_pct": "25.00",
+        "accelerated_basis_amount": "60000.00",
+        "bonus_depreciation_pct": "100.00",
+        "year_one_tax_deduction": "66545.45",
+        "investor_marginal_tax_rate": "32.00",
+        "year_one_tax_savings": "21294.55"
+      }
+    },
+    {
+      "quote_id": "kathleen-buydown",
+      "label": "Buydown",
+      "recommended": false,
+      "rate": "6.875",
+      "points_pct": "1.000",
+      "points_amount": "2250.00",
+      "down_payment_pct": "25.00",
+      "prepay_label": "5-year prepayment penalty",
+      "hero": {
+        "monthly_payment": "1825.59",
+        "cash_to_close": "84296.54",
+        "loan_amount": null,
+        "monthly_cashflow": "424.41",
+        "year1_tax_savings": "21294.55",
+        "year1_tax_savings_monthly": "1775"
+      },
+      "breakdown": {
+        "payment_lines": [
+          {
+            "label": "Principal & interest",
+            "amount": "1478.09"
+          },
+          {
+            "label": "Property taxes",
+            "amount": "222.50"
+          },
+          {
+            "label": "Homeowners insurance",
+            "amount": "125.00"
+          }
+        ],
+        "payment_total": "1825.59",
+        "cash_to_close_lines": [
+          {
+            "label": "Down payment",
+            "amount": "75000.00"
+          },
+          {
+            "label": "Lender fees",
+            "amount": "1790.00"
+          },
+          {
+            "label": "Discount points",
+            "amount": "2250.00"
+          },
+          {
+            "label": "Title & escrow",
+            "amount": "2100.00"
+          },
+          {
+            "label": "Prepaid interest",
+            "amount": "739.04"
+          },
+          {
+            "label": "Prepaid insurance",
+            "amount": "1750.00"
+          },
+          {
+            "label": "Prepaid taxes",
+            "amount": "667.50"
+          }
+        ],
+        "cash_to_close_total": "84296.54"
+      },
+      "cashflow": {
+        "rent_label": "Market rent (LTR)",
+        "gross_amount": "2250.00",
+        "expense_ratio": null,
+        "qualifying_rent": "2250.00",
+        "pitia": "1825.59",
+        "monthly_cashflow": "424.41",
+        "annual_cashflow": "5092.92",
+        "dscr": "1.23",
+        "cap_rate_pct": "6.75",
+        "monthly_cashflow_incl_tax": "2198.96"
+      },
+      "cost_seg": {
+        "purchase_price": "300000.00",
+        "land_allocation_pct": "20.00",
+        "land_value_allocation": "60000.00",
+        "depreciable_building_basis": "240000.00",
+        "accelerated_property_pct": "25.00",
+        "accelerated_basis_amount": "60000.00",
+        "bonus_depreciation_pct": "100.00",
+        "year_one_tax_deduction": "66545.45",
+        "investor_marginal_tax_rate": "32.00",
+        "year_one_tax_savings": "21294.55"
+      }
+    }
+  ],
+  "recommendation": {
+    "text": "We recommend the par option for the strongest long-term cashflow.",
+    "lo_note": null
+  },
+  "matches": [],
+  "disclosures": {
+    "core": "This is not a commitment to lend. Rates, payments and closing costs are estimates based on the information available today and are subject to change once your file is fully underwritten. This is not a Loan Estimate.",
+    "investment": "Rental income and cashflow figures are estimates based on third-party market data (RentCast/AirDNA) and are not a guarantee of actual performance.",
+    "tax": "Estimate only, not tax advice. Consult your tax professional."
+  },
+  "lo": {
+    "name": "Jordan Blake",
+    "title": "Loan Officer",
+    "nmls": "NMLS #1933377",
+    "phone": "(813) 555-0100",
+    "email": "jordan.blake@clearquote-demo.test"
+  }
+}

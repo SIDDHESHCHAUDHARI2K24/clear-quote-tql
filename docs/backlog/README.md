@@ -26,7 +26,7 @@ Status here is updated by the agent at stage 8 and by the human at merge.
 | [CQ-018](CQ-018-quote-builder/spec.md) | Quote builder | P3 | CQ-017 | To Do |
 | [CQ-019](CQ-019-send-tab/spec.md) | Send tab & preview | P3 | CQ-018, CQ-021 | To Do |
 | [CQ-020](CQ-020-letter-and-send/spec.md) | Letter PDF & send workflow | P3 | CQ-019, CQ-015 | To Do |
-| [CQ-021](CQ-021-report-components/spec.md) | Shared report components | P4 | CQ-005, CQ-008 | To Do |
+| [CQ-021](CQ-021-report-components/spec.md) | Shared report components | P4 | CQ-005, CQ-008 | In Review |
 | [CQ-022](CQ-022-borrower-report/spec.md) | Borrower report page | P4 | CQ-021, CQ-015 | To Do |
 | [CQ-023](CQ-023-property-matches/spec.md) | Property matches | P4 | CQ-022, CQ-013 | To Do |
 | [CQ-024](CQ-024-borrower-actions/spec.md) | Borrower actions | P4 | CQ-022 | To Do |
