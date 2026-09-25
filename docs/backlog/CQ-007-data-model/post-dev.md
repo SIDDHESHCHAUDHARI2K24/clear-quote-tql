@@ -87,6 +87,22 @@ Fresh-subagent review (did not write this code). Findings below; commands re-run
 
 **CI run:** GitHub Actions run [`36099844578`](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36099844578) on `cq-007-data-model` (commit `0235206`) — **success**. Both `backend` (ruff, ruff format, mypy, pytest) and `frontend` (eslint, tsc, prettier, vitest) jobs green. First real CI run on this branch (finding 3's root cause — CI workflow wasn't in this branch's history until the `phase-p0-p1` merge above).
 
+### Round 2 — independent fresh-reviewer verification
+
+Re-reviewed at `d7d5878` (HEAD). Did not trust the author's self-report above; re-ran every check independently.
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Diff read | `git show 0235206 -- <changed files>` | Confirms the 4 `index=True` additions and the `test_db_isolation.py` rewrite match the finding text exactly |
+| Fresh `cq_test` | `dropdb -U cq --if-exists cq_test && createdb -U cq cq_test`, then `uv run pytest backend -q` | **85 passed** — includes `test_db_isolation.py` (3) and the new `test_every_fk_column_has_an_index` |
+| No leftover probe model | `grep -rn "class _IsolationProbe\|Base)" backend/tests`; enumerated `Base.metadata.tables` in a fresh interpreter | Only comment-text references to the old table name remain (in `test_db_isolation.py`'s docstring); `Base.metadata` has exactly the 30 spec tables, no probe table |
+| Scratch DB migration round-trip | New scratch DB → `alembic upgrade head` → `downgrade base` → `upgrade head` | All three exit 0 |
+| `alembic check` (scratch DB) | `uv run alembic check` | "No new upgrade operations detected." |
+| FK-index regression test | `uv run pytest backend/tests/test_schema.py -k fk_column -v` | 1 passed |
+| CI run contents | `gh run view 36099844578 --json ... --job 107959807628 --log` | `headSha` = `0235206` (the fix commit); backend job's `pytest backend` step log shows `test_db_isolation.py ...` and `test_schema.py` (24 dots) collected, `85 passed, 1 warning in 9.37s`; both `backend` and `frontend` jobs `conclusion: success` |
+
+All three original findings verified fixed against a genuinely fresh environment, not just re-reading the diff. No new critical/major issues found. **Verdict: APPROVE.**
+
 ## How to test manually
 
 1. `make up` (starts the `clear-quote` compose stack: Postgres, Valkey, MinIO, Mailpit, Temporal).
