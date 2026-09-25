@@ -135,3 +135,18 @@ Fresh-subagent `code-review` (medium effort) on the `cq-025-fix` diff (dashboard
   link still showed the CQ-025 stub text; updated it in place (small
   necessity, AGENTS.md) to assert the real dashboard heading instead once
   navigated to `/`, since the stub it was testing no longer exists.
+
+## CQ-028b note (append, 2026-09-25)
+
+The "CQ-028: once the real re-verify endpoint exists, re-run AC5 through it
+instead of a direct DB update" follow-up above is done: CQ-028b's
+`e2e/lo-console/aisha-occupancy-resume.spec.ts` drives AC5 end to end
+through the real UI (no DB update) -- Aisha Coleman starts in "Needs your
+attention" with a missing-occupancy flag, the LO sets Occupancy on the
+Property tab and saves, the pipeline resumes and reaches Priced, and the
+spec then reloads the dashboard and asserts she's gone from "Needs your
+attention" within that one reload/refresh, per this item's own AC5 wording.
+See `docs/backlog/CQ-028-verification-tabs/post-dev.md`'s "CQ-028b —
+Verification tabs UI" section for the full evidence (also surfaced a real
+CQ-016/CQ-028 polling-race bug along the way, fixed in `useSection.ts`, not
+this item's code).

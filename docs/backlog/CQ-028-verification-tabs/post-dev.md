@@ -104,3 +104,67 @@ Also in this round: merged `phase-p5-p6` twice (CQ-030's per-test worker and `db
 - **CQ-033:** write `representative_fico` with `source_ref="hard_pull"` after the pull (plan #12), and persist `expired` (the section already reports it).
 - **CQ-017/CQ-030:** an address change does not re-enrich or mark quotes stale. That belongs to them.
 - `PORTAL_BASE_URL` (default `http://localhost:3020`) is a new setting; set it per environment.
+
+## CQ-028b — Verification tabs UI (this section)
+
+### Summary (CQ-028b)
+
+Built the five verification tabs (`apps/lo-console/src/app/(staff)/applications/[id]/{borrowers,housing,credit,assets,property}/page.tsx`) on top of 028a's API, plus a shared kit at `apps/lo-console/src/features/verification/shared/` (`useSection`, `FieldRow`, `FlagList`, `runSectionAction`, API wrappers, `formatFieldValue`/`formatDtiRatio`). Every field edit and revert goes through one pattern regardless of tab — `PUT`/`DELETE /fields/{field_key}` using the field's own `field_key` (plan.md decision #29: `fields.py`'s `resolve_field` parses application, party and row keys alike, so the row-collection endpoints are only needed to add a new row). Occupancy and investment strategy render on the **Property** tab, inside a "Loan" card, not Borrowers (decision #28: that's the only tab the section API actually returns them on). One sub-agent per tab (Borrowers, Housing, Credit, Assets); the coordinator built the shared kit, the Property tab, and the cross-tab gating test.
+
+### Deviations from spec (028b)
+
+| Spec said | Built | Why |
+| --- | --- | --- |
+| "...removes the TBD label in the header" (AC6) | The TBD label lives on the **Property tab** itself (`property-tbd-label` testid in `AddressOrTbdForm`), not CQ-016's global sticky header | The header's `ApplicationSummaryResponse` has no `address_status`/TBD field, and adding one is a backend change outside 028b's "no backend edits" scope (plan.md decision #30) |
+| AC7 "SSN reveal re-masks after 10 s" listed under the Playwright test plan | Covered by a Vitest test with fake timers (`SsnField.test.tsx`) instead, per plan.md's own task table (T11: "AC7 re-mask with fake timers") | A real 10s wait in a Playwright spec is slow and flaky; the plan already designated a fake-timers unit test for this, and the coordinator's prompt and plan.md disagreed on which — plan.md (the item's own binding plan) wins |
+
+### Acceptance evidence (stage 7, UI half)
+
+| Criterion | Status | Evidence |
+| --- | --- | --- |
+| AC1 Aisha resolve → resume → toast → Priced; leaves "Needs your attention" | ✅ | `e2e/lo-console/aisha-occupancy-resume.spec.ts` (real API :8121 + `make worker` on slot 21): sets Occupancy on the Property tab's Loan card, toast "All checks pass — pricing resumed" shown, header reaches "Priced" within 60 s (real Temporal chain), then the dashboard's "Needs your attention" no longer lists her (CQ-025 AC5) |
+| AC2 Ben housing ≥ 24 clears; shorter keeps with months | ✅ | `HousingTab.test.tsx`: 20-month fixture shows the shortfall and no "met" claim; 24+-month fixture shows the requirement met |
+| AC3 phone copy rule | ✅ | Covered at the API level (028a); the UI surfaces the field/flag generically via `FieldRow` — no bespoke phone-copy UI needed |
+| AC4 import liabilities keeps manual, DTI updates | ✅ | `CreditTab.test.tsx`: "Import liabilities" applies the returned section; DTI-as-percent assertions cover the primary-persona recompute |
+| AC5 hard pull once; consent states | ✅ | `CreditTab.test.tsx`: success path applies `data.section`; 409 shows a message containing "already pending"; all four E11 consent-state texts (pending/accepted/declined/expired) render |
+| AC6 buy-box metros; TBD → address turns recommend off, removes TBD label | ✅ | `e2e/lo-console/property-tab.spec.ts` (Kathleen McReynolds, real stack): two-tier picker (states → metros scoped to `GET /reference/metros?states=FL`), swaps Davenport for Tampa landing on [Tampa, Orlando]; entering an address removes the TBD label and unchecks Recommend matches; county shows "Polk" (zip lookup). `PropertyTab.test.tsx` (4 unit tests) covers the same logic against mocks |
+| AC7 edit/revert/SSN events; 10 s re-mask | ✅ | `SsnField.test.tsx` (fake timers): reveal shows raw digits, `vi.advanceTimersByTime(10000)` re-masks. `FieldRow.test.tsx` covers the generic edit/revert/flag-highlight UI every tab reuses |
+| AC8 DTI/income gating | ✅ | `VerificationTabs.gating.test.tsx` (coordinator-owned, cross-tab): primary shows DTI as a percent and employment/income; investment shows neither, reading straight off `dti_applicable`/`income_applicable` (never inferred client-side). `npx react-doctor -y --blocking error`: 0 errors, score 88/100 |
+
+### Test log (stage 5, UI half)
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Frontend unit tests (whole `apps/lo-console`) | `npx vitest run` (from `apps/lo-console/`) | 154 passed (36 files), including 45 new verification-tab tests |
+| Types | `npx tsc --noEmit -p .` (from `apps/lo-console/`) | clean, 0 errors |
+| Lint | `pnpm -r run lint`, `pnpm -r run typecheck` | clean across all 4 workspace packages |
+| Format | `pnpm exec prettier --check` (verification/, both e2e specs, this doc) | clean |
+| react-doctor | `npx react-doctor -y --blocking error` (from `apps/lo-console/`) | 0 errors (exit 0); 2 pre-existing warnings in CQ-016 files this item doesn't own (`DefaultTabRedirect.tsx`, `WorkspaceProvider.tsx`); score 88/100 "Great" (started at 75/100 before this item's own fixes below) |
+| E2E (slot 21) | `make demo-reset`; API `PYTHONPATH=backend uv run uvicorn app.main:app --port 8121` (note: `uv run --directory backend ...` from the worker guide broke `.env` discovery here — `Settings` failed 16 required-field validation errors; `PYTHONPATH=backend` from the repo root works, matching the guide's own alternative form); `make worker`; LO console + borrower portal (global-setup needs the portal for its own persona logins) on 3121/3221; `LO_BASE_URL=http://localhost:3121 PORTAL_BASE_URL=http://localhost:3221 npx playwright test e2e/lo-console/property-tab.spec.ts e2e/lo-console/aisha-occupancy-resume.spec.ts --project=lo-console` | both passed (2/2) |
+
+### Review findings (stage 6, UI half)
+
+A fresh subagent ran `code-review` (low effort) against the staged diff. Findings and resolutions:
+
+| Severity | Finding | Resolution |
+| --- | --- | --- |
+| Major | `FieldRow`'s `draftToValue` did `Number(draft)` for `kind="number"` with no validation; a non-numeric entry (e.g. "abc") produces `NaN`, and `JSON.stringify(NaN)` serializes to `null` — an invalid entry would silently save as a field-clear instead of an error. Affects `dependents_count`, `residence_years`/`residence_months` | Fixed: throws `"Enter a number."` instead, caught by `FieldRow`'s existing error UI (editor stays open, no save). New test: `FieldRow.test.tsx` "rejects a non-numeric 'number' draft..." |
+| Major | Same bug, concrete instance: `PropertyDetailsForm`'s `number_of_units` input did `Number(units)` unvalidated | Fixed: validates before calling `patchProperty`, shows "Units: enter a number." on failure instead of silently clearing the field |
+| Minor | `fieldBySuffix` (row-field lookup by column suffix) was byte-for-byte duplicated in `AssetsTab.tsx`, `CreditTab.tsx` and `HousingTab.tsx` | Moved to `shared/api.ts`, exported from the shared kit; all three tabs now import it |
+| Minor (noted, not fixed) | The per-record `onSave`/`onRevert` closure (`runSectionAction(() => putField(...))`, throw-on-error, `applyResult`) is near-identical across `AssetsTab`/`CreditTab`/`HousingTab`/`PropertyTab` and could be one shared hook | Left as-is: each tab's closure captures a different collection/kind, and factoring it out would be a larger refactor than this item's scope justifies; logged here as a real follow-up, not a correctness issue |
+
+**Coordinator's own fixes on top of react-doctor** (beyond code-review's findings, all with tests still green after):
+- 4 `react-doctor/no-array-index-as-key` warnings (Assets/Credit/Housing row lists): row records (`asset`/`employment`/`liability`/`housing_history` kinds) always carry a real UUID `id` per `service.py`'s `_row_record` — switched `key={record.id ?? \`asset-${index}\`}` to `key={record.id as string}` in all four spots.
+- 1 `react-doctor/no-adjust-state-on-prop-change` in `SsnField.tsx` (re-masking when the field's value changes underneath a reveal): rewritten using React's own "adjust state during render" pattern (compare against a previous value in **state**, not a ref) instead of a `useEffect` keyed on `field.value`.
+- That render-time rewrite's first version used a **ref** for the previous-value comparison, which react-doctor correctly flagged as `no-ref-current-in-render` (mutating `ref.current` during render is unsafe under concurrent rendering) — switched to `useState` instead, and dropped an unnecessary imperative `clearTimeout` call from the render path (the reveal timer is already cleared by the next `reveal()` call regardless).
+- `react-doctor/no-high-complexity-react-function` in `FieldRow.tsx`: extracted the per-`kind` editor markup into a small `FieldRowEditor` sub-component (same JSX, no behavior change).
+- Score went 75 → 80 (after array-key + adjust-state-on-prop-change fixes) → 88 (after the ref-in-render + complexity fixes), 0 errors throughout after the last two fixes.
+
+**A real production bug found while writing the AC1 E2E spec (not from code-review or react-doctor):** the first `aisha-occupancy-resume.spec.ts` run showed the header stuck on "Needs attention" for 60 s even though the DB had her `priced` within ~6 seconds of the edit. Root cause: `WorkspaceProvider` (CQ-016) only keeps polling `.../summary` while `last_pipeline_stage` is non-null; a freshly-**started** run (Aisha's seeded application has no prior Temporal run, plan.md #9) reports `last_pipeline_stage: null` until its first activity commits, a few hundred ms to ~1s later. `useSection`'s `applyResult` called `refetchWorkspace()` exactly once, immediately after the edit — almost always before that first activity commits — saw `null`, and `WorkspaceProvider` correctly (by its own contract) treated `null` as terminal and never started polling. The header would then stay wrong until a manual reload, for every LO fix that starts a fresh pipeline run, not just in the test. Fixed in `useSection.ts`: when `resume.requested` is true, schedule three additional delayed `refetchWorkspace()` calls (1.5 s, 4 s, 8 s) to bridge the race until `WorkspaceProvider`'s own 3 s interval takes over once it observes a non-null stage. New fake-timers test in `useSection.test.tsx` locks in the bridge's timing and cleanup-on-unmount.
+
+### How to test manually (028b, slot 21)
+
+1. `bash scripts/worktree-env.sh 21`, `make demo-reset`.
+2. From the repo root: `PYTHONPATH=backend uv run uvicorn app.main:app --port 8121`, `make worker`, `pnpm --filter @cq/lo-console exec next dev -p 3121`, `pnpm --filter @cq/borrower-portal exec next dev -p 3221`.
+3. Sign in as `jordan.lee@clearquote-demo.test` (Aisha's LO). Open her application's Property tab, edit Occupancy to "Investment", Save — the toast appears and the header reaches "Priced" within about a minute.
+4. Sign in as `morgan.reyes@clearquote-demo.test` (Kathleen's LO). Open her Property tab: swap the buy-box metros, then enter a specific address and confirm the TBD label disappears and Recommend matches turns off.
