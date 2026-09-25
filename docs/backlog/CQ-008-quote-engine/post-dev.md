@@ -134,6 +134,45 @@ Net: 41 tests now pass (was 28), all 8 golden values still exact to the cent (re
 Test log below), `ruff`/`mypy` clean on the whole `backend/` tree (not just this item's subtree, since
 `make lint`'s actual scope is now reachable post-merge).
 
+## Round 2 (re-review of `4ffad0e`/`baba4b8`)
+
+Re-reviewed by a fresh subagent that did not write the fixes. Verified each round-1 resolution
+against the actual diff, not just the plan.md/post-dev.md prose.
+
+**Commands re-run**
+
+| Command | Result |
+| --- | --- |
+| `uv run ruff check backend` | All checks passed! |
+| `uv run ruff format --check backend` | 36 files already formatted |
+| `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` (full `make lint` mypy scope) | Success: no issues found in 36 source files |
+| `uv run pytest backend -q` | 57 passed |
+| `uv run pytest backend/app/features/pricing/engine -v` | 41 passed |
+| `git merge-tree --write-tree origin/phase-p0-p1 HEAD` (current tip `8696af9`, post-CQ-006) | Clean merge, no conflicts (`bc99187...`) |
+| Independent Decimal re-derivation of AC2/AC3 P&I and `str_annual_rent_target` at both the default and a non-default `str_expense_ratio` (own script, not the engine) | All match: `1515.87`, `1913.05`, default `27313.05`, `str_expense_ratio=0.25` → `29133.92` (matches the new `test_str_annual_rent_target_non_default_expense_ratio`) |
+| Independent recompute of a primary 95% LTV / FICO 700 scenario against the new fraction-scale API (`ltv_pct=0.9500`, not `95.00`) | P&I/MI/PITIA all match `compute_quote`'s output |
+| Construct a primary scenario at 99% LTV | `LtvOutOfRangeError` raised, message names both the actual and max LTV |
+| Construct primary scenarios at exactly 97% LTV, and LTR/STR scenarios with an equivalent >97% "LTV" | Neither raises — cap is PRIMARY-only, as decided |
+| Mutate a `ConfigSnapshot` field after construction | Raises `pydantic.ValidationError` (frozen), not `dataclasses.FrozenInstanceError` |
+| Construct an LTR `ScenarioInputs` missing `market_rent_ltr` | Raises `pydantic.ValidationError` (a `ValueError` subclass), matching `test_scenario_inputs_validation.py` |
+
+**Finding-by-finding verification**
+
+| # | Round 1 severity | Status | Evidence |
+| --- | --- | --- | --- |
+| 1 | Major | Resolved | `types.py` now defines `ScenarioInputs`/`ConfigSnapshot`/`QuoteComputation` as `pydantic.BaseModel` with `model_config = ConfigDict(frozen=True)`; `pydantic`/`pydantic-settings` confirmed present in `pyproject.toml`/`uv.lock` post-merge. Matches spec.md's binding Public API exactly. |
+| 2 | Minor | Resolved | `quote_engine.py` defines `LtvOutOfRangeError(ValueError)` and `compute_quote` raises it for `strategy == PRIMARY and ltv > 0.97`, before any MI/payment math runs. Confirmed by direct construction above; `test_ltv_over_97_percent_on_primary_raises`/`_at_97_percent_..._does_not_raise`/`_on_investment_does_not_raise` cover the boundary and the strategy gate. |
+| 3 | Minor | Resolved | `ltv_pct` is a 0–1 fraction everywhere (`ltv_pct()` helper, `QuoteComputation.ltv_pct`, `mi_factor`'s parameter); `QuoteComputation.ltv_pct` now carries an inline comment stating the scale explicitly (the original ask was for the field itself to be documented, not just the helper function — done). `mi_factor` converts to 0–100 internally before the band lookup; spec.md's own text updated to `ltv_pct <= 0.80`/`> 0.80` consistently. |
+| 4 | Minor | Resolved | `str_annual_rent_target(total_payment, str_expense_ratio)` now computes `total_payment * 12 / (1 - str_expense_ratio)` and `compute_quote` passes `config.str_expense_ratio`; spec.md's formula line updated to match. `test_str_annual_rent_target_non_default_expense_ratio` (ratio 0.25 → $29,133.92) independently re-derived above and matches — proves the formula genuinely reads the snapshot now, closing the reproducibility-principle tension flagged in round 1. |
+| 5 | Minor | Resolved | New `tests/test_scenario_inputs_validation.py`, 9 tests, one per required/forbidden field per strategy plus one valid-construction test per strategy; all pass. |
+| 6 | Minor | Resolved | `test_full_scenario_matches_all_pinned_golden_values` (`test_golden.py`) now asserts `land_value_allocation == 68400.00`, `depreciable_building_basis == 273600.00`, `accelerated_basis_amount == 68400.00` and `break_even_rent_ltr == 2704.11` directly through `compute_quote()`, closing the coverage gap exactly as directed. Confirmed by reading the committed test file, not just re-deriving the values by hand. |
+
+**New (round 2) observations — informational, not blocking**
+
+- **CI has no run to check for this branch.** `gh run list --repo SIDDHESHCHAUDHARI2K24/clear-quote-tql --branch cq-008-quote-engine` returns empty. Root cause: this branch's merge commit (`4ffad0e`) merged `phase-p0-p1` at `cf32afd` (01:12:42), which predates CQ-006 adding `.github/workflows/ci.yml` to `phase-p0-p1` (landed at `8696af9`, 01:23:51). Since GitHub Actions runs whatever workflow file exists at the pushed commit, and `cq-008-quote-engine`'s `HEAD` has no `.github/workflows/ci.yml` at all (`git show HEAD:.github/workflows/ci.yml` → does not exist), no CI job has ever been scheduled for this branch — not a failure, there is simply nothing to run. `git merge-tree --write-tree origin/phase-p0-p1 HEAD` (current tip) is still a clean, conflict-free merge. I ran the exact `backend` job steps from `ci.yml` locally (`ruff check`/`ruff format --check`/`mypy` with the identical path list/`pytest backend`) and all pass. Recommend the branch pick up current `phase-p0-p1` (or merge as-is and let the resulting `phase-p0-p1` push run CI) rather than waiting on a run that cannot start on this exact commit.
+
+**Verdict: no critical/major findings remain open.** All 6 round-1 findings resolved and independently re-verified against the actual code (not just the prose). Ready to merge on the engine's own merits; the CI-gap above is a branch-freshness housekeeping item, not a defect in this item's code.
+
 ## How to test manually
 
 1. `cp .env.example .env` (if not already present — needed for `backend/conftest.py` to import; see
