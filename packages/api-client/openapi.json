@@ -524,6 +524,63 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "quote-builder"
+        ],
+        "summary": "Get Application Scenarios",
+        "operationId": "get_application_scenarios_api_v1_applications__application_id__scenarios_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationScenariosRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/scenarios/{scenario_id}/products": {
@@ -759,6 +816,245 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PricingViewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}": {
+      "put": {
+        "tags": [
+          "quote-builder"
+        ],
+        "summary": "Put Scenario",
+        "operationId": "put_scenario_api_v1_scenarios__scenario_id__put",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scenario Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioGroupRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{quote_id}": {
+      "delete": {
+        "tags": [
+          "quote-builder"
+        ],
+        "summary": "Delete Quote Route",
+        "operationId": "delete_quote_route_api_v1_quotes__quote_id__delete",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{quote_id}/recommend": {
+      "post": {
+        "tags": [
+          "quote-builder"
+        ],
+        "summary": "Post Recommend",
+        "operationId": "post_recommend_api_v1_quotes__quote_id__recommend_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/reprice": {
+      "post": {
+        "tags": [
+          "quote-builder"
+        ],
+        "summary": "Post Reprice",
+        "operationId": "post_reprice_api_v1_applications__application_id__reprice_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepriceResponse"
                 }
               }
             }
@@ -1316,6 +1612,58 @@
   },
   "components": {
     "schemas": {
+      "ApplicationScenariosRead": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "PRIMARY",
+                  "LTR",
+                  "STR"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy"
+          },
+          "recommended_quote_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Quote Id"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioGroupRead"
+            },
+            "type": "array",
+            "title": "Groups"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "strategy",
+          "recommended_quote_id",
+          "groups"
+        ],
+        "title": "ApplicationScenariosRead"
+      },
       "ApplicationStatus": {
         "type": "string",
         "enum": [
@@ -3048,6 +3396,134 @@
         ],
         "title": "PricingViewResponse"
       },
+      "QuoteCardRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "scenario_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Scenario Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "investor": {
+            "type": "string",
+            "title": "Investor"
+          },
+          "product": {
+            "type": "string",
+            "title": "Product"
+          },
+          "rate_pct": {
+            "type": "string",
+            "title": "Rate Pct"
+          },
+          "points_pct": {
+            "type": "string",
+            "title": "Points Pct"
+          },
+          "points_amount": {
+            "type": "string",
+            "title": "Points Amount"
+          },
+          "lock_days": {
+            "type": "integer",
+            "title": "Lock Days"
+          },
+          "monthly_payment": {
+            "type": "string",
+            "title": "Monthly Payment"
+          },
+          "cash_to_close": {
+            "type": "string",
+            "title": "Cash To Close"
+          },
+          "down_payment_pct": {
+            "type": "string",
+            "title": "Down Payment Pct"
+          },
+          "prepay_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepay Label"
+          },
+          "dscr_ratio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dscr Ratio"
+          },
+          "monthly_cashflow": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow"
+          },
+          "priced_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Priced At"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          },
+          "recommended": {
+            "type": "boolean",
+            "title": "Recommended"
+          },
+          "computed": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Computed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scenario_id",
+          "label",
+          "investor",
+          "product",
+          "rate_pct",
+          "points_pct",
+          "points_amount",
+          "lock_days",
+          "monthly_payment",
+          "cash_to_close",
+          "down_payment_pct",
+          "prepay_label",
+          "dscr_ratio",
+          "monthly_cashflow",
+          "priced_at",
+          "stale",
+          "recommended",
+          "computed"
+        ],
+        "title": "QuoteCardRead"
+      },
       "QuoteComputation": {
         "properties": {
           "loan_amount": {
@@ -4011,6 +4487,33 @@
         ],
         "title": "QuoteRead"
       },
+      "RecommendResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "recommended_quote_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Quote Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "recommended_quote_id"
+        ],
+        "title": "RecommendResponse"
+      },
       "ReportDisclosures": {
         "properties": {
           "core": {
@@ -4363,6 +4866,35 @@
         "title": "ReportStrategy",
         "type": "string"
       },
+      "RepriceResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "quote_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Quote Ids"
+          },
+          "priced_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Priced At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "quote_ids",
+          "priced_at"
+        ],
+        "title": "RepriceResponse"
+      },
       "ScenarioCreateRequest": {
         "properties": {
           "purchase_price": {
@@ -4423,6 +4955,116 @@
         ],
         "title": "ScenarioCreateRequest",
         "description": "The LO-owned pricing inputs (system-design's \"only inputs the LO\nowns\" table) minus note rate, which is chosen per-quote, not at\nscenario-creation time. FICO, tax, insurance, HOA and rent/STR are\nenrichment-owned and read from `field_values` server-side."
+      },
+      "ScenarioGroupRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "dscr_bucket": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DSCRBucket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inputs": {
+            "$ref": "#/components/schemas/ScenarioInputsRead"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteCardRead"
+            },
+            "type": "array",
+            "title": "Quotes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "note",
+          "dscr_bucket",
+          "inputs",
+          "quotes",
+          "created_at"
+        ],
+        "title": "ScenarioGroupRead"
+      },
+      "ScenarioInputsRead": {
+        "properties": {
+          "purchase_price": {
+            "type": "string",
+            "title": "Purchase Price"
+          },
+          "down_payment_pct": {
+            "type": "string",
+            "title": "Down Payment Pct"
+          },
+          "prepayment_penalty_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepayment Penalty Years"
+          },
+          "lock_days": {
+            "type": "integer",
+            "title": "Lock Days"
+          },
+          "fico": {
+            "type": "integer",
+            "title": "Fico"
+          },
+          "strategy": {
+            "type": "string",
+            "enum": [
+              "PRIMARY",
+              "LTR",
+              "STR"
+            ],
+            "title": "Strategy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_price",
+          "down_payment_pct",
+          "prepayment_penalty_years",
+          "lock_days",
+          "fico",
+          "strategy"
+        ],
+        "title": "ScenarioInputsRead"
       },
       "ScenarioRead": {
         "properties": {
@@ -4515,6 +5157,74 @@
           "quotes"
         ],
         "title": "ScenarioRead"
+      },
+      "ScenarioUpdateRequest": {
+        "properties": {
+          "purchase_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Purchase Price"
+          },
+          "down_payment_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Down Payment Pct"
+          },
+          "prepayment_penalty_years": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepayment Penalty Years"
+          },
+          "lock_days": {
+            "type": "integer",
+            "maximum": 90.0,
+            "minimum": 15.0,
+            "title": "Lock Days",
+            "default": 30
+          },
+          "dscr_bucket": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DSCRBucket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_price",
+          "down_payment_pct"
+        ],
+        "title": "ScenarioUpdateRequest",
+        "description": "`PUT /scenarios/{id}` -- the LO-owned inputs the overlay edits.\nEnrichment-owned inputs (FICO, tax, insurance, HOA, rent) are always\nre-read from `field_values` server-side."
       },
       "StaffLoginRequest": {
         "properties": {

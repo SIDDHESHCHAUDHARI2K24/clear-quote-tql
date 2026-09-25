@@ -139,7 +139,11 @@ async def test_scenario_create_route_propagates_pricing_validation_error(
 
     assert response.status_code == 422
     body = response.json()
-    assert body["error"]["code"] == "PRICING_VALIDATION_ERROR"
+    # CQ-018 (plan.md Decision 6): the Quote Builder's pre-check reports
+    # the spec's `missing_field` code (with the owning tab) before writing.
+    assert body["error"]["code"] == "missing_field"
+    assert body["error"]["details"]["field"] == "ZipCode"
+    assert body["error"]["details"]["tab"] == "property"
     assert "ZipCode" in body["error"]["details"]["missing_fields"]
 
 

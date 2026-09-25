@@ -22,11 +22,16 @@ from app.features.pricing.scenarios.schemas import (
     ScenarioRead,
 )
 from app.features.pricing.scenarios.service import (
-    autoquote_scenario,
     create_manual_quote,
     create_scenario,
     get_priced_products_for_scenario,
 )
+from app.features.quotes.builder.service import (
+    autoquote_replacing,
+    ensure_priceable,
+    missing_field_error,
+)
+from app.integrations.common.errors import PricingValidationError
 from app.integrations.pricing.schemas import PricedProductDTO
 
 router = APIRouter(tags=["pricing"])
@@ -55,6 +60,9 @@ async def post_scenario(
     db: AsyncSession = Depends(get_db),
     _application: Application = Depends(get_scoped_application),
 ) -> ScenarioRead:
+    # CQ-018: a missing OB-required field (e.g. Aisha Coleman's Occupancy)
+    # 422s as `missing_field` before anything is written.
+    await ensure_priceable(db, application_id, request.down_payment_pct)
     scenario = await create_scenario(
         db,
         application_id,
@@ -79,17 +87,23 @@ async def get_products(
     db: AsyncSession = Depends(get_db),
     _scope: None = Depends(ensure_scenario_in_scope),
 ) -> list[PricedProductRow]:
-    products = await get_priced_products_for_scenario(db, scenario_id)
+    try:
+        products = await get_priced_products_for_scenario(db, scenario_id)
+    except PricingValidationError as exc:
+        raise missing_field_error(exc) from exc
     return [PricedProductRow.model_validate(product.model_dump()) for product in products]
 
 
 @router.post("/scenarios/{scenario_id}/autoquote", response_model=AutoQuoteResponse)
 async def post_autoquote(
     scenario_id: uuid.UUID,
+    user: CurrentStaff,
     db: AsyncSession = Depends(get_db),
     _scope: None = Depends(ensure_scenario_in_scope),
 ) -> AutoQuoteResponse:
-    par_quote, buydown_quote = await autoquote_scenario(db, scenario_id)
+    # CQ-018 (plan.md Decision 4): Save & AutoQuote *replaces* the
+    # scenario's Par/Buydown (was: appended another pair every call).
+    par_quote, buydown_quote = await autoquote_replacing(db, scenario_id, user)
     return AutoQuoteResponse(
         par=QuoteRead.model_validate(par_quote),
         buydown=QuoteRead.model_validate(buydown_quote) if buydown_quote is not None else None,

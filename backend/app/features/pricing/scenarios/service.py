@@ -292,10 +292,22 @@ def _ob_overrides_from_scenario(scenario: Scenario, inputs: ScenarioInputs) -> O
         if scenario.dscr_bucket is not None
         else None
     )
+    lock_days = None
+    if isinstance(scenario.inputs, dict):
+        lock_days = scenario.inputs.get("lock_days")
+    if lock_days is None:
+        return ObRequestOverrides(
+            down_payment_pct=inputs.down_payment_pct,
+            dscr=dscr,
+            prepayment_penalty_years=ppp_years,
+        )
+    # CQ-018: the overlay's lock days (pipeline-created scenarios have
+    # none -> the OB request's 30-day default above).
     return ObRequestOverrides(
         down_payment_pct=inputs.down_payment_pct,
         dscr=dscr,
         prepayment_penalty_years=ppp_years,
+        desired_lock_days=int(lock_days),
     )
 
 
@@ -612,6 +624,10 @@ async def create_default_scenarios(
     the LO's chosen down payment."""
     application = await _get_application(db, application_id)
     config = ConfigSnapshot()
+    if down_payment_pct is None:
+        # CQ-018 (plan.md Decision 3): the LOS file's requested down
+        # payment, written by `import_from_los`, when the loan file had one.
+        down_payment_pct = await _field_decimal(db, application_id, "down_payment_pct")
 
     if application.occupancy is Occupancy.PRIMARY:
         resolved_down_payment = (
@@ -639,3 +655,60 @@ async def auto_price(db: AsyncSession, application_id: uuid.UUID) -> PricingResu
     inputs and returns every `scenario`/`quote` id it created."""
     result = await create_default_scenarios(db, application_id)
     return result.as_pricing_result()
+
+
+# --- CQ-018 additions: public helpers the Quote Builder routes use --------
+
+
+SCENARIO_EXTRA_INPUT_KEYS = ("prepayment_penalty_years", "lock_days")
+"""LO-owned inputs stored beside `ScenarioInputs` in `scenarios.inputs`."""
+
+
+def scenario_inputs(scenario: Scenario) -> ScenarioInputs:
+    return _scenario_inputs_from_row(scenario)
+
+
+async def rebuild_scenario_inputs(
+    db: AsyncSession,
+    scenario: Scenario,
+    *,
+    purchase_price: Decimal | None = None,
+    down_payment_pct: Decimal | None = None,
+    extras: dict[str, object] | None = None,
+) -> ScenarioInputs:
+    """Re-reads every enrichment-owned input (FICO, tax, insurance, HOA,
+    rent/STR revenue) from `field_values` and keeps the scenario's own
+    LO-owned inputs (price, down payment, PPP, lock days) unless new ones
+    are given. Writes the result back to `scenario.inputs` (flush only)."""
+    application = await _get_application(db, scenario.application_id)
+    current = _scenario_inputs_from_row(scenario)
+    base = await _gather_base_scenario_inputs(
+        db,
+        application,
+        purchase_price if purchase_price is not None else current.purchase_price,
+        down_payment_pct if down_payment_pct is not None else current.down_payment_pct,
+    )
+    old = scenario.inputs if isinstance(scenario.inputs, dict) else {}
+    kept = {key: old[key] for key in SCENARIO_EXTRA_INPUT_KEYS if key in old}
+    scenario.inputs = {**_json_safe(base), **kept, **(extras or {})}
+    await db.flush()
+    return base
+
+
+def compute_for_product(scenario: Scenario, product: PricedProductDTO) -> QuoteComputation:
+    return compute_quote(
+        inputs_with_priced_product(_scenario_inputs_from_row(scenario), product),
+        _config_from_row(scenario),
+    )
+
+
+async def persist_quote(
+    db: AsyncSession, scenario: Scenario, product: PricedProductDTO, label: str
+) -> Quote:
+    return await _persist_quote(
+        db, scenario.id, product, compute_for_product(scenario, product), label
+    )
+
+
+def computation_json(computation: QuoteComputation) -> dict:
+    return _json_safe(computation)

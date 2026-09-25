@@ -97,6 +97,18 @@ def down_payment_pct_from_amount(purchase_price: Decimal, down_payment_amount: D
     return _round_ltv(down_payment_amount / purchase_price)
 
 
+def discount_points_percent(loan: Decimal, discount_points_amount: Decimal) -> Decimal:
+    """Points as a display percent, 3dp (e.g. `0.875` for 0.875 points;
+    negative = lender credit), from a quote's own engine output. CQ-018's
+    quote cards need the exact figure: `quotes.points` is stored at 3dp as
+    a fraction (`0.009` for 0.875 points), too coarse to display."""
+    if loan <= 0:
+        raise NonPositivePriceError(f"loan must be positive to derive points, got {loan}")
+    return (discount_points_amount / loan * Decimal("100")).quantize(
+        Decimal("0.001"), rounding=ROUND_HALF_UP
+    )
+
+
 def insurance_annual_rate_from_amount(purchase_price: Decimal, annual_premium: Decimal) -> Decimal:
     """`annual_premium / purchase_price`, unrounded -- the same
     0-1-fraction scale `ScenarioInputs.insurance_annual_rate` uses

@@ -166,3 +166,120 @@
   lock_days: 30
   fico_adjustment_bps: "0.00"
   ltv_adjustment_bps: "0.00"
+# CQ-018 (plan.md Decision): a DSCR rate ladder so AutoQuote finds a
+# Buydown (<= 1.00 point) in every DSCR bucket and "Choose manually" lists
+# >= 8 products. Bucket- and FICO-agnostic, 5-year PPP, every price is more
+# than 0.500 from par so no persona's existing par row (and so no DSCR
+# bucket or end status) changes.
+- investor_name: Harborline Capital
+  product_name: DSCR 30yr Fixed 1.5pt
+  program: dscr
+  base_rate: "7.125"
+  base_price: "98.500"
+  min_fico: 680
+  max_ltv: "80.00"
+  dscr_bucket: null
+  ppp_years: 5
+  str_only: false
+  lead_source: null
+  lock_days: 30
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
+- investor_name: Harborline Capital
+  product_name: DSCR 30yr Fixed 1.125pt
+  program: dscr
+  base_rate: "7.250"
+  base_price: "98.875"
+  min_fico: 680
+  max_ltv: "80.00"
+  dscr_bucket: null
+  ppp_years: 5
+  str_only: false
+  lead_source: null
+  lock_days: 30
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
+- investor_name: Harborline Capital
+  product_name: DSCR 30yr Fixed Buydown
+  program: dscr
+  base_rate: "7.375"
+  base_price: "99.000"
+  min_fico: 680
+  max_ltv: "80.00"
+  dscr_bucket: null
+  ppp_years: 5
+  str_only: false
+  lead_source: null
+  lock_days: 30
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
+- investor_name: Harborline Capital
+  product_name: DSCR 30yr Fixed Low-Points
+  program: dscr
+  base_rate: "7.500"
+  base_price: "99.375"
+  min_fico: 680
+  max_ltv: "80.00"
+  dscr_bucket: null
+  ppp_years: 5
+  str_only: false
+  lead_source: null
+  lock_days: 30
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
+- investor_name: Keystone Investor Lending
+  product_name: DSCR 30yr Fixed 45-Day Buydown
+  program: dscr
+  base_rate: "7.500"
+  base_price: "99.250"
+  min_fico: 680
+  max_ltv: "80.00"
+  dscr_bucket: null
+  ppp_years: 5
+  str_only: false
+  lead_source: null
+  lock_days: 45
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
+- investor_name: Keystone Investor Lending
+  product_name: DSCR 30yr Fixed Credit
+  program: dscr
+  base_rate: "7.875"
+  base_price: "100.875"
+  min_fico: 680
+  max_ltv: "80.00"
+  dscr_bucket: null
+  ppp_years: 5
+  str_only: false
+  lead_source: null
+  lock_days: 30
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
+- investor_name: Keystone Investor Lending
+  product_name: DSCR 30yr Fixed Credit Plus
+  program: dscr
+  base_rate: "8.000"
+  base_price: "101.125"
+  min_fico: 680
+  max_ltv: "80.00"
+  dscr_bucket: null
+  ppp_years: 5
+  str_only: false
+  lead_source: null
+  lock_days: 30
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
+- investor_name: Keystone Investor Lending
+  product_name: DSCR 30yr Fixed Max Credit
+  program: dscr
+  base_rate: "8.250"
+  base_price: "101.500"
+  min_fico: 680
+  max_ltv: "80.00"
+  dscr_bucket: null
+  ppp_years: 5
+  str_only: false
+  lead_source: null
+  lock_days: 30
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
