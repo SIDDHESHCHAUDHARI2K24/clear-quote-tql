@@ -103,15 +103,15 @@ All under `/api/v1`, staff session required, out-of-scope package = 404 (Decisio
 
 ## Progress
 
-- [ ] T1
-- [ ] T2
-- [ ] T3
-- [ ] T4
-- [ ] T5
-- [ ] T6
-- [ ] T7
-- [ ] T8
-- [ ] T9
+- [x] T1
+- [x] T2
+- [x] T3
+- [x] T4
+- [x] T5
+- [x] T6
+- [x] T7
+- [x] T8
+- [x] T9
 - [ ] T10 (unit 2)
 - [ ] T11 (unit 2)
 - [ ] T12 (unit 2)
