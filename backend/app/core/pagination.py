@@ -47,7 +47,7 @@ def clamp_page(page: int | None) -> int:
 
 async def paginate(
     db: AsyncSession,
-    stmt: Select[Any],
+    stmt: Select[*tuple[Any, ...]],
     page: int | None = 1,
     page_size: int | None = DEFAULT_PAGE_SIZE,
 ) -> Page[Any]:

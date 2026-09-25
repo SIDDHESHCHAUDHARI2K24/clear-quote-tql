@@ -38,7 +38,9 @@ pytestmark = pytest.mark.usefixtures("temporal_worker")
 async def _los_call_count(db: AsyncSession) -> int:
     return (
         await db.execute(
-            select(func.count()).select_from(IntegrationCall).where(IntegrationCall.adapter == "los")
+            select(func.count())
+            .select_from(IntegrationCall)
+            .where(IntegrationCall.adapter == "los")
         )
     ).scalar_one()
 

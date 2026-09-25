@@ -6,14 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useBorrowerSession } from "./BorrowerSessionProvider";
-
-export const PORTAL_NAV_ITEMS = [
-  { href: "/", label: "Home" },
-  { href: "/support", label: "Support" },
-] as const;
-
-// Placeholder licensing text until real TQL details exist (CQ-035/036).
-export const NMLS_PLACEHOLDER = "NMLS #0000000 (placeholder)";
+import { NMLS_PLACEHOLDER, PORTAL_NAV_ITEMS } from "./nav";
 
 function AccountMenu() {
   const { me, logout } = useBorrowerSession();

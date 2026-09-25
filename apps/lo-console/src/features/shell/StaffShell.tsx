@@ -4,14 +4,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { STAFF_NAV_ITEMS } from "./nav";
 import { UserMenu } from "./UserMenu";
-
-export const STAFF_NAV_ITEMS = [
-  { href: "/", label: "Dashboard" },
-  { href: "/clients", label: "Clients" },
-  { href: "/applications", label: "Applications" },
-  { href: "/outbox", label: "Outbox" },
-] as const;
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";

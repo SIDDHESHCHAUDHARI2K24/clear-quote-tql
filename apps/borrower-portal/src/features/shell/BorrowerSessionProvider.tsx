@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { components } from "@cq/api-client";
 
 import { api } from "../../lib/api-client";
-import { safeNextPath } from "../../lib/nextParam";
+import { loginUrlFor } from "./nav";
 
 export type BorrowerMe = components["schemas"]["BorrowerMeOut"];
 
@@ -19,14 +19,6 @@ export interface BorrowerSession {
 }
 
 const BorrowerSessionContext = createContext<BorrowerSession | null>(null);
-
-/** `/login`, or `/login?next=<path>` for any protected path but `/`
- * (mirrors `src/middleware.ts`, which also leaves `next` off for `/`). */
-export function loginUrlFor(path: string): string {
-  const next = safeNextPath(path);
-  if (!next || next === "/") return "/login";
-  return `/login?next=${encodeURIComponent(next)}`;
-}
 
 /**
  * P5/P6 foundation (E6): loads `GET /api/v1/auth/borrower/me` once for the

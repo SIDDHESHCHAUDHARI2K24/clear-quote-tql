@@ -126,7 +126,7 @@ async def test_application_source_defaults_to_los(db_session: AsyncSession) -> N
     await db_session.refresh(application)
     assert application.source is ApplicationSource.LOS
 
-    raw = (
+    raw: str = (
         await db_session.execute(
             sa.text(
                 "INSERT INTO applications (id, client_id, lo_id, status, purpose) "
@@ -154,7 +154,7 @@ async def test_consent_status_server_default_is_accepted(db_session: AsyncSessio
     `accepted` -- the column's server default."""
     lo, client, _ = await _make_borrower(db_session)
     application = await _make_application(db_session, lo, client)
-    status = (
+    status: str = (
         await db_session.execute(
             sa.text(
                 "INSERT INTO consents (id, application_id, type, text_hash, ip, at) "
