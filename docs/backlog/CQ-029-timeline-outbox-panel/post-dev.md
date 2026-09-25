@@ -11,11 +11,11 @@ outbox`, `GET /api/v1/outbox/{id}`, `GET /api/v1/outbox/{id}/attachments/
 detail view), an Admin-only Integration panel over the 9 mock adapters
 (`GET`/`PUT /api/v1/admin/integrations`, reusing CQ-009's `failure_toggle`
 and `IntegrationCall` log, `/admin/integrations` page with a per-adapter
-force-failure toggle and a warning banner), and a read-only Admin Settings
-page (`GET /api/v1/admin/settings`, `/admin/settings`). The outbox derives
-an email `type` from its subject (no `outbox_emails.type` column, no
-migration — plan.md decision 1); the integration panel's "Run stale check
-now" button stays hidden behind a logged constant until CQ-030 lands.
+force-failure toggle, a warning banner, and a "Run stale check now" button
+that calls CQ-030's `POST /api/v1/admin/jobs/stale-check` and shows the
+returned counts), and a read-only Admin Settings page (`GET /api/v1/admin/
+settings`, `/admin/settings`). The outbox derives an email `type` from its
+subject (no `outbox_emails.type` column, no migration — plan.md decision 1).
 
 ## Deviations from spec
 
@@ -57,13 +57,30 @@ react-doctor warnings (all non-blocking, exit code 0):
 
 ## Review findings (stage 6)
 
-Pending — a fresh subagent review runs next (stage 6 of the agent loop, before this PR opens).
+A fresh subagent (no context from writing the code) reviewed `git diff HEAD` vs `origin/phase-p5-p6`. 10 findings; 9 fixed, 1 accepted as a deliberate, already-logged tradeoff. No critical/major finding is open.
+
+| # | Severity | Finding | Resolution |
+| --- | --- | --- | --- |
+| 1 | Major | `ActivityTimeline.tsx` bucketed days by UTC (`toISOString().slice(0,10)`) instead of the viewer's local calendar date — a late-evening US event could land under tomorrow's heading | Fixed: `localDateKey()`; regression test `ActivityTimeline.test.tsx` pinned `TZ=America/New_York` + `vi.setSystemTime`, verified failing on the old code and passing on the new |
+| 2 | Major | `IntegrationsPanel.tsx`'s `toggle()` had no try/catch/finally — a rejected promise (network drop, not just an `{error}` body) left the checkbox stuck disabled with the optimistic update never reverted | Fixed: try/catch/finally; regression test asserts the checkbox un-disables and reverts on a rejected PUT |
+| 3 | Major | Outbox attachment route called sync `stream_object()` directly in the handler, blocking the event loop for the whole GET | Fixed: `astream_object()`, pulling the first chunk eagerly so a missing key still 404s cleanly instead of aborting mid-stream after headers are sent; new test `test_outbox_attachment_stream_404s_cleanly_for_a_missing_object` |
+| 4 | Major | Outbox free-text search (`q`) built an unescaped `ILIKE` pattern — a literal `%`/`_` in the search text acted as a SQL wildcard | Fixed: `_escape_like()` + `escape=` kwarg; regression test `test_outbox_search_escapes_like_wildcards` |
+| 5 | Minor | `list_outbox` selected the whole `OutboxEmail` entity (including `html`) per row just to discard it | Fixed: `_LIST_COLUMNS` + `_row_to_out()` selects only what `OutboxEmailRow` needs |
+| 6 | Major | `admin/settings/service.py` hand-copied the down-payment default literals instead of importing `pricing/scenarios/service.py`'s real constants — two independently-maintained copies of the same literal | Fixed: imports `_DEFAULT_DOWN_PAYMENT_PRIMARY`/`_INVESTMENT` directly (cross-package private-name import — flagged in "Follow-ups" below for a human call on whether a public alias is preferred) |
+| 7 | Minor | `timeline/service.py`'s `_payload_summary` sliced "first 5" keys from a JSONB payload, which doesn't preserve insertion order | Fixed: `sorted(payload.items())[:5]` for determinism |
+| 8 | Major | `admin/integrations/service.py`'s `list_integration_status` made ~27 sequential DB/Valkey round trips (2 queries × 9 adapters + 9 sequential Valkey GETs) | Fixed: one `DISTINCT ON` query for the latest call per adapter, one `GROUP BY` query for hourly counts, `asyncio.gather` over the 9 Valkey `is_forced_to_fail` calls; also fixed a `SADeprecationWarning` this surfaced (SQLAlchemy 2.1's `distinct_on` API) |
+| 9 | Minor | `OutboxList.tsx` fired a full `GET /outbox` on every keystroke in the search box | Fixed: 300ms debounce (`qInput` shown immediately, debounced `q` drives the fetch); regression test asserts exactly one fetch for a whole typed string |
+| 10 | Minor | Outbox `type` is derived from subject-text pattern matching rather than a real `outbox_emails.type` column | **Accepted** — already a logged, deliberate tradeoff (plan.md decision 1: no migration, single classifier also drives the SQL filter; follow-ups note extending `_TYPE_SUBJECT_RULES` as CQ-020/24/34 land) |
+
+Two items the reviewer listed separately as "not in the top 10, for your judgement" (not scored/counted above):
+- Outbox scoping re-implements the shape of `core/auth.py`'s `scope_applications` rather than calling it directly — accepted, minor (outbox rows scope through `applications.lo_id`, not a direct FK `scope_applications` expects; revisit if a third caller needs the same scoping).
+- `IntegrationsPanel`'s "Run stale check now" button needing a manual flip once CQ-030 merged — resolved in this session (see "Remaining work" below): CQ-030 has merged, the button is un-hidden and wired to `POST /api/v1/admin/jobs/stale-check`, with a new Vitest suite and Playwright coverage.
 
 ## How to test manually
 
 1. `bash scripts/worktree-env.sh 15 && uv run python -m seed.reset` (from repo root; `.env` must already have `SEED_STAFF_PASSWORD`/`SEED_BORROWER_PASSWORD`).
 2. Start, in the background: `uv run uvicorn app.main:app --port 8115` (repo root), `uv run python -m app.workflows.worker` (repo root), `pnpm --filter @cq/lo-console exec next dev -p 3115`.
-3. Sign in to the LO console (`http://localhost:3115`) as `riley.admin@clearquote-demo.test` → user menu → Integrations: 9 adapter rows, toggle "pricing" → banner appears → untoggle → banner clears. → Settings: every `settings` row + the two down-payment code defaults, sourced.
+3. Sign in to the LO console (`http://localhost:3115`) as `riley.admin@clearquote-demo.test` → user menu → Integrations: 9 adapter rows, toggle "pricing" → banner appears → untoggle → banner clears; "Run stale check now" → shows "Nothing was stale…" or the marked/expired/flagged counts. → Settings: every `settings` row + the two down-payment code defaults, sourced.
 4. Open an application (e.g. Marcus Hale) → "Activity" button next to the actions menu → drawer shows Imported/Verified/Priced, grouped under "Today", quieter styling.
 5. `/outbox` → search "pre-approval", filter type "Quote sent" → Grace Kim / Luis Romero rows → click a row → sandboxed iframe with the HTML.
 6. Sign in as `jordan.lee@clearquote-demo.test` (LO) → user menu has no Integrations/Settings link; `/admin/integrations` shows "Not authorized"; that LO's own outbox list never shows another LO's emails.
@@ -72,5 +89,5 @@ Pending — a fresh subagent review runs next (stage 6 of the agent loop, before
 
 - `outbox/service.py`'s subject-based `type` classifier only knows today's OTP/borrower-action/quote-sent subjects. When CQ-020 (real quote-send emails), CQ-024 (letter emails) and CQ-034 (support emails) land, extend `_TYPE_SUBJECT_RULES` with their real subjects, or those emails will keep showing as `other`.
 - AC2's PDF-download half stays `pending — re-check after CQ-020`: re-verify against a real sent persona with a real PDF attachment once CQ-020 merges (H2, phase-p5-p6-plan.md).
-- `IntegrationsPanel`'s "Run stale check now" button is gated behind `STALE_CHECK_JOB_AVAILABLE = false` (`features/admin/integrations/api.ts`) — flip it to `true` once CQ-030 merges `POST /admin/jobs/stale-check`.
 - react-doctor's `no-locale-format-in-render` on the three new date-formatting call sites: see the Test log note above; no code change needed unless react-doctor's own analysis improves to account for post-mount-only formatting.
+- `admin/settings/service.py` imports two underscore-prefixed ("private") names from `pricing/scenarios/service.py` across a feature-package boundary (review finding 6). Deliberate (single source of truth), and ruff's enabled rule set (`E,F,I,UP,B`) doesn't flag it, but worth a second pair of eyes in case a public alias is preferred.

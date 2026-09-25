@@ -70,9 +70,7 @@ def _escape_like(value: str) -> str:
     """Escapes `%`/`_`/the escape char itself so a free-text search matches
     literally (code review finding: an unescaped `q` let `%`/`_` act as SQL
     LIKE wildcards, e.g. `100%` matching any subject starting with `100`)."""
-    return (
-        value.replace(_LIKE_ESCAPE, _LIKE_ESCAPE * 2).replace("%", r"\%").replace("_", r"\_")
-    )
+    return value.replace(_LIKE_ESCAPE, _LIKE_ESCAPE * 2).replace("%", r"\%").replace("_", r"\_")
 
 
 def infer_email_type(subject: str) -> str:

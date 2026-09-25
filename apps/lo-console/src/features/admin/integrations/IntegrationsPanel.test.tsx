@@ -2,10 +2,14 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { getMock, putMock } = vi.hoisted(() => ({ getMock: vi.fn(), putMock: vi.fn() }));
+const { getMock, putMock, postMock } = vi.hoisted(() => ({
+  getMock: vi.fn(),
+  putMock: vi.fn(),
+  postMock: vi.fn(),
+}));
 
 vi.mock("@cq/api-client", () => ({
-  createApiClient: () => ({ GET: getMock, PUT: putMock }),
+  createApiClient: () => ({ GET: getMock, PUT: putMock, POST: postMock }),
 }));
 
 import { IntegrationsPanel } from "./IntegrationsPanel";
@@ -28,6 +32,7 @@ describe("IntegrationsPanel (AC4/AC5)", () => {
   afterEach(() => {
     getMock.mockReset();
     putMock.mockReset();
+    postMock.mockReset();
   });
 
   it("lists every adapter with its last call, latency and result", async () => {
@@ -102,5 +107,52 @@ describe("IntegrationsPanel (AC4/AC5)", () => {
     // and the checkbox is usable again (not stuck disabled forever).
     await waitFor(() => expect(checkbox).not.toBeChecked());
     expect(checkbox).not.toBeDisabled();
+  });
+
+  // CQ-030 has merged: the "Run stale check now" button is no longer
+  // hidden behind STALE_CHECK_JOB_AVAILABLE.
+  it("runs the stale check and shows the returned counts", async () => {
+    getMock.mockResolvedValueOnce({
+      data: { adapters: [adapter()] },
+      response: { status: 200 },
+    });
+    render(<IntegrationsPanel />);
+    await screen.findByText("pricing");
+
+    postMock.mockResolvedValueOnce({
+      data: {
+        ran_at: new Date().toISOString(),
+        quotes_marked_stale: 3,
+        versions_expired: 2,
+        applications_marked_stale: 1,
+        application_ids: ["11111111-1111-1111-1111-111111111111"],
+      },
+      error: undefined,
+    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Run stale check now" }));
+
+    await waitFor(() => expect(postMock).toHaveBeenCalledWith("/api/v1/admin/jobs/stale-check"));
+    expect(
+      await screen.findByText("Marked 3 quotes stale, expired 2 versions, flagged 1 application."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows an error if the stale check request fails", async () => {
+    getMock.mockResolvedValueOnce({
+      data: { adapters: [adapter()] },
+      response: { status: 200 },
+    });
+    render(<IntegrationsPanel />);
+    await screen.findByText("pricing");
+
+    postMock.mockResolvedValueOnce({
+      data: undefined,
+      error: { detail: "Forbidden" },
+    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Run stale check now" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Forbidden");
   });
 });

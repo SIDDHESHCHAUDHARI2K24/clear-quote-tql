@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 
 import { Button, extractErrorMessage } from "@cq/ui";
 
-import { STALE_CHECK_JOB_AVAILABLE, fetchIntegrations, putIntegrationForceFailure } from "./api";
-import type { AdapterStatus } from "./api";
+import { fetchIntegrations, putIntegrationForceFailure, runStaleCheckNow } from "./api";
+import type { AdapterStatus, StaleCheckResult } from "./api";
 
 function formatCalledAt(at: string | null): string {
   if (!at) return "Never called";
@@ -26,12 +26,51 @@ type LoadState =
   | { kind: "error"; message: string }
   | { kind: "ready"; adapters: AdapterStatus[] };
 
+type StaleCheckState =
+  | { kind: "idle" }
+  | { kind: "running" }
+  | { kind: "done"; result: StaleCheckResult }
+  | { kind: "error"; message: string };
+
+function describeStaleCheckResult(result: StaleCheckResult): string {
+  const { quotes_marked_stale, versions_expired, applications_marked_stale } = result;
+  if (quotes_marked_stale === 0 && versions_expired === 0 && applications_marked_stale === 0) {
+    return "Nothing was stale. No changes made.";
+  }
+  return (
+    `Marked ${quotes_marked_stale} quote${quotes_marked_stale === 1 ? "" : "s"} stale, ` +
+    `expired ${versions_expired} version${versions_expired === 1 ? "" : "s"}, ` +
+    `flagged ${applications_marked_stale} application${applications_marked_stale === 1 ? "" : "s"}.`
+  );
+}
+
 /** spec.md CQ-029 "Integration panel" (Admin only): a status row per
  * adapter with the force-failure toggle (AC4/AC5), and a banner while any
  * failure is forced. */
 export function IntegrationsPanel() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [pendingAdapter, setPendingAdapter] = useState<string | null>(null);
+  const [staleCheck, setStaleCheck] = useState<StaleCheckState>({ kind: "idle" });
+
+  async function runStaleCheck() {
+    setStaleCheck({ kind: "running" });
+    try {
+      const { data, error } = await runStaleCheckNow();
+      if (error || !data) {
+        setStaleCheck({
+          kind: "error",
+          message: extractErrorMessage(error, "Couldn't run the stale check. Try again."),
+        });
+        return;
+      }
+      setStaleCheck({ kind: "done", result: data });
+    } catch {
+      setStaleCheck({
+        kind: "error",
+        message: "Couldn't run the stale check. Try again.",
+      });
+    }
+  }
 
   function load() {
     setState({ kind: "loading" });
@@ -124,11 +163,25 @@ export function IntegrationsPanel() {
         </div>
       )}
 
-      {STALE_CHECK_JOB_AVAILABLE && (
-        <div>
-          <Button variant="secondary">Run stale check now</Button>
-        </div>
-      )}
+      <div className="flex flex-col items-start gap-2">
+        <Button
+          variant="secondary"
+          onClick={runStaleCheck}
+          disabled={staleCheck.kind === "running"}
+        >
+          {staleCheck.kind === "running" ? "Running…" : "Run stale check now"}
+        </Button>
+        {staleCheck.kind === "done" && (
+          <p role="status" className="text-sm text-neutral-600">
+            {describeStaleCheckResult(staleCheck.result)}
+          </p>
+        )}
+        {staleCheck.kind === "error" && (
+          <p role="alert" className="text-sm text-status-danger">
+            {staleCheck.message}
+          </p>
+        )}
+      </div>
 
       <table className="w-full border-collapse text-sm">
         <thead>

@@ -70,10 +70,6 @@ test("AC4/AC5: admin forces PricingClient to fail, sees the banner, then turns i
   }
   await expect(page.getByText("Optimal Blue")).toBeVisible();
 
-  // plan.md decision 8: the stale-check button stays hidden until CQ-030
-  // lands `POST /admin/jobs/stale-check`.
-  await expect(page.getByRole("button", { name: "Run stale check now" })).toHaveCount(0);
-
   // Scoped by text, not just role -- Next.js's dev-mode route announcer is
   // also `role="alert"` (empty text, always present), so a bare
   // `getByRole("alert")` count would never reach 0.
@@ -95,6 +91,24 @@ test("AC4/AC5: admin forces PricingClient to fail, sees the banner, then turns i
   await pricingCheckbox.uncheck();
   await expect(pricingCheckbox).not.toBeChecked();
   await expect(forcedBanner).toHaveCount(0);
+});
+
+test("the admin can run the stale check now and see the returned counts", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await staffLogin(page, ADMIN, password!);
+  await page.goto("/admin/integrations");
+
+  const runButton = page.getByRole("button", { name: "Run stale check now" });
+  await expect(runButton).toBeVisible();
+  await runButton.click();
+
+  // CQ-030's `POST /admin/jobs/stale-check` returns the counts it
+  // changed -- zero on a repeat run against freshly seeded data, or a
+  // "Marked N quote(s) stale, ..." sentence otherwise. Either way the
+  // button stops saying "Running…" and a result line appears.
+  await expect(runButton).toHaveText("Run stale check now");
+  await expect(page.getByText(/nothing was stale|marked \d+ quotes? stale/i)).toBeVisible();
+  await page.screenshot({ path: `${EVIDENCE}/admin-integrations-stale-check.png` });
 });
 
 test("AC6: the settings page lists the pricing config, read-only", async ({ page }) => {

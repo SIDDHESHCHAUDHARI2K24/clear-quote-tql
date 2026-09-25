@@ -15,10 +15,12 @@ export async function putIntegrationForceFailure(adapter: string, forceFailure: 
   });
 }
 
-/** CQ-030's `POST /admin/jobs/stale-check` lands separately in this wave.
- * openapi-fetch's generated `paths` type has no runtime representation (it
- * disappears at compile time), so there's nothing to introspect at
- * runtime; per plan.md decision 8 this is the logged constant-flag
- * fallback instead. CQ-030 (or the orchestrator's merge) flips this to
- * `true` once `PUT /api/v1/admin/jobs/stale-check` actually exists. */
-export const STALE_CHECK_JOB_AVAILABLE = false;
+export type StaleCheckResult = components["schemas"]["StaleCheckResponse"];
+
+/** CQ-030's stale job, run in-process now instead of waiting for its
+ * scheduled Temporal activity (plan.md decision 8 -- the button was
+ * hidden behind a flag until this endpoint existed; CQ-030 has since
+ * merged). Admin only; other roles get 403 (E16). */
+export async function runStaleCheckNow() {
+  return api.POST("/api/v1/admin/jobs/stale-check");
+}

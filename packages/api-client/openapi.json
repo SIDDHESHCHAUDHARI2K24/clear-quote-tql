@@ -251,6 +251,323 @@
         }
       }
     },
+    "/api/v1/applications": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Get Applications",
+        "operationId": "get_applications_api_v1_applications_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Client name or email, partial, case-insensitive",
+              "title": "Q"
+            },
+            "description": "Client name or email, partial, case-insensitive"
+          },
+          {
+            "name": "lo_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Manager/Admin only; ignored for an LO's own request",
+              "title": "Lo Id"
+            },
+            "description": "Manager/Admin only; ignored for an LO's own request"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma list of status labels, plus the alias sent_or_later",
+              "title": "Status"
+            },
+            "description": "Comma list of status labels, plus the alias sent_or_later"
+          },
+          {
+            "name": "strategy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma list of primary, ltr, str",
+              "title": "Strategy"
+            },
+            "description": "Comma list of primary, ltr, str"
+          },
+          {
+            "name": "amount_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Min"
+            }
+          },
+          {
+            "name": "amount_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Max"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 2
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "name": "has_property",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Property"
+            }
+          },
+          {
+            "name": "created_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created From"
+            }
+          },
+          {
+            "name": "created_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created To"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "-updated_at",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/los": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Get Lo Options",
+        "description": "Backs the frontend's LO `Select` (spec.md \"Frontend\", Manager/Admin\nonly) -- 403s for an LO (E16), same as every other admin-scoped route.",
+        "operationId": "get_lo_options_api_v1_applications_los_get",
+        "parameters": [
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LoOption"
+                  },
+                  "title": "Response Get Lo Options Api V1 Applications Los Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/applications/{application_id}/field-values/{field_key}": {
       "patch": {
         "tags": [
@@ -1729,6 +2046,163 @@
         }
       }
     },
+    "/api/v1/portal/support": {
+      "post": {
+        "tags": [
+          "portal-support"
+        ],
+        "summary": "Submit Support",
+        "operationId": "submit_support_api_v1_portal_support_post",
+        "parameters": [
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportRequestCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportRequestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/me": {
+      "get": {
+        "tags": [
+          "portal-home"
+        ],
+        "summary": "Get Portal Home",
+        "operationId": "get_portal_home_api_v1_portal_me_get",
+        "parameters": [
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalHomeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/jobs/stale-check": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Run Stale Check",
+        "operationId": "run_stale_check_api_v1_admin_jobs_stale_check_post",
+        "parameters": [
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaleCheckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -1879,6 +2353,119 @@
           "force_failure"
         ],
         "title": "AdapterStatus"
+      },
+      "ApplicationListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationRow"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "ApplicationListResponse",
+        "description": "`GET /applications` response: `core/pagination.Page[ApplicationRow]`\n(`items`, `total`, `page`, `page_size`)."
+      },
+      "ApplicationRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "client_name": {
+            "type": "string",
+            "title": "Client Name"
+          },
+          "property_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Label"
+          },
+          "strategy": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "ltr",
+              "str"
+            ],
+            "title": "Strategy"
+          },
+          "purchase_price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Price"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatus"
+          },
+          "flag_count": {
+            "type": "integer",
+            "title": "Flag Count"
+          },
+          "lo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Lo Id"
+          },
+          "lo_name": {
+            "type": "string",
+            "title": "Lo Name"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "client_name",
+          "property_label",
+          "strategy",
+          "purchase_price",
+          "status",
+          "flag_count",
+          "lo_id",
+          "lo_name",
+          "updated_at"
+        ],
+        "title": "ApplicationRow",
+        "description": "One row of `GET /applications` (spec.md \"Row\"). Shared with CQ-026\n(E9) -- keep this shape stable; CQ-026 imports it directly rather than\nredefining it."
       },
       "ApplicationStatus": {
         "type": "string",
@@ -2164,6 +2751,17 @@
             "type": "string",
             "title": "First Name"
           },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
           "latest_application": {
             "anyOf": [
               {
@@ -2182,6 +2780,7 @@
           "client_id",
           "full_name",
           "first_name",
+          "phone",
           "latest_application"
         ],
         "title": "BorrowerMeOut"
@@ -2937,6 +3536,26 @@
         ],
         "title": "LatestApplicationOut"
       },
+      "LoOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name"
+        ],
+        "title": "LoOption",
+        "description": "One entry of `GET /applications/los` -- the frontend's \"LO\" `Select`\nfor a Manager/Admin (spec.md \"Frontend\"). Nothing else in the backend\nexposes a role=lo user list yet, so this item owns it (small, scoped\nnecessity -- plan.md)."
+      },
       "LocationResponse": {
         "properties": {
           "city": {
@@ -3428,6 +4047,167 @@
         ],
         "title": "PipelineStartResponse"
       },
+      "PortalApplicationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/PortalStage"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "next_action": {
+            "$ref": "#/components/schemas/PortalNextAction"
+          },
+          "secondary_report_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secondary Report Token"
+          },
+          "lo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortalLoOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "stage",
+          "label",
+          "next_action"
+        ],
+        "title": "PortalApplicationOut"
+      },
+      "PortalHomeResponse": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "applications": {
+            "items": {
+              "$ref": "#/components/schemas/PortalApplicationOut"
+            },
+            "type": "array",
+            "title": "Applications"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_name",
+          "email",
+          "applications"
+        ],
+        "title": "PortalHomeResponse"
+      },
+      "PortalLoOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "phone",
+          "email"
+        ],
+        "title": "PortalLoOut"
+      },
+      "PortalNextAction": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/PortalNextActionType"
+          },
+          "report_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Token"
+          },
+          "consent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Id"
+          },
+          "draft_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "PortalNextAction"
+      },
+      "PortalNextActionType": {
+        "type": "string",
+        "enum": [
+          "view_report",
+          "continue_application",
+          "authorize_credit_check",
+          "none"
+        ],
+        "title": "PortalNextActionType"
+      },
       "PortalReportActionRequest": {
         "properties": {
           "type": {
@@ -3570,6 +4350,27 @@
         ],
         "title": "PortalReportResponse",
         "description": "`ReportViewModel` plus the two fields only a live request can answer:\n`borrower_action` (from `QuotePackageVersion.borrower_action`, `None`\nuntil CQ-024) and `newest_report_token` (set only when this version is\nsuperseded, per spec.md's \"SupersededBanner ... a link to the newest\nversion\")."
+      },
+      "PortalStage": {
+        "type": "string",
+        "enum": [
+          "applied",
+          "in_review",
+          "preapproved",
+          "option_selected",
+          "closed",
+          "draft"
+        ],
+        "title": "PortalStage",
+        "description": "Borrower-facing stage (spec.md's mapping table), plus `draft` for an\nopen `application_drafts` row (CQ-032a) that has no `Application` yet."
+      },
+      "PreferredContact": {
+        "type": "string",
+        "enum": [
+          "email",
+          "phone"
+        ],
+        "title": "PreferredContact"
       },
       "PricedProductRow-Input": {
         "properties": {
@@ -4970,6 +5771,45 @@
         ],
         "title": "StaffUserOut"
       },
+      "StaleCheckResponse": {
+        "properties": {
+          "ran_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ran At"
+          },
+          "quotes_marked_stale": {
+            "type": "integer",
+            "title": "Quotes Marked Stale"
+          },
+          "versions_expired": {
+            "type": "integer",
+            "title": "Versions Expired"
+          },
+          "applications_marked_stale": {
+            "type": "integer",
+            "title": "Applications Marked Stale"
+          },
+          "application_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Application Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ran_at",
+          "quotes_marked_stale",
+          "versions_expired",
+          "applications_marked_stale",
+          "application_ids"
+        ],
+        "title": "StaleCheckResponse",
+        "description": "The counts one `mark_stale` run changed. Every count is zero on a\nrepeat run."
+      },
       "StatusPatchRequest": {
         "properties": {
           "status": {
@@ -5017,6 +5857,97 @@
         ],
         "title": "StrategyType",
         "description": "The engine's single occupancy/strategy field.\n\nMapping from `applications.occupancy` + `applications.strategy` (CQ-007)\nonto this enum is CQ-013's job, not this item's."
+      },
+      "SupportLoContact": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "phone"
+        ],
+        "title": "SupportLoContact"
+      },
+      "SupportRequestCreate": {
+        "properties": {
+          "topic": {
+            "$ref": "#/components/schemas/SupportTopic"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Message"
+          },
+          "preferred_contact": {
+            "$ref": "#/components/schemas/PreferredContact"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "message",
+          "preferred_contact"
+        ],
+        "title": "SupportRequestCreate"
+      },
+      "SupportRequestResponse": {
+        "properties": {
+          "reference": {
+            "type": "string",
+            "title": "Reference"
+          },
+          "lo": {
+            "$ref": "#/components/schemas/SupportLoContact"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reference",
+          "lo"
+        ],
+        "title": "SupportRequestResponse"
+      },
+      "SupportTopic": {
+        "type": "string",
+        "enum": [
+          "application",
+          "quote",
+          "documents",
+          "other"
+        ],
+        "title": "SupportTopic"
       },
       "TabStateResponse": {
         "properties": {
