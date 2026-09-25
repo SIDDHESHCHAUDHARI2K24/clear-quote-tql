@@ -57,7 +57,7 @@ class FakeHandle:
     temporal: FakeTemporal
     workflow_id: str
 
-    async def describe(self) -> Any:
+    async def describe(self, **_kwargs: Any) -> Any:
         closed = self.temporal.closed.get(self.workflow_id)
         if self.workflow_id not in self.temporal.running and closed is None:
             raise RPCError("workflow not found", RPCStatusCode.NOT_FOUND, b"")

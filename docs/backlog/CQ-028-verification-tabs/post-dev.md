@@ -104,3 +104,23 @@ Also in this round: merged `phase-p5-p6` twice (CQ-030's per-test worker and `db
 - **CQ-033:** write `representative_fico` with `source_ref="hard_pull"` after the pull (plan #12), and persist `expired` (the section already reports it).
 - **CQ-017/CQ-030:** an address change does not re-enrich or mark quotes stale. That belongs to them.
 - `PORTAL_BASE_URL` (default `http://localhost:3020`) is a new setting; set it per environment.
+
+## Hardening round (round-2 review minors, branch `cq-028-lock-hardening`)
+
+| Finding | Resolution | Evidence |
+| --- | --- | --- |
+| Minor 3: deadlock with FK key-share locks | `lock_application` takes `FOR NO KEY UPDATE` (`with_for_update(key_share=True)`). Holders still exclude each other and CQ-030's `FOR UPDATE`, but no longer block the `FOR KEY SHARE` that every insert referencing `applications` takes | `sections/tests/test_lock_hardening.py::test_lock_does_not_block_inserts_referencing_the_application` (failed with `LockNotAvailable` before), `::test_lock_holders_still_serialise` (holder vs holder, holder vs `FOR UPDATE`, and ordered hand-over) |
+| Minor 1: Temporal `describe` under the lock | `reverify` commits the flag events (releasing the lock), calls `_plan_resume` (`describe(rpc_timeout=3 s)`), then re-takes the lock only to re-check status/blocking flags, check the pending resume and write the event | `::test_describe_runs_outside_the_lock_with_a_short_timeout` (slow fake client checks the lock from another connection during `describe`; failed before) |
+| Minor 2: mock LOS call under the lock | `credit.fetch_loan_file` runs before `_lock`; `credit.import_liabilities` applies the fetched file under the lock | `::test_import_liabilities_fetches_the_loan_file_before_locking` (failed before) |
+| Minor 4: sticky `already_requested` | A pending `pipeline.resume_requested` expires after `RESUME_PENDING_TTL` = 60 s, on either clock: `clock.now() - at` (app clock, injectable) or `clock_timestamp() - created_at` (DB clock, so a frozen or future `CLOCK_NOW` cannot keep it pending forever). Then the idempotent signal is sent again | `sections/tests/test_resume_expiry.py` (both tests; the first failed before) |
+| Minor 5a: replay test | `workflows/tests/test_resume_reset_replay.py` records a history with `workflow.patched` answering False for `p56-resume-reset` (unsandboxed worker; the mid-chain signal is lost the old way, then resumed) and replays it with `Replayer` against the current workflow | test passes; asserts no patch marker in the recorded history |
+| Minor 5b: pipeline verify vs PUT race | Two sessions: `verify_application` (`run_and_persist(commit=False)`) and a PUT fixing the blocking SSN, 4 rounds under a 20 s timeout | `::test_pipeline_verify_and_edit_race_ends_consistent`: no blocking flags; `ready_to_price`, or `needs_attention` with a `pipeline.resume_requested` |
+| Nit: `_resume_pending` ordering | Accepted and documented in `_resume_pending`: `created_at` is the transaction start, so a pipeline event from a transaction that waited on the lock can sort before our resume. The 60 s TTL bounds the effect | docstring |
+
+Self-review (code-review skill): one medium finding, fixed. The first TTL version compared `at` with `clock.now()` only, so under a frozen `CLOCK_NOW` the age stayed 0 and never expired. The DB-clock age was added and is covered by `test_pending_resume_expires_on_the_db_clock_under_a_frozen_clock`.
+
+`FakeHandle.describe` in `sections/tests/conftest.py` now accepts keyword arguments (`rpc_timeout`).
+
+**Verification:** `make lint` clean. `make test`: backend 737 passed, seed 32 passed, all frontend packages green. `uv run pytest backend/app/features/applications backend/app/workflows -q` ran 3 times: 231 passed each time. E2E on slot 25 (`make demo-reset`, API :8125, `make worker` on `cq-s25`): Aisha `needs_attention` → `PUT occupancy_type` 200 `started`; a second edit right after gave `already_requested`. She reached `priced` in about 7 s with 3 quotes. Events: `field.edited, flag.resolved, pipeline.resume_requested (started), pipeline.imported (skipped), verified, enriched×3, priced`. No duplicate open flags.
+
+**Follow-up:** `credit.request_hard_pull` still takes its own `FOR UPDATE` after the router's `FOR NO KEY UPDATE`, which upgrades the lock. It is outside this round's scope. Dropping it (the router lock already serialises) is left to CQ-033.

@@ -257,8 +257,11 @@ async def import_liabilities(
     application: Application = Depends(get_scoped_application),
     temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SectionResponse:
+    # The LOS call runs before the lock (lock-hardening minor 2): holding
+    # the application lock across a slow provider call stalls the pipeline.
+    loan_file = await credit.fetch_loan_file(db, application)
     await _lock(db, application)
-    await credit.import_liabilities(db, application, user.id)
+    await credit.import_liabilities(db, application, user.id, loan_file)
     return await _after_edit(db, application.id, SectionTab.CREDIT, temporal)
 
 
