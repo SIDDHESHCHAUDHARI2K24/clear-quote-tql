@@ -1,0 +1,591 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": ".mcp.json",
+      "file_type": "code",
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "metadata": {
+        "mcp_kind": "mcp_config_file"
+      },
+      "_origin": "ast",
+      "id": "mcp",
+      "community": 0,
+      "norm_label": ".mcp.json"
+    },
+    {
+      "label": "kaneo",
+      "file_type": "code",
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "metadata": {
+        "mcp_kind": "mcp_server"
+      },
+      "_origin": "ast",
+      "id": "mcp_mcp_server_kaneo",
+      "community": 0,
+      "norm_label": "kaneo"
+    },
+    {
+      "label": "npx",
+      "file_type": "code",
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "metadata": {
+        "mcp_kind": "mcp_command"
+      },
+      "_origin": "ast",
+      "id": "mcp_command_npx",
+      "community": 0,
+      "norm_label": "npx"
+    },
+    {
+      "label": "@kaneo/mcp",
+      "file_type": "code",
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "metadata": {
+        "mcp_kind": "mcp_package"
+      },
+      "_origin": "ast",
+      "id": "mcp_package_kaneo_mcp",
+      "community": 0,
+      "norm_label": "@kaneo/mcp"
+    },
+    {
+      "label": "KANEO_API_URL",
+      "file_type": "code",
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "metadata": {
+        "mcp_kind": "env_var"
+      },
+      "_origin": "ast",
+      "id": "env_var_kaneo_api_url",
+      "community": 0,
+      "norm_label": "kaneo_api_url"
+    },
+    {
+      "label": "codegraph",
+      "file_type": "code",
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "metadata": {
+        "mcp_kind": "mcp_server"
+      },
+      "_origin": "ast",
+      "id": "mcp_mcp_server_codegraph",
+      "community": 0,
+      "norm_label": "codegraph"
+    },
+    {
+      "label": "codegraph",
+      "file_type": "code",
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "metadata": {
+        "mcp_kind": "mcp_command"
+      },
+      "_origin": "ast",
+      "id": "mcp_command_codegraph",
+      "community": 0,
+      "norm_label": "codegraph"
+    },
+    {
+      "label": "opencode.json",
+      "file_type": "code",
+      "source_file": "opencode.json",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "opencode",
+      "community": 4,
+      "norm_label": "opencode.json"
+    },
+    {
+      "label": "$schema",
+      "file_type": "code",
+      "source_file": "opencode.json",
+      "source_location": "L2",
+      "_origin": "ast",
+      "id": "opencode_schema",
+      "community": 4,
+      "norm_label": "$schema"
+    },
+    {
+      "label": "mcp",
+      "file_type": "code",
+      "source_file": "opencode.json",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "opencode_mcp",
+      "community": 4,
+      "norm_label": "mcp"
+    },
+    {
+      "label": "kaneo",
+      "file_type": "code",
+      "source_file": "opencode.json",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "opencode_mcp_kaneo",
+      "community": 2,
+      "norm_label": "kaneo"
+    },
+    {
+      "label": "type",
+      "file_type": "code",
+      "source_file": "opencode.json",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "opencode_kaneo_type",
+      "community": 2,
+      "norm_label": "type"
+    },
+    {
+      "label": "command",
+      "file_type": "code",
+      "source_file": "opencode.json",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "opencode_kaneo_command",
+      "community": 3,
+      "norm_label": "command"
+    },
+    {
+      "label": "npx",
+      "file_type": "concept",
+      "source_file": "opencode.json",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "ref_npx",
+      "community": 3,
+      "norm_label": "npx"
+    },
+    {
+      "label": "-y",
+      "file_type": "concept",
+      "source_file": "opencode.json",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "ref_y",
+      "community": 3,
+      "norm_label": "-y"
+    },
+    {
+      "label": "@kaneo/mcp",
+      "file_type": "concept",
+      "source_file": "opencode.json",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "ref_kaneo_mcp",
+      "community": 3,
+      "norm_label": "@kaneo/mcp"
+    },
+    {
+      "label": "serve",
+      "file_type": "concept",
+      "source_file": "opencode.json",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "ref_serve",
+      "community": 3,
+      "norm_label": "serve"
+    },
+    {
+      "label": "environment",
+      "file_type": "code",
+      "source_file": "opencode.json",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "opencode_kaneo_environment",
+      "community": 2,
+      "norm_label": "environment"
+    },
+    {
+      "label": "KANEO_API_URL",
+      "file_type": "code",
+      "source_file": "opencode.json",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "opencode_environment_kaneo_api_url",
+      "community": 2,
+      "norm_label": "kaneo_api_url"
+    },
+    {
+      "label": "enabled",
+      "file_type": "code",
+      "source_file": "opencode.json",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "opencode_kaneo_enabled",
+      "community": 2,
+      "norm_label": "enabled"
+    },
+    {
+      "label": "Agent Loop",
+      "file_type": "concept",
+      "source_file": "AGENTS.md",
+      "source_location": "L38-L52",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "The 8-stage loop (Brainstorm, Plan, Execute, Code, Test, Review, Verify, Commit) every backlog item runs, each stage naming its skill, output and gate.",
+      "id": "agents_agent_loop",
+      "community": 1,
+      "norm_label": "agent loop"
+    },
+    {
+      "label": "Backlog Index",
+      "file_type": "document",
+      "source_file": "docs/backlog/README.md",
+      "source_location": "L1-L9",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": null,
+      "id": "docs_backlog_readme_backlog_index",
+      "community": 1,
+      "norm_label": "backlog index"
+    },
+    {
+      "label": "Roadmap",
+      "file_type": "document",
+      "source_file": "docs/roadmap.md",
+      "source_location": "L1-L3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": null,
+      "id": "docs_roadmap_roadmap",
+      "community": 1,
+      "norm_label": "roadmap"
+    },
+    {
+      "label": "Backlog Workflow",
+      "file_type": "concept",
+      "source_file": "docs/roadmap.md",
+      "source_location": "L32-L58",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "36 backlog items grouped into 8 phases (P0-P7) and 15 execution waves; items in the same wave have no dependency on each other and can run in parallel sessions.",
+      "id": "docs_roadmap_backlog_workflow",
+      "community": 1,
+      "norm_label": "backlog workflow"
+    },
+    {
+      "label": "Suggested Execution Waves",
+      "file_type": "concept",
+      "source_file": "docs/roadmap.md",
+      "source_location": "L32-L52",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": null,
+      "id": "docs_roadmap_suggested_execution_waves",
+      "community": 1,
+      "norm_label": "suggested execution waves"
+    },
+    {
+      "label": "Kaneo backlog tracking",
+      "file_type": "concept",
+      "source_file": "AGENTS.md",
+      "source_location": "L79-L90",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Kaneo project Clear Quote TQL mirrors backlog status; Kaneo's task number equals the backlog id; reached through the kaneo MCP server.",
+      "id": "agents_kaneo_tracking",
+      "community": 1,
+      "norm_label": "kaneo backlog tracking"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "mcp",
+      "target": "mcp_mcp_server_codegraph"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "mcp",
+      "target": "mcp_mcp_server_kaneo"
+    },
+    {
+      "relation": "semantically_similar_to",
+      "confidence": "AMBIGUOUS",
+      "confidence_score": 0.6,
+      "source_file": "AGENTS.md",
+      "source_location": "L82",
+      "weight": 0.6,
+      "source": "agents_kaneo_tracking",
+      "target": "mcp_mcp_server_kaneo"
+    },
+    {
+      "relation": "requires_env",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "mcp_mcp_server_kaneo",
+      "target": "env_var_kaneo_api_url"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "weight": 1.0,
+      "context": "command",
+      "_origin": "ast",
+      "source": "mcp_mcp_server_kaneo",
+      "target": "mcp_command_npx"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "weight": 1.0,
+      "context": "package",
+      "_origin": "ast",
+      "source": "mcp_mcp_server_kaneo",
+      "target": "mcp_package_kaneo_mcp"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".mcp.json",
+      "source_location": "L1",
+      "weight": 1.0,
+      "context": "command",
+      "_origin": "ast",
+      "source": "mcp_mcp_server_codegraph",
+      "target": "mcp_command_codegraph"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "opencode",
+      "target": "opencode_mcp",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "opencode",
+      "target": "opencode_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "opencode_mcp",
+      "target": "opencode_mcp_kaneo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "opencode_mcp_kaneo",
+      "target": "opencode_kaneo_command",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "opencode_mcp_kaneo",
+      "target": "opencode_kaneo_enabled",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "opencode_mcp_kaneo",
+      "target": "opencode_kaneo_environment",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "opencode_mcp_kaneo",
+      "target": "opencode_kaneo_type",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L6",
+      "weight": 1.0,
+      "context": "import",
+      "_origin": "ast",
+      "source": "opencode_kaneo_command",
+      "target": "ref_kaneo_mcp",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L6",
+      "weight": 1.0,
+      "context": "import",
+      "_origin": "ast",
+      "source": "opencode_kaneo_command",
+      "target": "ref_npx",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L6",
+      "weight": 1.0,
+      "context": "import",
+      "_origin": "ast",
+      "source": "opencode_kaneo_command",
+      "target": "ref_serve",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L6",
+      "weight": 1.0,
+      "context": "import",
+      "_origin": "ast",
+      "source": "opencode_kaneo_command",
+      "target": "ref_y",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "opencode.json",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "opencode_kaneo_environment",
+      "target": "opencode_environment_kaneo_api_url",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.9,
+      "source_file": "AGENTS.md",
+      "source_location": "L79-L90",
+      "weight": 1.0,
+      "source": "agents_agent_loop",
+      "target": "agents_kaneo_tracking"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.85,
+      "source_file": "docs/roadmap.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "docs_roadmap_backlog_workflow",
+      "target": "agents_agent_loop"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.9,
+      "source_file": "docs/backlog/README.md",
+      "source_location": "L1-L9",
+      "weight": 1.0,
+      "source": "docs_backlog_readme_backlog_index",
+      "target": "docs_roadmap_roadmap"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95,
+      "source_file": "docs/roadmap.md",
+      "source_location": "L32-L58",
+      "weight": 1.0,
+      "source": "docs_roadmap_roadmap",
+      "target": "docs_roadmap_backlog_workflow"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.85,
+      "source_file": "docs/roadmap.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "docs_roadmap_backlog_workflow",
+      "target": "agents_kaneo_tracking"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95,
+      "source_file": "docs/roadmap.md",
+      "source_location": "L32-L52",
+      "weight": 1.0,
+      "source": "docs_roadmap_backlog_workflow",
+      "target": "docs_roadmap_suggested_execution_waves"
+    }
+  ],
+  "hyperedges": [],
+  "built_at_commit": "012e0272d319c1f23a3ae4329fdd150362f5c179"
+}
