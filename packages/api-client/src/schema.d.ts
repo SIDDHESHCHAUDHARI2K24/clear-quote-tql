@@ -767,6 +767,8 @@ export interface components {
         QuotePreviewResponse: {
             /** Loan Amount */
             loan_amount: string;
+            /** Down Payment Amount */
+            down_payment_amount: string;
             /** Ltv Pct */
             ltv_pct: string;
             /** Monthly Pi */
@@ -804,6 +806,8 @@ export interface components {
             qualifying_rent?: string | null;
             /** Underwritten Str Rent */
             underwritten_str_rent?: string | null;
+            /** Str Gross Monthly Revenue */
+            str_gross_monthly_revenue?: string | null;
             /** Dscr Ratio */
             dscr_ratio?: string | null;
             dscr_bucket?: components["schemas"]["DSCRBucket"] | null;

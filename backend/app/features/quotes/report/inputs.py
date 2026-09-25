@@ -44,14 +44,11 @@ class ReportOptionInput:
     computation: QuoteComputation
     """The engine's full output for this option. `compute_quote`'s return
     value, unmodified -- the builder reads fields off it and formats them
-    as strings; it never recomputes anything the engine already computed."""
-    str_gross_annual_revenue: Decimal | None = None
-    """STR only: `ScenarioInputs.str_gross_annual_revenue`, the raw
-    pre-expense-ratio AirDNA figure. `QuoteComputation.underwritten_str_rent`
-    is already net of the expense ratio, so the cashflow table's "gross
-    revenue" row (spec.md) needs this raw input too -- it is not itself
-    money math, the same annual->monthly /12 conversion `underwritten_str_rent`
-    already does inside the engine."""
+    as strings; it never recomputes anything the engine already computed.
+    Carries `down_payment_amount` and (STR only) `str_gross_monthly_revenue`
+    directly (CQ-021 review M1), so this dataclass no longer needs to pass
+    raw scenario inputs alongside the computation for the builder to
+    reconstruct them itself."""
 
 
 @dataclass(frozen=True)

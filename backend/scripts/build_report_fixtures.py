@@ -100,7 +100,6 @@ def _marcus_hale_inputs(*, expired: bool = False) -> ReportInputs:
                 discount_points_pct=par.discount_points_pct,
                 prepay_label="5-year prepayment penalty",
                 computation=compute_quote(par, config),
-                str_gross_annual_revenue=str_gross_annual_revenue,
             ),
             ReportOptionInput(
                 quote_id="marcus-buydown",
@@ -111,7 +110,6 @@ def _marcus_hale_inputs(*, expired: bool = False) -> ReportInputs:
                 discount_points_pct=buydown.discount_points_pct,
                 prepay_label="5-year prepayment penalty",
                 computation=compute_quote(buydown, config),
-                str_gross_annual_revenue=str_gross_annual_revenue,
             ),
         ],
         recommendation_text=(

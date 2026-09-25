@@ -65,7 +65,6 @@ def _marcus_hale_inputs() -> ReportInputs:
                 discount_points_pct=par.discount_points_pct,
                 prepay_label="5-year prepayment penalty",
                 computation=compute_quote(par, config),
-                str_gross_annual_revenue=str_gross_annual_revenue,
             ),
             ReportOptionInput(
                 quote_id="buydown-quote",
@@ -76,7 +75,6 @@ def _marcus_hale_inputs() -> ReportInputs:
                 discount_points_pct=buydown.discount_points_pct,
                 prepay_label="5-year prepayment penalty",
                 computation=compute_quote(buydown, config),
-                str_gross_annual_revenue=str_gross_annual_revenue,
             ),
         ],
         recommendation_text="We recommend the par option for the lowest cash to close.",

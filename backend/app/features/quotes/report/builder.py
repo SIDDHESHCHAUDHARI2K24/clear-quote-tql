@@ -2,15 +2,15 @@
 
 No I/O, no DB (see inputs.py). Every money/rate/percent value already lives
 as a rounded `Decimal` on `QuoteComputation` (the engine rounds exactly once,
-per quote_engine.py's own rounding rule); this module's only job is to
-*format* those decimals into the strings `ReportViewModel` carries and to
-group them under the headings spec.md pins (hero, breakdown, cashflow,
-cost_seg). It performs two narrow derivations that are not already fields on
-`QuoteComputation` -- see `_down_payment_amount` and `_gross_rent_monthly`
-docstrings for why each is not "new money math" in the sense AGENTS.md's
-"money math lives only in quote_engine" rule means to forbid (that rule is
-aimed at frontend components recomputing engine numbers; see CQ-021
-plan.md Decision 2).
+per quote_engine.py's own rounding rule, and now also computes
+`down_payment_amount`/`str_gross_monthly_revenue` directly -- CQ-021 review
+M1); this module's only job is to *format* those decimals into the strings
+`ReportViewModel` carries and to group them under the headings spec.md pins
+(hero, breakdown, cashflow, cost_seg). It performs no arithmetic of its own
+-- every value below is either passed straight through, or scaled/rounded
+for *display only* (percent scaling, whole-dollar rounding of an
+already-engine-computed value), never combined with another value to derive
+a new financial fact.
 """
 
 from __future__ import annotations
@@ -74,40 +74,18 @@ def _to_report_strategy(strategy: StrategyType) -> ReportStrategy:
     return ReportStrategy[strategy.name]
 
 
-def _down_payment_amount(purchase_price: Decimal, computation: QuoteComputation) -> Decimal:
-    """`purchase_price - loan_amount`, both already engine-rounded decimals.
-
-    `QuoteComputation` computes `down_payment = purchase_price *
-    down_payment_pct` internally (quote_engine.py's `compute_quote`) but does
-    not expose it as a field -- only `loan_amount` (`= purchase_price -
-    down_payment`) survives to the public contract. Reconstructing it via
-    subtraction of two *already-engine-produced* numbers (not deriving a new
-    financial fact from raw inputs) is the same category of operation as
-    formatting `-x` for a credit line; it is not the kind of frontend
-    recomputation AGENTS.md's rule forbids. Flagged in plan.md as a
-    follow-up: CQ-008/the engine owner could add `down_payment_amount` to
-    `QuoteComputation` directly so no consumer needs this helper."""
-    return purchase_price - computation.loan_amount
-
-
-def _gross_rent_monthly(
-    strategy: StrategyType,
-    computation: QuoteComputation,
-    str_gross_annual_revenue: Decimal | None,
-) -> Decimal:
+def _gross_rent_monthly(strategy: StrategyType, computation: QuoteComputation) -> Decimal:
     """The pre-expense-ratio monthly rent/revenue figure for the cashflow
     table's "gross" row. For LTR this is exactly `qualifying_rent` (100% of
     market rent, no expense ratio applied -- system-design.md's "Qualifying
-    rent" formula). For STR it is `str_gross_annual_revenue / 12`, the same
-    annual->monthly conversion `quote_engine.underwritten_str_rent` already
-    performs on this exact raw AirDNA figure before applying the expense
-    ratio -- not a new derived money fact, just unit conversion of an
-    already-raw external input."""
+    rent" formula). For STR it is `computation.str_gross_monthly_revenue`,
+    computed by the engine (CQ-021 review M1) -- this function only selects
+    which already-engine-produced field to read, it performs no arithmetic."""
     if strategy is StrategyType.LTR:
         assert computation.qualifying_rent is not None
         return computation.qualifying_rent
-    assert str_gross_annual_revenue is not None
-    return str_gross_annual_revenue / Decimal("12")
+    assert computation.str_gross_monthly_revenue is not None
+    return computation.str_gross_monthly_revenue
 
 
 def _build_hero(strategy: StrategyType, computation: QuoteComputation) -> HeroNumbers:
@@ -139,7 +117,7 @@ def _build_hero(strategy: StrategyType, computation: QuoteComputation) -> HeroNu
     )
 
 
-def _build_breakdown(purchase_price: Decimal, computation: QuoteComputation) -> Breakdown:
+def _build_breakdown(computation: QuoteComputation) -> Breakdown:
     c = computation
     payment_lines = [
         BreakdownLine(label="Principal & interest", amount=_money(c.monthly_pi)),
@@ -151,12 +129,11 @@ def _build_breakdown(purchase_price: Decimal, computation: QuoteComputation) -> 
     if c.monthly_hoa != Decimal("0"):
         payment_lines.append(BreakdownLine(label="HOA", amount=_money(c.monthly_hoa)))
 
-    down_payment = _down_payment_amount(purchase_price, c)
     points_label = (
         "Discount points" if c.discount_points_amount >= Decimal("0") else "Points credit"
     )
     cash_to_close_lines = [
-        BreakdownLine(label="Down payment", amount=_money(down_payment)),
+        BreakdownLine(label="Down payment", amount=_money(c.down_payment_amount)),
         BreakdownLine(label="Lender fees", amount=_money(c.lender_fees)),
         BreakdownLine(label=points_label, amount=_money(c.discount_points_amount)),
         BreakdownLine(label="Title & escrow", amount=_money(c.title_fees)),
@@ -172,11 +149,7 @@ def _build_breakdown(purchase_price: Decimal, computation: QuoteComputation) -> 
     )
 
 
-def _build_cashflow(
-    strategy: StrategyType,
-    computation: QuoteComputation,
-    str_gross_annual_revenue: Decimal | None,
-) -> CashflowTable:
+def _build_cashflow(strategy: StrategyType, computation: QuoteComputation) -> CashflowTable:
     c = computation
     assert c.qualifying_rent is not None
     assert c.dscr_ratio is not None
@@ -185,7 +158,7 @@ def _build_cashflow(
     assert c.cap_rate_pct is not None
     assert c.monthly_cashflow_incl_tax is not None
 
-    gross = _gross_rent_monthly(strategy, c, str_gross_annual_revenue)
+    gross = _gross_rent_monthly(strategy, c)
     is_str = strategy is StrategyType.STR
     return CashflowTable(
         rent_label="Gross STR revenue" if is_str else "Market rent (LTR)",
@@ -238,10 +211,8 @@ def _build_option(
         down_payment_pct=_pct_2dp(option.down_payment_pct),
         prepay_label=option.prepay_label,
         hero=_build_hero(strategy, c),
-        breakdown=_build_breakdown(purchase_price, c),
-        cashflow=(
-            None if is_primary else _build_cashflow(strategy, c, option.str_gross_annual_revenue)
-        ),
+        breakdown=_build_breakdown(c),
+        cashflow=None if is_primary else _build_cashflow(strategy, c),
         cost_seg=None if is_primary else _build_cost_seg(purchase_price, c),
     )
 
@@ -268,11 +239,11 @@ def _build_disclosures(strategy: StrategyType) -> ReportDisclosures:
 
 
 def build_report_view_model(inputs: ReportInputs) -> ReportViewModel:
-    """Pure: every field is either passed straight through, formatted as a
-    decimal string, or derived per the narrow rules documented on the
-    `_down_payment_amount`/`_gross_rent_monthly` helpers above. No DB, no
-    network, no engine recomputation -- `ReportOptionInput.computation` is
-    always an already-computed `QuoteComputation`."""
+    """Pure: every field is either passed straight through or formatted as a
+    decimal/percent string from an already-engine-computed `QuoteComputation`
+    value (see `_gross_rent_monthly` for the one field-selection helper). No
+    DB, no network, no engine recomputation -- `ReportOptionInput.computation`
+    is always an already-computed `QuoteComputation`."""
     header = ReportHeader(
         first_name=inputs.first_name,
         property_label=inputs.property_label or _PROPERTY_TBD_LABEL,

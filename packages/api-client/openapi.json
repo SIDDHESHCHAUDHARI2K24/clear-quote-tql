@@ -1910,6 +1910,11 @@
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Loan Amount"
           },
+          "down_payment_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Down Payment Amount"
+          },
           "ltv_pct": {
             "type": "string",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -2023,6 +2028,18 @@
               }
             ],
             "title": "Underwritten Str Rent"
+          },
+          "str_gross_monthly_revenue": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Str Gross Monthly Revenue"
           },
           "dscr_ratio": {
             "anyOf": [
@@ -2182,6 +2199,7 @@
         "type": "object",
         "required": [
           "loan_amount",
+          "down_payment_amount",
           "ltv_pct",
           "monthly_pi",
           "monthly_tax",

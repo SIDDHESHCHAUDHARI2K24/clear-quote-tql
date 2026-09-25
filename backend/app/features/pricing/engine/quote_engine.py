@@ -156,9 +156,19 @@ def cash_to_close(
 # --- Investment: qualifying rent, DSCR, cashflow, cap rate --------------------
 
 
+def str_gross_monthly_revenue_amount(str_gross_annual_revenue: Decimal) -> Decimal:
+    """`str_gross_annual_revenue / 12` -- the pre-expense-ratio monthly figure.
+
+    Exposed as its own field on `QuoteComputation` (`str_gross_monthly_revenue`)
+    so consumers displaying both the gross and net STR figures (e.g. CQ-021's
+    report builder) never divide `ScenarioInputs.str_gross_annual_revenue`
+    themselves outside the engine."""
+    return str_gross_annual_revenue / Decimal("12")
+
+
 def underwritten_str_rent(str_gross_annual_revenue: Decimal, str_expense_ratio: Decimal) -> Decimal:
     """`gross_monthly_str_revenue x (1 - str_expense_ratio)`, `gross_monthly = annual / 12`."""
-    gross_monthly = str_gross_annual_revenue / Decimal("12")
+    gross_monthly = str_gross_monthly_revenue_amount(str_gross_annual_revenue)
     return gross_monthly * (Decimal("1") - str_expense_ratio)
 
 
@@ -282,6 +292,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
     )
 
     rounded_loan_amount = _round_currency(loan)
+    rounded_down_payment = _round_currency(down_payment)
     rounded_ltv_pct = _round_ltv(ltv)
     rounded_pi = _round_currency(pi)
     rounded_tax = _round_currency(tax)
@@ -302,6 +313,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
     if inputs.strategy is StrategyType.PRIMARY:
         return QuoteComputation(
             loan_amount=rounded_loan_amount,
+            down_payment_amount=rounded_down_payment,
             ltv_pct=rounded_ltv_pct,
             monthly_pi=rounded_pi,
             monthly_tax=rounded_tax,
@@ -321,6 +333,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
             config_snapshot=config,
         )
 
+    rounded_str_gross_monthly_revenue: Decimal | None = None
     if inputs.strategy is StrategyType.LTR:
         assert inputs.market_rent_ltr is not None  # enforced by ScenarioInputs.__post_init__
         qualifying_rent = inputs.market_rent_ltr
@@ -331,6 +344,9 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
             inputs.str_gross_annual_revenue, config.str_expense_ratio
         )
         qualifying_rent = underwritten_str
+        rounded_str_gross_monthly_revenue = _round_currency(
+            str_gross_monthly_revenue_amount(inputs.str_gross_annual_revenue)
+        )
 
     dscr = dscr_ratio(qualifying_rent, payment)
     bucket = bucket_for_dscr(dscr)
@@ -364,6 +380,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
 
     return QuoteComputation(
         loan_amount=rounded_loan_amount,
+        down_payment_amount=rounded_down_payment,
         ltv_pct=rounded_ltv_pct,
         monthly_pi=rounded_pi,
         monthly_tax=rounded_tax,
@@ -385,6 +402,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
         underwritten_str_rent=(
             _round_currency(underwritten_str) if underwritten_str is not None else None
         ),
+        str_gross_monthly_revenue=rounded_str_gross_monthly_revenue,
         dscr_ratio=_round_2dp(dscr),
         dscr_bucket=bucket,
         monthly_cashflow=_round_currency(cashflow),
