@@ -160,4 +160,18 @@ Wave order: **W1** T-A, T-B, T-C. **W2** T-D, T-E. **W3** T-F. Then S5.
 
 ## Verification record
 
-Filled in at merge time.
+Run on 2026-09-25 by the orchestrator session (Opus) with Sonnet subagents.
+
+- **S0**: PR #1 was MERGED as `3f2dedd`, and main CI run 36121921951 succeeded. The worktree was clean.
+- **S1**: The item worktrees were removed and `backup/phase-p2-pre-rewrite` was taken at `42eba55`. `git filter-branch` rewrote 18 commits. Afterwards neither password value appears in any P2 commit (`git log -S` and `git grep` both empty), both item merges survive, and the only tip diff against the backup is the two blanked `.env.example` lines. Commit ids in "Current state" above are pre-rewrite. They map to: `64ee14a` → `ab15c6b`, `f0da258` → `66dd422`, `4d92687` → `48f9602`, `42eba55` → `a49ef83`. `9018ff6` is unchanged. The branches `cq-014-staff-auth` and `cq-015-borrower-auth` were deleted.
+- **S2**: `fd729d8` merged `origin/main` and resolved the conflicts as the S2 table says.
+- **S3/S4**: T-A `cbe1478`; T-B `3e629f9`, `fad4c63`, `0bab0ef`; T-C needed no change (the backend job already runs `pytest seed` with Valkey and MinIO, and the seed tests set their own borrower password); T-D `59da3e1`; T-E `c232408`; T-F `8445321`. No frontend code calls the changed routes.
+- **G1**: Clean (see S1). No `.env` is tracked. The only password-shaped strings in the diff are test fixtures and CI dummies.
+- **G2**: There is one head, `642b3bc55d31`. Upgrade, downgrade base and upgrade on a scratch DB are clean.
+- **G3**: `make lint` is clean. `make test` passes 344 backend, 27 seed and 124 frontend tests (api-client 2, ui 66, lo-console 20, borrower-portal 36). `make api-client` produces no diff.
+- **G4**: `make demo-reset` takes 1.1 s. There are 4 staff users and 10 personas, with marcus_hale, kathleen_mcreynolds, priya_nair, daniel_ortiz, sam_reed and tom_lisa_brandt `priced`, aisha_coleman and ben_ford `needs_attention`, grace_kim `sent` and luis_romero `option_selected`. It also creates 10 borrower accounts and 200 background applications.
+- **G5**: Run on API port 8000. Jordan Lee's login and OTP verify return 200, and `/me` reports role lo. `GET /scenarios/{id}/products` returns 200 for the owner and 401 without a cookie. `POST pipeline/start` returns 401 without a cookie. Morgan Reyes gets 404 on Jordan's scenario and on pipeline resume. Manager Casey Nguyen gets 200. For the borrower, Marcus Hale's login and OTP return 200, and `/me` returns his client with `latest_application.status = priced`. Both `/login` pages return 200 on 3010 and 3020. `/` redirects (307) to `/login` without a cookie and returns 200 with the session cookie on both apps.
+- **G6**: `docs/backlog/phase-p2-review.md` has 0 critical, 0 major, 2 minor and 1 nit, all fixed (`2521b30`, `8df0ba2`).
+- **G8**: `origin/main` is an ancestor of `phase-p2`.
+- **P3/P4 isolation**: The P3/P4 work had started in parallel on `p34-setup`, which rewrites CQ-016…024 specs. This PR's only P3/P4 file was CQ-020's `spec.md`, from P2's `9018ff6` magic-link edit. `db1b529` restores `main`'s copy, because `p34-setup` already drops the magic link there. `git merge-tree p34-setup phase-p2` is clean. CQ-015 `plan.md` Decision #1 still says the CQ-020 spec was updated on `phase-p2`; that change now lives in the P3/P4 rewrite instead.
+- **P1 follow-up resolved**: "pipeline endpoints have no auth until CQ-014" is resolved by T-E.
