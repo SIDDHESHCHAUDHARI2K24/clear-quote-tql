@@ -69,10 +69,7 @@ export function WorkspaceProvider({ applicationId, children }: WorkspaceProvider
     return () => clearInterval(timer);
   }, [state, refetch]);
 
-  const value = useMemo(
-    () => ({ applicationId, state, refetch }),
-    [applicationId, state, refetch],
-  );
+  const value = useMemo(() => ({ applicationId, state, refetch }), [applicationId, state, refetch]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }

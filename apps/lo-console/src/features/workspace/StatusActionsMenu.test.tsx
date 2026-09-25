@@ -81,9 +81,7 @@ describe("StatusActionsMenu (AC6)", () => {
     await user.click(screen.getByRole("menuitem", { name: "Close application" }));
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Application is already withdrawn.",
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Application is already withdrawn.");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

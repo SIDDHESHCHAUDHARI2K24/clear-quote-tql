@@ -30,10 +30,7 @@ describe("TabRail (AC4)", () => {
 
     render(<TabRail applicationId="app-1" tabs={tabs} />);
 
-    expect(screen.getByRole("tab", { name: /housing/i })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(screen.getByRole("tab", { name: /housing/i })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByLabelText("2 flags")).toBeInTheDocument();
     expect(screen.getAllByLabelText("Pending").length).toBeGreaterThan(0);
   });

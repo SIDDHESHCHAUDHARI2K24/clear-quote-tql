@@ -38,9 +38,7 @@ function HeaderNumber({
   return (
     <div title={title}>
       <dt className="text-xs font-medium uppercase tracking-wide text-neutral-500">{label}</dt>
-      <dd
-        className={`tabular-nums font-medium ${muted ? "text-neutral-400" : "text-navy-900"}`}
-      >
+      <dd className={`tabular-nums font-medium ${muted ? "text-neutral-400" : "text-navy-900"}`}>
         {value}
       </dd>
     </div>
