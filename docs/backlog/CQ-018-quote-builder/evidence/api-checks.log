@@ -1,0 +1,44 @@
+
+## GET Marcus scenarios
+GET /api/v1/applications/b68af658-85fb-46c4-bd77-de630273046f/scenarios -> 200
+  group 'At DSCR 1.00' note=None
+    Par      7.625% pts -0.375% pay 2332.67 ctc 75282.21 dscr 0.69 stale=False priced_at=2026-09-25T15:48:10.987518Z
+    Buydown  7.375% pts 1.000% pay 2285.84 ctc 79020.79 dscr 0.70 stale=False priced_at=2026-09-25T15:48:10.988706Z
+  group 'At your DSCR (0.69)' note=None
+    Par      7.625% pts -0.375% pay 2332.67 ctc 75282.21 dscr 0.69 stale=False priced_at=2026-09-25T15:48:10.996592Z
+    Buydown  7.375% pts 1.000% pay 2285.84 ctc 79020.79 dscr 0.70 stale=False priced_at=2026-09-25T15:48:10.997016Z
+
+## Summary before recommend
+GET /api/v1/applications/b68af658-85fb-46c4-bd77-de630273046f/summary -> 200
+  note_rate=None
+
+## Recommend Buydown
+POST /api/v1/quotes/8c2ca5b5-f387-40cb-ac00-f8d19141cd32/recommend -> 200
+  {'application_id': 'b68af658-85fb-46c4-bd77-de630273046f', 'recommended_quote_id': '8c2ca5b5-f387-40cb-ac00-f8d19141cd32'}
+
+## Summary after recommend
+GET /api/v1/applications/b68af658-85fb-46c4-bd77-de630273046f/summary -> 200
+  note_rate=7.375 (buydown rate 7.375)
+
+## Aisha: POST scenarios (Save & AutoQuote)
+POST /api/v1/applications/1abe6f83-ad19-4e4c-a2f3-6d2e186ae760/scenarios -> 422
+  {'error': {'code': 'missing_field', 'message': 'Cannot price: missing Occupancy', 'details': {'field': 'Occupancy', 'tab': 'property', 'missing_fields': ['Occupancy']}}}
+
+## Aisha scenarios
+GET /api/v1/applications/1abe6f83-ad19-4e4c-a2f3-6d2e186ae760/scenarios -> 200
+  groups=0
+
+## Override Marcus tax (CQ-017 route)
+PATCH /api/v1/applications/b68af658-85fb-46c4-bd77-de630273046f/field-values/property_tax_annual_rate -> 200
+  stale flags: [True, True, True, True]
+
+## Reprice
+POST /api/v1/applications/b68af658-85fb-46c4-bd77-de630273046f/reprice -> 200
+  priced_at=2026-09-25T15:57:49.541251Z quotes=4
+    Par      stale=False priced_at=2026-09-25T15:57:48.750897Z rec=False
+    Buydown  stale=False priced_at=2026-09-25T15:57:48.750897Z rec=True
+    Par      stale=False priced_at=2026-09-25T15:57:49.537695Z rec=False
+    Buydown  stale=False priced_at=2026-09-25T15:57:49.537695Z rec=False
+  pricing.has_stale_quotes=False
+
+(cleanup: revert -> 200, reprice)

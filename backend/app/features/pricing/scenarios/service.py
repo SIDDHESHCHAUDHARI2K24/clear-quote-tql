@@ -83,18 +83,40 @@ class DefaultScenarioSetResult:
         return PricingResult(scenario_ids=self.scenario_ids, quote_ids=self.quote_ids)
 
 
+class NoEligibleProductsError(ValidationAppError, ValueError):
+    """422 `no_eligible_products` (CQ-018 PR review M2): the OB grid is
+    empty, or has no par row, at these inputs -- e.g. an investment
+    scenario above the 80% LTV cap. Also a `ValueError`, which is what
+    `select_par_and_buydown` raised before."""
+
+    def __init__(self, down_payment_pct: Decimal | None = None) -> None:
+        if down_payment_pct is None:
+            message = "No eligible products at these inputs"
+            details: dict[str, object] = {}
+        else:
+            ltv = ((Decimal("1") - down_payment_pct) * Decimal("100")).normalize()
+            ltv_text = f"{ltv:f}"
+            message = f"No products at {ltv_text}% LTV"
+            details = {"ltv_pct": ltv_text, "field": "down_payment_pct"}
+        super().__init__(message, code="no_eligible_products", details=details)
+
+
 def select_par_and_buydown(
     rows: list[PricedProductDTO],
+    *,
+    down_payment_pct: Decimal | None = None,
 ) -> tuple[PricedProductDTO, PricedProductDTO | None]:
     """Save & AutoQuote's selection (spec.md): best par = `is_par_rate` row,
     tie-broken by minimum `abs(discount_points_pct)`, then lowest
     `note_rate`, then `investor_name` (deterministic). Best buydown = lowest
     `note_rate` among rows with `0 < discount_points_pct <= 1.00 point`;
-    `None` if no row qualifies.
+    `None` if no row qualifies. No par row (an empty grid included) raises
+    `NoEligibleProductsError` (422), whose message names the LTV when
+    `down_payment_pct` is given.
     """
     par_candidates = [row for row in rows if row.is_par_rate]
     if not par_candidates:
-        raise ValueError("select_par_and_buydown: no row has is_par_rate=True.")
+        raise NoEligibleProductsError(down_payment_pct)
     best_par = min(
         par_candidates,
         key=lambda row: (abs(row.discount_points_pct), row.note_rate, row.investor_name),
@@ -292,10 +314,22 @@ def _ob_overrides_from_scenario(scenario: Scenario, inputs: ScenarioInputs) -> O
         if scenario.dscr_bucket is not None
         else None
     )
+    lock_days = None
+    if isinstance(scenario.inputs, dict):
+        lock_days = scenario.inputs.get("lock_days")
+    if lock_days is None:
+        return ObRequestOverrides(
+            down_payment_pct=inputs.down_payment_pct,
+            dscr=dscr,
+            prepayment_penalty_years=ppp_years,
+        )
+    # CQ-018: the overlay's lock days (pipeline-created scenarios have
+    # none -> the OB request's 30-day default above).
     return ObRequestOverrides(
         down_payment_pct=inputs.down_payment_pct,
         dscr=dscr,
         prepayment_penalty_years=ppp_years,
+        desired_lock_days=int(lock_days),
     )
 
 
@@ -350,7 +384,7 @@ async def create_scenario(
                 prepayment_penalty_years=prepayment_penalty_years,
             )
             products = await _get_products(db, application_id, overrides)
-            par, _buydown = select_par_and_buydown(products)
+            par, _buydown = select_par_and_buydown(products, down_payment_pct=down_payment_pct)
             return par
 
         result = await run_two_pass_dscr(db, application_id, base_inputs, config, _price_par)
@@ -612,6 +646,10 @@ async def create_default_scenarios(
     the LO's chosen down payment."""
     application = await _get_application(db, application_id)
     config = ConfigSnapshot()
+    if down_payment_pct is None:
+        # CQ-018 (plan.md Decision 3): the LOS file's requested down
+        # payment, written by `import_from_los`, when the loan file had one.
+        down_payment_pct = await _field_decimal(db, application_id, "down_payment_pct")
 
     if application.occupancy is Occupancy.PRIMARY:
         resolved_down_payment = (
@@ -639,3 +677,91 @@ async def auto_price(db: AsyncSession, application_id: uuid.UUID) -> PricingResu
     inputs and returns every `scenario`/`quote` id it created."""
     result = await create_default_scenarios(db, application_id)
     return result.as_pricing_result()
+
+
+# --- CQ-018 additions: public helpers the Quote Builder routes use --------
+
+
+SCENARIO_EXTRA_INPUT_KEYS = ("prepayment_penalty_years", "lock_days")
+"""LO-owned inputs stored beside `ScenarioInputs` in `scenarios.inputs`."""
+
+
+def scenario_inputs(scenario: Scenario) -> ScenarioInputs:
+    return _scenario_inputs_from_row(scenario)
+
+
+async def rebuild_scenario_inputs(
+    db: AsyncSession,
+    scenario: Scenario,
+    *,
+    purchase_price: Decimal | None = None,
+    down_payment_pct: Decimal | None = None,
+    extras: dict[str, object] | None = None,
+) -> ScenarioInputs:
+    """Re-reads every enrichment-owned input (FICO, tax, insurance, HOA,
+    rent/STR revenue) from `field_values` and keeps the scenario's own
+    LO-owned inputs (price, down payment, PPP, lock days) unless new ones
+    are given. Writes the result back to `scenario.inputs` (flush only)."""
+    application = await _get_application(db, scenario.application_id)
+    current = _scenario_inputs_from_row(scenario)
+    base = await _gather_base_scenario_inputs(
+        db,
+        application,
+        purchase_price if purchase_price is not None else current.purchase_price,
+        down_payment_pct if down_payment_pct is not None else current.down_payment_pct,
+    )
+    old = scenario.inputs if isinstance(scenario.inputs, dict) else {}
+    kept = {key: old[key] for key in SCENARIO_EXTRA_INPUT_KEYS if key in old}
+    scenario.inputs = {**_json_safe(base), **kept, **(extras or {})}
+    await db.flush()
+    return base
+
+
+def compute_for_product(scenario: Scenario, product: PricedProductDTO) -> QuoteComputation:
+    return compute_quote(
+        inputs_with_priced_product(_scenario_inputs_from_row(scenario), product),
+        _config_from_row(scenario),
+    )
+
+
+async def persist_quote(
+    db: AsyncSession, scenario: Scenario, product: PricedProductDTO, label: str
+) -> Quote:
+    return await _persist_quote(
+        db, scenario.id, product, compute_for_product(scenario, product), label
+    )
+
+
+def computation_json(computation: QuoteComputation) -> dict:
+    return _json_safe(computation)
+
+
+def tag_par_and_buydown(products: list[PricedProductDTO]) -> list[PricedProductDTO]:
+    """The manual grid's Par/Buydown tags, recomputed with AutoQuote's own
+    rule (`select_par_and_buydown`) instead of the mock adapter's
+    `is_buydown_rate`, so the grid's "Buydown" is the Buydown card (CQ-018
+    PR review M3). An empty grid, or one with no par row, has no tags."""
+    try:
+        par, buydown = select_par_and_buydown(products)
+    except NoEligibleProductsError:
+        par, buydown = None, None
+    return [
+        row.model_copy(update={"is_par_rate": row is par, "is_buydown_rate": row is buydown})
+        for row in products
+    ]
+
+
+def find_offered_product(
+    products: list[PricedProductDTO], investor: str, product: str, lock_days: int
+) -> PricedProductDTO | None:
+    """The grid row a manual pick names by `(investor, product, lock)`."""
+    return next(
+        (
+            row
+            for row in products
+            if row.investor_name == investor
+            and row.product_name == product
+            and row.lock_period_days == lock_days
+        ),
+        None,
+    )

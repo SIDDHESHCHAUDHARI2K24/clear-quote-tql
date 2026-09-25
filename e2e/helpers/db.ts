@@ -82,7 +82,7 @@ function valkeyDbIndex(): string {
 // email+password+OTP round trip) can trip the staff login endpoint's own
 // abuse-prevention rate limit (`auth/staff/service.py`, Valkey-backed)
 // within a single run -- flushing this worktree's own Valkey db between
-// logins keeps the suite deterministic without weakening the real limit
+// logins (its `rl:*` rate-limit keys only) keeps the suite deterministic without weakening the real limit
 // (this never touches another worktree's db, see `valkeyDbIndex`).
 export function flushLoginRateLimit(): void {
   execFileSync(
@@ -97,7 +97,14 @@ export function flushLoginRateLimit(): void {
       "valkey-cli",
       "-n",
       valkeyDbIndex(),
-      "flushdb",
+      // Only the rate-limit counters (`rl:*`), never `flushdb`: that also
+      // dropped the borrower sessions `global-setup.ts` saved, so every
+      // report spec 401'd when `e2e/lo-console` ran first in the same
+      // invocation (CQ-018 PR review round 1).
+      "EVAL",
+      "for _, key in ipairs(redis.call('KEYS', ARGV[1])) do redis.call('DEL', key) end return 0",
+      "0",
+      "rl:*",
     ],
     { cwd: REPO_ROOT },
   );

@@ -140,7 +140,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get Application Scenarios */
+        get: operations["get_application_scenarios_api_v1_applications__application_id__scenarios_get"];
         put?: never;
         /** Post Scenario */
         post: operations["post_scenario_api_v1_applications__application_id__scenarios_post"];
@@ -212,6 +213,74 @@ export interface paths {
         get: operations["get_pricing_api_v1_applications__application_id__pricing_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scenarios/{scenario_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Scenario */
+        put: operations["put_scenario_api_v1_scenarios__scenario_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quotes/{quote_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Quote Route */
+        delete: operations["delete_quote_route_api_v1_quotes__quote_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quotes/{quote_id}/recommend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Recommend */
+        post: operations["post_recommend_api_v1_quotes__quote_id__recommend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/reprice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Reprice */
+        post: operations["post_reprice_api_v1_applications__application_id__reprice_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -443,6 +512,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ApplicationScenariosRead */
+        ApplicationScenariosRead: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Strategy */
+            strategy: ("PRIMARY" | "LTR" | "STR") | null;
+            /** Recommended Quote Id */
+            recommended_quote_id: string | null;
+            /** Groups */
+            groups: components["schemas"]["ScenarioGroupRead"][];
+        };
         /**
          * ApplicationStatus
          * @description Mirrors the application status machine in `system-design.md`,
@@ -1032,6 +1115,10 @@ export interface components {
             is_par_rate: boolean;
             /** Is Buydown Rate */
             is_buydown_rate: boolean;
+            /** Monthly Pi */
+            monthly_pi?: number | string | null;
+            /** Points Pct */
+            points_pct?: number | string | null;
         };
         /** PricedProductRow */
         "PricedProductRow-Output": {
@@ -1053,6 +1140,10 @@ export interface components {
             is_par_rate: boolean;
             /** Is Buydown Rate */
             is_buydown_rate: boolean;
+            /** Monthly Pi */
+            monthly_pi?: string | null;
+            /** Points Pct */
+            points_pct?: string | null;
         };
         /**
          * PricingFieldView
@@ -1112,6 +1203,62 @@ export interface components {
             breakdown: components["schemas"]["QuoteComputation"] | null;
             /** Has Stale Quotes */
             has_stale_quotes: boolean;
+        };
+        /** QuoteCardRead */
+        QuoteCardRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Scenario Id
+             * Format: uuid
+             */
+            scenario_id: string;
+            /** Label */
+            label: string;
+            /** Investor */
+            investor: string;
+            /** Product */
+            product: string;
+            /** Rate Pct */
+            rate_pct: string;
+            /** Points Pct */
+            points_pct: string;
+            /** Points Amount */
+            points_amount: string;
+            /** Note Rate */
+            note_rate: string;
+            /** Discount Points Pct */
+            discount_points_pct: string;
+            /** Lock Days */
+            lock_days: number;
+            /** Monthly Payment */
+            monthly_payment: string;
+            /** Cash To Close */
+            cash_to_close: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
+            /** Prepay Label */
+            prepay_label: string | null;
+            /** Dscr Ratio */
+            dscr_ratio: string | null;
+            /** Monthly Cashflow */
+            monthly_cashflow: string | null;
+            /**
+             * Priced At
+             * Format: date-time
+             */
+            priced_at: string;
+            /** Stale */
+            stale: boolean;
+            /** Recommended */
+            recommended: boolean;
+            /** Computed */
+            computed: {
+                [key: string]: unknown;
+            };
         };
         /**
          * QuoteComputation
@@ -1376,6 +1523,16 @@ export interface components {
              */
             updated_at: string;
         };
+        /** RecommendResponse */
+        RecommendResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Recommended Quote Id */
+            recommended_quote_id: string | null;
+        };
         /** ReportDisclosures */
         ReportDisclosures: {
             /** Core */
@@ -1496,6 +1653,21 @@ export interface components {
          * @enum {string}
          */
         ReportStrategy: "primary" | "ltr" | "str";
+        /** RepriceResponse */
+        RepriceResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Quote Ids */
+            quote_ids: string[];
+            /**
+             * Priced At
+             * Format: date-time
+             */
+            priced_at: string;
+        };
         /**
          * ScenarioCreateRequest
          * @description The LO-owned pricing inputs (system-design's "only inputs the LO
@@ -1513,6 +1685,49 @@ export interface components {
             prepayment_penalty_years?: number | null;
             /** Label */
             label?: string | null;
+        };
+        /** ScenarioGroupRead */
+        ScenarioGroupRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Note */
+            note: string | null;
+            dscr_bucket: components["schemas"]["DSCRBucket"] | null;
+            inputs: components["schemas"]["ScenarioInputsRead"];
+            /** Engine Inputs */
+            engine_inputs: {
+                [key: string]: unknown;
+            };
+            /** Quotes */
+            quotes: components["schemas"]["QuoteCardRead"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ScenarioInputsRead */
+        ScenarioInputsRead: {
+            /** Purchase Price */
+            purchase_price: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
+            /** Prepayment Penalty Years */
+            prepayment_penalty_years: number | null;
+            /** Lock Days */
+            lock_days: number;
+            /** Fico */
+            fico: number;
+            /**
+             * Strategy
+             * @enum {string}
+             */
+            strategy: "PRIMARY" | "LTR" | "STR";
         };
         /** ScenarioRead */
         ScenarioRead: {
@@ -1538,6 +1753,26 @@ export interface components {
             dscr_bucket: string | null;
             /** Quotes */
             quotes: components["schemas"]["QuoteRead"][];
+        };
+        /**
+         * ScenarioUpdateRequest
+         * @description `PUT /scenarios/{id}` -- the LO-owned inputs the overlay edits.
+         *     Enrichment-owned inputs (FICO, tax, insurance, HOA, rent) are always
+         *     re-read from `field_values` server-side.
+         */
+        ScenarioUpdateRequest: {
+            /** Purchase Price */
+            purchase_price: number | string;
+            /** Down Payment Pct */
+            down_payment_pct: number | string;
+            /** Prepayment Penalty Years */
+            prepayment_penalty_years?: number | null;
+            /**
+             * Lock Days
+             * @default 30
+             */
+            lock_days: number;
+            dscr_bucket?: components["schemas"]["DSCRBucket"] | null;
         };
         /** StaffLoginRequest */
         StaffLoginRequest: {
@@ -1891,6 +2126,39 @@ export interface operations {
             };
         };
     };
+    get_application_scenarios_api_v1_applications__application_id__scenarios_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationScenariosRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     post_scenario_api_v1_applications__application_id__scenarios_post: {
         parameters: {
             query?: never;
@@ -2051,6 +2319,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PricingViewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_scenario_api_v1_scenarios__scenario_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioGroupRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_quote_route_api_v1_quotes__quote_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_recommend_api_v1_quotes__quote_id__recommend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_reprice_api_v1_applications__application_id__reprice_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepriceResponse"];
                 };
             };
             /** @description Validation Error */
