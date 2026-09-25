@@ -14,6 +14,7 @@ from app.core.enums import UserRole
 from app.core.errors import ConflictError
 from app.core.security import verify_password
 from app.features.auth.models import BorrowerAccount, User
+from app.features.auth.users import service as users_service
 from app.features.auth.users.service import (
     DEMO_BORROWER_CLIENT_NAME,
     DEMO_BORROWER_EMAIL,
@@ -76,6 +77,50 @@ async def test_seed_dev_users_roles_and_fields_correct(db_session: AsyncSession)
     assert admin.title == "Administrator"
 
 
+async def test_seed_dev_users_hashes_password_once(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """All three `DEV_USERS` share one `password` argument, so a fresh run
+    must hash it exactly once (not once per user)."""
+    calls: list[str] = []
+    original_hash_password_async = users_service.hash_password_async
+
+    async def _tracking_hash_password_async(password: str) -> str:
+        calls.append(password)
+        return await original_hash_password_async(password)
+
+    monkeypatch.setattr(users_service, "hash_password_async", _tracking_hash_password_async)
+
+    await seed_dev_users(db_session, password="Dem0Passw0rd!")
+
+    assert calls == ["Dem0Passw0rd!"]
+
+
+async def test_seed_dev_users_second_run_with_short_password_still_no_op(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: the length check and the hash must only run for a user
+    this call is actually about to insert. A rerun where every `DEV_USERS`
+    entry already exists must stay a no-op — including with a `password`
+    under `MIN_PASSWORD_LENGTH` — since `create_user`'s own length check
+    was likewise only ever reached for a *missing* user."""
+    await seed_dev_users(db_session, password="Dem0Passw0rd!")
+
+    calls: list[str] = []
+    original_hash_password_async = users_service.hash_password_async
+
+    async def _tracking_hash_password_async(password: str) -> str:
+        calls.append(password)
+        return await original_hash_password_async(password)
+
+    monkeypatch.setattr(users_service, "hash_password_async", _tracking_hash_password_async)
+
+    users = await seed_dev_users(db_session, password="short1")
+
+    assert len(users) == 3
+    assert calls == []
+
+
 async def test_seed_dev_borrowers_creates_demo_client_and_account(
     db_session: AsyncSession,
 ) -> None:
@@ -121,6 +166,57 @@ async def test_seed_dev_borrowers_second_run_is_idempotent(db_session: AsyncSess
     assert demo_accounts[0].password_hash == first_hash
     assert demo_accounts[0].password_hash is not None
     assert verify_password(demo_accounts[0].password_hash, "B0rrowerPassw0rd!")
+
+
+async def test_seed_dev_borrowers_hashes_password_once(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every account created this run shares one `password` argument, so a
+    run creating more than one account (the demo borrower plus another
+    client) must hash it exactly once, not once per account."""
+    users = await seed_dev_users(db_session, password="Dem0Passw0rd!")
+    lo = next(user for user in users if user.role == UserRole.LO)
+    db_session.add(
+        Client(full_name="Other Client", email="hash-once@clearquote.test", assigned_lo_id=lo.id)
+    )
+    await db_session.flush()
+
+    calls: list[str] = []
+    original_hash_password_async = users_service.hash_password_async
+
+    async def _tracking_hash_password_async(password: str) -> str:
+        calls.append(password)
+        return await original_hash_password_async(password)
+
+    monkeypatch.setattr(users_service, "hash_password_async", _tracking_hash_password_async)
+
+    accounts = await seed_dev_borrowers(db_session, password="B0rrowerPassw0rd!")
+
+    assert len(accounts) == 2
+    assert calls == ["B0rrowerPassw0rd!"]
+
+
+async def test_seed_dev_borrowers_second_run_does_not_hash(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A no-op rerun (every client already has an account) must not hash
+    `password` at all."""
+    await seed_dev_users(db_session, password="Dem0Passw0rd!")
+    await seed_dev_borrowers(db_session, password="B0rrowerPassw0rd!")
+
+    calls: list[str] = []
+    original_hash_password_async = users_service.hash_password_async
+
+    async def _tracking_hash_password_async(password: str) -> str:
+        calls.append(password)
+        return await original_hash_password_async(password)
+
+    monkeypatch.setattr(users_service, "hash_password_async", _tracking_hash_password_async)
+
+    second_run = await seed_dev_borrowers(db_session, password="ADifferentPassw0rd!")
+
+    assert second_run == []
+    assert calls == []
 
     clients = (
         (await db_session.execute(select(Client).where(Client.email == DEMO_BORROWER_EMAIL)))

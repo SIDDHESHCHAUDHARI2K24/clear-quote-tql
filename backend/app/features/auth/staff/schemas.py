@@ -4,6 +4,12 @@
 (plan.md T3): `EmailStr` requires the `email-validator` package, which isn't
 a project dependency and this item doesn't add it — `staff/service.py`
 normalizes with `.strip().lower()` before use.
+
+`ChallengeResponse` and `OtpVerifyRequest` live in `auth.common` (shared
+with `auth.borrower`); `staff/router.py` imports them from there directly.
+`StaffLoginRequest.password` deliberately has no `min_length`: unlike
+sign-up, login must not reveal the password rule to a caller who doesn't
+already know a valid password.
 """
 
 import uuid
@@ -11,29 +17,12 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.enums import UserRole
-
-# RFC 5321's max mailbox length. `password` is capped well above any real
-# password so a client can't force an oversized argon2 hash/verify (CPU
-# cost scales with input length) before the login rate limit even applies.
-_MAX_EMAIL_LENGTH = 254
-_MAX_PASSWORD_LENGTH = 256
-# `generate_token(24)` yields 32 url-safe chars; the cap keeps arbitrary
-# strings out of the Valkey key built from `challenge_id`.
-_MAX_CHALLENGE_ID_LENGTH = 64
+from app.features.auth.common import MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH
 
 
 class StaffLoginRequest(BaseModel):
-    email: str = Field(max_length=_MAX_EMAIL_LENGTH)
-    password: str = Field(max_length=_MAX_PASSWORD_LENGTH)
-
-
-class ChallengeResponse(BaseModel):
-    challenge_id: str
-
-
-class OtpVerifyRequest(BaseModel):
-    challenge_id: str = Field(max_length=_MAX_CHALLENGE_ID_LENGTH)
-    code: str = Field(max_length=6)
+    email: str = Field(max_length=MAX_EMAIL_LENGTH)
+    password: str = Field(max_length=MAX_PASSWORD_LENGTH)
 
 
 class StaffUserOut(BaseModel):

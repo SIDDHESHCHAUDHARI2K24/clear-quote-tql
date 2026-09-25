@@ -14,6 +14,7 @@ from app.features.auth.borrower.schemas import (
     BorrowerMeOut,
     BorrowerSignupRequest,
 )
+from app.features.auth.common import ChallengeResponse, OtpVerifyRequest, client_ip
 from app.features.auth.sessions.service import (
     COOKIE_NAMES,
     clear_session_cookie,
@@ -21,13 +22,8 @@ from app.features.auth.sessions.service import (
     delete_session,
     set_session_cookie,
 )
-from app.features.auth.staff.schemas import ChallengeResponse, OtpVerifyRequest
 
 router = APIRouter(prefix="/auth/borrower", tags=["auth"])
-
-
-def _client_ip(request: Request) -> str:
-    return request.client.host if request.client is not None else "unknown"
 
 
 @router.post("/signup", response_model=ChallengeResponse)
@@ -43,7 +39,7 @@ async def signup(
         full_name=body.full_name,
         email=body.email,
         password=body.password,
-        ip=_client_ip(request),
+        ip=client_ip(request),
     )
     return ChallengeResponse(challenge_id=challenge_id)
 
@@ -56,7 +52,7 @@ async def login(
     valkey: Redis = Depends(get_valkey),
 ) -> ChallengeResponse:
     challenge_id = await service.login(
-        db, valkey, email=body.email, password=body.password, ip=_client_ip(request)
+        db, valkey, email=body.email, password=body.password, ip=client_ip(request)
     )
     return ChallengeResponse(challenge_id=challenge_id)
 

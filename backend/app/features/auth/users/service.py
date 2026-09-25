@@ -31,6 +31,39 @@ def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
+async def _insert_user(
+    db: AsyncSession,
+    *,
+    normalized_email: str,
+    password_hash: str,
+    role: UserRole,
+    full_name: str,
+    nmls: str | None = None,
+    title: str | None = None,
+    phone: str | None = None,
+) -> User:
+    """The SAVEPOINT insert shared by `create_user` (which hashes `password`
+    itself) and `seed_dev_users` below (which hashes the shared demo
+    password once and reuses that hash for every `DEV_USERS` entry, rather
+    than re-hashing the same password once per user). Does not commit."""
+    user = User(
+        email=normalized_email,
+        password_hash=password_hash,
+        role=role,
+        full_name=full_name,
+        nmls=nmls,
+        title=title,
+        phone=phone,
+    )
+    try:
+        async with db.begin_nested():
+            db.add(user)
+            await db.flush()
+    except IntegrityError as exc:
+        raise ConflictError(f"A user with email {normalized_email} already exists.") from exc
+    return user
+
+
 async def create_user(
     db: AsyncSession,
     *,
@@ -66,8 +99,9 @@ async def create_user(
     if len(password) < MIN_PASSWORD_LENGTH:
         raise ValidationAppError(f"Password must be at least {MIN_PASSWORD_LENGTH} characters.")
 
-    user = User(
-        email=normalized_email,
+    return await _insert_user(
+        db,
+        normalized_email=normalized_email,
         password_hash=await hash_password_async(password),
         role=role,
         full_name=full_name,
@@ -75,13 +109,6 @@ async def create_user(
         title=title,
         phone=phone,
     )
-    try:
-        async with db.begin_nested():
-            db.add(user)
-            await db.flush()
-    except IntegrityError as exc:
-        raise ConflictError(f"A user with email {normalized_email} already exists.") from exc
-    return user
 
 
 @dataclass(frozen=True)
@@ -127,8 +154,17 @@ async def seed_dev_users(db: AsyncSession, *, password: str) -> list[User]:
     untouched (idempotent — a repeat run does not change an existing user's
     password hash, role or name). Returns all three `User` rows in
     `DEV_USERS` order. Does not commit.
+
+    All `DEV_USERS` share the one `password` argument. Rather than
+    re-hashing that identical password once per `DevUserSpec` (each argon2
+    hash is deliberately CPU-expensive), it's hashed once, lazily, the
+    first time this run actually needs to insert a row — so a rerun where
+    every dev user already exists neither hashes anything nor requires
+    `password` to meet `MIN_PASSWORD_LENGTH` (matching `create_user`, which
+    only checked length for the row it was about to insert).
     """
     users: list[User] = []
+    password_hash: str | None = None
     for spec in DEV_USERS:
         existing = (
             await db.execute(select(User).where(User.email == spec.email))
@@ -136,11 +172,17 @@ async def seed_dev_users(db: AsyncSession, *, password: str) -> list[User]:
         if existing is not None:
             users.append(existing)
             continue
+        if password_hash is None:
+            if len(password) < MIN_PASSWORD_LENGTH:
+                raise ValidationAppError(
+                    f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
+                )
+            password_hash = await hash_password_async(password)
         users.append(
-            await create_user(
+            await _insert_user(
                 db,
-                email=spec.email,
-                password=password,
+                normalized_email=normalize_email(spec.email),
+                password_hash=password_hash,
                 role=spec.role,
                 full_name=spec.full_name,
                 nmls=spec.nmls,
@@ -193,6 +235,12 @@ async def seed_dev_borrowers(db: AsyncSession, *, password: str) -> list[Borrowe
     `password_hash`. Returns only the accounts created by *this* call
     (empty once every client already has one). Does not commit.
 
+    Every account created this run shares the one `password` argument, so
+    it's hashed once, lazily, the first time this run actually needs to
+    insert an account — rather than re-hashing the identical password once
+    per client, or hashing it at all on a no-op rerun where every client
+    already has one.
+
     `clients.email` is not unique (unlike `borrower_accounts.email`), so
     two clients whose emails normalize to the same value — or a client
     whose email already belongs to another client's account — would
@@ -217,12 +265,15 @@ async def seed_dev_borrowers(db: AsyncSession, *, password: str) -> list[Borrowe
     )
 
     now = datetime.now(UTC)
+    password_hash: str | None = None
     created: list[BorrowerAccount] = []
     for client in clients_missing_accounts:
+        if password_hash is None:
+            password_hash = await hash_password_async(password)
         account = BorrowerAccount(
             client_id=client.id,
             email=normalize_email(client.email),
-            password_hash=await hash_password_async(password),
+            password_hash=password_hash,
             email_verified_at=now,
         )
         try:
