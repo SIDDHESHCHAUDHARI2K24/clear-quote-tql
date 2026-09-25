@@ -400,6 +400,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Or Get Draft
+         * @description Creates the borrower's draft, or returns the open one.
+         */
+        post: operations["create_or_get_draft_api_v1_portal_applications_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/applications/{draft_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Draft */
+        get: operations["get_draft_api_v1_portal_applications__draft_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/applications/{draft_id}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Autosave Tab
+         * @description Saves one tab and returns its validation errors (never blocks).
+         */
+        patch: operations["autosave_tab_api_v1_portal_applications__draft_id__draft_patch"];
+        trace?: never;
+    };
+    "/api/v1/portal/applications/{draft_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Application */
+        post: operations["submit_application_api_v1_portal_applications__draft_id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/applications/{draft_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Document
+         * @description PDF, JPG or PNG, 10 MB at most (AC7).
+         */
+        post: operations["upload_document_api_v1_portal_applications__draft_id__documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/applications/{draft_id}/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Document */
+        delete: operations["delete_document_api_v1_portal_applications__draft_id__documents__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -470,10 +581,49 @@ export interface components {
          * @enum {string}
          */
         ApplicationTab: "borrowers" | "housing" | "credit" | "assets" | "property" | "pricing" | "send";
+        /** ApplyDraftOut */
+        ApplyDraftOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Email */
+            email: string;
+            current_tab: components["schemas"]["TabName"];
+            tabs: components["schemas"]["DraftTabs"];
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+            /** Submitted Application Id */
+            submitted_application_id: string | null;
+            consent: components["schemas"]["ConsentTextOut"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** AutoQuoteResponse */
         AutoQuoteResponse: {
             par: components["schemas"]["QuoteRead"];
             buydown: components["schemas"]["QuoteRead"] | null;
+        };
+        /** Body_upload_document_api_v1_portal_applications__draft_id__documents_post */
+        Body_upload_document_api_v1_portal_applications__draft_id__documents_post: {
+            /** File */
+            file: string;
+            /**
+             * Doc Type
+             * @enum {string}
+             */
+            doc_type: "pay_stub" | "w2" | "bank_statement";
         };
         /**
          * BorrowerActionType
@@ -751,6 +901,13 @@ export interface components {
                 ][]
             ][];
         };
+        /** ConsentTextOut */
+        ConsentTextOut: {
+            /** Version */
+            version: string;
+            /** Text */
+            text: string;
+        };
         /** CostSegTable */
         CostSegTable: {
             /** Purchase Price */
@@ -780,6 +937,56 @@ export interface components {
          * @enum {string}
          */
         DSCRBucket: "BELOW_1_00" | "ONE_TO_1_25" | "GE_1_25";
+        /** DraftDocumentOut */
+        DraftDocumentOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Doc Type
+             * @enum {string}
+             */
+            doc_type: "pay_stub" | "w2" | "bank_statement";
+            /** Filename */
+            filename: string;
+            /** Content Type */
+            content_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+        };
+        /** DraftPatchRequest */
+        DraftPatchRequest: {
+            tab: components["schemas"]["TabName"];
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+        };
+        /** DraftPatchResponse */
+        DraftPatchResponse: {
+            draft: components["schemas"]["ApplyDraftOut"];
+            tab: components["schemas"]["TabName"];
+            /** Tab Valid */
+            tab_valid: boolean;
+            /** Field Errors */
+            field_errors: {
+                [key: string]: string;
+            };
+        };
+        /** DraftTabs */
+        DraftTabs: {
+            you: components["schemas"]["TabStatus"];
+            property: components["schemas"]["TabStatus"];
+            income: components["schemas"]["TabStatus"];
+            consent: components["schemas"]["TabStatus"];
+        };
         /**
          * FieldSource
          * @description Drives the source badge + "revert to source" UI on `field_values`.
@@ -1412,6 +1619,33 @@ export interface components {
          * @enum {string}
          */
         StrategyType: "PRIMARY" | "LTR" | "STR";
+        /** SubmitResponse */
+        SubmitResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /**
+             * Draft Id
+             * Format: uuid
+             */
+            draft_id: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "intake";
+            /** Assigned Lo Name */
+            assigned_lo_name: string;
+            /** Pipeline Started */
+            pipeline_started: boolean;
+        };
+        /**
+         * TabName
+         * @enum {string}
+         */
+        TabName: "you" | "property" | "income" | "consent";
         /** TabStateResponse */
         TabStateResponse: {
             tab: components["schemas"]["ApplicationTab"];
@@ -1422,6 +1656,11 @@ export interface components {
             state: "ok" | "flagged" | "pending";
             /** Flag Count */
             flag_count: number;
+        };
+        /** TabStatus */
+        TabStatus: {
+            /** Complete */
+            complete: boolean;
         };
         /**
          * UserRole
@@ -2200,6 +2439,209 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PortalReportActionResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_or_get_draft_api_v1_portal_applications_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyDraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_draft_api_v1_portal_applications__draft_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyDraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    autosave_tab_api_v1_portal_applications__draft_id__draft_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftPatchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_application_api_v1_portal_applications__draft_id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmitResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_document_api_v1_portal_applications__draft_id__documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_document_api_v1_portal_applications__draft_id__documents_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftDocumentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_document_api_v1_portal_applications__draft_id__documents__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+                document_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
