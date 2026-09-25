@@ -40,7 +40,7 @@ class Employment(Base):
         UUID(as_uuid=True), ForeignKey("applications.id", ondelete="CASCADE"), index=True
     )
     party_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("application_parties.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("application_parties.id"), nullable=True, index=True
     )
     employer_name: Mapped[str | None] = mapped_column(String, nullable=True)
     monthly_income: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)

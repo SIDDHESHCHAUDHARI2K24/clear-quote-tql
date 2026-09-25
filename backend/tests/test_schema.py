@@ -160,6 +160,58 @@ def test_enum_values(enum_cls: type[enum.Enum], expected_values: set[str]) -> No
     assert {member.value for member in enum_cls} == expected_values
 
 
+async def test_every_fk_column_has_an_index(test_engine: AsyncEngine) -> None:
+    """Review finding #2: every FK column must be indexed (spec.md
+    "Conventions (all tables)": "Every FK column is indexed").
+
+    Inspects the live, migrated DB rather than the ORM models, so this
+    catches a migration that doesn't actually create the index a model
+    declares (or vice versa) — not just a model-level typo.
+    """
+
+    def _fk_columns_without_an_index(sync_conn: sa.Connection) -> dict[str, list[str]]:
+        inspector = sa.inspect(sync_conn)
+        missing: dict[str, list[str]] = {}
+
+        for table_name in inspector.get_table_names():
+            if table_name == "alembic_version":
+                continue
+
+            fk_columns = {
+                column
+                for fk in inspector.get_foreign_keys(table_name)
+                for column in fk["constrained_columns"]
+            }
+            if not fk_columns:
+                continue
+
+            # A column is "covered" if it's the primary key, the leading
+            # column of a unique constraint, or the leading column of any
+            # index — Postgres (like most DBs) can use any of those to
+            # satisfy a lookup on that column, same leftmost-prefix rule a
+            # composite index would give it.
+            covered_columns: set[str] = set(
+                inspector.get_pk_constraint(table_name).get("constrained_columns") or []
+            )
+            for unique in inspector.get_unique_constraints(table_name):
+                if unique["column_names"] and unique["column_names"][0]:
+                    covered_columns.add(unique["column_names"][0])
+            for index in inspector.get_indexes(table_name):
+                if index["column_names"] and index["column_names"][0]:
+                    covered_columns.add(index["column_names"][0])
+
+            uncovered = sorted(fk_columns - covered_columns)
+            if uncovered:
+                missing[table_name] = uncovered
+
+        return missing
+
+    async with test_engine.connect() as conn:
+        missing = await conn.run_sync(_fk_columns_without_an_index)
+
+    assert missing == {}, f"FK columns without an index: {missing}"
+
+
 async def test_application_status_enum_type_in_db_includes_withdrawn_and_closed(
     test_engine: AsyncEngine,
 ) -> None:

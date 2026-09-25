@@ -25,7 +25,7 @@ class QuotePackage(Base):
     )
     quote_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)))
     recommended_quote_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("quotes.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("quotes.id"), nullable=True, index=True
     )
     lo_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     letter_key: Mapped[str | None] = mapped_column(String, nullable=True)

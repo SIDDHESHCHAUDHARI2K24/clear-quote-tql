@@ -63,6 +63,30 @@ Fresh-subagent review (did not write this code). Findings below; commands re-run
 | `make test` | Pass as reported (same caveat as the pytest row above — depends on the stale table) |
 | `git merge-tree --write-tree phase-p0-p1 HEAD` | Pass — clean merge, no conflicts |
 
+## Round 2 — fixes for review findings
+
+- Merged `phase-p0-p1` (brings CQ-006's `.github/workflows/ci.yml` and CQ-008's quote engine) — clean, no conflicts.
+- **Finding 1 (critical) — fixed.** Rewrote `backend/tests/test_db_isolation.py` to exercise isolation against `settings` (a real table `initial_schema` creates) instead of the ad-hoc `Base`-registered `_isolation_probe_cq004` table. Reproduced the failure first: `docker compose -f infra/docker-compose.yml exec postgres dropdb -U cq cq_test && ... createdb -U cq cq_test`, then `uv run pytest backend` → 3 failed / 82 passed, all `relation "_isolation_probe_cq004" does not exist` (matches the finding exactly). After the rewrite, dropped/recreated `cq_test` again and re-ran: **85 passed** (85, not 43 — the merge also brought in CQ-008's 42 quote-engine tests). No throwaway model is registered on `Base.metadata` anymore, so `alembic check` stays clean.
+- **Finding 2 (major) — fixed.** Added `index=True` to `Setting.updated_by`, `QuotePackage.recommended_quote_id`, `Employment.party_id`, `FieldValue.overridden_by`. Amended `alembic/versions/4864c0fa0754_initial_schema.py` in place (added the 4 `op.create_index(...)` calls in `upgrade()` and matching `op.drop_index(...)` calls in `downgrade()`) rather than adding a new revision, since nothing downstream is merged yet. Added `backend/tests/test_schema.py::test_every_fk_column_has_an_index`, which inspects the live migrated DB (not the ORM models) and asserts every FK column is covered by a PK, a unique constraint, or an index — TDD: ran it first against the un-amended migration and it failed listing exactly the same 4 columns, then passed after the migration edit. Verified `dropdb`/`createdb` cq_dev + `alembic upgrade head` → `downgrade base` → `upgrade head` (all exit 0) and `alembic check` → "No new upgrade operations detected."
+- Finding 3 (minor, CI never ran) is addressed by the `phase-p0-p1` merge above (workflow file now in this branch's history) and the push in the next section.
+
+### Round 2 test log
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Fresh-DB isolation repro | `dropdb cq_test && createdb cq_test && uv run pytest backend -q` (before fix) | 3 failed, 82 passed |
+| Fresh-DB isolation fix | same, after rewriting `test_db_isolation.py` | 85 passed |
+| FK-index regression test (red) | `uv run pytest backend/tests/test_schema.py::test_every_fk_column_has_an_index` (before migration edit) | Failed: `{'settings': ['updated_by'], 'field_values': ['overridden_by'], 'employment': ['party_id'], 'quote_packages': ['recommended_quote_id']}` |
+| FK-index regression test (green) | same, after amending `initial_schema` | Passed |
+| Migration round-trip | `alembic upgrade head && alembic downgrade base && alembic upgrade head` (on freshly recreated `cq_dev`) | All exit 0 |
+| `alembic check` | `uv run alembic check` | "No new upgrade operations detected." |
+| Backend suite | `uv run pytest backend -q` (fresh `cq_test`) | 85 passed |
+| `make lint` | ruff/mypy/eslint/tsc/prettier | All green |
+| `make test` | backend 85 passed; frontend all passed | Green |
+| CI (push) | `gh run list --repo SIDDHESHCHAUDHARI2K24/clear-quote-tql --branch cq-007-data-model` / `gh run watch <id> --exit-status` | _filled in after push, see below_ |
+
+**CI run:** _pending — filled in after `git push`._
+
 ## How to test manually
 
 1. `make up` (starts the `clear-quote` compose stack: Postgres, Valkey, MinIO, Mailpit, Temporal).
