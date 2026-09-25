@@ -1,8 +1,8 @@
 .PHONY: up down logs lint test api-client demo-reset
 
-# Local stack (Postgres, Valkey, MinIO, Mailpit, Temporal). Real compose file
-# lands in CQ-003; until then this fails loudly (docker compose errors on the
-# missing file) instead of doing nothing.
+# Local stack (Postgres, Valkey, MinIO, Mailpit, Temporal), project name
+# `clear-quote` (infra/docker-compose.yml). --wait blocks until every
+# service with a healthcheck reports healthy (or minio-init exits 0).
 up:
 	docker compose -f infra/docker-compose.yml up -d --wait
 
