@@ -45,7 +45,38 @@ No `make lint` / `make test` changes apply — this item touches only `infra/` a
 
 ## Review findings (stage 6)
 
-*(left for the fresh-subagent reviewer)*
+Fresh-subagent review (did not write this code). All acceptance criteria re-verified independently by re-running `make up`, the AC-mapped commands, `make down`, a second `make up`, and a final `make down`, plus `make lint` / `uv run pytest backend`. Kaneo isolation checked with `docker ps -a` before and after every cycle.
+
+| # | Severity | file:line | Finding | Suggested fix |
+| --- | --- | --- | --- | --- |
+| 1 | minor | `docs/backlog/CQ-003-local-infra/spec.md:64` (AC4) | Confirmed AC4's command as literally written, `docker compose exec postgres psql -U cq -c '\l'`, fails: reproduced independently — `psql: error: … FATAL: database "cq" does not exist` (exit 2). `psql -U cq` with no `-d`/`PGDATABASE` defaults to a database named after the connecting role, which doesn't exist by design (only `cq_dev`, `cq_test`, `temporal` exist). The author correctly diagnosed this (plan.md Decision #10) and ran `psql -U cq -d cq_dev -c '\l'` instead for AC4 evidence, without touching spec.md — correct per AGENTS.md ("do not change … another item's spec.md"). | Whoever next has spec.md edit rights should fix AC4's command in spec.md to `docker compose exec postgres psql -U cq -d cq_dev -c '\l'` so future runs of this item don't re-trip on the same typo. Not a blocker for this branch. |
+| 2 | minor | `infra/docker-compose.yml:100-111` | `temporal-ui` declares `depends_on: minio-init: condition: service_completed_successfully` purely to work around this Docker Compose version's `--wait` treating any one-shot/exited container as unhealthy unless something declares that exact condition on it (plan.md Decision #9). The edge is real in the compose graph even though `temporal-ui` has zero functional relationship to `minio-init` — a `docker compose ps`/dependency-graph reader could reasonably infer a real coupling that doesn't exist. It is inline-commented in the compose file and already flagged as a re-test-before-removing follow-up in post-dev.md, so no action is required now. | If a future Compose upgrade removes the need for this (per the existing Follow-ups note), delete the `depends_on` edge then. Alternatively, consider moving `minio-init` outside `--wait`'s purview entirely (e.g. a `make up` step that runs it via `docker compose run --rm minio-init` after the main `up --wait`) to avoid an artificial dependency edge — optional, not blocking. |
+| 3 | nit | `infra/docker-compose.yml:79-91` (`temporal`) | Dropping `DYNAMIC_CONFIG_FILE_PATH` (not in the spec's pinned env-var list to begin with) was verified against the actual `temporalio/auto-setup:latest` image contents (empty `docker.yaml`, no `development-sql.yaml`) rather than assumed — sound, no pinned name/port/service changed. No action needed. | — |
+| 4 | nit | repo root (worktree) | `make lint`'s `pnpm -r run lint` step fails in this worktree with `eslint: command not found` because `node_modules` isn't installed here (fresh git worktree, no `pnpm install` run). This is a pre-existing/environmental gap unrelated to this diff — CQ-003 touches only `infra/` and one Makefile comment; `uv run ruff check/format`, `uv run mypy backend/app`, and `uv run pytest backend` (the parts of `make lint`/`make test` this item could plausibly affect) all pass clean. Not a CQ-003 finding. | Run `pnpm install` at the repo root before relying on `make lint`'s frontend step in a fresh worktree — no code change needed. |
+
+**CQ-004 reliance check:** `.env.example`'s `DATABASE_URL`/`TEST_DATABASE_URL` (`cq`/`cq`@`localhost:5432`/`cq_dev`|`cq_test`), `VALKEY_URL` (`localhost:6379`), `S3_ENDPOINT`/`S3_BUCKET`/`S3_ACCESS_KEY`/`S3_SECRET_KEY` (`localhost:9010`, `clear-quote`, `cq-minio`/`cq-minio-secret`), and `TEMPORAL_ADDRESS`/`TEMPORAL_NAMESPACE` (`localhost:7233`/`default`) all match this compose file's actual credentials and published ports exactly. Independently confirmed: the `default` Temporal namespace exists and the frontend gRPC service answers over the published `7233` port (verified via `curl http://localhost:8080/api/v1/namespaces` through Temporal UI's proxy, which listed both `temporal-system` and `default`); the `clear-quote` MinIO bucket exists; `cq_dev`/`cq_test`/`temporal` Postgres databases exist. CQ-004's `/health` checks (DB, Valkey, MinIO, Temporal) and its `TEST_DATABASE_URL`-backed pytest fixtures can rely on this stack as-is, no changes needed.
+
+**Verdict: APPROVE.** No critical or major findings — every acceptance criterion re-verified with real commands and matches the evidence already in this file; Kaneo's containers, volumes and ports (5183, 9000, 9001) were confirmed untouched before, during and after every `make up`/`make down` cycle run in this review.
+
+### Commands re-run in this review (all pass)
+
+| Command | Result |
+| --- | --- |
+| `docker ps -a` (baseline) | 5 `kaneo-evaluation-*` containers present, ports 5183/9000-9001 owned by Kaneo |
+| `docker compose -f infra/docker-compose.yml config --quiet` | Exit 0 |
+| `make up` (1st) | Exit 0, ~7.3s, all 6 long-running services healthy, `minio-init` exited 0 |
+| `docker compose -f infra/docker-compose.yml ps` / `ps -a` | AC2 pass — 6 services `Up (healthy)`, `minio-init` `Exited (0)` |
+| `curl -sf -o /dev/null -w '%{http_code}' http://localhost:8025` / `:8080` | AC3 pass — `200` / `200` |
+| `docker compose exec postgres psql -U cq -c '\l'` (literal spec command) | Fails as documented above — `FATAL: database "cq" does not exist` |
+| `docker compose exec postgres psql -U cq -d cq_dev -c '\l'` | AC4 pass — lists `cq_dev`, `cq_test`, `temporal` (+ `temporal_visibility`, `postgres`, templates) |
+| `docker compose logs minio-init` + `docker inspect … ExitCode` | AC5 pass — bucket created, exit code `0` |
+| `make down` → `docker ps -a --filter name=clear-quote` (empty) → `make up` (2nd) → `docker compose ps` | AC6 pass — clean teardown, second `make up` exits 0, all healthy again |
+| `curl http://localhost:8080/api/v1/namespaces`, `.../cluster-info` | `default` and `temporal-system` namespaces present, cluster info returned — Temporal frontend fully functional, not just port-open |
+| `docker ps --format '{{.Names}}\t{{.Ports}}' \| grep kaneo` (after each cycle) | Kaneo's 4 running containers and ports 5183/9000-9001 unchanged throughout |
+| `make down` (final, no `-v`) | Exit 0; `clear-quote_postgres_data`/`clear-quote_minio_data` volumes retained; stack left DOWN |
+| `uv run ruff check backend` / `ruff format --check backend` / `mypy backend/app` | All pass |
+| `uv run pytest backend` | 1 passed (placeholder test; no real backend code yet — CQ-004) |
+| `make lint` (`pnpm -r run lint`) | Fails — `eslint: command not found`, missing `node_modules` in this worktree (environmental, unrelated to this diff; see finding #4) |
 
 ## How to test manually
 
