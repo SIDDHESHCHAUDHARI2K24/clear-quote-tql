@@ -43,6 +43,9 @@ identical background-application counts.
 | `make test` (backend + seed + all frontend packages) | `make test` | all green (209 backend, 22 seed, 1+27+3+3+4+4 frontend) |
 | `make lint` (ruff, mypy, eslint, tsc, prettier) | `make lint` | all green |
 | Demo reset timing | `time make demo-reset` (run twice) | `elapsed: 1.8s` / `1.8s`, identical background counts both times |
+| CI (GitHub Actions, push to `cq-010-seed-data`) | `gh run view 36107535016` | **success** — `backend` job (ruff/mypy/`pytest backend`) 55s, `frontend` job (eslint/tsc/prettier/vitest) 35s |
+
+Note: CI's `backend` job runs `uv run pytest backend` only (not `seed`) — `.github/workflows/ci.yml` is CQ-006's owned file and out of this item's scope to change. `seed/`'s YAML/config files are still checked by the frontend job's `pnpm exec prettier --check .`. `seed`'s own pytest/ruff/mypy suite is verified locally (this table, above) and via `make test`/`make lint`.
 
 ## Review findings (stage 6)
 
