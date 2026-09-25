@@ -1215,6 +1215,55 @@
         }
       }
     },
+    "/api/v1/admin/jobs/stale-check": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Run Stale Check",
+        "operationId": "run_stale_check_api_v1_admin_jobs_stale_check_post",
+        "parameters": [
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaleCheckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -3989,6 +4038,45 @@
           "phone"
         ],
         "title": "StaffUserOut"
+      },
+      "StaleCheckResponse": {
+        "properties": {
+          "ran_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ran At"
+          },
+          "quotes_marked_stale": {
+            "type": "integer",
+            "title": "Quotes Marked Stale"
+          },
+          "versions_expired": {
+            "type": "integer",
+            "title": "Versions Expired"
+          },
+          "applications_marked_stale": {
+            "type": "integer",
+            "title": "Applications Marked Stale"
+          },
+          "application_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Application Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ran_at",
+          "quotes_marked_stale",
+          "versions_expired",
+          "applications_marked_stale",
+          "application_ids"
+        ],
+        "title": "StaleCheckResponse",
+        "description": "The counts one `mark_stale` run changed. Every count is zero on a\nrepeat run."
       },
       "StatusPatchRequest": {
         "properties": {
