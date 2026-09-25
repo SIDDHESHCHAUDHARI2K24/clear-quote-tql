@@ -1,0 +1,23 @@
+signup 200
+otp verify 200
+draft 7db69562-a483-4daa-816f-641073d2fe67 email prefilled: True current_tab: you
+patch you valid: True {}
+patch property valid: True {}
+patch income valid: True {}
+patch consent valid: True {}
+upload pdf 201
+upload 11MB 413 Files must be 10 MB or smaller.
+upload exe 415 Only PDF, JPG and PNG files are accepted.
+submit 200 {'application_id': '3327ab4f-3a21-4de1-adc4-4e41abc40426', 'draft_id': '7db69562-a483-4daa-816f-641073d2fe67', 'status': 'intake', 'assigned_lo_name': 'Jordan Lee', 'pipeline_started': True}
+assigned LO Jordan Lee jordan.lee@clearquote-demo.test
+staff otp 200
+summary status: priced stage: priced
+summary keys: ['application_id', 'client_name', 'default_tab', 'down_payment_amount', 'down_payment_pct', 'last_pipeline_stage', 'location', 'note_rate', 'occupancy', 'ppp_years', 'program', 'purchasing_power', 'status', 'strategy', 'tabs']
+summary excerpt: {}
+LO 'New application' emails: ['New application from Tina Tampa', 'New application from Tina Tampa']
+raw ssn column borrower b'gAAAAABqtrUMENxrsqTk3xpw' ... contains digits: False
+quotes: 2
+documents: [{'doc_type': 'pay_stub', 'object_key': 'applications/3327ab4f-3a21-4de1-adc4-4e41abc40426/documents/607ed90b-340c-4be5-a626-4765ce0d3b86.pdf'}]
+consent: {'type': 'application', 'status': 'accepted', 'text_hash': '3bf2754c779b6e21797a332c5df81cc116ae7243bdb4cae6f08cd1105742edbb', 'ip': '127.0.0.1', 'user_agent': 'E2E/cq032', 'at': datetime.datetime(2026, 9, 25, 17, 53, 15, 320252, tzinfo=datetime.timezone.utc)}
+events: ['application.submitted', 'application.assigned', 'pipeline.verified', 'pipeline.enriched', 'pipeline.enriched', 'pipeline.enriched', 'pipeline.priced']
+source: portal
