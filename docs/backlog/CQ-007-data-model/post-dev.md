@@ -85,7 +85,7 @@ Fresh-subagent review (did not write this code). Findings below; commands re-run
 | `make test` | backend 85 passed; frontend all passed | Green |
 | CI (push) | `gh run list --repo SIDDHESHCHAUDHARI2K24/clear-quote-tql --branch cq-007-data-model` / `gh run watch <id> --exit-status` | _filled in after push, see below_ |
 
-**CI run:** _pending — filled in after `git push`._
+**CI run:** GitHub Actions run [`36099844578`](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36099844578) on `cq-007-data-model` (commit `0235206`) — **success**. Both `backend` (ruff, ruff format, mypy, pytest) and `frontend` (eslint, tsc, prettier, vitest) jobs green. First real CI run on this branch (finding 3's root cause — CI workflow wasn't in this branch's history until the `phase-p0-p1` merge above).
 
 ## How to test manually
 
