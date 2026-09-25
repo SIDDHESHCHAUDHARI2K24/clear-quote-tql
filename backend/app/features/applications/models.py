@@ -60,7 +60,14 @@ class Application(Base):
         default=ApplicationStatus.INTAKE,
         index=True,
     )
-    occupancy: Mapped[Occupancy] = mapped_column(pg_enum(Occupancy, "occupancy"))
+    occupancy: Mapped[Occupancy | None] = mapped_column(
+        pg_enum(Occupancy, "occupancy"), nullable=True
+    )
+    """Nullable (CQ-010 review round 1, finding #1 / migration
+    `e7b20ff388a7`): copied from the LOS record by `import_from_los`, so a
+    LOS record missing `occupancy_type` (persona 7, Aisha Coleman) leaves
+    this `NULL` until the LO fixes it, letting the pipeline's Validate stage
+    raise "Cannot price: missing Occupancy" as designed."""
     strategy: Mapped[Strategy | None] = mapped_column(pg_enum(Strategy, "strategy"), nullable=True)
     program: Mapped[str | None] = mapped_column(String, nullable=True)
     purpose: Mapped[LoanPurpose] = mapped_column(

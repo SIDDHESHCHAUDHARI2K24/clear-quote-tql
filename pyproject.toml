@@ -8,11 +8,15 @@ dependencies = [
     "alembic>=1.14.0",
     "argon2-cffi>=25.1.0",
     "asyncpg>=0.31.0",
+    "bcrypt>=4.2.0",
     "boto3>=1.43.102",
     "cryptography>=44.0.0",
     "fastapi>=0.141.1",
+    "pillow>=11.0.0",
     "pydantic-settings>=2.15.0",
+    "pyyaml>=6.0.2",
     "redis>=8.1.0",
+    "reportlab>=4.2.5",
     "sqlalchemy[asyncio]>=2.1.0",
     "temporalio>=1.33.0",
     "uvicorn[standard]>=0.53.0",
@@ -23,7 +27,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["backend/app"]
+packages = ["backend/app", "seed"]
 
 [dependency-groups]
 dev = [
@@ -32,6 +36,13 @@ dev = [
   "pytest>=8.3.0",
   "pytest-asyncio>=0.24.0",
   "httpx>=0.28.1",
+  # CQ-009: in-process fake for app.integrations.common.failure_toggle's
+  # redis.asyncio client in tests -- CI has no Valkey/Redis service, and the
+  # real local Valkey is shared with parallel agents (see plan.md Decision 1).
+  "fakeredis>=2.26.0",
+  # CQ-010: seed/tests/test_documents_watermarked.py reads back the burned-in
+  # "SAMPLE" watermark text from the generated PDF.
+  "pypdf>=5.1.0",
 ]
 
 [tool.ruff]
@@ -59,9 +70,17 @@ disallow_untyped_defs = true
 module = ["boto3.*", "botocore.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# CQ-010: no third-party type stubs published for these.
+module = ["reportlab.*", "bcrypt.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["backend"]
-pythonpath = ["backend"]
+# `.` (repo root) so `seed/tests/*` (CQ-010) can `import seed...` /
+# `import app...` when run explicitly (`uv run pytest seed/tests/...`) --
+# `testpaths` only gates a bare `pytest` invocation, not an explicit path.
+pythonpath = ["backend", "."]
 asyncio_mode = "auto"
 # A session-scoped `test_engine` fixture (backend/conftest.py) must run in
 # the same event loop as the tests that use it, or asyncpg raises "Future

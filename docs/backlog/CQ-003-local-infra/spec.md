@@ -36,8 +36,7 @@ Docker Compose: Postgres, Valkey, MinIO + bucket init, Mailpit, Temporal server 
 | --- | --- | --- | --- |
 | `postgres` | `postgres:16-alpine` | `5432:5432` | App DB (`cq_dev`, `cq_test`) + Temporal's DB (`temporal`) |
 | `valkey` | `valkey/valkey:7-alpine` | `6379:6379` | OTP rate limits, short-lived caches |
-| `minio` | `minio/minio:latest` | `9010:9000` (S3 API), `9011:9001` (console) | File storage |
-| `minio-init` | `minio/mc:latest` | none (one-shot, `depends_on: minio` healthy) | Creates the `clear-quote` bucket, exits 0 |
+| `minio` | `bitnamilegacy/minio:2025.5.24-debian-12-r5` (was `minio/minio:latest`, no longer pullable — see post-dev.md "CI clean-up pass" and its follow-up fix) | `9010:9000` (S3 API), `9011:9001` (console) | File storage; creates both `clear-quote` and `clearquote-demo-docs` buckets at startup via `MINIO_DEFAULT_BUCKETS` |
 | `mailpit` | `axllent/mailpit:latest` | `1025:1025` (SMTP), `8025:8025` (web UI) | Captures outbound email |
 | `temporal` | `temporalio/auto-setup:latest` | `7233:7233` (frontend gRPC) | Workflow engine, backed by the `postgres` service's `temporal` database |
 | `temporal-ui` | `temporalio/ui:latest` | `8080:8080` | Temporal Web UI, `TEMPORAL_ADDRESS=temporal:7233` |
@@ -62,7 +61,7 @@ Decision: Temporal reuses the `postgres` service (a second database named `tempo
 - [ ] AC2 — `docker compose -f infra/docker-compose.yml ps` shows every service in the table above as `Up`/`healthy`.
 - [ ] AC3 — `curl -sf http://localhost:8025` (Mailpit UI) and `curl -sf http://localhost:8080` (Temporal UI) both return HTTP 200.
 - [ ] AC4 — Postgres has `cq_dev`, `cq_test`, and `temporal` databases: `docker compose exec postgres psql -U cq -d cq_dev -c '\l'` lists all three.
-- [ ] AC5 — The `clear-quote` bucket exists in MinIO after `make up` with no manual step: the `minio-init` container exits 0 and its logs show the bucket was created (or already existed).
+- [ ] AC5 — The `clear-quote` and `clearquote-demo-docs` buckets exist in MinIO after `make up` with no manual step: `MINIO_DEFAULT_BUCKETS` creates both at container start (see post-dev.md follow-up fix; superseded the earlier `minio-init` one-shot container).
 - [ ] AC6 — `make down` stops and removes all containers cleanly; a second `make up` afterwards succeeds from a clean state.
 
 ## Test plan
@@ -72,7 +71,7 @@ Decision: Temporal reuses the `postgres` service (a second database named `tempo
 | AC1, AC2 | Manual/shell | `make up && docker compose -f infra/docker-compose.yml ps` |
 | AC3 | Shell | `curl -sf -o /dev/null -w '%{http_code}' http://localhost:8025`; same for `:8080` |
 | AC4 | Shell | `docker compose -f infra/docker-compose.yml exec postgres psql -U cq -d cq_dev -c '\l'` |
-| AC5 | Shell | `docker compose -f infra/docker-compose.yml logs minio-init` |
+| AC5 | Shell | `docker run --rm --network clear-quote_default --entrypoint sh bitnamilegacy/minio-client:latest -c "mc alias set local http://minio:9000 cq-minio cq-minio-secret && mc ls local/"` (or check `minio` container logs for bucket creation at boot) |
 | AC6 | Shell | `make down && make up` |
 
 ## Notes for the agent

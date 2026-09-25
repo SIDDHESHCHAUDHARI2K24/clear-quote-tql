@@ -90,4 +90,73 @@ Fresh-subagent review (did not write this code). All acceptance criteria re-veri
 ## Follow-ups
 
 - CQ-004's backend config/env loading should be checked against `.env.example` once written — no changes were needed to `.env.example` in this item, ports/vars already matched.
-- If a future Docker Compose upgrade changes `--wait`'s handling of one-shot containers, the `temporal-ui → minio-init` `depends_on` workaround (plan.md Decision #9) can likely be removed; re-test before removing.
+- If a future Docker Compose upgrade changes `--wait`'s handling of one-shot containers, the `temporal-ui → minio-init` `depends_on` workaround (plan.md Decision #9) can likely be removed; re-test before removing. **Done below — see "CI clean-up pass".**
+
+## CI clean-up pass (deferred, 2026-09-25)
+
+Review finding #2 (below) fixed per `docs/backlog/phase-p0-p1-merge-plan.md` gate G3, once Phase 1 was otherwise complete. Plan.md Decisions #12–14 above.
+
+### What changed
+
+- `infra/docker-compose.yml`: removed `temporal-ui`'s artificial `depends_on: minio-init: condition: service_completed_successfully` edge (and its comment). `temporal-ui` now only declares its real dependency, `temporal: condition: service_started`.
+- `Makefile`'s `up` target: `docker compose up -d --wait postgres valkey minio mailpit temporal temporal-ui` (the six long-running services named explicitly, `minio-init` excluded) followed by `docker compose run --rm minio-init`. `down`/`logs` untouched.
+
+### Evidence — `make up` against the already-running shared stack
+
+Per the orchestrator's brief, the stack was never stopped/torn down to test this (no `make down`, no cold start). Verified twice against the live shared stack instead, from the `cq-006-ci-cleanup` worktree:
+
+| Run | Command | Result |
+| --- | --- | --- |
+| 1st `make up` | `make up` (stack already running from earlier work) | Exit 0, ~7.5s. `postgres` showed `Recreate`/`Recreated` — **not caused by this diff**: `postgres`'s service definition is byte-identical to before this change (only `temporal-ui`'s `depends_on` was touched); the recreate reflects the `clear-quote` Compose project being shared, by fixed project name, across several parallel worktrees that each hold their own (occasionally slightly different) copy of `infra/docker-compose.yml` — whichever worktree's `up` runs last reconciles the container to its own file. The other 5 services stayed `Running`. `minio-init` ran via `docker compose run --rm`, printed `Added local successfully` / `Bucket created successfully local/clear-quote` / `bucket clear-quote ready`, and exited 0. |
+| 2nd `make up` (immediately after) | `make up` | Exit 0, ~2.1s, **no recreation** — all 6 services stayed `Running`/`Healthy` throughout, confirming the new `up` target is idempotent once every worktree's compose file agrees. `minio-init` ran again via `run --rm`, same success output (bucket already existed, `mc mb --ignore-existing` is a no-op). |
+| Health check | `docker compose -f infra/docker-compose.yml ps` | All 6 long-running services `Up`/`healthy`. |
+| UI reachability | `curl -sf -o /dev/null -w '%{http_code}' http://localhost:8025` / `:8080` | `200` / `200` |
+| Data survived the `postgres` recreate | `docker compose exec postgres psql -U cq -d cq_dev -c '\l'` | Lists `cq_dev`, `cq_test`, `temporal`, `temporal_visibility` (+ two extra DBs from other worktrees' work, `cq_dev_p2`/`cq_test_cq011`/`cq_test_p2` — all on the same named `postgres_data` volume, none touched) |
+| Bucket check (independent of `minio-init`'s own logs, since `run --rm` removes its container) | `docker run --rm --network clear-quote_default --entrypoint sh minio/mc:latest -c "mc alias set local http://minio:9000 cq-minio cq-minio-secret >/dev/null && mc ls local/"` | Lists both `clear-quote/` and `clearquote-demo-docs/` (the latter from CQ-010's seed docs) |
+| Volumes untouched | `docker volume ls \| grep clear-quote` | `clear-quote_postgres_data`, `clear-quote_minio_data` — both present throughout, never removed |
+
+No `make down` was run at any point in this pass; the shared stack was left running, healthy, for other parallel agents.
+
+### Note for future cross-worktree work
+
+The `postgres` recreate observed above (and already present before this pass started — the container was already at "41 minutes" old on first inspection, versus "3 hours" for its siblings) is a pre-existing consequence of multiple worktrees sharing one fixed Compose project name (`clear-quote`) with independently-edited copies of `infra/docker-compose.yml`. It does not lose data (named volumes persist across container recreation) but is worth knowing about if a shared service unexpectedly restarts during parallel Phase 1/2 work — not a regression introduced by this clean-up pass, and out of scope to "fix" here (it would require every worktree's compose file to be byte-identical, which isn't this item's concern).
+
+## MinIO image follow-up (2026-09-25)
+
+Fixes CQ-006 Decision #17's flagged finding: `minio/minio:latest` and `minio/mc:latest` are gone from Docker Hub/quay.io (MinIO went source-only distribution, ~Oct 2025), breaking `make up` on any fresh clone (merge-plan gate G5). Orchestrator decision: local compose uses the exact same image/tag as CI so the two can't diverge again. See plan.md's "MinIO image follow-up" decisions #15–16.
+
+### What changed
+
+- `infra/docker-compose.yml`: `minio` now runs `bitnamilegacy/minio:2025.5.24-debian-12-r5` (pinned — resolved as the named tag currently sharing `bitnamilegacy/minio:latest`'s digest, via the Docker Hub tags API), with `MINIO_DEFAULT_BUCKETS: "clear-quote,clearquote-demo-docs"` creating both buckets at container start. Data volume changed from `minio_data:/data` to a new `minio_bitnami_data:/bitnami/minio/data` (Bitnami's non-root image can't write into the old volume — see below). `minio-init` service removed entirely (`minio/mc:latest`, also unpullable, no longer needed).
+- `Makefile`'s `up` target: drops the `docker compose run --rm minio-init` step; all 6 services are now ordinary `--wait` targets.
+- `.github/workflows/ci.yml`: `minio` service image repinned from `bitnamilegacy/minio:latest` to the same exact tag as compose, `2025.5.24-debian-12-r5`.
+- `docs/backlog/CQ-003-local-infra/spec.md`: updated the compose table's `minio` row and AC5 (image, bucket-creation mechanism, evidence command) to match; `minio-init` row removed. Scope of the edit limited to those two spots, per the orchestrator's note.
+
+### Permission-denied on the old `minio_data` volume
+
+First `make up` attempt failed: `minio` container exited 1, log `/opt/bitnami/scripts/libminio.sh: line 370: /bitnami/minio/data/.root_user: Permission denied`. Root cause: the existing `clear-quote_minio_data` volume's root directory was written by the old `minio/minio` image, which runs as root; Bitnami's `minio` image runs as a non-root user and can't write into a root-owned volume root. Object data was never going to carry over either way (orchestrator-acknowledged — sample docs are regenerated by `make demo-reset`), so switched to a new volume name (`minio_bitnami_data`) rather than trying to fix permissions on the old one. `minio_data` is still declared in `infra/docker-compose.yml`'s top-level `volumes:` (unused by any service, commented) — the underlying `clear-quote_minio_data` Docker volume was **not removed** (per the brief: never remove volumes other than none). **Follow-up for later cleanup: `docker volume rm clear-quote_minio_data`** once confirmed unneeded (name to remove, not automated here).
+
+### Evidence
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Tag lookup | `curl -s 'https://hub.docker.com/v2/repositories/bitnamilegacy/minio/tags/latest'` then matched its digest against the tags list | `latest`'s digest (`sha256:451fe685...`) matches named tag `2025.5.24-debian-12-r5` |
+| Image pullable | `docker pull bitnamilegacy/minio:2025.5.24-debian-12-r5` | `Status: Downloaded newer image` / `Image is up to date` |
+| Compose validates | `docker compose -f infra/docker-compose.yml config` | Exit 0 |
+| Fresh-clone proof (no shared-stack changes) | `docker pull` on all 6 images in the compose file (`postgres:16-alpine`, `valkey/valkey:7-alpine`, `bitnamilegacy/minio:2025.5.24-debian-12-r5`, `axllent/mailpit:latest`, `temporalio/auto-setup:latest`, `temporalio/ui:latest`) | All 6 succeed |
+| `make up` against the shared stack | `make up` (1st attempt) | `minio` exited 1, `Permission denied` (see above) |
+| `make up` after volume-name fix | `make up` | Exit 0; only `minio` recreated (new image + new volume), all 6 services `Healthy` within seconds |
+| Buckets exist at boot, no manual step | `docker run --rm --network clear-quote_default --entrypoint sh bitnamilegacy/minio-client:latest -c "mc alias set local http://minio:9000 cq-minio cq-minio-secret && mc ls local/"` | Lists both `clear-quote/` and `clearquote-demo-docs/` |
+| `demo-reset` | `SEED_STAFF_PASSWORD=dev-local-test-password uv run python -m seed.reset` | Exit 0, ~1.4s: 4 users, 10 personas, 200 background applications |
+| Seed's MinIO document tests | `uv run pytest seed` (CI-shaped env, `INTEGRATION_LATENCY_ENABLED` unset/false) | **23 passed in 8.3s**, including `test_documents_watermarked.py::test_upload_sample_document_key_has_sample_suffix_and_round_trips_via_minio` (the real MinIO round-trip) |
+| `make lint` | `make lint` | ruff / ruff format / mypy / eslint / tsc / prettier all pass |
+| `make test` | `uv run pytest backend` (247 passed), `uv run pytest seed` (23 passed), `pnpm -r run test` (4/4 workspaces, 35 tests) | All pass |
+| `actionlint` | `actionlint .github/workflows/ci.yml` | Exit 0, no output |
+
+### Investigation: `pytest seed` appeared to hang mid-run (not a real bug)
+
+Mid-verification, `uv run pytest seed -v` (run with a local `.env` sourced, created only for this session's manual testing — see below) appeared to stall for 8+ minutes at `test_provider_rows_seeded.py`, with ~0% CPU and two Postgres `cq_test` connections sitting idle (one "idle in transaction" after a `RELEASE SAVEPOINT`, one idle after a completed `COMMIT`). The orchestrator flagged this as a possible connection-pool exhaustion or CI-env divergence and asked for a systematic debug pass before continuing.
+
+**Root cause, confirmed, not a regression from this change:** this worktree had no `.env` file (none is committed; `.env.example` is the template). To run `make demo-reset` for this pass's AC evidence, a `.env` was created by copying `.env.example` — which sets `INTEGRATION_LATENCY_ENABLED=true` (the shipped local-dev default, CQ-009). `seed/tests/conftest.py` only sets that var via `os.environ.setdefault("INTEGRATION_LATENCY_ENABLED", "false")`, which **does not override an already-set environment variable** — so sourcing that `.env` before `pytest` silently flipped every mock adapter call (LOS, tax, rent, STR, credit, insurance, property search, CRM) from instant to a real 200–1200 ms simulated delay, for every one of the ~8–10 tests in `test_provider_rows_seeded.py` that each re-seed all 10 personas from scratch via the function-scoped `seeded_base` fixture. That's the exact risk CQ-010 spec.md Decision D3 already documents for a single `demo-reset` run, multiplied across many independent tests — legitimately slow, not stuck. Postgres's two idle connections were consistent with this: neither had an active query or lock wait (`wait_event_type`/`wait_event` both `Client`/`ClientRead`, meaning "waiting on the client app," not "blocked in Postgres") — confirming the stall was in application code (`asyncio.sleep`), not a DB-side deadlock or pool exhaustion.
+
+Confirmed by re-running the same test file (and then the full `seed` suite) with `env -i` and only the exact CI-shaped env vars (`APP_ENV`, `TEST_DATABASE_URL`, `VALKEY_URL`, `S3_*`, etc. — no `INTEGRATION_LATENCY_ENABLED` override, so the test suite's own `false` default applies): `test_provider_rows_seeded.py` alone passed 8/8 in 4.9s, and the full `seed` suite passed 23/23 in 8.3s — no hang, no pool issue. Fixed the local `.env` (`INTEGRATION_LATENCY_ENABLED=false`, matching how a developer running tests, as opposed to a live dev server, should set it) so this doesn't recur locally. Not a code change — `.env` is git-ignored and never committed; nothing in `seed/`, `backend/app/integrations/`, or this item's MinIO diff was touched to "fix" this.

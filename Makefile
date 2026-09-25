@@ -1,10 +1,13 @@
-.PHONY: up down logs lint test api api-client demo-reset
+.PHONY: up down logs lint test api api-client demo-reset worker
 
 # Local stack (Postgres, Valkey, MinIO, Mailpit, Temporal), project name
 # `clear-quote` (infra/docker-compose.yml). --wait blocks until every
-# service with a healthcheck reports healthy (or minio-init exits 0).
+# long-running service with a healthcheck reports healthy. `minio` now
+# creates its own buckets at startup via MINIO_DEFAULT_BUCKETS (CQ-003 fix,
+# follow-up to CQ-006 Decision #17), so the old one-shot `minio-init`
+# service is gone and every service is a normal long-running --wait target.
 up:
-	docker compose -f infra/docker-compose.yml up -d --wait
+	docker compose -f infra/docker-compose.yml up -d --wait postgres valkey minio mailpit temporal temporal-ui
 
 down:
 	docker compose -f infra/docker-compose.yml down
@@ -22,6 +25,7 @@ lint:
 
 test:
 	uv run pytest backend
+	uv run pytest seed
 	pnpm -r run test
 
 # backend/scripts/export_openapi.py (CQ-004) overwrites
@@ -31,12 +35,20 @@ api-client:
 	uv run python backend/scripts/export_openapi.py
 	pnpm --filter @cq/api-client run generate
 
-# CQ-010 replaces this body with the real demo reset (drop DB, migrate, seed).
+# Drops/recreates cq_dev's public schema, migrates, seeds personas +
+# background data + sample docs. Never touches cq_test or the temporal DB
+# (separate databases on the same shared Postgres). Budget: under 60s (AC1).
 demo-reset:
-	@echo "demo-reset: not implemented until CQ-010"
+	uv run python -m seed.reset
 
 # Dev server, port 8000 is pinned for this project (CQ-004).
 api:
 	uv run uvicorn app.main:app --port 8000 --reload
 
-# make worker -- added by CQ-011: cd backend && uv run python -m app.workflows.worker
+# Temporal worker: registers ApplicationPipelineWorkflow + activities on
+# the pipeline task queue (CQ-011). Requires `make up` (Temporal at
+# localhost:7233) to be running first. Run from the repo root (like `api`
+# above) so Settings' env_file=".env" (backend/app/core/config.py) resolves
+# the repo-root .env instead of a nonexistent backend/.env (CQ-011 fix).
+worker:
+	uv run python -m app.workflows.worker

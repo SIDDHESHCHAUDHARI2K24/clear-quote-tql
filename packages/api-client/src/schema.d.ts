@@ -5,7 +5,7 @@
  */
 
 export interface paths {
-    "/api/v1/auth/staff/login": {
+    "/api/v1/applications/{application_id}/pipeline/start": {
         parameters: {
             query?: never;
             header?: never;
@@ -14,15 +14,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login */
-        post: operations["login_api_v1_auth_staff_login_post"];
+        /** Start Pipeline */
+        post: operations["start_pipeline_api_v1_applications__application_id__pipeline_start_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/staff/otp/verify": {
+    "/api/v1/applications/{application_id}/pipeline/resume": {
         parameters: {
             query?: never;
             header?: never;
@@ -31,15 +31,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Verify Otp */
-        post: operations["verify_otp_api_v1_auth_staff_otp_verify_post"];
+        /** Resume Pipeline */
+        post: operations["resume_pipeline_api_v1_applications__application_id__pipeline_resume_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/staff/logout": {
+    "/api/v1/applications/{application_id}/field-values/{field_key}": {
         parameters: {
             query?: never;
             header?: never;
@@ -48,23 +48,78 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logout */
-        post: operations["logout_api_v1_auth_staff_logout_post"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Patch Field Value */
+        patch: operations["patch_field_value_api_v1_applications__application_id__field_values__field_key__patch"];
         trace?: never;
     };
-    "/api/v1/auth/staff/me": {
+    "/api/v1/applications/{application_id}/field-values/{field_key}/revert": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Me */
-        get: operations["get_me_api_v1_auth_staff_me_get"];
+        get?: never;
+        put?: never;
+        /** Revert Field Value Route */
+        post: operations["revert_field_value_route_api_v1_applications__application_id__field_values__field_key__revert_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quotes/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Quote
+         * @description Engine-only, no adapter latency, no persistence -- must respond
+         *     under 300ms (spec.md AC1).
+         */
+        post: operations["preview_quote_api_v1_quotes_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/scenarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Scenario */
+        post: operations["post_scenario_api_v1_applications__application_id__scenarios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scenarios/{scenario_id}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Products */
+        get: operations["get_products_api_v1_scenarios__scenario_id__products_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -73,7 +128,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/borrower/signup": {
+    "/api/v1/scenarios/{scenario_id}/autoquote": {
         parameters: {
             query?: never;
             header?: never;
@@ -82,15 +137,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Signup */
-        post: operations["signup_api_v1_auth_borrower_signup_post"];
+        /** Post Autoquote */
+        post: operations["post_autoquote_api_v1_scenarios__scenario_id__autoquote_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/borrower/login": {
+    "/api/v1/scenarios/{scenario_id}/quotes": {
         parameters: {
             query?: never;
             header?: never;
@@ -99,59 +154,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login */
-        post: operations["login_api_v1_auth_borrower_login_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/borrower/otp/verify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Verify Otp */
-        post: operations["verify_otp_api_v1_auth_borrower_otp_verify_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/borrower/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Logout */
-        post: operations["logout_api_v1_auth_borrower_logout_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/borrower/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Me */
-        get: operations["get_me_api_v1_auth_borrower_me_get"];
-        put?: never;
-        post?: never;
+        /** Post Manual Quote */
+        post: operations["post_manual_quote_api_v1_scenarios__scenario_id__quotes_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -179,46 +183,246 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** BorrowerLoginRequest */
-        BorrowerLoginRequest: {
-            /** Email */
-            email: string;
-            /** Password */
-            password: string;
+        /** AutoQuoteResponse */
+        AutoQuoteResponse: {
+            par: components["schemas"]["QuoteRead"];
+            buydown: components["schemas"]["QuoteRead"] | null;
         };
-        /** BorrowerMeOut */
-        BorrowerMeOut: {
+        /**
+         * ConfigSnapshot
+         * @description Pricing configuration, snapshotted per-quote so old quotes never change
+         *     when defaults change later (`scenarios.config_snapshot` stores one of
+         *     these as JSON per CQ-007).
+         */
+        ConfigSnapshot: {
             /**
-             * Account Id
+             * Lender Processing Fee
+             * @default 995.00
+             */
+            lender_processing_fee: string;
+            /**
+             * Lender Underwriting Fee
+             * @default 795.00
+             */
+            lender_underwriting_fee: string;
+            /**
+             * Title Rate Pct
+             * @default 0.007
+             */
+            title_rate_pct: string;
+            /**
+             * Insurance Rate Pct
+             * @default 0.005
+             */
+            insurance_rate_pct: string;
+            /**
+             * Prepaid Interest Days
+             * @default 15
+             */
+            prepaid_interest_days: number;
+            /**
+             * Prepaid Insurance Months
+             * @default 14
+             */
+            prepaid_insurance_months: number;
+            /**
+             * Prepaid Tax Months
+             * @default 3
+             */
+            prepaid_tax_months: number;
+            /**
+             * Str Expense Ratio
+             * @default 0.20
+             */
+            str_expense_ratio: string;
+            /**
+             * Cap Rate Multiplier
+             * @default 0.75
+             */
+            cap_rate_multiplier: string;
+            /**
+             * Land Allocation Pct
+             * @default 0.20
+             */
+            land_allocation_pct: string;
+            /**
+             * Accelerated Property Pct
+             * @default 0.25
+             */
+            accelerated_property_pct: string;
+            /**
+             * Bonus Depreciation Pct
+             * @default 1.00
+             */
+            bonus_depreciation_pct: string;
+            /**
+             * Investor Marginal Tax Rate
+             * @default 0.32
+             */
+            investor_marginal_tax_rate: string;
+            /**
+             * Target Dscr
+             * @default 1.00
+             */
+            target_dscr: string;
+            /**
+             * Reserves Months Primary
+             * @default 2
+             */
+            reserves_months_primary: number;
+            /**
+             * Reserves Months Investment
+             * @default 6
+             */
+            reserves_months_investment: number;
+            /**
+             * Mi Matrix
+             * @default [
+             *       [
+             *         "80.00",
+             *         "85.00",
+             *         [
+             *           [
+             *             679,
+             *             "0.0058"
+             *           ],
+             *           [
+             *             719,
+             *             "0.0042"
+             *           ],
+             *           [
+             *             759,
+             *             "0.0031"
+             *           ],
+             *           [
+             *             null,
+             *             "0.0019"
+             *           ]
+             *         ]
+             *       ],
+             *       [
+             *         "85.00",
+             *         "90.00",
+             *         [
+             *           [
+             *             679,
+             *             "0.0086"
+             *           ],
+             *           [
+             *             719,
+             *             "0.0062"
+             *           ],
+             *           [
+             *             759,
+             *             "0.0044"
+             *           ],
+             *           [
+             *             null,
+             *             "0.0030"
+             *           ]
+             *         ]
+             *       ],
+             *       [
+             *         "90.00",
+             *         "95.00",
+             *         [
+             *           [
+             *             679,
+             *             "0.0113"
+             *           ],
+             *           [
+             *             719,
+             *             "0.0083"
+             *           ],
+             *           [
+             *             759,
+             *             "0.0059"
+             *           ],
+             *           [
+             *             null,
+             *             "0.0039"
+             *           ]
+             *         ]
+             *       ],
+             *       [
+             *         "95.00",
+             *         "97.00",
+             *         [
+             *           [
+             *             679,
+             *             "0.0186"
+             *           ],
+             *           [
+             *             719,
+             *             "0.0135"
+             *           ],
+             *           [
+             *             759,
+             *             "0.0096"
+             *           ],
+             *           [
+             *             null,
+             *             "0.0063"
+             *           ]
+             *         ]
+             *       ]
+             *     ]
+             */
+            mi_matrix: [
+                string,
+                string,
+                [
+                    number | null,
+                    string
+                ][]
+            ][];
+        };
+        /**
+         * DSCRBucket
+         * @description DSCR classification bucket. Boundaries are inclusive on the lower edge.
+         * @enum {string}
+         */
+        DSCRBucket: "BELOW_1_00" | "ONE_TO_1_25" | "GE_1_25";
+        /**
+         * FieldSource
+         * @description Drives the source badge + "revert to source" UI on `field_values`.
+         * @enum {string}
+         */
+        FieldSource: "encompass" | "rentcast" | "airdna" | "smartasset" | "steadily" | "optimal_blue" | "credit_bureau" | "property_search" | "lo_entry" | "formula" | "default" | "lo_override";
+        /**
+         * FieldValueOverrideRequest
+         * @description Every overridable pricing field (spec.md's fixed 5-key list) is a
+         *     currency or rate `Decimal`.
+         */
+        FieldValueOverrideRequest: {
+            /** Value */
+            value: number | string;
+        };
+        /** FieldValueRead */
+        FieldValueRead: {
+            /**
+             * Id
              * Format: uuid
              */
-            account_id: string;
-            /** Email */
-            email: string;
+            id: string;
             /**
-             * Client Id
+             * Application Id
              * Format: uuid
              */
-            client_id: string;
-            /** Full Name */
-            full_name: string;
-            /** First Name */
-            first_name: string;
-            latest_application: components["schemas"]["LatestApplicationOut"] | null;
-        };
-        /** BorrowerSignupRequest */
-        BorrowerSignupRequest: {
-            /** Full Name */
-            full_name: string;
-            /** Email */
-            email: string;
-            /** Password */
-            password: string;
-        };
-        /** ChallengeResponse */
-        ChallengeResponse: {
-            /** Challenge Id */
-            challenge_id: string;
+            application_id: string;
+            /** Field Key */
+            field_key: string;
+            /** Value */
+            value: {
+                [key: string]: unknown;
+            } | unknown[] | string | number | boolean | null;
+            source: components["schemas"]["FieldSource"];
+            /** Source Ref */
+            source_ref: string | null;
+            /** Overridden By */
+            overridden_by: string | null;
+            /** Overridden At */
+            overridden_at: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -237,54 +441,280 @@ export interface components {
                 [key: string]: string;
             };
         };
-        /** LatestApplicationOut */
-        LatestApplicationOut: {
+        /** ManualQuoteCreateRequest */
+        ManualQuoteCreateRequest: {
+            product: components["schemas"]["PricedProductRow-Input"];
+            /** Label */
+            label: string;
+        };
+        /** PipelineResumeResponse */
+        PipelineResumeResponse: {
+            /** Workflow Id */
+            workflow_id: string;
+            /**
+             * Signaled
+             * @default true
+             */
+            signaled: boolean;
+        };
+        /** PipelineStartResponse */
+        PipelineStartResponse: {
+            /** Workflow Id */
+            workflow_id: string;
+            /** Started */
+            started: boolean;
+        };
+        /** PricedProductRow */
+        "PricedProductRow-Input": {
+            /** Investor Name */
+            investor_name: string;
+            /** Product Name */
+            product_name: string;
+            /** Lock Period Days */
+            lock_period_days: number;
+            /** Note Rate */
+            note_rate: number | string;
+            /** Price Pct */
+            price_pct: number | string;
+            /** Discount Points Pct */
+            discount_points_pct: number | string;
+            /** Discount Points Amount */
+            discount_points_amount: number | string;
+            /** Is Par Rate */
+            is_par_rate: boolean;
+            /** Is Buydown Rate */
+            is_buydown_rate: boolean;
+        };
+        /** PricedProductRow */
+        "PricedProductRow-Output": {
+            /** Investor Name */
+            investor_name: string;
+            /** Product Name */
+            product_name: string;
+            /** Lock Period Days */
+            lock_period_days: number;
+            /** Note Rate */
+            note_rate: string;
+            /** Price Pct */
+            price_pct: string;
+            /** Discount Points Pct */
+            discount_points_pct: string;
+            /** Discount Points Amount */
+            discount_points_amount: string;
+            /** Is Par Rate */
+            is_par_rate: boolean;
+            /** Is Buydown Rate */
+            is_buydown_rate: boolean;
+        };
+        /** QuotePreviewRequest */
+        QuotePreviewRequest: {
+            /** Purchase Price */
+            purchase_price: number | string;
+            /** Down Payment Pct */
+            down_payment_pct: number | string;
+            /** Note Rate */
+            note_rate: number | string;
+            strategy: components["schemas"]["StrategyType"];
+            /** Fico */
+            fico: number;
+            /** Property Tax Annual Rate */
+            property_tax_annual_rate: number | string;
+            /** Insurance Annual Rate */
+            insurance_annual_rate: number | string;
+            /**
+             * Term Months
+             * @default 360
+             */
+            term_months: number;
+            /**
+             * Hoa Monthly
+             * @default 0
+             */
+            hoa_monthly: number | string;
+            /**
+             * Discount Points Pct
+             * @default 0
+             */
+            discount_points_pct: number | string;
+            /**
+             * Seller Credits
+             * @default 0
+             */
+            seller_credits: number | string;
+            /** Market Rent Ltr */
+            market_rent_ltr?: number | string | null;
+            /** Str Gross Annual Revenue */
+            str_gross_annual_revenue?: number | string | null;
+            /** Target Dscr */
+            target_dscr?: number | string | null;
+            /** Bonus Depreciation Pct */
+            bonus_depreciation_pct?: number | string | null;
+            /** Investor Marginal Tax Rate */
+            investor_marginal_tax_rate?: number | string | null;
+        };
+        /** QuotePreviewResponse */
+        QuotePreviewResponse: {
+            /** Loan Amount */
+            loan_amount: string;
+            /** Ltv Pct */
+            ltv_pct: string;
+            /** Monthly Pi */
+            monthly_pi: string;
+            /** Monthly Tax */
+            monthly_tax: string;
+            /** Monthly Insurance */
+            monthly_insurance: string;
+            /** Monthly Mi */
+            monthly_mi: string | null;
+            /** Monthly Hoa */
+            monthly_hoa: string;
+            /** Total Monthly Payment */
+            total_monthly_payment: string;
+            /** Discount Points Amount */
+            discount_points_amount: string;
+            /** Lender Fees */
+            lender_fees: string;
+            /** Title Fees */
+            title_fees: string;
+            /** Prepaid Interest */
+            prepaid_interest: string;
+            /** Prepaid Insurance */
+            prepaid_insurance: string;
+            /** Prepaid Taxes */
+            prepaid_taxes: string;
+            /** Total Prepaids */
+            total_prepaids: string;
+            /** Total Closing Costs */
+            total_closing_costs: string;
+            /** Cash To Close */
+            cash_to_close: string;
+            config_snapshot: components["schemas"]["ConfigSnapshot"];
+            /** Qualifying Rent */
+            qualifying_rent?: string | null;
+            /** Underwritten Str Rent */
+            underwritten_str_rent?: string | null;
+            /** Dscr Ratio */
+            dscr_ratio?: string | null;
+            dscr_bucket?: components["schemas"]["DSCRBucket"] | null;
+            /** Monthly Cashflow */
+            monthly_cashflow?: string | null;
+            /** Annual Cashflow */
+            annual_cashflow?: string | null;
+            /** Break Even Rent Ltr */
+            break_even_rent_ltr?: string | null;
+            /** Str Annual Rent Target */
+            str_annual_rent_target?: string | null;
+            /** Cap Rate Pct */
+            cap_rate_pct?: string | null;
+            /** Land Value Allocation */
+            land_value_allocation?: string | null;
+            /** Depreciable Building Basis */
+            depreciable_building_basis?: string | null;
+            /** Accelerated Basis Amount */
+            accelerated_basis_amount?: string | null;
+            /** Year One Tax Deduction */
+            year_one_tax_deduction?: string | null;
+            /** Year One Tax Savings */
+            year_one_tax_savings?: string | null;
+            /** Monthly Cashflow Incl Tax */
+            monthly_cashflow_incl_tax?: string | null;
+        };
+        /** QuoteRead */
+        QuoteRead: {
             /**
              * Id
              * Format: uuid
              */
             id: string;
-            /** Status */
-            status: string;
-        };
-        /** OtpVerifyRequest */
-        OtpVerifyRequest: {
-            /** Challenge Id */
-            challenge_id: string;
-            /** Code */
-            code: string;
-        };
-        /** StaffLoginRequest */
-        StaffLoginRequest: {
-            /** Email */
-            email: string;
-            /** Password */
-            password: string;
-        };
-        /** StaffUserOut */
-        StaffUserOut: {
             /**
-             * Id
+             * Scenario Id
              * Format: uuid
              */
-            id: string;
-            /** Email */
-            email: string;
-            /** Full Name */
-            full_name: string;
-            role: components["schemas"]["UserRole"];
-            /** Nmls */
-            nmls: string | null;
-            /** Title */
-            title: string | null;
-            /** Phone */
-            phone: string | null;
+            scenario_id: string;
+            /** Investor */
+            investor: string;
+            /** Product */
+            product: string;
+            /** Rate */
+            rate: string;
+            /** Points */
+            points: string;
+            /** Lock Days */
+            lock_days: number;
+            /** Computed */
+            computed: {
+                [key: string]: unknown;
+            } | unknown[] | string | number | boolean | null;
+            /** Label */
+            label: string;
+            /**
+             * Priced At
+             * Format: date-time
+             */
+            priced_at: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
-         * UserRole
+         * ScenarioCreateRequest
+         * @description The LO-owned pricing inputs (system-design's "only inputs the LO
+         *     owns" table) minus note rate, which is chosen per-quote, not at
+         *     scenario-creation time. FICO, tax, insurance, HOA and rent/STR are
+         *     enrichment-owned and read from `field_values` server-side.
+         */
+        ScenarioCreateRequest: {
+            /** Purchase Price */
+            purchase_price: number | string;
+            /** Down Payment Pct */
+            down_payment_pct: number | string;
+            strategy: components["schemas"]["StrategyType"];
+            /** Prepayment Penalty Years */
+            prepayment_penalty_years?: number | null;
+            /** Label */
+            label?: string | null;
+        };
+        /** ScenarioRead */
+        ScenarioRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Inputs */
+            inputs: {
+                [key: string]: unknown;
+            } | unknown[] | string | number | boolean | null;
+            /** Config Snapshot */
+            config_snapshot: {
+                [key: string]: unknown;
+            } | unknown[] | string | number | boolean | null;
+            /** Dscr Bucket */
+            dscr_bucket: string | null;
+            /** Quotes */
+            quotes: components["schemas"]["QuoteRead"][];
+        };
+        /**
+         * StrategyType
+         * @description The engine's single occupancy/strategy field.
+         *
+         *     Mapping from `applications.occupancy` + `applications.strategy` (CQ-007)
+         *     onto this enum is CQ-013's job, not this item's.
          * @enum {string}
          */
-        UserRole: "lo" | "manager" | "admin";
+        StrategyType: "PRIMARY" | "LTR" | "STR";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -307,98 +737,45 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    login_api_v1_auth_staff_login_post: {
+    start_pipeline_api_v1_applications__application_id__pipeline_start_post: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["StaffLoginRequest"];
+            path: {
+                application_id: string;
             };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChallengeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    verify_otp_api_v1_auth_staff_otp_verify_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OtpVerifyRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StaffUserOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    logout_api_v1_auth_staff_logout_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PipelineStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
-    get_me_api_v1_auth_staff_me_get: {
+    resume_pipeline_api_v1_applications__application_id__pipeline_resume_post: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
-            cookie?: {
-                cq_staff_session?: string | null;
+            path: {
+                application_id: string;
             };
+            cookie?: never;
         };
         requestBody?: never;
         responses: {
@@ -408,7 +785,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StaffUserOut"];
+                    "application/json": components["schemas"]["PipelineResumeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -422,16 +799,19 @@ export interface operations {
             };
         };
     };
-    signup_api_v1_auth_borrower_signup_post: {
+    patch_field_value_api_v1_applications__application_id__field_values__field_key__patch: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                application_id: string;
+                field_key: string;
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["BorrowerSignupRequest"];
+                "application/json": components["schemas"]["FieldValueOverrideRequest"];
             };
         };
         responses: {
@@ -441,7 +821,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChallengeResponse"];
+                    "application/json": components["schemas"]["FieldValueRead"];
                 };
             };
             /** @description Validation Error */
@@ -455,98 +835,15 @@ export interface operations {
             };
         };
     };
-    login_api_v1_auth_borrower_login_post: {
+    revert_field_value_route_api_v1_applications__application_id__field_values__field_key__revert_post: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                application_id: string;
+                field_key: string;
+            };
             cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BorrowerLoginRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChallengeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    verify_otp_api_v1_auth_borrower_otp_verify_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OtpVerifyRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BorrowerMeOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    logout_api_v1_auth_borrower_logout_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    get_me_api_v1_auth_borrower_me_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: {
-                cq_borrower_session?: string | null;
-            };
         };
         requestBody?: never;
         responses: {
@@ -556,7 +853,172 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BorrowerMeOut"];
+                    "application/json": components["schemas"]["FieldValueRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_quote_api_v1_quotes_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuotePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotePreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_scenario_api_v1_applications__application_id__scenarios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_products_api_v1_scenarios__scenario_id__products_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricedProductRow-Output"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_autoquote_api_v1_scenarios__scenario_id__autoquote_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoQuoteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_manual_quote_api_v1_scenarios__scenario_id__quotes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualQuoteCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRead"];
                 };
             };
             /** @description Validation Error */

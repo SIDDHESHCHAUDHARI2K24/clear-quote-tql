@@ -39,36 +39,37 @@ services:
       timeout: 5s
       retries: 10
 
+  # `minio/minio` (Docker Hub and quay.io) is gone -- MinIO went
+  # source-only distribution (removals started ~Oct 2025); see CQ-006
+  # post-dev.md's "CI clean-up pass" (plan.md Decision #17). CI already
+  # runs `bitnamilegacy/minio` as its `services:` container -- pinned here
+  # to the exact same tag so local and CI never diverge (CQ-003 fix,
+  # follow-up to CQ-006 Decision #17). `MINIO_DEFAULT_BUCKETS` creates both
+  # buckets the app/seed use at container start, so the old `minio-init`
+  # one-shot service (and `minio/mc:latest`, also unpullable) is gone too.
   minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
+    image: bitnamilegacy/minio:2025.5.24-debian-12-r5
     environment:
       MINIO_ROOT_USER: cq-minio
       MINIO_ROOT_PASSWORD: cq-minio-secret
+      MINIO_DEFAULT_BUCKETS: "clear-quote,clearquote-demo-docs"
     ports:
       - "9010:9000"
       - "9011:9001"
     volumes:
-      - minio_data:/data
+      # New volume name, not the old `minio_data`: that volume's root dir is
+      # owned by root (written by the old `minio/minio` image, which ran as
+      # root); Bitnami's `minio` image runs as a non-root user and gets
+      # "Permission denied" writing into it. Object data doesn't carry over
+      # either way (CQ-003 fix, orchestrator-acknowledged) -- `minio_data`
+      # is left in place, unused, for later manual cleanup.
+      - minio_bitnami_data:/bitnami/minio/data
     healthcheck:
       # Container-internal port (9000), not the remapped host port (9010).
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 5s
       timeout: 5s
       retries: 10
-
-  minio-init:
-    image: minio/mc:latest
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set local http://minio:9000 cq-minio cq-minio-secret &&
-      mc mb --ignore-existing local/clear-quote &&
-      echo 'bucket clear-quote ready'
-      "
-    restart: "no"
 
   mailpit:
     image: axllent/mailpit:latest
@@ -100,16 +101,13 @@ services:
     depends_on:
       temporal:
         condition: service_started
-      # `docker compose up --wait` only recognizes a one-shot, exit(0)
-      # container (minio-init) as reaching its expected terminal state when
-      # some other service declares this exact depends_on condition on it;
-      # otherwise --wait treats any non-running container as a failure
-      # regardless of exit code (verified empirically against this Docker
-      # Compose version). temporal-ui has no functional need for the
-      # bucket; this edge exists purely so `make up` succeeds.
-      minio-init:
-        condition: service_completed_successfully
 
 volumes:
   postgres_data:
+  # Orphaned (no longer referenced by any service): held the old
+  # `minio/minio`-image data, owned by root, incompatible with the
+  # Bitnami image's non-root user. Left in place, not removed, per the
+  # orchestrator's brief -- clean up manually later with
+  # `docker volume rm clear-quote_minio_data` once confirmed unneeded.
   minio_data:
+  minio_bitnami_data:

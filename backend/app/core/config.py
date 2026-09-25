@@ -59,10 +59,31 @@ class Settings(BaseSettings):
     login_rate_limit_per_ip: int = 20
     login_rate_limit_window_seconds: int = 900
 
-    # Local/dev-only demo passwords consumed by `scripts/seed_dev_users.py`
-    # (CQ-014) and CQ-015's borrower equivalent. Unset in prod-like envs.
-    demo_staff_password: str | None = None
-    demo_borrower_password: str | None = None
+    # CQ-009: shared mock-adapter latency simulation. `integration_latency_enabled`
+    # reads `INTEGRATION_LATENCY_ENABLED` (pydantic-settings' default env-var
+    # name for this field); `backend/conftest.py` sets it to "false" for the
+    # whole pytest session so tests stay fast, except `integrations/common/
+    # tests/test_latency.py`'s enabled-path test, which flips it back via
+    # `get_settings()` monkeypatching for that one test.
+    integration_latency_min_ms: int = 200
+    integration_latency_max_ms: int = 1200
+    integration_latency_enabled: bool = True
+
+    # CQ-013: fixed dev LO id `deps.get_current_lo_stub()` returns until
+    # CQ-014 replaces it with real staff auth. Unset -> every pricing route
+    # raises `AuthenticationError` (401).
+    dev_lo_id: str | None = None
+
+    # CQ-010 (review round 1, finding #3): shared demo password
+    # `seed/loader.py::seed_users` bcrypt-hashes for the seeded staff users.
+    # No default -- deliberately never committed as a literal anywhere in
+    # the repo. `make demo-reset` fails fast with a clear message if unset.
+    seed_staff_password: str | None = None
+
+    # Optional shared password `make demo-reset` gives every persona client's
+    # borrower account. Unset -> no borrower accounts are seeded. Never
+    # committed as a literal anywhere in the repo.
+    seed_borrower_password: str | None = None
 
     @field_validator("cors_origins", mode="before")
     @classmethod
