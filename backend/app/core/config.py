@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     temporal_namespace: str
     temporal_task_queue: str
 
+    # CQ-020: the borrower portal's public origin; the send workflow builds
+    # the emailed report link `{portal_base_url}/report/{token}` from it (H2:
+    # no magic link). CQ-028a also links the hard-pull consent request to
+    # `{portal_base_url}/tasks/credit-check/{id}`. `scripts/worktree-env.sh`
+    # writes each slot's port.
+    portal_base_url: str = "http://localhost:3020"
+
     cors_origins: Annotated[list[str], NoDecode] = []
 
     # CQ-014: staff/borrower session and OTP tuning. Defaults match the
@@ -89,9 +96,6 @@ class Settings(BaseSettings):
     stale_check_interval_seconds: int = 3600
     clock_now: str | None = None
 
-    # CQ-028a: borrower-portal base URL for links in emails (the hard-pull
-    # consent request links to `{portal_base_url}/tasks/credit-check/{id}`).
-    portal_base_url: str = "http://localhost:3020"
     # CQ-034 (plan.md Decision #2): base URL of the LO console, used to
     # build the `/applications/{id}` deep link in the support-inbox email.
     # No such setting existed before this item; local dev's LO console runs
