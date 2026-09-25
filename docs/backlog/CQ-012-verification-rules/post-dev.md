@@ -44,8 +44,8 @@ clean on `backend/`.
 | Ruff | `uv run ruff check backend` | All checks passed |
 | Ruff format | `uv run ruff format --check backend` | 118 files already formatted |
 | Mypy | `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` | Success: no issues found in 118 source files |
-| `make lint` (backend portion) | `make lint` | Backend (ruff/ruff format/mypy) all clean. The `pnpm -r run lint` step fails in this worktree with `eslint: command not found` / `node_modules missing` — pre-existing local environment state (no `pnpm install` has been run in this worktree; this item touches no frontend file). Not this item's regression. |
-| CI | `gh run watch` on push | See below |
+| `make lint` (backend portion) | `make lint` | Backend (ruff/ruff format/mypy) all clean. The `pnpm -r run lint` step fails in this worktree with `eslint: command not found` / `node_modules missing` — pre-existing local environment state (no `pnpm install` has been run in this worktree; this item touches no frontend file). CI (which does run `pnpm install --frozen-lockfile`) confirms the frontend job is unaffected — see below. |
+| CI | `git push -u origin cq-012-verification-rules`; `gh run list --repo SIDDHESHCHAUDHARI2K24/clear-quote-tql --branch cq-012-verification-rules`; `gh run watch 36101066349 --repo SIDDHESHCHAUDHARI2K24/clear-quote-tql --exit-status` | Commit `e751ff5` pushed to `origin/cq-012-verification-rules`. Run id **36101066349** (workflow `CI`) — both jobs green: `frontend` (pnpm install, lint, typecheck, prettier --check, test) passed in 27s; `backend` (ruff check, ruff format --check, mypy, pytest) passed in 45s. `gh run watch --exit-status` exited 0. |
 
 ## Review findings (stage 6)
 
