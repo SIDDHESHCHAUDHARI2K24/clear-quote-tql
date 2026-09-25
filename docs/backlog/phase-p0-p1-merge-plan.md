@@ -39,6 +39,7 @@ Fix forward on a new branch from `main`, review, and merge through a PR. A rever
 - CQ-013: scenarios snapshot `ConfigSnapshot()` defaults, not the `settings` table (no loader yet); HOA is always $0 until a source exists.
 - CQ-010/CQ-012: reserves-months choice treats NULL occupancy as investment implicitly (`verification/service.py`); make it explicit.
 - CQ-010: a plaintext demo staff password exists in old commits of the public `cq-010-seed-data` branch (`ea72560`, `a036651`); never reuse it as `SEED_STAFF_PASSWORD`.
+- CQ-011: `worker.py` duplicates `alembic/env.py`'s model import list with no drift check; `pipeline.enriched` is reused for three activities (coarse for the future timeline UI); pipeline endpoints have no auth until CQ-014.
 
 ## Verification record
 
