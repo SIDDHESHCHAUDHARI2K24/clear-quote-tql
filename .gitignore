@@ -22,3 +22,9 @@ dist/
 coverage/
 .worktrees/
 *.tsbuildinfo
+
+# Playwright (H3)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
