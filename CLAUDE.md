@@ -2,10 +2,8 @@
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+graphify-out/ holds a knowledge graph of the docs. Follow the Tool split in AGENTS.md: codegraph for code questions, graphify for docs/spec questions.
 
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- For docs questions, run `graphify query "<question>"`; use `graphify path "<A>" "<B>"` or `graphify explain "<concept>"` for relationships and concepts.
+- Read graphify-out/GRAPH_REPORT.md only for a broad architecture review.
+- After changing docs or code, run `graphify update .` to keep the graph current (AST-only, no API cost).
