@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 import uuid
 from collections.abc import Awaitable, Callable
 from decimal import Decimal
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import UserRole
 from app.features.applications.models import Application
+from app.features.applications.timeline.models import ActivityEvent
 from app.features.quotes.builder.models import Quote
 from app.features.quotes.builder.tests.test_router import _cards, _scenarios, _seed
 from app.features.quotes.send.models import QuotePackage
@@ -232,3 +234,156 @@ async def test_default_draft_and_builder_star_share_one_recommendation(
     assert after["recommended_quote_id"] == last
     assert after["quote_ids"][0] == last
     assert len(after["quote_ids"]) == 3
+
+
+# --- post-merge review round (minors) ---------------------------------------
+
+
+async def test_get_package_does_not_persist_recommendation_text(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """M2: a GET re-drafts the recommendation text for its own response
+    only. It used to `db.commit()` the fresh text without holding
+    `lock_application`, so a GET racing a PUT could overwrite the PUT's
+    newer text with a stale one; now the row is left untouched."""
+    ids = await _seed(db_session, "marcus_hale")
+    await make_staff_session(role=UserRole.MANAGER)
+    application_id = ids["marcus_hale"]
+    package = await _package(client, application_id)
+    package_id = uuid.UUID(package["id"])
+    stored_before = (
+        await db_session.execute(
+            select(QuotePackage.recommendation_text).where(QuotePackage.id == package_id)
+        )
+    ).scalar_one()
+
+    await db_session.execute(
+        update(Quote)
+        .where(Quote.id == uuid.UUID(package["recommended_quote_id"]))
+        .values(rate=Decimal("6.125"))
+    )
+    await db_session.commit()
+
+    again = await _package(client, application_id)
+    assert "at 6.125%" in again["recommendation_text"]  # the response is fresh
+
+    stored_after = (
+        await db_session.execute(
+            select(QuotePackage.recommendation_text).where(QuotePackage.id == package_id)
+        )
+    ).scalar_one()
+    assert stored_after == stored_before  # but the GET never wrote to the row
+
+
+async def test_delete_recommended_quote_keeps_app_and_draft_recommendation_in_step(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """M4: `_delete_quote_row` used to clear `applications.recommended_
+    quote_id` unconditionally while `drop_quote_from_drafts` moved the
+    draft's own recommendation to the quote left in its place -- the two
+    disagreed. The application must follow the draft's new pick."""
+    ids = await _seed(db_session, "marcus_hale")
+    await make_staff_session(role=UserRole.MANAGER)
+    application_id = ids["marcus_hale"]
+    package = await _package(client, application_id)
+    first = package["quote_ids"][0]
+    assert package["recommended_quote_id"] == first
+
+    response = await client.delete(f"/api/v1/quotes/{first}")
+    assert response.status_code == 204, response.text
+
+    after = await _package(client, application_id)
+    assert after["recommended_quote_id"] == after["quote_ids"][0]
+    application = await db_session.get(Application, application_id, populate_existing=True)
+    assert application is not None
+    assert str(application.recommended_quote_id) == after["recommended_quote_id"]
+
+
+async def test_delete_unrelated_quote_does_not_auto_assign_a_cleared_recommendation(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """M4: an LO who deliberately cleared the draft's recommendation keeps
+    none, even when an unrelated quote still in the draft is deleted."""
+    ids = await _seed(db_session, "marcus_hale")
+    await make_staff_session(role=UserRole.MANAGER)
+    application_id = ids["marcus_hale"]
+    package = await _package(client, application_id)
+    quote_ids = package["quote_ids"]
+
+    response = await client.put(
+        f"/api/v1/applications/{application_id}/package",
+        json={"quote_ids": quote_ids, "recommended_quote_id": None},
+    )
+    assert response.status_code == 200, response.text
+
+    response = await client.delete(f"/api/v1/quotes/{quote_ids[-1]}")
+    assert response.status_code == 204, response.text
+
+    after = await _package(client, application_id)
+    assert after["recommended_quote_id"] is None
+
+
+async def test_default_draft_logs_a_system_recommendation_event(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """M4: `new_default_package` sets `applications.recommended_quote_id`
+    from a GET with no user action behind it; log it like every other
+    `quote.recommended` event so the timeline explains where it came
+    from."""
+    ids = await _seed(db_session, "marcus_hale")
+    await make_staff_session(role=UserRole.MANAGER)
+    application_id = ids["marcus_hale"]
+    package = await _package(client, application_id)
+
+    events = (
+        (
+            await db_session.execute(
+                select(ActivityEvent).where(
+                    ActivityEvent.application_id == application_id,
+                    ActivityEvent.type == "quote.recommended",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(events) == 1
+    assert events[0].actor == "system"
+    payload = events[0].payload
+    assert isinstance(payload, dict)
+    assert payload["source"] == "default_draft"
+    assert payload["quote_id"] == package["recommended_quote_id"]
+
+
+async def test_get_or_create_package_reapplies_default_to_an_empty_unsent_draft(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """M5: the Send tab can be opened before any quote is priced, creating
+    an unsent draft with `quote_ids=[]`. Once quotes exist, the next GET
+    must apply the default instead of returning it empty forever."""
+    ids = await _seed(db_session, "marcus_hale")
+    application_id = ids["marcus_hale"]
+    await make_staff_session(role=UserRole.MANAGER)
+
+    db_session.add(
+        QuotePackage(
+            application_id=application_id,
+            quote_ids=[],
+            recommended_quote_id=None,
+            report_token=secrets.token_urlsafe(24),
+        )
+    )
+    await db_session.commit()
+
+    package = await _package(client, application_id)
+    assert package["quote_ids"] != []
+    assert package["recommended_quote_id"] == package["quote_ids"][0]
+
+    count = (
+        await db_session.execute(
+            select(func.count())
+            .select_from(QuotePackage)
+            .where(QuotePackage.application_id == application_id)
+        )
+    ).scalar_one()
+    assert count == 1  # reused the empty draft row instead of creating a second

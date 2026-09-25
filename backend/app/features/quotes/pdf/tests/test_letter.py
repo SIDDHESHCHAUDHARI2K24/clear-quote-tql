@@ -10,15 +10,18 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from httpx import AsyncClient
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import UserRole
 from app.features.applications.assets.models import Document
-from app.features.applications.models import Application
+from app.features.applications.models import Application, ApplicationParty, PartyRole
+from app.features.applications.verification.models import FieldValue
 from app.features.auth.models import User
 from app.features.quotes.builder.models import Quote
 from app.features.quotes.builder.tests.test_router import _seed
-from app.features.quotes.pdf.service import fico_bracket, verified_assets_display
+from app.features.quotes.pdf.service import _parse_fico, fico_bracket, verified_assets_display
+from app.features.quotes.send.router import LETTER_CSP
 from conftest import StaffSession
 
 MakeStaff = Callable[..., Awaitable[StaffSession]]
@@ -96,12 +99,12 @@ async def test_letter_tbd_variant(
     assert (lo.title or "Loan Officer") in block
     assert lo.phone and lo.phone[-4:] in block
 
-    # Checklist from the documents table; portal link placeholder until CQ-020.
+    # Checklist from the documents table: received documents only (catalog
+    # §10; code review M9) -- the unreceived bank statement is left off.
     checklist = re.search(r'data-testid="letter-checklist".*?</ul>', html, re.S)
     assert checklist
     items = [" ".join(i.split()) for i in re.findall(r"<li>(.*?)</li>", checklist.group(0), re.S)]
     assert items == [
-        "Bank statements — requested",
         "Pay stubs — received",
         "W-2s — received",
     ]
@@ -135,3 +138,99 @@ def test_fico_bracket_and_assets_display() -> None:
     assert verified_assets_display(Decimal("135000")) == "Verified Assets $135K+"
     assert verified_assets_display(Decimal("1200000")) == "Verified Assets $1,200K+"
     assert verified_assets_display(Decimal("0")) is None
+
+
+def test_parse_fico_is_defensive_about_malformed_jsonb() -> None:
+    """M7: `representative_fico`'s `FieldValue.value` is JSONB and could
+    hold anything; a bad value must not crash the letter."""
+    assert _parse_fico(725) == 725
+    assert _parse_fico(725.0) == 725
+    assert _parse_fico("725") == 725
+    assert _parse_fico(" 725 ") == 725
+    assert _parse_fico(None) is None
+    assert _parse_fico(True) is None
+    assert _parse_fico("unknown") is None
+    assert _parse_fico({"note": "pending"}) is None
+    assert _parse_fico([]) is None
+
+
+async def test_letter_omits_fico_bracket_for_malformed_field_value(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """M7: a non-numeric `representative_fico` value used to 500 the whole
+    letter (`int(fico_row)`); it must render with no bracket instead."""
+    ids = await _seed(db_session, "kathleen_mcreynolds")
+    await make_staff_session(role=UserRole.MANAGER)
+    await db_session.execute(
+        update(FieldValue)
+        .where(
+            FieldValue.application_id == ids["kathleen_mcreynolds"],
+            FieldValue.field_key == "representative_fico",
+        )
+        .values(value="unknown")
+    )
+    await db_session.commit()
+
+    html, _ = await _letter(client, ids["kathleen_mcreynolds"])
+    assert 'data-testid="letter-fico"' not in html
+
+
+async def test_letter_escapes_llc_name(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """M8: an LLC name is borrower-editable free text; it must render HTML
+    -escaped, never as raw markup."""
+    ids = await _seed(db_session, "sam_reed")
+    await db_session.execute(
+        update(ApplicationParty)
+        .where(
+            ApplicationParty.application_id == ids["sam_reed"],
+            ApplicationParty.role == PartyRole.BORROWER,
+        )
+        .values(llc_entity_name="<script>x</script> LLC")
+    )
+    await db_session.commit()
+    await make_staff_session(role=UserRole.MANAGER)
+
+    html, _ = await _letter(client, ids["sam_reed"])
+    assert "<script>x</script>" not in html
+    assert "&lt;script&gt;x&lt;/script&gt; LLC" in html
+
+
+async def test_letter_sends_csp_header(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """M8: `letter.html` must never run script, even opened directly."""
+    ids = await _seed(db_session, "marcus_hale")
+    await make_staff_session(role=UserRole.MANAGER)
+    package = (await client.get(f"/api/v1/applications/{ids['marcus_hale']}/package")).json()
+
+    response = await client.get(f"/api/v1/packages/{package['id']}/letter.html")
+    assert response.status_code == 200, response.text
+    assert response.headers["content-security-policy"] == LETTER_CSP
+
+
+async def test_letter_checklist_lists_received_documents_only(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """M9: catalog §10 -- the checklist is "documents received", not every
+    requested document."""
+    ids = await _seed(db_session, "kathleen_mcreynolds")
+    now = datetime.now(UTC)
+    for doc_type, received in (("pay_stub", now), ("bank_statement", None)):
+        db_session.add(
+            Document(
+                application_id=ids["kathleen_mcreynolds"],
+                doc_type=doc_type,
+                object_key=f"test/{doc_type}.pdf",
+                received_at=received,
+            )
+        )
+    await db_session.commit()
+    await make_staff_session(role=UserRole.MANAGER)
+
+    html, _ = await _letter(client, ids["kathleen_mcreynolds"])
+    checklist = re.search(r'data-testid="letter-checklist".*?</ul>', html, re.S)
+    assert checklist
+    items = [" ".join(i.split()) for i in re.findall(r"<li>(.*?)</li>", checklist.group(0), re.S)]
+    assert items == ["Pay stubs — received"]

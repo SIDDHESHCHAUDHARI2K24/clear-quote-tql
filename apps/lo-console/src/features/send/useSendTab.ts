@@ -16,6 +16,7 @@ import {
   type ReportViewModel,
   type SendPackage,
 } from "./api";
+import { editedPackageFields } from "./draft";
 
 export type SendLoad =
   | { kind: "loading" }
@@ -48,7 +49,18 @@ export function useSendTab(): UseSendTabResult {
   const [previews, setPreviews] = useState<Previews>(EMPTY_PREVIEWS);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const latestSave = useRef(0);
+  /** The last package the server actually confirmed (a save's response, or
+   * the initial load) -- every queued save's body starts here, not from
+   * whatever optimistic state happens to be on screen (M1, post-merge
+   * review). */
+  const latestConfirmed = useRef<SendPackage | null>(null);
+  /** Chains saves so the next PUT only fires once the previous one's
+   * response has landed (M1): two edits fired close together (e.g. a note
+   * blur and a checkbox click) must not both build a full-draft PUT from
+   * the same stale snapshot and race each other -- the second would win
+   * and silently undo the first. */
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  const pendingSaves = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -60,6 +72,7 @@ export function useSendTab(): UseSendTabResult {
         } else if (!scenarios.ok) {
           setLoad({ kind: "error", message: scenarios.problem.message });
         } else {
+          latestConfirmed.current = pkg.data;
           setLoad({ kind: "ready", pkg: pkg.data, scenarios: scenarios.data });
         }
       },
@@ -93,27 +106,55 @@ export function useSendTab(): UseSendTabResult {
     async (draft: PackageUpdate) => {
       if (load.kind !== "ready") return;
       const previous = load.pkg;
-      const request = ++latestSave.current;
-      setLoad({ ...load, pkg: { ...previous, ...draft } });
-      setSaving(true);
+      const edit = editedPackageFields(draft, previous);
+      if (Object.keys(edit).length === 0) return;
+
+      // Optimistic: layer just this edit onto whatever is on screen right
+      // now (a functional update, so an edit still queued ahead of this
+      // one isn't clobbered).
+      setLoad((current) =>
+        current.kind === "ready" ? { ...current, pkg: { ...current.pkg, ...edit } } : current,
+      );
       setSaveError(null);
-      let result: Awaited<ReturnType<typeof savePackage>>;
-      try {
-        result = await savePackage(applicationId, draft);
-      } finally {
-        if (request === latestSave.current) setSaving(false);
-      }
-      if (request !== latestSave.current) return;
-      if (!result.ok) {
-        setSaveError(result.message);
-        setLoad({ ...load, pkg: previous });
-        return;
-      }
-      setLoad({ ...load, pkg: result.data });
-      // The header's note rate follows the recommended quote (CQ-016).
-      if (result.data.recommended_quote_id !== previous.recommended_quote_id) {
-        void refetchWorkspace();
-      }
+      pendingSaves.current += 1;
+      setSaving(true);
+
+      const task = saveQueue.current.then(async () => {
+        // Built from the latest *confirmed* state, not `previous` (which
+        // can already be stale by the time this save's turn comes up), so
+        // a field this call isn't touching still carries whatever the
+        // previous queued save just landed (M1).
+        const base = latestConfirmed.current ?? previous;
+        const body: PackageUpdate = {
+          quote_ids: base.quote_ids,
+          recommended_quote_id: base.recommended_quote_id ?? null,
+          lo_note: base.lo_note ?? null,
+          ...edit,
+        };
+        const result = await savePackage(applicationId, body);
+        pendingSaves.current -= 1;
+        if (pendingSaves.current === 0) setSaving(false);
+        if (!result.ok) {
+          setSaveError(result.message);
+          const confirmed = latestConfirmed.current;
+          if (confirmed) {
+            setLoad((current) =>
+              current.kind === "ready" ? { ...current, pkg: confirmed } : current,
+            );
+          }
+          return;
+        }
+        latestConfirmed.current = result.data;
+        setLoad((current) =>
+          current.kind === "ready" ? { ...current, pkg: result.data } : current,
+        );
+        // The header's note rate follows the recommended quote (CQ-016).
+        if (result.data.recommended_quote_id !== base.recommended_quote_id) {
+          void refetchWorkspace();
+        }
+      });
+      saveQueue.current = task;
+      await task;
     },
     [applicationId, load, refetchWorkspace],
   );

@@ -151,6 +151,39 @@ describe("SendTab", () => {
     await waitFor(() => expect(putMock.mock.lastCall?.[1].body.lo_note).toBe("Call me first."));
   });
 
+  it("M1: a note-blur save and a checkbox save in quick succession end with the server state containing both", async () => {
+    serve();
+    let serverState: SendPackage = pkg;
+    let releaseFirstSave: (() => void) | null = null;
+    const gate = new Promise<void>((resolve) => {
+      releaseFirstSave = resolve;
+    });
+    putMock.mockImplementation(async (_path: string, { body }: { body: Partial<SendPackage> }) => {
+      if (serverState === pkg) await gate; // only the first PUT waits
+      serverState = { ...serverState, ...body, updated_at: new Date().toISOString() };
+      return ok(serverState);
+    });
+    render(<SendTab />);
+    const selected = await screen.findAllByTestId("selected-quote");
+
+    // Fire a note edit and then a checkbox removal without waiting for
+    // either PUT to land.
+    const note = screen.getByLabelText("Note to the borrower (optional)");
+    await userEvent.type(note, "Call me first.");
+    await userEvent.tab(); // blurs the note field: queues save #1 (gated)
+    await userEvent.click(within(selected[2]).getByRole("checkbox")); // queues save #2
+
+    // Save #2 must not fire until save #1's response has landed.
+    expect(putMock).toHaveBeenCalledTimes(1);
+    releaseFirstSave!();
+    await waitFor(() => expect(putMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(serverState.lo_note).toBe("Call me first."));
+    expect(serverState.quote_ids).toEqual([pkg.quote_ids[0], pkg.quote_ids[1]]);
+    await waitFor(() =>
+      expect(screen.getByTestId("save-status")).toHaveTextContent("All changes saved"),
+    );
+  });
+
   it("reorders with the keyboard-accessible move buttons", async () => {
     serve();
     putMock.mockImplementation((_path: string, { body }: { body: Partial<SendPackage> }) =>

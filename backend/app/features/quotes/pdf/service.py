@@ -122,6 +122,25 @@ def fico_bracket(score: int) -> str:
     return f"Below {_FICO_BANDS[-1]}"
 
 
+def _parse_fico(value: Any) -> int | None:
+    """`representative_fico`'s `FieldValue.value` is JSONB (`dict | list |
+    str | float | bool | None`); a malformed or non-numeric override used to
+    500 the letter via a bare `int(...)` (code review M7). Render no
+    bracket instead of failing the letter."""
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            return None
+    return None
+
+
 def verified_assets_display(threshold: Decimal) -> str | None:
     """catalog §3: `"Verified Assets $135K+"` from `verified_assets_floor`."""
     if threshold <= 0:
@@ -221,12 +240,14 @@ async def build_letter_context(
         .scalars()
         .all()
     )
+    # catalog §10: the checklist lists documents *received*, not
+    # outstanding requests (code review M9).
     seen: dict[str, ChecklistItem] = {}
     for doc in documents:
+        if doc.received_at is None:
+            continue
         label = _DOC_LABELS.get(doc.doc_type, doc.doc_type.replace("_", " ").capitalize())
-        status = "received" if doc.received_at is not None else "requested"
-        if seen.get(label, ChecklistItem(label, "requested")).status != "received":
-            seen[label] = ChecklistItem(label, status)
+        seen[label] = ChecklistItem(label, "received")
 
     is_primary = ctx.strategy is StrategyType.PRIMARY
     term_years = inputs.term_months // 12
@@ -253,7 +274,7 @@ async def build_letter_context(
         occupancy="Primary Residence" if is_primary else "Investment",
         property_type=_PROPERTY_TYPES.get(prop.property_type, "SFR") if prop else "SFR",
         property_address=_full_address(ctx),
-        fico_bracket=fico_bracket(int(fico_row)) if fico_row is not None else None,
+        fico_bracket=(fico_bracket(fico) if (fico := _parse_fico(fico_row)) is not None else None),
         verified_assets_display=verified_assets_display(verified_assets_floor(amounts)),
         verification_checklist=list(seen.values()),
         disclaimer_core=DISCLAIMER_CORE,
