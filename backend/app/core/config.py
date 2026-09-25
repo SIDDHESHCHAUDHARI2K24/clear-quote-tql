@@ -8,7 +8,7 @@ the codebase should instantiate `Settings()` directly (it would bypass the
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -20,6 +20,12 @@ class Settings(BaseSettings):
 
     database_url: str
     test_database_url: str
+
+    # CQ-007: Fernet key (`Fernet.generate_key()` format) for encrypting
+    # `application_parties.ssn_encrypted` at rest. Optional in the type
+    # because APP_ENV=test may not set one (see the validator below); every
+    # other environment must set it.
+    field_encryption_key: str | None = None
 
     valkey_url: str
 
@@ -51,6 +57,21 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+
+    @model_validator(mode="after")
+    def _require_field_encryption_key_outside_test(self) -> "Settings":
+        """AC4: fail fast at startup rather than at first SSN read/write.
+
+        `backend/conftest.py` sets `APP_ENV=test` for the whole pytest
+        session, so tests that don't care about encryption never need to
+        set a key; every other environment (local/CI/prod) must have one.
+        """
+        if self.app_env != "test" and not self.field_encryption_key:
+            raise ValueError(
+                "FIELD_ENCRYPTION_KEY must be set when APP_ENV is not 'test' "
+                "(generate one with `Fernet.generate_key()`)."
+            )
+        return self
 
 
 @lru_cache
