@@ -28,6 +28,11 @@ final for the whole test session:
   exercise encryption (`app/core/tests/test_encryption.py`) work the same
   whether or not a developer's local `.env` happens to define one — CI
   (CQ-006) isn't guaranteed to load `.env` at all.
+- `DEV_LO_ID` (CQ-013): same reasoning as `FIELD_ENCRYPTION_KEY` above —
+  every pricing route depends on `deps.get_current_lo_stub()`, which 401s
+  when this is unset (AC11's own point), so the *rest* of the suite (routes
+  that aren't specifically testing the unset-401 case) needs a real default
+  regardless of whether `.env`/the CI workflow happen to define one.
 """
 
 import os
@@ -41,6 +46,10 @@ os.environ.setdefault("FIELD_ENCRYPTION_KEY", Fernet.generate_key().decode())
 # CQ-009: keep the full suite fast; integrations/common/tests/test_latency.py
 # monkeypatches this back on for its one enabled-path test.
 os.environ.setdefault("INTEGRATION_LATENCY_ENABLED", "false")
+# CQ-013: fixed dev LO id `pricing.scenarios.deps.get_current_lo_stub()`
+# returns; `test_auth_stub.py`'s unset-DEV_LO_ID tests monkeypatch
+# `get_settings` directly rather than unsetting this env var.
+os.environ.setdefault("DEV_LO_ID", "00000000-0000-0000-0000-000000000001")
 
 import asyncio  # noqa: E402
 
