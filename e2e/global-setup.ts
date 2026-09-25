@@ -27,10 +27,19 @@ const AUTH_DIR = path.join(__dirname, ".auth");
 
 export const LUIS_ROMERO_STORAGE_STATE = path.join(AUTH_DIR, "luis-romero.json");
 export const GRACE_KIM_STORAGE_STATE = path.join(AUTH_DIR, "grace-kim.json");
+// CQ-023: Kathleen McReynolds is the one TBD persona (buy-box FL/[Davenport,
+// Orlando]) -- `report-matches.spec.ts` needs her signed in the same
+// once-per-suite way, after `backend/scripts/freeze_version.py
+// --persona kathleen_mcreynolds` has given her a real sent version.
+export const KATHLEEN_MCREYNOLDS_STORAGE_STATE = path.join(AUTH_DIR, "kathleen-mcreynolds.json");
 
 const PERSONAS: Array<{ email: string; storageStatePath: string }> = [
   { email: "luis.romero@clearquote-demo.test", storageStatePath: LUIS_ROMERO_STORAGE_STATE },
   { email: "grace.kim@clearquote-demo.test", storageStatePath: GRACE_KIM_STORAGE_STATE },
+  {
+    email: "kathleen.mcreynolds@clearquote-demo.test",
+    storageStatePath: KATHLEEN_MCREYNOLDS_STORAGE_STATE,
+  },
 ];
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
