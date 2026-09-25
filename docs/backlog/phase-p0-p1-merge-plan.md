@@ -53,4 +53,13 @@ CI clean-up pass merged (branch `cq-006-ci-cleanup`, review APPROVE). CI run 361
 
 ## Verification record
 
-Filled in at merge time.
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| G1 | Pass | Merge commits for cq-001 … cq-013 on `phase-p0-p1` |
+| G2 | Pass | Every item's `post-dev.md` has a fresh-reviewer verdict of APPROVE (several after a second round); no open critical/major |
+| G3 | Pass | CI clean-up pass merged; run 36119132631 green, no Node-20 annotations |
+| G4 | Pass after fixes | `phase-p0-p1-review.md`: stale api-client (fixed + drift guard), password in history (accepted by the human) |
+| G5 | Pass | Fresh clone of `1ff5dfb`: `make up`, `make lint`, `make test` (247 backend, 23 seed, 36 frontend), alembic up/check/down/up on scratch DB, `make api-client` no diff, `make demo-reset` 1.2 s with all 10 personas at expected status, `/health` 200. Setup gaps found and fixed on `p1-merge-prep` (README first run, `make worker` reads root `.env`) |
+| G6 | Pass | Push run 36121545973 and PR #1 run 36121551932 green on `4cf9c01` (backend, frontend, api-client-drift) |
+| G7 | Pass | `origin/main` is an ancestor of `phase-p0-p1` |
+| G8 | Pass after fix | No tracked `.env`/keys/tokens; burned demo password redacted from docs, `git grep ClearQuoteDemo HEAD` empty (history copy accepted by the human) |
