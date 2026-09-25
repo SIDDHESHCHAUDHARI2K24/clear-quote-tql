@@ -1,0 +1,22 @@
+node_modules
+.next
+dist
+coverage
+uv.lock
+pnpm-lock.yaml
+packages/api-client/src/schema.d.ts
+packages/api-client/openapi.json
+
+# Pre-existing docs/backlog content predates this item's Prettier setup and is
+# owned by other backlog items (AGENTS.md: "do not change docs/design/* or
+# another item's spec.md"); scoping Prettier to code/config keeps `make lint`
+# from failing on prose it isn't this item's place to reformat.
+docs/
+graphify-out/
+
+# Agent tooling config predates this item and isn't code this item owns.
+.claude/
+.codex/
+.mcp.json
+opencode.json
+AGENTS.md
