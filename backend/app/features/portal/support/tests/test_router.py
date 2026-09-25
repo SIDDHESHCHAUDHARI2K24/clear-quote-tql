@@ -14,10 +14,12 @@ from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.clients.models import Client
 from app.features.notifications.outbox.models import OutboxEmail
+from app.features.quotes.send.models import QuotePackageVersion
 from conftest import BorrowerSession
 
 MakeBorrowerSession = Callable[..., Awaitable[BorrowerSession]]
 MakeApplication = Callable[..., Awaitable[Application]]
+MakeSentVersion = Callable[..., Awaitable[QuotePackageVersion]]
 
 _VALID_BODY = {
     "topic": "quote",
@@ -234,3 +236,98 @@ async def test_support_stage_and_status_in_email(
     inbox_email = next(e for e in emails if e.to_email != client_row.email)
     assert "Application received" in inbox_email.html
     assert "needs_attention" in inbox_email.html
+
+
+async def test_support_stale_without_sent_version_is_in_review(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: MakeBorrowerSession,
+    make_application: MakeApplication,
+) -> None:
+    """Review round 1 finding: STALE with no `quote_package_versions` row
+    ever sent maps to `in_review` (CQ-031's `stage_and_label`), matching
+    the label the home tab shows -- not the "reviewing your numbers" vs.
+    "pre-approval" mismatch the old local `_STAGE_LABELS`/
+    `_STATUS_TO_STAGE_KEY` copy produced by checking `QuotePackage.sent_at`
+    (which runtime code never sets)."""
+    application = await make_application()
+    application.status = ApplicationStatus.STALE
+    await db_session.commit()
+    client_row = await _sign_in(db_session, make_borrower_session, application)
+
+    response = await client.post("/api/v1/portal/support", json=_VALID_BODY)
+    assert response.status_code == 200
+
+    emails = (
+        (
+            await db_session.execute(
+                select(OutboxEmail).where(OutboxEmail.application_id == application.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    inbox_email = next(e for e in emails if e.to_email != client_row.email)
+    assert "Your loan officer is reviewing your numbers" in inbox_email.html
+    assert "Your pre-approval is ready" not in inbox_email.html
+
+
+async def test_support_stale_with_sent_version_is_preapproved(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: MakeBorrowerSession,
+    make_application: MakeApplication,
+    make_sent_version: MakeSentVersion,
+) -> None:
+    """STALE with a `quote_package_versions` row (sent, regardless of
+    whether it was later superseded) maps to `preapproved`."""
+    application = await make_application()
+    await make_sent_version(application)
+    application.status = ApplicationStatus.STALE
+    await db_session.commit()
+    client_row = await _sign_in(db_session, make_borrower_session, application)
+
+    response = await client.post("/api/v1/portal/support", json=_VALID_BODY)
+    assert response.status_code == 200
+
+    emails = (
+        (
+            await db_session.execute(
+                select(OutboxEmail).where(OutboxEmail.application_id == application.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    inbox_email = next(e for e in emails if e.to_email != client_row.email)
+    assert "Your pre-approval is ready" in inbox_email.html
+
+
+async def test_support_option_selected_includes_lo_first_name(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: MakeBorrowerSession,
+    make_application: MakeApplication,
+) -> None:
+    """The old local copy's `option_selected` label was a bare "You chose
+    an option", dropping CQ-031's "-- {LO first name} will be in touch"
+    clause. `make_application`'s default LO is "Jordan Blake"."""
+    application = await make_application()
+    application.status = ApplicationStatus.OPTION_SELECTED
+    await db_session.commit()
+    client_row = await _sign_in(db_session, make_borrower_session, application)
+
+    response = await client.post("/api/v1/portal/support", json=_VALID_BODY)
+    assert response.status_code == 200
+
+    emails = (
+        (
+            await db_session.execute(
+                select(OutboxEmail).where(OutboxEmail.application_id == application.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    inbox_email = next(e for e in emails if e.to_email != client_row.email)
+    assert "You chose an option — Jordan will be in touch" in inbox_email.html

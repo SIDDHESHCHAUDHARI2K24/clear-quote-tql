@@ -40,6 +40,19 @@ Built `POST /api/v1/portal/support`: a borrower session posts `{topic, message, 
 | e2e typecheck | `npx tsc --noEmit` (root, covers `e2e/**`) | clean |
 | Prettier (e2e + touched files) | `npx prettier --check e2e/ apps/borrower-portal/src/features/support apps/borrower-portal/src/app/login` | clean |
 
+### Fix worker re-run (after merging `phase-p5-p6`, review round 1)
+
+| Check | Command | Result |
+| --- | --- | --- |
+| `backend/app/features/portal/support` | `uv run pytest backend/app/features/portal/support -q` | 16 passed (13 prior + 3 new: STALE without/with a sent version, option_selected LO first name) |
+| `backend/app/features/portal` (support + home together) | `uv run pytest backend/app/features/portal -q` | 70 passed |
+| `make api-client` | `make api-client` | regenerated `packages/api-client/openapi.json`/`src/schema.d.ts` after the merge conflict (CQ-031's `/api/v1/portal/me` types were missing until this ran) |
+| Full `make lint` | `make lint` | clean (ruff, ruff format, mypy, eslint × 4 workspaces, tsc × 4 workspaces, prettier) |
+| Full `make test` | `make test` | backend 566 passed, seed 32 passed, `pnpm -r run test` (api-client 2, ui 163, lo-console 90, borrower-portal 113) all passed |
+| Borrower-portal vitest (incl. `SupportForm.test.tsx`, `page.test.tsx`, `stub-pages.test.tsx`) | `pnpm --filter @cq/borrower-portal exec vitest run` | 113 passed, 21 files |
+| `make demo-reset` (slot 19) | `uv run alembic upgrade head && make demo-reset` | clean, 2.4s |
+| e2e re-run (slot 19, live API + portal + Mailpit/Postgres/Valkey, post-merge/post-fix) | `pnpm exec playwright test e2e/borrower-portal/support.spec.ts` with `LO_BASE_URL`/`PORTAL_BASE_URL`/`SEED_BORROWER_PASSWORD` exported | 2 passed (17.7s) — AC1/AC2/AC4 still hold after the `stage_and_label` switch |
+
 ## Review findings (stage 6)
 
 Fresh-subagent `code-review` skill run against the diff. Three findings; two fixed, one logged as an accepted, already-documented tradeoff.
@@ -49,6 +62,17 @@ Fresh-subagent `code-review` skill run against the diff. Three findings; two fix
 | High (security) | `portal/support/templates.py` interpolated borrower-/LO-supplied free text (`message`, `phone`, `borrower_name`, `lo_name`, `property_label`) unescaped into the HTML email sent to the real support inbox and the borrower — a stored-HTML/phishing-link vector (e.g. a message containing `<a href="http://evil.example">...</a>` renders as a live link in an HTML mail client) | Fixed: added `_esc()` (`html.escape(..., quote=True)`) and applied it to every plain-text row value and every heading/intro/footer string; the one legitimate `<a href=...>` (the LO console link, built from `lo_console_base_url` + a UUID) escapes its own URL and builds the anchor explicitly rather than going through a "trusted by default" path. New regression tests: `test_support_inbox_html_escapes_borrower_supplied_markup`, `test_confirmation_html_escapes_borrower_name` |
 | Low | The login page's "Need help signing in?" email was a bare hardcoded string with nothing keeping it in sync with the backend's `settings.support_inbox` if that's ever overridden | Fixed: reads `NEXT_PUBLIC_SUPPORT_EMAIL` (same pattern as `NEXT_PUBLIC_API_URL`), falling back to the same default; documented in both `.env.example` files with a "keep these in sync" note |
 | Info | `_STAGE_LABELS`/`_stage_key_for`/`_property_label` in `support/service.py` duplicate logic CQ-031 will own canonically, with no automated parity check until CQ-031 merges | Not fixed — this is the explicit, human-approved decision in `phase-p5-p6-plan.md` (parallel-wave item workers write small local helpers, log a follow-up, and the orchestrator reconciles post-merge); no CQ-031 module exists in this worktree to test parity against yet. Follow-up already logged in plan.md Decision #1 |
+
+## Review round 1
+
+Fresh-subagent `code-review` skill run against `cq-034-support-form` after merging `phase-p5-p6` (which brought CQ-031's `features/portal/home/` in). One major finding, fixed; one accepted follow-up logged (not a fix here — shared pattern across every `send_email` caller).
+
+| Severity | Finding | Resolution |
+| --- | --- | --- |
+| Major | `support/service.py`'s own `_STAGE_LABELS`/`_STATUS_TO_STAGE_KEY`/`_stage_key_for` (the CQ-031-merge follow-up from Decision #1 above) checked `QuotePackage.sent_at` for its STALE split, but runtime code never sets that column (CQ-031/CQ-020 stamp `sent_at` on `QuotePackageVersion`, not `QuotePackage`) — so a sent-then-stale application was always mislabelled `in_review` ("Your loan officer is reviewing your numbers") in the support email instead of `preapproved`. The `option_selected` label was also a bare "You chose an option", dropping CQ-031's "— {LO first name} will be in touch" clause. | Fixed: deleted the local `_STAGE_LABELS`/`_STATUS_TO_STAGE_KEY`/`_stage_key_for` and switched `submit_support_request` to CQ-031's canonical `stage_and_label`/`has_ever_sent` (`app.features.portal.home.service`). `_has_ever_sent` was module-private in `home/service.py`; promoted to `has_ever_sent` (public) with a one-line docstring noting the new caller — the only other change to that module. New tests: `test_support_stale_without_sent_version_is_in_review`, `test_support_stale_with_sent_version_is_preapproved`, `test_support_option_selected_includes_lo_first_name` |
+| Accepted (not fixed here) | `notifications/email/service.py::send_email` calls `smtp_send` (the real SMTP delivery) before the caller's `db.commit()` — `support/service.py`'s `submit_support_request` commits once, at the very end, after both the inbox and confirmation emails have already gone out over SMTP. A crash or exception between either `send_email` call and that final `db.commit()` rolls back the `SupportRequest`/`OutboxEmail`/`ActivityEvent` rows while the email has already been delivered: an "email sent, no record" gap. | Not fixed here — `send_email`'s own docstring already documents "does not commit, caller owns the transaction" as the contract, and every other `send_email` caller (OTP issue, CQ-020 send, CQ-024 actions) has the identical shape, so this is a shared pattern across the codebase, not specific to CQ-034. Logged as a follow-up below for whoever picks up hardening `notifications/email/service.py` (e.g. commit the outbox row in its own transaction before sending, or move the SMTP call after the caller's commit via an outbox-poller pattern) |
+
+Deviations table update: the row "Local `_stage_key_for`/`_STAGE_LABELS` in `support/service.py` duplicate CQ-031's status→stage table" above is resolved as of this round — both were deleted and `submit_support_request` now calls CQ-031's `stage_and_label`/`has_ever_sent` directly.
 
 ## How to test manually
 
@@ -62,6 +86,7 @@ Fresh-subagent `code-review` skill run against the diff. Three findings; two fix
 
 ## Follow-ups
 
-- Once CQ-031 (`features/portal/home/`) merges into `phase-p5-p6`, switch `support/service.py`'s `_stage_key_for`/`_STAGE_LABELS` to its canonical stage-mapping function and delete the local copy (plan.md Decision #1).
+- ~~Once CQ-031 (`features/portal/home/`) merges into `phase-p5-p6`, switch `support/service.py`'s `_stage_key_for`/`_STAGE_LABELS` to its canonical stage-mapping function and delete the local copy (plan.md Decision #1).~~ Done in review round 1 above (CQ-034 fix worker, PR #19): `support/service.py` now calls `home/service.py`'s `stage_and_label`/`has_ever_sent` directly; the local copy is deleted.
+- **New (review round 1, accepted, not fixed here)**: `notifications/email/service.py::send_email` sends over SMTP before the caller's `db.commit()`. Every caller (OTP issue, CQ-020 send, CQ-024 actions, this item's inbox/confirmation emails) shares the same "email sent, no record" gap if the process dies between the send and the commit. Worth a dedicated hardening item on `notifications/email/`, not a per-caller fix.
 - The shared Postgres container under concurrent load from sibling wave-2 workers intermittently produces `InterfaceError`/rollback failures across the whole backend suite (not specific to this item — reproduced on unrelated `backend/tests/*` and `backend/app/workflows/tests/*` files); a clean re-run always passes. Worth a note to the orchestrator if other workers hit the same flakiness.
 - `apps/lo-console/.env.example` doesn't exist (only `apps/borrower-portal/.env.example` does), so the `LO_CONSOLE_BASE_URL`/`NEXT_PUBLIC_SUPPORT_EMAIL` sync note only lives in the borrower-portal one and the repo-root one; fine for now since neither app reads the other's env file, just noting it in case a later item adds one.

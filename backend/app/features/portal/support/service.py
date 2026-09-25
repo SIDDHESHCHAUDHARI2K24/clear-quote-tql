@@ -12,13 +12,12 @@ import secrets
 import uuid
 
 from redis.asyncio import Redis
-from sqlalchemy import exists, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.clock import now
 from app.core.config import get_settings
-from app.core.enums import ApplicationStatus
 from app.core.errors import RateLimitedError
 from app.features.applications.models import Application
 from app.features.applications.property.models import Property, PropertyAddressStatus
@@ -27,7 +26,7 @@ from app.features.auth.models import BorrowerAccount, User
 from app.features.auth.otp.rate_limit import hit
 from app.features.clients.models import Client
 from app.features.notifications.email.service import send_email
-from app.features.quotes.send.models import QuotePackage
+from app.features.portal.home.service import has_ever_sent, stage_and_label
 
 from . import templates
 from .models import SupportRequest
@@ -48,50 +47,6 @@ _RATE_LIMIT_WINDOW_SECONDS = 3600
 # many attempts. Try again later."); no edit to the shared
 # `otp/rate_limit.py` needed (plan.md Decision #5).
 _RATE_LIMIT_MESSAGE = "Please try again later"
-
-# CQ-031's status -> stage table (spec.md), duplicated here because
-# `features/portal/home/` (CQ-031) hasn't merged into `phase-p5-p6` yet.
-# Follow-up (plan.md Decision #1): switch this call site to CQ-031's
-# canonical function once it lands, and delete this copy.
-_STAGE_LABELS: dict[str, str] = {
-    "applied": "Application received",
-    "in_review": "Your loan officer is reviewing your numbers",
-    "preapproved": "Your pre-approval is ready",
-    "option_selected": "You chose an option",
-    "closed": "This application is closed",
-}
-
-_STATUS_TO_STAGE_KEY: dict[ApplicationStatus, str] = {
-    ApplicationStatus.INTAKE: "applied",
-    ApplicationStatus.VERIFYING: "applied",
-    ApplicationStatus.NEEDS_ATTENTION: "applied",
-    ApplicationStatus.READY_TO_PRICE: "applied",
-    ApplicationStatus.PRICED: "in_review",
-    # STALE splits on whether the application was ever sent -- resolved
-    # by the caller (see `_stage_key_for`) since it needs a DB query.
-    ApplicationStatus.SENT: "preapproved",
-    ApplicationStatus.VIEWED: "preapproved",
-    ApplicationStatus.INQUIRY: "preapproved",
-    ApplicationStatus.OPTION_SELECTED: "option_selected",
-    ApplicationStatus.WITHDRAWN: "closed",
-    ApplicationStatus.CLOSED: "closed",
-}
-
-
-async def _stage_key_for(db: AsyncSession, application: Application) -> str:
-    if application.status is not ApplicationStatus.STALE:
-        return _STATUS_TO_STAGE_KEY[application.status]
-    ever_sent = (
-        await db.execute(
-            select(
-                exists().where(
-                    QuotePackage.application_id == application.id,
-                    QuotePackage.sent_at.isnot(None),
-                )
-            )
-        )
-    ).scalar_one()
-    return "preapproved" if ever_sent else "in_review"
 
 
 def _generate_reference() -> str:
@@ -183,8 +138,10 @@ async def submit_support_request(
     property_label: str | None = None
     lo_console_url: str | None = None
     if application is not None:
-        stage_key = await _stage_key_for(db, application)
-        stage_label = _STAGE_LABELS[stage_key]
+        ever_sent = await has_ever_sent(db, application_id=application.id)
+        _, stage_label = stage_and_label(
+            application.status, has_ever_sent=ever_sent, lo_first_name=lo.full_name.split()[0]
+        )
         property_row = (
             await db.execute(select(Property).where(Property.application_id == application.id))
         ).scalar_one_or_none()
