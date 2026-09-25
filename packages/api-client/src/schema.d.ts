@@ -400,6 +400,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/applications/{application_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Activity */
+        get: operations["get_activity_api_v1_applications__application_id__activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Outbox Emails */
+        get: operations["list_outbox_emails_api_v1_outbox_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outbox/{email_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Outbox Email */
+        get: operations["get_outbox_email_api_v1_outbox__email_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outbox/{email_id}/attachments/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Attachment */
+        get: operations["download_attachment_api_v1_outbox__email_id__attachments__key__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Integrations */
+        get: operations["get_integrations_api_v1_admin_integrations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integrations/{adapter}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Integration */
+        put: operations["put_integration_api_v1_admin_integrations__adapter__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings Page */
+        get: operations["get_settings_page_api_v1_admin_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -421,6 +540,53 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivityActor */
+        ActivityActor: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "system" | "staff" | "borrower";
+            /** Name */
+            name: string;
+        };
+        /** ActivityEventOut */
+        ActivityEventOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            actor: components["schemas"]["ActivityActor"];
+            /** Type */
+            type: string;
+            /** Message */
+            message: string;
+            /** Payload Summary */
+            payload_summary: string | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+        };
+        /** AdapterStatus */
+        AdapterStatus: {
+            /** Adapter */
+            adapter: string;
+            /** Provider */
+            provider: string;
+            /** Last Call At */
+            last_call_at: string | null;
+            /** Last Latency Ms */
+            last_latency_ms: number | null;
+            /** Last Result */
+            last_result: string;
+            /** Calls Last Hour */
+            calls_last_hour: number;
+            /** Force Failure */
+            force_failure: boolean;
+        };
         /**
          * ApplicationStatus
          * @description Mirrors the application status machine in `system-design.md`,
@@ -470,6 +636,13 @@ export interface components {
          * @enum {string}
          */
         ApplicationTab: "borrowers" | "housing" | "credit" | "assets" | "property" | "pricing" | "send";
+        /** AttachmentOut */
+        AttachmentOut: {
+            /** Key */
+            key: string;
+            /** Filename */
+            filename: string;
+        };
         /** AutoQuoteResponse */
         AutoQuoteResponse: {
             par: components["schemas"]["QuoteRead"];
@@ -781,6 +954,11 @@ export interface components {
          */
         DSCRBucket: "BELOW_1_00" | "ONE_TO_1_25" | "GE_1_25";
         /**
+         * EmailStatus
+         * @enum {string}
+         */
+        EmailStatus: "queued" | "sent" | "failed";
+        /**
          * FieldSource
          * @description Drives the source badge + "revert to source" UI on `field_values`.
          * @enum {string}
@@ -821,6 +999,11 @@ export interface components {
             /** Overridden At */
             overridden_at: string | null;
         };
+        /** ForceFailureRequest */
+        ForceFailureRequest: {
+            /** Force Failure */
+            force_failure: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -852,6 +1035,11 @@ export interface components {
             year1_tax_savings: string | null;
             /** Year1 Tax Savings Monthly */
             year1_tax_savings_monthly: string | null;
+        };
+        /** IntegrationsResponse */
+        IntegrationsResponse: {
+            /** Adapters */
+            adapters: components["schemas"]["AdapterStatus"][];
         };
         /** LatestApplicationOut */
         LatestApplicationOut: {
@@ -926,6 +1114,84 @@ export interface components {
             challenge_id: string;
             /** Code */
             code: string;
+        };
+        /** OutboxEmailDetail */
+        OutboxEmailDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** To Email */
+            to_email: string;
+            /** Subject */
+            subject: string;
+            /** Type */
+            type: string;
+            status: components["schemas"]["EmailStatus"];
+            /** Application Id */
+            application_id: string | null;
+            /** Client Name */
+            client_name: string | null;
+            /** Sent At */
+            sent_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Html */
+            html: string;
+            /** Attachments */
+            attachments: components["schemas"]["AttachmentOut"][];
+        };
+        /** OutboxEmailRow */
+        OutboxEmailRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** To Email */
+            to_email: string;
+            /** Subject */
+            subject: string;
+            /** Type */
+            type: string;
+            status: components["schemas"]["EmailStatus"];
+            /** Application Id */
+            application_id: string | null;
+            /** Client Name */
+            client_name: string | null;
+            /** Sent At */
+            sent_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** Page[ActivityEventOut] */
+        Page_ActivityEventOut_: {
+            /** Items */
+            items: components["schemas"]["ActivityEventOut"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /** Page[OutboxEmailRow] */
+        Page_OutboxEmailRow_: {
+            /** Items */
+            items: components["schemas"]["OutboxEmailRow"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
         };
         /** PipelineResumeResponse */
         PipelineResumeResponse: {
@@ -1355,6 +1621,25 @@ export interface components {
             dscr_bucket: string | null;
             /** Quotes */
             quotes: components["schemas"]["QuoteRead"][];
+        };
+        /** SettingValue */
+        SettingValue: {
+            /** Key */
+            key: string;
+            /** Value */
+            value: unknown;
+            /** Description */
+            description: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "settings_table" | "code_default";
+        };
+        /** SettingsResponse */
+        SettingsResponse: {
+            /** Settings */
+            settings: components["schemas"]["SettingValue"][];
         };
         /** StaffLoginRequest */
         StaffLoginRequest: {
@@ -2199,6 +2484,245 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortalReportActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_activity_api_v1_applications__application_id__activity_get: {
+        parameters: {
+            query?: {
+                page?: number | null;
+                page_size?: number | null;
+            };
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ActivityEventOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_outbox_emails_api_v1_outbox_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                type?: string | null;
+                application_id?: string | null;
+                page?: number | null;
+                page_size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_OutboxEmailRow_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_outbox_email_api_v1_outbox__email_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                email_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutboxEmailDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_attachment_api_v1_outbox__email_id__attachments__key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                email_id: string;
+                key: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_integrations_api_v1_admin_integrations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_integration_api_v1_admin_integrations__adapter__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                adapter: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForceFailureRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdapterStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_page_api_v1_admin_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsResponse"];
                 };
             };
             /** @description Validation Error */

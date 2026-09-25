@@ -40,7 +40,10 @@ test("an admin sees Integrations and Settings in the user menu", async ({ page }
   await page.getByRole("link", { name: "Integrations" }).click();
   await expect(page).toHaveURL(/\/admin\/integrations$/);
   await expect(page.getByRole("heading", { level: 1, name: "Integrations" })).toBeVisible();
-  await expect(page.getByText("Built in CQ-029")).toBeVisible();
+  // CQ-029 built the real panel (was a stub when this spec was written):
+  // a status row per adapter, e.g. "pricing" / "Optimal Blue".
+  await expect(page.getByText("pricing")).toBeVisible();
+  await expect(page.getByText("Optimal Blue")).toBeVisible();
 });
 
 test("an LO has no admin entries and is refused /admin pages", async ({ page }) => {
@@ -65,7 +68,6 @@ test("the nav links go to the stub pages", async ({ page }) => {
   for (const [label, path, item] of [
     ["Clients", "/clients", "CQ-026"],
     ["Applications", "/applications", "CQ-027"],
-    ["Outbox", "/outbox", "CQ-029"],
     ["Dashboard", "/", "CQ-025"],
   ] as const) {
     await nav.getByRole("link", { name: label }).click();
@@ -75,6 +77,13 @@ test("the nav links go to the stub pages", async ({ page }) => {
     await expect(nav.getByRole("link", { name: label })).toHaveAttribute("aria-current", "page");
   }
   await page.screenshot({ path: `${EVIDENCE}/lo-dashboard-stub.png` });
+
+  // CQ-029 built the real Outbox page (was a stub when this spec was
+  // written) -- still reachable from the nav, no longer "Built in CQ-029".
+  await nav.getByRole("link", { name: "Outbox" }).click();
+  await page.waitForURL("/outbox");
+  await expect(page.getByRole("heading", { level: 1, name: "Outbox" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Outbox" })).toHaveAttribute("aria-current", "page");
 });
 
 test("sign out returns to the login page", async ({ page }) => {

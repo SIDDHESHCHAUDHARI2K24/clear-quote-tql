@@ -24,6 +24,10 @@ FEATURE_ROUTERS: list[str] = [
     "app.features.auth.borrower.router",
     "app.features.portal.reports.router",
     "app.features.portal.actions.router",
+    "app.features.applications.timeline.router",
+    "app.features.notifications.outbox.router",
+    "app.features.admin.integrations.router",
+    "app.features.admin.settings.router",
 ]
 
 
