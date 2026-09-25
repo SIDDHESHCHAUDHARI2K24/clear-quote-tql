@@ -16,7 +16,7 @@ from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import scope_applications
-from app.core.errors import NotFoundError, ValidationAppError
+from app.core.errors import ConflictError, NotFoundError, ValidationAppError
 from app.features.applications.locks import lock_application
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
@@ -30,7 +30,7 @@ from app.features.quotes.send.default_draft import (
     default_package_selection,
     draft_recommendation_text,
 )
-from app.features.quotes.send.models import QuotePackage
+from app.features.quotes.send.models import IN_FLIGHT_SEND_STATUSES, QuotePackage
 from app.features.quotes.send.readiness import package_blockers
 from app.features.quotes.send.schemas import (
     PackageRead,
@@ -325,6 +325,18 @@ async def update_package(
     package = await _newest_package(db, application.id)
     if package is None:
         package = await new_default_package(db, application)
+    if package.send_status in IN_FLIGHT_SEND_STATUSES:
+        raise ConflictError(
+            "This package is being sent. Try again once the send finishes.",
+            code="SEND_IN_PROGRESS",
+        )
+    if package.sent_at is not None:
+        # CQ-020 M3 (plan.md Decision 2): editing a sent package reopens it
+        # as the working draft. What was sent stays frozen on its
+        # `quote_package_versions` row (snapshot, PDF, token, outbox link),
+        # which nothing here touches; `sent_at` on the package means "the
+        # current content is the newest sent version", so it clears.
+        package.sent_at = None
 
     if recommended != package.recommended_quote_id or package.recommendation_text is None:
         package.recommendation_text = await recommendation_text_for(db, application, recommended)
