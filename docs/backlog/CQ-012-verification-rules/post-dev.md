@@ -117,6 +117,40 @@ All 6 findings addressed; orchestrator decisions and implementation in plan.md d
 3. `uv run pytest backend/app/features/applications/verification -v` — exercises all 17 new tests, including the two persona tests (Ben Ford / Aisha Coleman) against the real (test) database via `alembic upgrade head`.
 4. `uv run pytest backend -q` — full backend suite, confirms no regressions.
 
+## Round 2
+
+Re-reviewed by a fresh subagent (different pass than round 1) against commits `8bd76b3` (fix) and `da98416` (CI record) on top of `92762a4`.
+
+### Commands re-run
+
+| Command | Result |
+| --- | --- |
+| `uv run pytest backend/app/features/applications/verification -v` | 31 passed |
+| `uv run pytest backend -q` | 116 passed, 1 pre-existing warning |
+| `uv run ruff check backend` | All checks passed |
+| `uv run ruff format --check backend` | 118 files already formatted |
+| `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` | Success: no issues found in 118 source files |
+| `gh run view 36102774618 --log` | CI green; log shows the verification test files collected and run; `116 passed, 1 warning in 13.25s` |
+| `gh run view 36102875189` | CI green (both jobs) |
+| `git merge-tree --write-tree phase-p0-p1 HEAD` | Clean (single tree hash, no conflict markers) — `phase-p0-p1` now has CQ-009 merged in (`c194e32`); still merges cleanly |
+
+### Finding-by-finding verification
+
+| # | Round-1 severity | Verified fix | Status |
+| --- | --- | --- | --- |
+| 1 | major | `run_and_persist` no longer constructs any `ActivityEvent` (confirmed by reading `service.py` — the `ActivityEvent` import and both `db.add(ActivityEvent(...))` calls are gone) and returns `VerificationRunResult` instead of `list[RuleResult]`. `test_run_and_persist_writes_no_activity_events` asserts zero rows even when a flag is also raised in the same run. CQ-011's per-stage `activity_events` contract (AC5) is now satisfiable: nothing in this module writes to that table, so CQ-011's activity is free to log exactly one row per stage from `VerificationRunResult`. `spec.md` and `plan.md` (decision #11) updated consistently; `handoff.md` correctly tells CQ-011 it owns this. | Resolved |
+| 2 | minor | `service.resolve_flag` added; `run_and_persist` calls it for every non-auto-fixed, non-`info` result that passed, alongside `write_flag` for ones that still fail — read and confirmed in `service.py`. `test_run_and_persist_resolves_flag_once_rule_passes` proves raise → LO fixes data → resolve reuses the same `Flag.id` (not a new row) and sets `resolved_at`; `test_run_and_persist_leaves_flag_open_when_still_failing` proves an unchanged failure isn't touched across two runs. `handoff.md` now has a real Handoff 1 entry (previously just the blank template) that additionally flags a genuine follow-up gap: CQ-013's pricing-stage path only ever calls `write_flag`, never `resolve_flag` symmetrically — noted correctly as CQ-013's problem to pick up, not re-opened here. | Resolved |
+| 3 | minor | `ssn_format`/`dob_format` (`rules.py`) now iterate `context.parties` and emit one result per `BORROWER`/`CO_BORROWER` party present, with distinct `field_key`s (`co_borrower_ssn`/`co_borrower_dob` added to `_SSN_FIELD_KEY`/`_DOB_FIELD_KEY`). Pure test (`test_ssn_dob_format_validates_co_borrower_with_distinct_field_keys`) and DB-backed test with a Tom & Lisa Brandt-shaped fixture (`test_ssn_dob_validate_co_borrower_with_distinct_field_keys`) both pass and correctly assert the primary's fields are absent from `flags_raised` while the co-borrower's are present. | Resolved |
+| 4 | minor | `test_latest_scenario_snapshot_reads_quote_computed` inserts a real `Scenario`+`Quote` row with a `computed` JSON blob and asserts the Decimal mapping; `test_run_and_persist_evaluates_pricing_rules_against_real_quote` proves `assets_vs_ctc_reserves`/`dti_primary` actually evaluate (not skip) once a priced `Quote` exists, through the full `run_and_persist` path. | Resolved |
+| 5 | minor | Boundary tests added for all three inequality rules, matching the code's actual `>=`/`<=` semantics: 24 vs. 23 months, `assets_total` exactly equal to `required` vs. one cent short, DTI exactly `0.45` vs. just over. All pass. | Resolved |
+| 6 | minor | `test_run_and_persist_flags_malformed_ssn_via_db_decrypt_roundtrip` builds a real `ApplicationParty` with `ssn_encrypted="12345678"`, calls `db.refresh(party)` to force `EncryptedString.process_result_value`, then asserts `run_and_persist` raises the `blocking` flag with `field_key == "borrower_ssn"`. This is a genuine round trip through the encrypted column, not a hand-built `PartySnapshot`. | Resolved |
+
+### New findings
+
+None. No new correctness, contract or security issues found in the diff (`92762a4..da98416`). `Decimal`-only money handling is unchanged and still correct; no re-implemented CTC/PITIA math. `write_flag`/`resolve_flag`/`run_and_persist` signatures still match CQ-011/CQ-013's documented usage (only `run_and_persist`'s return type changed, which is the intended, orchestrator-authorised fix for finding 1, and is anticipated by CQ-011 spec.md's own note that a differing CQ-012 signature at start-of-CQ-011 should be reconciled via a `Decision:`, not treated as a blocker here).
+
+**Verdict: APPROVE.** No critical or major findings open.
+
 ## Follow-ups
 
 Recorded for real in `handoff.md` (Handoff 1), not just here:
