@@ -3139,6 +3139,36 @@
           "is_buydown_rate": {
             "type": "boolean",
             "title": "Is Buydown Rate"
+          },
+          "monthly_pi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Pi"
+          },
+          "points_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points Pct"
           }
         },
         "type": "object",
@@ -3196,6 +3226,30 @@
           "is_buydown_rate": {
             "type": "boolean",
             "title": "Is Buydown Rate"
+          },
+          "monthly_pi": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Pi"
+          },
+          "points_pct": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points Pct"
           }
         },
         "type": "object",
@@ -3432,6 +3486,14 @@
             "type": "string",
             "title": "Points Amount"
           },
+          "note_rate": {
+            "type": "string",
+            "title": "Note Rate"
+          },
+          "discount_points_pct": {
+            "type": "string",
+            "title": "Discount Points Pct"
+          },
           "lock_days": {
             "type": "integer",
             "title": "Lock Days"
@@ -3510,6 +3572,8 @@
           "rate_pct",
           "points_pct",
           "points_amount",
+          "note_rate",
+          "discount_points_pct",
           "lock_days",
           "monthly_payment",
           "cash_to_close",
@@ -4991,6 +5055,11 @@
           "inputs": {
             "$ref": "#/components/schemas/ScenarioInputsRead"
           },
+          "engine_inputs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Engine Inputs"
+          },
           "quotes": {
             "items": {
               "$ref": "#/components/schemas/QuoteCardRead"
@@ -5011,6 +5080,7 @@
           "note",
           "dscr_bucket",
           "inputs",
+          "engine_inputs",
           "quotes",
           "created_at"
         ],

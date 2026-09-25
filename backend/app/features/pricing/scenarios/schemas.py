@@ -106,6 +106,11 @@ class PricedProductRow(BaseModel):
     discount_points_amount: Decimal
     is_par_rate: bool
     is_buydown_rate: bool
+    monthly_pi: Decimal | None = None
+    """CQ-018: `quote_engine`'s P&I for this row at the scenario's inputs
+    (the "Choose manually" grid's P&I column); ignored on a manual pick."""
+    points_pct: Decimal | None = None
+    """CQ-018: `discount_points_pct` at display (percent) scale, 3dp."""
 
 
 class QuoteRead(BaseModel):

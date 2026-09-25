@@ -18,6 +18,7 @@ a helper in `quote_engine`); this module only copies and scales for display.
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -251,6 +252,8 @@ def _card(
         rate_pct=str(quote.rate.quantize(_PCT_3DP)),
         points_pct=str(points_pct),
         points_amount=str(points_amount),
+        note_rate=str((quote.rate / Decimal("100")).quantize(Decimal("0.00001"))),
+        discount_points_pct=str((points_pct / Decimal("100")).quantize(Decimal("0.00001"))),
         lock_days=quote.lock_days,
         monthly_payment=str(computed.get("total_monthly_payment")),
         cash_to_close=str(computed.get("cash_to_close")),
@@ -375,6 +378,7 @@ def _group_read(
             fico=inputs.fico,
             strategy=strategy or inputs.strategy.value,
         ),
+        engine_inputs=json.loads(inputs.model_dump_json()),
         quotes=[_card(q, scenario, is_primary, recommended_quote_id) for q in quotes],
         created_at=scenario.created_at,
     )

@@ -1,6 +1,7 @@
 """Pricing/scenarios routes (spec.md route table)."""
 
 import uuid
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,9 +23,11 @@ from app.features.pricing.scenarios.schemas import (
     ScenarioRead,
 )
 from app.features.pricing.scenarios.service import (
+    compute_for_product,
     create_manual_quote,
     create_scenario,
     get_priced_products_for_scenario,
+    get_scenario,
 )
 from app.features.quotes.builder.service import (
     autoquote_replacing,
@@ -91,7 +94,19 @@ async def get_products(
         products = await get_priced_products_for_scenario(db, scenario_id)
     except PricingValidationError as exc:
         raise missing_field_error(exc) from exc
-    return [PricedProductRow.model_validate(product.model_dump()) for product in products]
+    scenario = await get_scenario(db, scenario_id)
+    return [
+        PricedProductRow.model_validate(
+            {
+                **product.model_dump(),
+                "monthly_pi": compute_for_product(scenario, product).monthly_pi,
+                "points_pct": (product.discount_points_pct * Decimal("100")).quantize(
+                    Decimal("0.001")
+                ),
+            }
+        )
+        for product in products
+    ]
 
 
 @router.post("/scenarios/{scenario_id}/autoquote", response_model=AutoQuoteResponse)

@@ -1115,6 +1115,10 @@ export interface components {
             is_par_rate: boolean;
             /** Is Buydown Rate */
             is_buydown_rate: boolean;
+            /** Monthly Pi */
+            monthly_pi?: number | string | null;
+            /** Points Pct */
+            points_pct?: number | string | null;
         };
         /** PricedProductRow */
         "PricedProductRow-Output": {
@@ -1136,6 +1140,10 @@ export interface components {
             is_par_rate: boolean;
             /** Is Buydown Rate */
             is_buydown_rate: boolean;
+            /** Monthly Pi */
+            monthly_pi?: string | null;
+            /** Points Pct */
+            points_pct?: string | null;
         };
         /**
          * PricingFieldView
@@ -1220,6 +1228,10 @@ export interface components {
             points_pct: string;
             /** Points Amount */
             points_amount: string;
+            /** Note Rate */
+            note_rate: string;
+            /** Discount Points Pct */
+            discount_points_pct: string;
             /** Lock Days */
             lock_days: number;
             /** Monthly Payment */
@@ -1687,6 +1699,10 @@ export interface components {
             note: string | null;
             dscr_bucket: components["schemas"]["DSCRBucket"] | null;
             inputs: components["schemas"]["ScenarioInputsRead"];
+            /** Engine Inputs */
+            engine_inputs: {
+                [key: string]: unknown;
+            };
             /** Quotes */
             quotes: components["schemas"]["QuoteCardRead"][];
             /**

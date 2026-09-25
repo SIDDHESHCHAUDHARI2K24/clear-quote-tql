@@ -99,7 +99,7 @@ describe("PricingPanel", () => {
     expect(totalAfter).not.toBe(totalBefore);
   });
 
-  it("shows the stale banner and a disabled Re-price button when has_stale_quotes is true", async () => {
+  it("shows the stale banner and an enabled Re-price button when has_stale_quotes is true", async () => {
     getMock.mockResolvedValueOnce({
       data: { ...marcusFixture, has_stale_quotes: true },
       response: { status: 200 },
@@ -109,8 +109,9 @@ describe("PricingPanel", () => {
     await waitFor(() =>
       expect(screen.getByText("Quotes are out of date — Re-price")).toBeInTheDocument(),
     );
+    // CQ-018 wires the button (QuoteBuilderSlot -> POST .../reprice).
     const button = screen.getByRole("button", { name: "Re-price" });
-    expect(button).toBeDisabled();
+    expect(button).toBeEnabled();
   });
 
   it("AC7: shows a 'Recalculating…' indicator when a preview call takes over 300ms", async () => {

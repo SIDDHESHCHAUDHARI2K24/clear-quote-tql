@@ -1,0 +1,280 @@
+{
+  "application_id": "71d047bb-a8d3-4d47-8ac6-b4ca0e886d22",
+  "strategy": "PRIMARY",
+  "recommended_quote_id": null,
+  "groups": [
+    {
+      "id": "6cabe83a-cc59-4730-923e-d825cabf32de",
+      "label": "At 20% down",
+      "note": null,
+      "dscr_bucket": null,
+      "inputs": {
+        "purchase_price": "420000.00",
+        "down_payment_pct": "0.20",
+        "prepayment_penalty_years": null,
+        "lock_days": 30,
+        "fico": 762,
+        "strategy": "PRIMARY"
+      },
+      "engine_inputs": {
+        "purchase_price": "420000.00",
+        "down_payment_pct": "0.20",
+        "note_rate": "0",
+        "strategy": "PRIMARY",
+        "fico": 762,
+        "property_tax_annual_rate": "0.0085",
+        "insurance_annual_rate": "0.005",
+        "term_months": 360,
+        "hoa_monthly": "0",
+        "discount_points_pct": "0",
+        "seller_credits": "0",
+        "market_rent_ltr": null,
+        "str_gross_annual_revenue": null,
+        "target_dscr": null,
+        "bonus_depreciation_pct": null,
+        "investor_marginal_tax_rate": null
+      },
+      "quotes": [
+        {
+          "id": "c4543d58-0499-4bbb-8e4d-3ea1dfab509f",
+          "scenario_id": "6cabe83a-cc59-4730-923e-d825cabf32de",
+          "label": "Par",
+          "investor": "Sterling Capital",
+          "product": "Conventional 30yr Fixed",
+          "rate_pct": "6.500",
+          "points_pct": "-0.500",
+          "points_amount": "-1680.00",
+          "note_rate": "0.06500",
+          "discount_points_pct": "-0.00500",
+          "lock_days": 30,
+          "monthly_payment": "2596.25",
+          "cash_to_close": "91454.37",
+          "down_payment_pct": "20.00",
+          "prepay_label": null,
+          "dscr_ratio": null,
+          "monthly_cashflow": null,
+          "priced_at": "2026-09-25T15:48:11.104061Z",
+          "stale": false,
+          "recommended": false,
+          "computed": {
+            "ltv_pct": "0.8000",
+            "dscr_ratio": null,
+            "monthly_mi": null,
+            "monthly_pi": "2123.75",
+            "title_fees": "2940.00",
+            "dscr_bucket": null,
+            "lender_fees": "1790.00",
+            "loan_amount": "336000.00",
+            "monthly_hoa": "0.00",
+            "monthly_tax": "297.50",
+            "cap_rate_pct": null,
+            "cash_to_close": "91454.37",
+            "prepaid_taxes": "892.50",
+            "total_prepaids": "4404.37",
+            "annual_cashflow": null,
+            "config_snapshot": {
+              "mi_matrix": [
+                [
+                  "80.00",
+                  "85.00",
+                  [
+                    [679, "0.0058"],
+                    [719, "0.0042"],
+                    [759, "0.0031"],
+                    [null, "0.0019"]
+                  ]
+                ],
+                [
+                  "85.00",
+                  "90.00",
+                  [
+                    [679, "0.0086"],
+                    [719, "0.0062"],
+                    [759, "0.0044"],
+                    [null, "0.0030"]
+                  ]
+                ],
+                [
+                  "90.00",
+                  "95.00",
+                  [
+                    [679, "0.0113"],
+                    [719, "0.0083"],
+                    [759, "0.0059"],
+                    [null, "0.0039"]
+                  ]
+                ],
+                [
+                  "95.00",
+                  "97.00",
+                  [
+                    [679, "0.0186"],
+                    [719, "0.0135"],
+                    [759, "0.0096"],
+                    [null, "0.0063"]
+                  ]
+                ]
+              ],
+              "target_dscr": "1.00",
+              "title_rate_pct": "0.007",
+              "str_expense_ratio": "0.20",
+              "insurance_rate_pct": "0.005",
+              "prepaid_tax_months": 3,
+              "cap_rate_multiplier": "0.75",
+              "land_allocation_pct": "0.20",
+              "lender_processing_fee": "995.00",
+              "prepaid_interest_days": 15,
+              "bonus_depreciation_pct": "1.00",
+              "lender_underwriting_fee": "795.00",
+              "reserves_months_primary": 2,
+              "accelerated_property_pct": "0.25",
+              "prepaid_insurance_months": 14,
+              "investor_marginal_tax_rate": "0.32",
+              "reserves_months_investment": 6
+            },
+            "qualifying_rent": null,
+            "down_payment_pct": "0.20",
+            "monthly_cashflow": null,
+            "prepaid_interest": "1061.87",
+            "monthly_insurance": "175.00",
+            "prepaid_insurance": "2450.00",
+            "break_even_rent_ltr": null,
+            "down_payment_amount": "84000.00",
+            "total_closing_costs": "7454.37",
+            "year_one_tax_savings": null,
+            "land_value_allocation": null,
+            "total_monthly_payment": "2596.25",
+            "underwritten_str_rent": null,
+            "discount_points_amount": "-1680.00",
+            "str_annual_rent_target": null,
+            "year_one_tax_deduction": null,
+            "accelerated_basis_amount": null,
+            "monthly_cashflow_incl_tax": null,
+            "str_gross_monthly_revenue": null,
+            "depreciable_building_basis": null
+          }
+        },
+        {
+          "id": "716faa63-12d8-4bf6-8a0a-eb31d8956864",
+          "scenario_id": "6cabe83a-cc59-4730-923e-d825cabf32de",
+          "label": "Buydown",
+          "investor": "Sterling Capital",
+          "product": "Conventional 30yr Fixed Buydown",
+          "rate_pct": "6.125",
+          "points_pct": "0.750",
+          "points_amount": "2520.00",
+          "note_rate": "0.06125",
+          "discount_points_pct": "0.00750",
+          "lock_days": 30,
+          "monthly_payment": "2514.07",
+          "cash_to_close": "95613.29",
+          "down_payment_pct": "20.00",
+          "prepay_label": null,
+          "dscr_ratio": null,
+          "monthly_cashflow": null,
+          "priced_at": "2026-09-25T15:48:11.104502Z",
+          "stale": false,
+          "recommended": false,
+          "computed": {
+            "ltv_pct": "0.8000",
+            "dscr_ratio": null,
+            "monthly_mi": null,
+            "monthly_pi": "2041.57",
+            "title_fees": "2940.00",
+            "dscr_bucket": null,
+            "lender_fees": "1790.00",
+            "loan_amount": "336000.00",
+            "monthly_hoa": "0.00",
+            "monthly_tax": "297.50",
+            "cap_rate_pct": null,
+            "cash_to_close": "95613.29",
+            "prepaid_taxes": "892.50",
+            "total_prepaids": "4363.29",
+            "annual_cashflow": null,
+            "config_snapshot": {
+              "mi_matrix": [
+                [
+                  "80.00",
+                  "85.00",
+                  [
+                    [679, "0.0058"],
+                    [719, "0.0042"],
+                    [759, "0.0031"],
+                    [null, "0.0019"]
+                  ]
+                ],
+                [
+                  "85.00",
+                  "90.00",
+                  [
+                    [679, "0.0086"],
+                    [719, "0.0062"],
+                    [759, "0.0044"],
+                    [null, "0.0030"]
+                  ]
+                ],
+                [
+                  "90.00",
+                  "95.00",
+                  [
+                    [679, "0.0113"],
+                    [719, "0.0083"],
+                    [759, "0.0059"],
+                    [null, "0.0039"]
+                  ]
+                ],
+                [
+                  "95.00",
+                  "97.00",
+                  [
+                    [679, "0.0186"],
+                    [719, "0.0135"],
+                    [759, "0.0096"],
+                    [null, "0.0063"]
+                  ]
+                ]
+              ],
+              "target_dscr": "1.00",
+              "title_rate_pct": "0.007",
+              "str_expense_ratio": "0.20",
+              "insurance_rate_pct": "0.005",
+              "prepaid_tax_months": 3,
+              "cap_rate_multiplier": "0.75",
+              "land_allocation_pct": "0.20",
+              "lender_processing_fee": "995.00",
+              "prepaid_interest_days": 15,
+              "bonus_depreciation_pct": "1.00",
+              "lender_underwriting_fee": "795.00",
+              "reserves_months_primary": 2,
+              "accelerated_property_pct": "0.25",
+              "prepaid_insurance_months": 14,
+              "investor_marginal_tax_rate": "0.32",
+              "reserves_months_investment": 6
+            },
+            "qualifying_rent": null,
+            "down_payment_pct": "0.20",
+            "monthly_cashflow": null,
+            "prepaid_interest": "1020.79",
+            "monthly_insurance": "175.00",
+            "prepaid_insurance": "2450.00",
+            "break_even_rent_ltr": null,
+            "down_payment_amount": "84000.00",
+            "total_closing_costs": "11613.29",
+            "year_one_tax_savings": null,
+            "land_value_allocation": null,
+            "total_monthly_payment": "2514.07",
+            "underwritten_str_rent": null,
+            "discount_points_amount": "2520.00",
+            "str_annual_rent_target": null,
+            "year_one_tax_deduction": null,
+            "accelerated_basis_amount": null,
+            "monthly_cashflow_incl_tax": null,
+            "str_gross_monthly_revenue": null,
+            "depreciable_building_basis": null
+          }
+        }
+      ],
+      "created_at": "2026-09-25T15:48:11.099464Z"
+    }
+  ]
+}

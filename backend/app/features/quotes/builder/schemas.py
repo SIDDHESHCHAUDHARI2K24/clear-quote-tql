@@ -30,6 +30,10 @@ class QuoteCardRead(BaseModel):
     """Discount points, percent scale, 3dp; negative = lender credit."""
     points_amount: str
     """`computed.discount_points_amount` (negative = credit)."""
+    note_rate: str
+    """Engine scale (0-1 fraction) of `rate_pct`, for `/quotes/preview`."""
+    discount_points_pct: str
+    """Engine scale (0-1 fraction) of `points_pct`, for `/quotes/preview`."""
     lock_days: int
     monthly_payment: str
     """`computed.total_monthly_payment`."""
@@ -70,6 +74,10 @@ class ScenarioGroupRead(BaseModel):
     dscr_bucket: DSCRBucket | None
     """Assumed DSCR bucket priced at (investment only)."""
     inputs: ScenarioInputsRead
+    engine_inputs: dict[str, object]
+    """The scenario's full stored `ScenarioInputs` JSON (engine scale), so
+    the overlay's live preview can post it to `/quotes/preview` unchanged
+    apart from the edited LO inputs."""
     quotes: list[QuoteCardRead]
     created_at: datetime
 

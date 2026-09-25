@@ -87,5 +87,8 @@ async def test_products_grid_returns_8_to_15_rows(
             "discount_points_amount",
             "is_par_rate",
             "is_buydown_rate",
+            # CQ-018: the grid's engine P&I and display-scale points.
+            "monthly_pi",
+            "points_pct",
         }
     assert sum(1 for row in rows if row["is_par_rate"]) == 1
