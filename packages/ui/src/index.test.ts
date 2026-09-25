@@ -13,6 +13,14 @@ describe("@cq/ui barrel exports", () => {
     expect(typeof ui.StatusPill).toBe("function");
     expect(typeof ui.Table).toBe("function");
     expect(typeof ui.Tabs).toBe("function");
+    expect(typeof ui.Pagination).toBe("function");
+    expect(typeof ui.Select).toBe("function");
+    expect(typeof ui.MultiSelect).toBe("function");
+    expect(typeof ui.Drawer).toBe("function");
+    expect(typeof ui.EmptyState).toBe("function");
+    expect(typeof ui.ToastProvider).toBe("function");
+    expect(typeof ui.useToast).toBe("function");
+    expect(typeof ui.useFocusTrap).toBe("function");
     expect(ui.APPLICATION_STATUSES).toHaveLength(12);
     expect(ui.SOURCE_BADGE_SOURCES).toHaveLength(12);
     expect(typeof ui.AuthCard).toBe("function");

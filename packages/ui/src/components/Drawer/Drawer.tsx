@@ -6,46 +6,49 @@ import type { ReactNode } from "react";
 import { cx } from "../../utils/cx";
 import { useFocusTrap } from "../../utils/useFocusTrap";
 
-export interface OverlayProps {
+export interface DrawerProps {
   isOpen: boolean;
   onClose: () => void;
   title: ReactNode;
-  size?: "sm" | "md" | "lg" | "full";
+  /** Panel width on wide screens; always full width on phones. */
+  size?: "sm" | "md" | "lg";
   footer?: ReactNode;
   children: ReactNode;
 }
 
-const SIZE_CLASSES: Record<NonNullable<OverlayProps["size"]>, string> = {
-  sm: "max-w-sm",
-  md: "max-w-lg",
-  lg: "max-w-2xl",
-  full: "max-w-full h-full",
+const SIZE_CLASSES: Record<NonNullable<DrawerProps["size"]>, string> = {
+  sm: "sm:max-w-sm",
+  md: "sm:max-w-md",
+  lg: "sm:max-w-xl",
 };
 
-export function Overlay({ isOpen, onClose, title, size = "md", footer, children }: OverlayProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  // Focus trap, Escape-to-close and return-focus-on-close live in the
-  // shared `useFocusTrap` hook (P5/P6 foundation: `Drawer` reuses it).
-  useFocusTrap(dialogRef, isOpen, onClose);
+/**
+ * Right-side slide-over panel (e.g. CQ-029's activity timeline). Same
+ * modal contract as `Overlay`: focus trapped inside, Escape and the
+ * backdrop close it, focus returns to the opener (`useFocusTrap`).
+ */
+export function Drawer({ isOpen, onClose, title, size = "md", footer, children }: DrawerProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, isOpen, onClose);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex justify-end">
       <div
         role="presentation"
-        data-testid="overlay-backdrop"
+        data-testid="drawer-backdrop"
         className="absolute inset-0 bg-neutral-950/40"
         onClick={onClose}
       />
       <div
-        ref={dialogRef}
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === "string" ? title : undefined}
         tabIndex={-1}
         className={cx(
-          "relative z-10 flex max-h-[90vh] w-full flex-col rounded-lg bg-neutral-0 shadow-lg",
+          "relative z-10 flex h-full w-full flex-col bg-neutral-0 shadow-lg",
           SIZE_CLASSES[size],
         )}
       >
