@@ -38,6 +38,9 @@ from cryptography.fernet import Fernet
 
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("FIELD_ENCRYPTION_KEY", Fernet.generate_key().decode())
+# CQ-009: keep the full suite fast; integrations/common/tests/test_latency.py
+# monkeypatches this back on for its one enabled-path test.
+os.environ.setdefault("INTEGRATION_LATENCY_ENABLED", "false")
 
 import asyncio  # noqa: E402
 

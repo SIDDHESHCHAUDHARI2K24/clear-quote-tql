@@ -45,6 +45,16 @@ class Settings(BaseSettings):
 
     cors_origins: Annotated[list[str], NoDecode] = []
 
+    # CQ-009: shared mock-adapter latency simulation. `integration_latency_enabled`
+    # reads `INTEGRATION_LATENCY_ENABLED` (pydantic-settings' default env-var
+    # name for this field); `backend/conftest.py` sets it to "false" for the
+    # whole pytest session so tests stay fast, except `integrations/common/
+    # tests/test_latency.py`'s enabled-path test, which flips it back via
+    # `get_settings()` monkeypatching for that one test.
+    integration_latency_min_ms: int = 200
+    integration_latency_max_ms: int = 1200
+    integration_latency_enabled: bool = True
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, value: object) -> object:
