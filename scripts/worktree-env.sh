@@ -139,6 +139,8 @@ elif (( VALKEY_DB == 15 )); then
   echo "warning: slot ${SLOT}'s Valkey db 15 is also pytest's default test db; recreate Valkey with 64 databases (see above) before running pytest and the dev stack together" >&2
 fi
 set_kv "CORS_ORIGINS" "http://localhost:${LO_PORT},http://localhost:${PORTAL_PORT}"
+# CQ-020: the emailed report link points at this slot's borrower portal.
+set_kv "PORTAL_BASE_URL" "http://localhost:${PORTAL_PORT}"
 
 if [[ -z "$(get_kv SECRET_KEY)" || "$(get_kv SECRET_KEY)" == "change-me" ]]; then
   set_kv "SECRET_KEY" "$(random_hex)"

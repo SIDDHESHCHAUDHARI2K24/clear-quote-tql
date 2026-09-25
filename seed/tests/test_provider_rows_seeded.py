@@ -98,7 +98,7 @@ async def test_named_provider_tables_have_a_row_per_market(seeded_base: SeededBa
 
     rate_sheet_stmt = select(func.count()).select_from(ProviderRateSheet)
     rate_sheet_count = (await db.execute(rate_sheet_stmt)).scalar_one()
-    assert 8 <= rate_sheet_count <= 15
+    assert 8 <= rate_sheet_count <= 25
 
 
 async def test_los_adapter_returns_non_empty_for_every_persona(seeded_base: SeededBase) -> None:

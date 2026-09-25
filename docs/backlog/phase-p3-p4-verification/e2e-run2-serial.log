@@ -1,0 +1,93 @@
+Froze quote_package_versions.id=21ee6453-805e-4d76-9e57-a7140d85ce26 for kathleen.mcreynolds@clearquote-demo.test
+report_token=OBu7aq2WKKB4txrODvGqlkQAhUvssQjASlW5ADLrLGs
+/report/OBu7aq2WKKB4txrODvGqlkQAhUvssQjASlW5ADLrLGs
+
+Running 51 tests using 1 worker
+
+pricing-latency samples (ms): [
+  372, 373, 375, 375,
+  375, 376, 376, 379,
+  381, 382
+] p95: 381
+  ✓   1 [lo-console] › e2e/lo-console/pricing-latency.spec.ts:20:5 › AC7: p95 keystroke-to-updated-breakdown latency is under 600ms (5.2s)
+
+  ✓   2 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:24:5 › AC4: Priya Nair (primary) shows no investment block and no PPP (932ms)
+
+  ✓   3 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:35:5 › AC4: Daniel Ortiz (primary) at 5% down shows an MI line (1.0s)
+
+  ✓   4 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:54:5 › AC4/AC5: Marcus Hale shows the STR block only, DSCR amber (974ms)
+
+  ✓   5 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:65:5 › AC4: Kathleen McReynolds shows the LTR block only (1.0s)
+
+  ✓   6 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:74:5 › AC3: overriding property tax shows LO override, recomputes the total and marks quotes stale (2.6s)
+
+  ✓   7 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:98:5 › PR review round (fresh stage-6): tabbing through every field with no edits leaves badges and staleness unchanged (1.2s)
+
+  ✓   8 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:148:5 › AC8: react-doctor accessibility -- axe finds no violations on the pricing panel (1.2s)
+
+  ✓   9 [lo-console] › e2e/lo-console/quote-builder.spec.ts:38:5 › AC1: Marcus Hale shows 4 quotes in 2 groups with no user action (1.1s)
+
+  ✓  10 [lo-console] › e2e/lo-console/quote-builder.spec.ts:50:5 › AC5: starring a quote recommends it and the header note rate follows (1.1s)
+
+  ✓  11 [lo-console] › e2e/lo-console/quote-builder.spec.ts:73:5 › AC3: editing to 25% down and Save & AutoQuote replaces that scenario's par and buydown (2.8s)
+
+  ✓  12 [lo-console] › e2e/lo-console/quote-builder.spec.ts:110:5 › AC4: Choose manually lists >= 8 products; a pick becomes a card; delete removes it (3.2s)
+
+  ✓  13 [lo-console] › e2e/lo-console/quote-builder.spec.ts:138:5 › AC6: Aisha Coleman's Save & AutoQuote shows 'Cannot price: missing Occupancy' and creates nothing (1.1s)
+
+  ✓  14 [lo-console] › e2e/lo-console/quote-builder.spec.ts:163:5 › AC7: Priya Nair's primary cards carry no DSCR text; Daniel Ortiz's second group removes MI (1.5s)
+
+  ✓  15 [lo-console] › e2e/lo-console/quote-builder.spec.ts:179:5 › Compare: two cards side by side with the borrower table's rows (1.1s)
+  ✓  16 [lo-console] › e2e/lo-console/report-gallery.spec.ts:11:5 › gallery renders with no console errors or page errors (337ms)
+  ✓  17 [lo-console] › e2e/lo-console/report-gallery.spec.ts:26:5 › no critical or serious accessibility violations on the gallery page (857ms)
+
+  ✓  18 [lo-console] › e2e/lo-console/reprice-after-override.spec.ts:20:5 › AC8: Re-price after an override clears the banner and updates priced_at on every quote (3.3s)
+
+  ✓  19 [lo-console] › e2e/lo-console/send-tab-draft.spec.ts:97:5 › AC1 + AC7: Marcus Hale's default draft, report preview and sandboxed letter (1.1s)
+
+  ✓  20 [lo-console] › e2e/lo-console/send-tab-draft.spec.ts:127:5 › AC5: Grace Kim and Aisha Coleman are blocked; Send is disabled (1.5s)
+
+  ✓  21 [lo-console] › e2e/lo-console/send-tab-draft.spec.ts:148:5 › AC3 + AC4: letter previews for Kathleen (TBD) and Sam Reed (LLC) (7.9s)
+
+  ✓  22 [lo-console] › e2e/lo-console/send-tab-draft.spec.ts:176:5 › AC6: removing a quote, changing the recommendation and the note persist after reload (1.5s)
+  ✓  23 [lo-console] › e2e/lo-console/smoke.spec.ts:3:5 › login page renders (295ms)
+  ✓  24 [lo-console] › e2e/lo-console/staff-login.spec.ts:20:5 › staff can sign in with email + password + emailed OTP (469ms)
+
+  ✓  25 [lo-console] › e2e/lo-console/workspace.spec.ts:33:5 › AC4: Aisha Coleman (missing occupancy) opens on her first flagged tab with a red badge (946ms)
+
+  ✓  26 [lo-console] › e2e/lo-console/workspace.spec.ts:49:5 › AC4: Ben Ford's Housing tab shows a red badge and is the default tab (967ms)
+
+  ✓  27 [lo-console] › e2e/lo-console/workspace.spec.ts:61:5 › AC2: Priya Nair (primary) opens on Pricing with no PPP field (971ms)
+
+  ✓  28 [lo-console] › e2e/lo-console/workspace.spec.ts:77:5 › AC8: the header stays visible while scrolling, at 1280px and 1440px (1.2s)
+
+  ✓  29 [lo-console] › e2e/lo-console/workspace.spec.ts:92:5 › AC6: withdrawing an application sets status Withdrawn and hides the actions menu (1.1s)
+
+  ✓  30 [lo-console] › e2e/lo-console/workspace.spec.ts:109:5 › AC5: an LO requesting another LO's application gets the not-found page; a Manager can open it (1.6s)
+
+  ✓  31 [lo-console] › e2e/lo-console/workspace.spec.ts:127:5 › AC7: the pipeline banner shows the running stage while the workflow is active (2.4s)
+  ✓  32 [borrower-portal] › e2e/borrower-portal/move-forward.spec.ts:64:5 › move forward on the Buydown option sets the confirmed state; a second attempt is a no-op (2.4s)
+  ✓  33 [borrower-portal] › e2e/borrower-portal/move-forward.spec.ts:98:5 › ask about another option requires a message, then sets Inquiry and is still visible afterward (2.1s)
+  ✓  34 [borrower-portal] › e2e/borrower-portal/report-expired-actions.spec.ts:26:5 › expired report: only 'Ask for updated numbers' is shown, and it works (1.2s)
+  ✓  35 [borrower-portal] › e2e/borrower-portal/report-expired.spec.ts:21:5 › Grace Kim's report shows the expired banner and hides the action buttons (344ms)
+  ✓  36 [borrower-portal] › e2e/borrower-portal/report-gallery.spec.ts:11:5 › gallery renders with no console errors or page errors (331ms)
+  ✓  37 [borrower-portal] › e2e/borrower-portal/report-gallery.spec.ts:26:5 › AC2: Priya Nair (primary) renders exactly 3 hero tiles and no investment content (400ms)
+  ✓  38 [borrower-portal] › e2e/borrower-portal/report-gallery.spec.ts:57:5 › AC3: Kathleen McReynolds shows the TBD label and LTR, never STR (311ms)
+  ✓  39 [borrower-portal] › e2e/borrower-portal/report-gallery.spec.ts:70:5 › AC4: switching options updates the hero numbers to the selected option's own values (364ms)
+  ✓  40 [borrower-portal] › e2e/borrower-portal/report-gallery.spec.ts:85:5 › no critical or serious accessibility violations on the gallery page (829ms)
+  ✓  41 [borrower-portal] › e2e/borrower-portal/report-login-redirect.spec.ts:25:5 › a signed-out visit redirects to /login?next=..., and OTP success returns to the report (1.3s)
+  ✓  42 [borrower-portal] › e2e/borrower-portal/report-login-redirect.spec.ts:50:5 › an unsafe next value never navigates off-site (open-redirect guard) (482ms)
+  ✓  43 [borrower-portal] › e2e/borrower-portal/report-matches.spec.ts:31:5 › shows exactly 3 property matches with the section title and subtitle (AC1) (325ms)
+  ✓  44 [borrower-portal] › e2e/borrower-portal/report-matches.spec.ts:46:5 › one column at 375px, three columns at 1120px (AC8) (594ms)
+  ✓  45 [borrower-portal] › e2e/borrower-portal/report-mobile.spec.ts:22:5 › no horizontal scroll and the 4 investment hero tiles stack 2x2 at 375px (324ms)
+  ✓  46 [borrower-portal] › e2e/borrower-portal/report-option-switch.spec.ts:23:5 › selecting Buydown updates hero numbers, sets ?option=, persists on reload, and shows the alternative-view note (713ms)
+  ✓  47 [borrower-portal] › e2e/borrower-portal/report-print.spec.ts:25:5 › print preview contains the hero numbers and both expanded sections, with no switcher or action buttons (404ms)
+  ✓  48 [borrower-portal] › e2e/borrower-portal/smoke.spec.ts:3:5 › login page renders (263ms)
+
+  ✓  49 [cross-app] › e2e/borrower-action-reflects-in-console.spec.ts:70:5 › borrower moves forward; the LO console header shows Option selected after its next load (3.9s)
+
+  ✓  50 [cross-app] › e2e/p3-milestone-send-to-report.spec.ts:47:5 › P3: send Marcus Hale's package, open the emailed link, sign in, land on his report (6.4s)
+
+  ✓  51 [cross-app] › e2e/p3-milestone-send-to-report.spec.ts:117:5 › LO send flow: progress, toast, Sent pill, Sent versions with a PDF; a re-send supersedes (3.8s)
+
+  51 passed (1.6m)

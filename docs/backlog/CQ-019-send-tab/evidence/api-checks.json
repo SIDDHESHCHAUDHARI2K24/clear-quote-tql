@@ -1,0 +1,65 @@
+{
+  "marcus_package": {
+    "id": "30cb5e07-b645-4989-86cf-6d9891174560",
+    "application_id": "b59b7968-17d7-4e4d-8a14-e31ecc7a7784",
+    "quote_ids": [
+      "a610f605-62ae-4560-b954-5e2707cf91b3",
+      "afdfc8b4-e5a7-4808-b63f-34399fd18c07",
+      "d8ebb383-9c71-4e8f-a354-2c35b810dc89"
+    ],
+    "recommended_quote_id": "a610f605-62ae-4560-b954-5e2707cf91b3",
+    "recommendation_text": "20% down \u00b7 Par pricing at 7.625%, 5-year prepay. It balances your monthly payment and cash needed at closing.",
+    "lo_note": null,
+    "recipient_email": "marcus.hale@clearquote-demo.test",
+    "attachments": [
+      "Pre-approval letter (PDF)"
+    ],
+    "sent_at": null,
+    "updated_at": "2026-09-25T17:27:14.424698Z"
+  },
+  "marcus_report_recommendation": {
+    "text": "20% down \u00b7 Par pricing at 7.625%, 5-year prepay. It balances your monthly payment and cash needed at closing.",
+    "lo_note": null
+  },
+  "readiness Grace Kim": {
+    "ready": false,
+    "blockers": [
+      {
+        "code": "quotes_stale",
+        "message": "Quotes are out of date",
+        "tab": "pricing"
+      }
+    ]
+  },
+  "readiness Aisha Coleman": {
+    "ready": false,
+    "blockers": [
+      {
+        "code": "open_flag",
+        "message": "Open flag: Occupancy type \u2014 required for pricing",
+        "tab": "pricing"
+      },
+      {
+        "code": "no_quotes",
+        "message": "Select at least one quote",
+        "tab": "send"
+      }
+    ]
+  },
+  "readiness Marcus Hale": {
+    "ready": true,
+    "blockers": []
+  },
+  "letter Kathleen McReynolds": {
+    "status": 200,
+    "csp": "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+  },
+  "letter Sam Reed": {
+    "status": 200,
+    "csp": "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+  },
+  "letter Marcus Hale": {
+    "status": 200,
+    "csp": "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+  }
+}

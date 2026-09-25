@@ -10,6 +10,7 @@ from sqlalchemy import select
 from app.core.enums import ApplicationStatus
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.notifications.outbox.models import OutboxEmail
+from app.features.quotes.builder.models import Quote
 from app.features.quotes.send.models import QuotePackage, QuotePackageVersion
 from seed.tests.conftest import SeededBase
 
@@ -113,3 +114,27 @@ async def test_grace_and_luis_have_quote_package_versions(seeded_base: SeededBas
     assert isinstance(luis_borrower_action, dict)
     assert luis_borrower_action["type"] == "option_selected"
     assert datetime.now(UTC) <= luis_version.expires_at  # sent 3 days ago, well within 21 days
+
+
+async def test_seeded_packages_are_recommended_plus_two(seeded_base: SeededBase) -> None:
+    """CQ-018 PR review M1 (plan.md Decision 14): a seeded package is the
+    recommended option plus up to 2 alternatives (CQ-019's default-draft
+    rule), so it never carries two options with the same label."""
+    db = seeded_base.db
+    by_key = {r.key: r for r in seeded_base.persona_results}
+    for key in ("grace_kim", "luis_romero"):
+        package = (
+            await db.execute(
+                select(QuotePackage).where(
+                    QuotePackage.application_id == by_key[key].application_id
+                )
+            )
+        ).scalar_one()
+        assert 1 <= len(package.quote_ids) <= 3, key
+        assert package.recommended_quote_id == package.quote_ids[0], key
+        labels = (
+            (await db.execute(select(Quote.label).where(Quote.id.in_(package.quote_ids))))
+            .scalars()
+            .all()
+        )
+        assert labels.count("Buydown") <= 1, (key, labels)

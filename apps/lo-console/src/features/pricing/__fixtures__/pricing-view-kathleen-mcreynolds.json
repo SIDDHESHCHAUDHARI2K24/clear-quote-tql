@@ -1,0 +1,143 @@
+{
+  "application_id": "22222222-2222-2222-2222-222222222222",
+  "inputs": {
+    "purchase_price": "280000.00",
+    "down_payment_pct": "0.25",
+    "strategy": "LTR",
+    "prepayment_penalty_years": 5,
+    "fico": 780,
+    "insurance_annual_rate": "0.005"
+  },
+  "fields": [
+    {
+      "field_key": "property_tax_annual_rate",
+      "value": "0.011",
+      "source": "smartasset",
+      "source_ref": null,
+      "overridden": false,
+      "original_value": null
+    },
+    {
+      "field_key": "homeowners_ins_annual",
+      "value": "1400.00",
+      "source": "steadily",
+      "source_ref": null,
+      "overridden": false,
+      "original_value": null
+    },
+    {
+      "field_key": "hoa_fee_monthly",
+      "value": "0.00",
+      "source": "default",
+      "source_ref": null,
+      "overridden": false,
+      "original_value": null
+    },
+    {
+      "field_key": "market_rent_ltr",
+      "value": "2100.00",
+      "source": "rentcast",
+      "source_ref": null,
+      "overridden": false,
+      "original_value": null
+    }
+  ],
+  "note_rate": "0.07",
+  "breakdown": {
+    "loan_amount": "210000.00",
+    "down_payment_amount": "70000.00",
+    "ltv_pct": "0.7500",
+    "monthly_pi": "1397.14",
+    "monthly_tax": "256.67",
+    "monthly_insurance": "116.67",
+    "monthly_mi": null,
+    "monthly_hoa": "0.00",
+    "total_monthly_payment": "1770.47",
+    "discount_points_amount": "0.00",
+    "lender_fees": "1790.00",
+    "title_fees": "1960.00",
+    "prepaid_interest": "698.57",
+    "prepaid_insurance": "1633.33",
+    "prepaid_taxes": "770.00",
+    "total_prepaids": "3101.90",
+    "total_closing_costs": "6851.90",
+    "cash_to_close": "76851.90",
+    "config_snapshot": {
+      "lender_processing_fee": "995.00",
+      "lender_underwriting_fee": "795.00",
+      "title_rate_pct": "0.007",
+      "insurance_rate_pct": "0.005",
+      "prepaid_interest_days": 15,
+      "prepaid_insurance_months": 14,
+      "prepaid_tax_months": 3,
+      "str_expense_ratio": "0.20",
+      "cap_rate_multiplier": "0.75",
+      "land_allocation_pct": "0.20",
+      "accelerated_property_pct": "0.25",
+      "bonus_depreciation_pct": "1.00",
+      "investor_marginal_tax_rate": "0.32",
+      "target_dscr": "1.00",
+      "reserves_months_primary": 2,
+      "reserves_months_investment": 6,
+      "mi_matrix": [
+        [
+          "80.00",
+          "85.00",
+          [
+            [679, "0.0058"],
+            [719, "0.0042"],
+            [759, "0.0031"],
+            [null, "0.0019"]
+          ]
+        ],
+        [
+          "85.00",
+          "90.00",
+          [
+            [679, "0.0086"],
+            [719, "0.0062"],
+            [759, "0.0044"],
+            [null, "0.0030"]
+          ]
+        ],
+        [
+          "90.00",
+          "95.00",
+          [
+            [679, "0.0113"],
+            [719, "0.0083"],
+            [759, "0.0059"],
+            [null, "0.0039"]
+          ]
+        ],
+        [
+          "95.00",
+          "97.00",
+          [
+            [679, "0.0186"],
+            [719, "0.0135"],
+            [759, "0.0096"],
+            [null, "0.0063"]
+          ]
+        ]
+      ]
+    },
+    "qualifying_rent": "2100.00",
+    "underwritten_str_rent": null,
+    "str_gross_monthly_revenue": null,
+    "dscr_ratio": "1.19",
+    "dscr_bucket": "ONE_TO_1_25",
+    "monthly_cashflow": "329.53",
+    "annual_cashflow": "3954.38",
+    "break_even_rent_ltr": "1770.47",
+    "str_annual_rent_target": "26557.03",
+    "cap_rate_pct": "6.75",
+    "land_value_allocation": "56000.00",
+    "depreciable_building_basis": "224000.00",
+    "accelerated_basis_amount": "56000.00",
+    "year_one_tax_deduction": "62109.09",
+    "year_one_tax_savings": "19874.91",
+    "monthly_cashflow_incl_tax": "1985.77"
+  },
+  "has_stale_quotes": false
+}

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import CurrentStaff, get_scoped_application
 from app.core.db import get_db
+from app.features.applications.locks import lock_application
 from app.features.applications.models import Application
 from app.features.applications.sections.events import record_field_event
 from app.features.pricing.enrichment.schemas import FieldValueOverrideRequest, FieldValueRead
@@ -26,6 +27,8 @@ async def patch_field_value(
     db: AsyncSession = Depends(get_db),
     _application: Application = Depends(get_scoped_application),
 ) -> FieldValueRead:
+    # CQ-018 PR review (minor 4): serialize with Quote Builder writes.
+    await lock_application(db, application_id)
     row = await override_field_value(db, application_id, field_key, request.value, user.id)
     result = FieldValueRead.model_validate(row)
     # CQ-028a (AC7): activity event naming the field.
@@ -46,7 +49,8 @@ async def revert_field_value_route(
     db: AsyncSession = Depends(get_db),
     _application: Application = Depends(get_scoped_application),
 ) -> FieldValueRead:
-    row = await revert_field_value(db, application_id, field_key)
+    await lock_application(db, application_id)
+    row = await revert_field_value(db, application_id, field_key, user.id)
     result = FieldValueRead.model_validate(row)
     # CQ-028a (AC7): activity event naming the field.
     await record_field_event(

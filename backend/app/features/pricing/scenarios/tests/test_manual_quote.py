@@ -1,11 +1,16 @@
 """AC10: `POST /scenarios/{id}/quotes` (manual pick) persists a `quotes` row
 with `computed` equal to `compute_quote` run on that scenario's inputs with
-the picked row's rate/points."""
+the picked row's rate/points.
+
+CQ-018 PR review (minor 5): the pick must name a row of the scenario's
+current grid, whose server-side rate/points are used, so this test seeds
+the mock rate sheet and picks a real grid row."""
 
 from collections.abc import Awaitable, Callable
 from decimal import Decimal
 
 from httpx import AsyncClient
+from seed.loader import seed_providers
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import Occupancy
@@ -16,18 +21,6 @@ from app.features.pricing.scenarios.dscr_loop import inputs_with_priced_product
 from app.features.pricing.scenarios.service import create_scenario
 from app.integrations.pricing.schemas import PricedProductDTO
 from conftest import StaffSession
-
-_PRODUCT = {
-    "investor_name": "Rocket Pro",
-    "product_name": "Conventional 30 Yr Fixed",
-    "lock_period_days": 30,
-    "note_rate": "7.250",
-    "price_pct": "100.500",
-    "discount_points_pct": "-0.005",
-    "discount_points_amount": "-1200.00",
-    "is_par_rate": False,
-    "is_buydown_rate": False,
-}
 
 
 async def test_manual_quote_computed_matches_compute_quote(
@@ -44,6 +37,7 @@ async def test_manual_quote_computed_matches_compute_quote(
     await set_field_value(application.id, "representative_fico", Decimal("760"))
     await set_field_value(application.id, "property_tax_annual_rate", Decimal("0.01"))
     await set_field_value(application.id, "homeowners_ins_annual", Decimal("1500.00"))
+    await seed_providers(db_session)
     await db_session.commit()
 
     scenario = await create_scenario(
@@ -51,20 +45,22 @@ async def test_manual_quote_computed_matches_compute_quote(
     )
     await db_session.commit()
 
+    grid = (await client.get(f"/api/v1/scenarios/{scenario.id}/products")).json()
+    picked = next(row for row in grid if not row["is_par_rate"])
     response = await client.post(
         f"/api/v1/scenarios/{scenario.id}/quotes",
-        json={"product": _PRODUCT, "label": "Manual"},
+        json={"product": picked, "label": "Manual"},
     )
 
     assert response.status_code == 200
     body = response.json()
     assert body["label"] == "Manual"
-    assert body["investor"] == "Rocket Pro"
-    assert Decimal(body["rate"]) == Decimal("7.250")
+    assert body["investor"] == picked["investor_name"]
+    assert Decimal(body["rate"]) == Decimal(picked["note_rate"])
 
     base_inputs = ScenarioInputs.model_validate(scenario.inputs)
     config = ConfigSnapshot.model_validate(scenario.config_snapshot)
-    product = PricedProductDTO.model_validate(_PRODUCT)
+    product = PricedProductDTO.model_validate(picked)
     expected = compute_quote(inputs_with_priced_product(base_inputs, product), config)
 
     assert Decimal(body["computed"]["cash_to_close"]) == expected.cash_to_close
