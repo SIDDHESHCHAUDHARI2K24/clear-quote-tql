@@ -159,6 +159,64 @@ def test_full_scenario_matches_all_pinned_golden_values() -> None:
     # number: MI never applies to LTR/STR regardless of LTV.
     assert quote.monthly_mi is None
 
+    # down_payment_amount / str_gross_monthly_revenue (CQ-021 review M1):
+    # exposed directly on QuoteComputation so no consumer reconstructs them
+    # via purchase_price - loan_amount / str_gross_annual_revenue / 12
+    # outside the engine.
+    assert quote.down_payment_amount == Decimal("68400.00")  # 342000 * 0.20
+    assert quote.str_gross_monthly_revenue == Decimal("3050.00")  # 36600 / 12
+
+
+def test_down_payment_amount_marcus_hale_342k_20pct() -> None:
+    """CQ-021 review M1: down_payment_amount = purchase_price * down_payment_pct,
+    computed once by the engine (not reconstructed by a report builder as
+    purchase_price - loan_amount). $342,000 * 20% = $68,400.00 exactly --
+    Marcus Hale's own persona inputs (seed/personas/p01_marcus_hale.yaml)."""
+    inputs, config = _str_342k_scenario()
+    quote = compute_quote(inputs, config)
+
+    assert quote.down_payment_amount == Decimal("68400.00")
+    # Consistency check: down_payment_amount + loan_amount reproduces the
+    # purchase price exactly (both are already-rounded engine outputs).
+    assert quote.down_payment_amount + quote.loan_amount == Decimal("342000.00")
+
+
+def test_down_payment_amount_present_on_primary_too() -> None:
+    """down_payment_amount is not investment-only -- every strategy has a
+    down payment (system-design.md's `D = P x d` applies universally)."""
+    inputs = ScenarioInputs(
+        purchase_price=Decimal("420000"),
+        down_payment_pct=Decimal("0.20"),
+        note_rate=Decimal("0.065"),
+        strategy=StrategyType.PRIMARY,
+        fico=760,
+        property_tax_annual_rate=Decimal("0.0085"),
+        insurance_annual_rate=Decimal("0.005"),
+    )
+    quote = compute_quote(inputs, ConfigSnapshot())
+
+    assert quote.down_payment_amount == Decimal("84000.00")  # 420000 * 0.20
+    assert quote.str_gross_monthly_revenue is None  # PRIMARY never carries STR fields
+
+
+def test_str_gross_monthly_revenue_none_on_ltr() -> None:
+    """str_gross_monthly_revenue is STR-only -- LTR carries market_rent_ltr
+    directly (no gross/net expense-ratio split for LTR)."""
+    inputs = ScenarioInputs(
+        purchase_price=Decimal("300000"),
+        down_payment_pct=Decimal("0.25"),
+        note_rate=Decimal("0.0725"),
+        strategy=StrategyType.LTR,
+        fico=720,
+        property_tax_annual_rate=Decimal("0.0089"),
+        insurance_annual_rate=Decimal("0.005"),
+        market_rent_ltr=Decimal("2250"),
+    )
+    quote = compute_quote(inputs, ConfigSnapshot())
+
+    assert quote.str_gross_monthly_revenue is None
+    assert quote.down_payment_amount == Decimal("75000.00")  # 300000 * 0.25
+
 
 def test_rounding_full_precision_internal() -> None:
     """AC14: compute_quote must reproduce $24,275.78 (not $24,276 — the

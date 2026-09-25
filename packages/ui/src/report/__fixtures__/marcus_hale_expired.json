@@ -1,0 +1,212 @@
+{
+  "header": {
+    "first_name": "Marcus",
+    "property_label": "4412 W Gray St, Tampa, FL 33602",
+    "purchase_price": "342000.00",
+    "prepared_at": "2026-09-25",
+    "rates_as_of": "2026-09-25",
+    "expires_at": "2026-10-16",
+    "expired": true,
+    "superseded": false
+  },
+  "strategy": "str",
+  "options": [
+    {
+      "quote_id": "marcus-par",
+      "label": "Par",
+      "recommended": true,
+      "rate": "7.500",
+      "points_pct": "0.000",
+      "points_amount": "0.00",
+      "down_payment_pct": "20.00",
+      "prepay_label": "5-year prepayment penalty",
+      "hero": {
+        "monthly_payment": "2309.20",
+        "cash_to_close": "76296.48",
+        "loan_amount": null,
+        "monthly_cashflow": "-709.20",
+        "year1_tax_savings": "24275.78",
+        "year1_tax_savings_monthly": "2023"
+      },
+      "breakdown": {
+        "payment_lines": [
+          {
+            "label": "Principal & interest",
+            "amount": "1913.05"
+          },
+          {
+            "label": "Property taxes",
+            "amount": "253.65"
+          },
+          {
+            "label": "Homeowners insurance",
+            "amount": "142.50"
+          }
+        ],
+        "payment_total": "2309.20",
+        "cash_to_close_lines": [
+          {
+            "label": "Down payment",
+            "amount": "68400.00"
+          },
+          {
+            "label": "Lender fees",
+            "amount": "1790.00"
+          },
+          {
+            "label": "Discount points",
+            "amount": "0.00"
+          },
+          {
+            "label": "Title & escrow",
+            "amount": "2394.00"
+          },
+          {
+            "label": "Prepaid interest",
+            "amount": "956.53"
+          },
+          {
+            "label": "Prepaid insurance",
+            "amount": "1995.00"
+          },
+          {
+            "label": "Prepaid taxes",
+            "amount": "760.95"
+          }
+        ],
+        "cash_to_close_total": "76296.48"
+      },
+      "cashflow": {
+        "rent_label": "Gross STR revenue",
+        "gross_amount": "2000.00",
+        "expense_ratio": "20.00",
+        "qualifying_rent": "1600.00",
+        "pitia": "2309.20",
+        "monthly_cashflow": "-709.20",
+        "annual_cashflow": "-8510.41",
+        "dscr": "0.69",
+        "cap_rate_pct": "4.21",
+        "monthly_cashflow_incl_tax": "1313.78"
+      },
+      "cost_seg": {
+        "purchase_price": "342000.00",
+        "land_allocation_pct": "20.00",
+        "land_value_allocation": "68400.00",
+        "depreciable_building_basis": "273600.00",
+        "accelerated_property_pct": "25.00",
+        "accelerated_basis_amount": "68400.00",
+        "bonus_depreciation_pct": "100.00",
+        "year_one_tax_deduction": "75861.82",
+        "investor_marginal_tax_rate": "32.00",
+        "year_one_tax_savings": "24275.78"
+      }
+    },
+    {
+      "quote_id": "marcus-buydown",
+      "label": "Buydown",
+      "recommended": false,
+      "rate": "6.875",
+      "points_pct": "1.000",
+      "points_amount": "2736.00",
+      "down_payment_pct": "20.00",
+      "prepay_label": "5-year prepayment penalty",
+      "hero": {
+        "monthly_payment": "2193.51",
+        "cash_to_close": "78974.63",
+        "loan_amount": null,
+        "monthly_cashflow": "-593.51",
+        "year1_tax_savings": "24275.78",
+        "year1_tax_savings_monthly": "2023"
+      },
+      "breakdown": {
+        "payment_lines": [
+          {
+            "label": "Principal & interest",
+            "amount": "1797.36"
+          },
+          {
+            "label": "Property taxes",
+            "amount": "253.65"
+          },
+          {
+            "label": "Homeowners insurance",
+            "amount": "142.50"
+          }
+        ],
+        "payment_total": "2193.51",
+        "cash_to_close_lines": [
+          {
+            "label": "Down payment",
+            "amount": "68400.00"
+          },
+          {
+            "label": "Lender fees",
+            "amount": "1790.00"
+          },
+          {
+            "label": "Discount points",
+            "amount": "2736.00"
+          },
+          {
+            "label": "Title & escrow",
+            "amount": "2394.00"
+          },
+          {
+            "label": "Prepaid interest",
+            "amount": "898.68"
+          },
+          {
+            "label": "Prepaid insurance",
+            "amount": "1995.00"
+          },
+          {
+            "label": "Prepaid taxes",
+            "amount": "760.95"
+          }
+        ],
+        "cash_to_close_total": "78974.63"
+      },
+      "cashflow": {
+        "rent_label": "Gross STR revenue",
+        "gross_amount": "2000.00",
+        "expense_ratio": "20.00",
+        "qualifying_rent": "1600.00",
+        "pitia": "2193.51",
+        "monthly_cashflow": "-593.51",
+        "annual_cashflow": "-7122.09",
+        "dscr": "0.73",
+        "cap_rate_pct": "4.21",
+        "monthly_cashflow_incl_tax": "1429.47"
+      },
+      "cost_seg": {
+        "purchase_price": "342000.00",
+        "land_allocation_pct": "20.00",
+        "land_value_allocation": "68400.00",
+        "depreciable_building_basis": "273600.00",
+        "accelerated_property_pct": "25.00",
+        "accelerated_basis_amount": "68400.00",
+        "bonus_depreciation_pct": "100.00",
+        "year_one_tax_deduction": "75861.82",
+        "investor_marginal_tax_rate": "32.00",
+        "year_one_tax_savings": "24275.78"
+      }
+    }
+  ],
+  "recommendation": {
+    "text": "We recommend the par option: it keeps cash to close lowest while the STR income offsets most of the payment.",
+    "lo_note": "Happy to walk through the numbers whenever works for you."
+  },
+  "matches": [],
+  "disclosures": {
+    "core": "This is not a commitment to lend. Rates, payments and closing costs are estimates based on the information available today and are subject to change once your file is fully underwritten. This is not a Loan Estimate.",
+    "investment": "Rental income and cashflow figures are estimates based on third-party market data (RentCast/AirDNA) and are not a guarantee of actual performance.",
+    "tax": "Estimate only, not tax advice. Consult your tax professional."
+  },
+  "lo": {
+    "name": "Jordan Blake",
+    "title": "Loan Officer",
+    "nmls": "NMLS #1933377",
+    "phone": "(813) 555-0100",
+    "email": "jordan.blake@clearquote-demo.test"
+  }
+}

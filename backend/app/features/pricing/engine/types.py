@@ -125,6 +125,12 @@ class QuoteComputation(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     loan_amount: Decimal
+    down_payment_amount: Decimal
+    """`purchase_price * down_payment_pct` (system-design.md's `D`). Always
+    set (every strategy has a down payment); exposed as its own field so
+    consumers building a cash-to-close breakdown (e.g. CQ-021's report
+    builder) never have to reconstruct it via `purchase_price - loan_amount`
+    themselves."""
     # 0-1 fraction (e.g. 0.95 for 95% LTV), like every other *_pct field on
     # ScenarioInputs/ConfigSnapshot -- not a 0-100 percentage number.
     ltv_pct: Decimal
@@ -148,6 +154,12 @@ class QuoteComputation(BaseModel):
     # Investment-only (LTR/STR); always None on PRIMARY.
     qualifying_rent: Decimal | None = None
     underwritten_str_rent: Decimal | None = None
+    str_gross_monthly_revenue: Decimal | None = None
+    """`str_gross_annual_revenue / 12` (STR only; `None` for LTR/PRIMARY).
+    The pre-expense-ratio gross monthly figure -- `underwritten_str_rent` is
+    already net of `config.str_expense_ratio`. Consumers displaying both the
+    gross and net STR figures (e.g. CQ-021's cashflow table) read this
+    instead of dividing `ScenarioInputs.str_gross_annual_revenue` themselves."""
     dscr_ratio: Decimal | None = None
     dscr_bucket: DSCRBucket | None = None
     monthly_cashflow: Decimal | None = None
