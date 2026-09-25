@@ -83,6 +83,7 @@ Backend changes:
 | 6 | Minor | PUT validation | A primary PUT with `dscr_bucket` or a PPP 422s with `details.field` | `test_put_422s` (bad down payment, primary `dscr_bucket`, primary PPP, `missing_field` Occupancy) |
 | 7 | Minor | The same-bucket note vanished when the LO added a scenario | The note belongs to the pipeline's collapsed group: the earliest `created_at` batch, when it holds one `ONE_TO_1_25` scenario whose actual DSCR is in that bucket | `test_same_bucket_note_survives_an_added_scenario` |
 | e2e | Found while verifying | Running `e2e/lo-console` and `e2e/borrower-portal` in one invocation 401'd every report spec: `flushLoginRateLimit` ran `flushdb`, dropping the borrower sessions `global-setup.ts` saved | `flushLoginRateLimit` now deletes only the `rl:*` rate-limit keys | The combined run: 44/44 |
+| CR | Medium (`/code-review` on round 1) | Skipping the no-op PUT also skipped the enrichment refresh: after a tax override, a manual pick was priced from the old stored inputs and saved `stale=False` | `post_manual_quote` runs `rebuild_scenario_inputs` under the application lock before building the grid and pricing the pick | `test_manual_pick_after_override_uses_fresh_inputs`; e2e rerun 44/44 + cross-app 1/1 |
 | e2e | Trivial follow-up fixed | AC3's `oldIds` held `priced_at` values, and the spec never checked 25% | Renamed `oldPricedAt`; the spec reopens the overlay and checks the saved down payment is 25 | `quote-builder.spec.ts` AC3 |
 
 ### Par per seeded persona, before and after (query over `quotes` after `make demo-reset`)
@@ -108,7 +109,7 @@ Backend changes:
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Backend | `make test` (pytest backend) | 497 passed |
+| Backend | `make test` (pytest backend) | 498 passed |
 | Seed | `make test` (pytest seed) | 31 passed |
 | Frontend | `make test` (`pnpm -r run test`) | lo-console 110, ui 141, borrower-portal 84, api-client 2 |
 | Lint / types | `make lint` | exit 0 |

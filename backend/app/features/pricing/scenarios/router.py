@@ -31,6 +31,7 @@ from app.features.pricing.scenarios.service import (
     find_offered_product,
     get_priced_products_for_scenario,
     get_scenario,
+    rebuild_scenario_inputs,
     tag_par_and_buydown,
 )
 from app.features.quotes.builder.service import (
@@ -142,6 +143,10 @@ async def post_manual_quote(
     # (investor, product, lock); rate and points come from a fresh grid.
     scenario = await get_scenario(db, scenario_id)
     await lock_application(db, scenario.application_id)
+    # Re-read enrichment-owned inputs (tax, insurance, HOA, rent) first: the
+    # overlay skips a no-op PUT, so an override since the last save would
+    # otherwise price this pick from stale inputs (code review).
+    await rebuild_scenario_inputs(db, scenario)
     try:
         products = await get_priced_products_for_scenario(db, scenario_id)
     except PricingValidationError as exc:

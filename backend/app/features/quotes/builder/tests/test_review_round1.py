@@ -441,3 +441,29 @@ async def test_same_bucket_note_survives_an_added_scenario(
     assert notes[collapsed_id] == SAME_BUCKET_NOTE
     assert [n for i, n in notes.items() if i != collapsed_id] == [None]
     assert len(_cards(body)) >= 2
+
+
+async def test_manual_pick_after_override_uses_fresh_inputs(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """Code review: with "Choose manually" skipping the no-op PUT, the pick
+    itself must re-read enrichment inputs (a tax override since the last
+    save) instead of pricing from the stored ones."""
+    ids = await _seed(db_session, "marcus_hale")
+    await make_staff_session(role=UserRole.MANAGER)
+    application_id = ids["marcus_hale"]
+    group = (await _scenarios(client, application_id))["groups"][0]
+    old_tax = group["quotes"][0]["computed"]["monthly_tax"]
+    response = await client.patch(
+        f"/api/v1/applications/{application_id}/field-values/property_tax_annual_rate",
+        json={"value": "0.012"},
+    )
+    assert response.status_code == 200, response.text
+
+    products = (await client.get(f"/api/v1/scenarios/{group['id']}/products")).json()
+    pick = next(p for p in products if p["product_name"] == "DSCR 30yr Fixed Max Credit")
+    response = await client.post(
+        f"/api/v1/scenarios/{group['id']}/quotes", json={"product": pick, "label": "Manual"}
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["computed"]["monthly_tax"] != old_tax
