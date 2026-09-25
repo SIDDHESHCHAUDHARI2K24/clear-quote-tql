@@ -17,6 +17,8 @@ import {
 } from "@cq/ui";
 import type { TabItem, TableColumn } from "@cq/ui";
 
+import { PrimitivesSection } from "./PrimitivesSection";
+
 interface QuoteRow {
   id: string;
   product: string;
@@ -138,6 +140,8 @@ export default function GalleryPage() {
           <p>Overlay body content.</p>
         </Overlay>
       </Card>
+
+      <PrimitivesSection />
     </main>
   );
 }
