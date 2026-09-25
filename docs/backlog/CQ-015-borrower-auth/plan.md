@@ -22,6 +22,12 @@ Gap check against the updated `system-design.md` (Borrower Portal intro, Decisio
 | 12 | Decision | Demo borrower | `seed_dev_users.py` also creates client "Casey Morgan" (`borrower@clearquote.test`, assigned to lo@), an account with `DEMO_BORROWER_PASSWORD` and `email_verified_at=now`, and an account for every existing client without one. It is idempotent. |
 | 13 | Decision | Portal cookie visibility | Same as CQ-014 Decision #12: `credentials: "include"` (already in `@cq/api-client`). Portal on 3020 and API on localhost share a host. Railway is a CQ-035 follow-up. |
 
+| 14 | Decision (stage 6) | Cost of separate sign-up limits | Accepted: one target email can receive up to 5 sign-up + 5 login emails per 15 minutes (was 5 combined). Lockout-by-sign-up-flood is worse than 5 extra emails. |
+| 15 | Decision (stage 6) | Least-loaded LO under concurrent sign-ups | Accepted: no locking; two simultaneous new-client sign-ups can land on the same LO. Only the balance is off; nothing breaks. |
+| 16 | Decision (stage 6) | Proxy IPs | `client_ip` reads `request.client.host`. Behind Railway's proxy, per-IP limits would pool every user; CQ-035 must run uvicorn with `--proxy-headers --forwarded-allow-ips`. `client_ip` now lives once in `auth/common.py`. |
+| 17 | Decision (cleanup) | Password minimum in the contract | `BorrowerSignupRequest.password` has `min_length=MIN_PASSWORD_LENGTH`, so short passwords get FastAPI's 422 (`detail` shape) before the rate limit; the service check stays as a second guard. The frontend `extractErrorMessage` reads both error shapes. |
+| 18 | Decision (cleanup) | Shared auth UI | Login/OTP forms, `TextField`, `AuthCard`, `useAsyncSubmit`, `extractErrorMessage` and `isPublicPath` live in `packages/ui/src/auth`; both apps keep only endpoint wiring, copy, navigation and middleware. This refactors CQ-014's LO Console auth UI. |
+
 ## Why
 
 The quote email (CQ-020), report (CQ-022), borrower actions (CQ-024) and the whole P6 portal need a signed-in borrower tied to exactly one client.

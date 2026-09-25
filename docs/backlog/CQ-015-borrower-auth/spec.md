@@ -36,15 +36,15 @@ Borrowers create a portal account themselves, then sign in with email + password
 
 ## Acceptance criteria
 
-- [ ] AC1 — A borrower signs up with a seeded client's email, gets the OTP in Mailpit, verifies it, and `/me` returns that existing client (no new client row).
-- [ ] AC2 — Signing up with an unknown email creates a client assigned to the LO with the fewest clients, plus a linked borrower account.
-- [ ] AC3 — Signing up with an email that already has an account looks the same to the caller (200 with a challenge id); the email sent says an account exists, and no second account is created.
-- [ ] AC4 — Borrower login: a wrong password and an unknown email return the same 401; OTP expiry, the 5-attempt limit and the rate limit apply as for staff.
-- [ ] AC5 — A borrower cookie gets 401 on staff `/me`, and a staff cookie gets 401 on borrower `/me`.
-- [ ] AC6 — `ensure_borrower_owns_client` returns 404 for another client's id and passes for the borrower's own.
-- [ ] AC7 — The migration upgrades and downgrades cleanly on a fresh DB.
-- [ ] AC8 — `seed_dev_users.py` creates the demo borrower and stays idempotent.
-- [ ] AC9 — Portal sign-up → OTP → home → logout and login → OTP → home work against the local API; vitest and react-doctor pass.
+- [x] AC1 — A borrower signs up with a seeded client's email, gets the OTP in Mailpit, verifies it, and `/me` returns that existing client (no new client row).
+- [x] AC2 — Signing up with an unknown email creates a client assigned to the LO with the fewest clients, plus a linked borrower account.
+- [x] AC3 — Signing up with an email that already has an account looks the same to the caller (200 with a challenge id); the email sent says an account exists, and no second account is created.
+- [x] AC4 — Borrower login: a wrong password and an unknown email return the same 401; OTP expiry, the 5-attempt limit and the rate limit apply as for staff.
+- [x] AC5 — A borrower cookie gets 401 on staff `/me`, and a staff cookie gets 401 on borrower `/me`.
+- [x] AC6 — `ensure_borrower_owns_client` returns 404 for another client's id and passes for the borrower's own.
+- [x] AC7 — The migration upgrades and downgrades cleanly on a fresh DB.
+- [x] AC8 — `seed_dev_users.py` creates the demo borrower and stays idempotent.
+- [x] AC9 — Portal sign-up → OTP → home → logout and login → OTP → home work against the local API; vitest and react-doctor pass.
 
 ## Test plan
 
