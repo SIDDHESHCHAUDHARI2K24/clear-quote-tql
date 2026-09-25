@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     field_encryption_key: str | None = None
 
     valkey_url: str
+    # CQ-014: db the pytest `valkey` fixture FLUSHDBs; unset means
+    # `valkey_url` with db index 15 (see backend/conftest.py).
+    test_valkey_url: str | None = None
 
     s3_endpoint: str
     s3_bucket: str

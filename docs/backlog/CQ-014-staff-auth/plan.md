@@ -74,9 +74,9 @@ Every console feature needs a signed-in staff user and the LO/Manager scoping ru
 
 ## Progress
 
-- [ ] T1
-- [ ] T2
-- [ ] T3
-- [ ] T4
+- [x] T1
+- [x] T2
+- [x] T3
+- [x] T4
 - [ ] T5
 - [ ] T6

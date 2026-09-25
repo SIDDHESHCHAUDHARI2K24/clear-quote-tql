@@ -55,7 +55,8 @@ jobs:
       # CQ-014: real Valkey now backs OTP/session/rate-limit tests
       # (backend/conftest.py's `valkey` fixture FLUSHDBs this db before and
       # after every test) — db 1, distinct from the db 0 other tools use.
-      VALKEY_URL: redis://localhost:6379/1
+      VALKEY_URL: redis://localhost:6379/0
+      TEST_VALKEY_URL: redis://localhost:6379/1
       # Dummy values below: CQ-004's /health checks are monkeypatched in
       # tests, so these never need to resolve in CI (see CQ-006 spec Notes).
       S3_ENDPOINT: http://localhost:9010
