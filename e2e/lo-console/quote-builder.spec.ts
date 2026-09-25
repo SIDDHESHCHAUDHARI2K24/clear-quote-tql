@@ -37,7 +37,7 @@ function rateOf(text: string): number {
 
 test("AC1: Marcus Hale shows 4 quotes in 2 groups with no user action", async ({ page }) => {
   const { builder } = await openPricing(page, LO_EMAIL, "marcus.hale@clearquote-demo.test");
-  const groups = builder.getByRole("region");
+  const groups = builder.getByTestId("quote-group");
   await expect(groups).toHaveCount(2);
   await expect(groups.nth(0).getByRole("heading")).toHaveText("At DSCR 1.00");
   await expect(groups.nth(1).getByRole("heading")).toHaveText(/^At your DSCR \(0\.\d\d\)$/);
@@ -54,7 +54,7 @@ test("AC5: starring a quote recommends it and the header note rate follows", asy
     .locator("xpath=following-sibling::dd");
 
   const buydown = builder
-    .getByRole("region")
+    .getByTestId("quote-group")
     .nth(0)
     .getByRole("article", { name: "Buydown quote" });
   const rate = rateOf(await buydown.innerText());
@@ -63,7 +63,7 @@ test("AC5: starring a quote recommends it and the header note rate follows", asy
   await expect(noteRate).toHaveText(`${rate.toFixed(3)}%`);
   await expect(builder.getByRole("button", { pressed: true })).toHaveCount(1);
 
-  const par = builder.getByRole("region").nth(0).getByRole("article", { name: "Par quote" });
+  const par = builder.getByTestId("quote-group").nth(0).getByRole("article", { name: "Par quote" });
   const parRate = rateOf(await par.innerText());
   await par.getByRole("button", { name: /^Recommend Par/ }).click();
   await expect(noteRate).toHaveText(`${parRate.toFixed(3)}%`);
@@ -74,7 +74,7 @@ test("AC3: editing to 25% down and Save & AutoQuote replaces that scenario's par
   page,
 }) => {
   const { builder } = await openPricing(page, LO_EMAIL, "marcus.hale@clearquote-demo.test");
-  const group = builder.getByRole("region").nth(1);
+  const group = builder.getByTestId("quote-group").nth(1);
   const oldPar = group.getByRole("article", { name: "Par quote" });
   const oldParRate = rateOf(await oldPar.innerText());
   const oldIds = await group
@@ -104,7 +104,7 @@ test("AC4: Choose manually lists >= 8 products; a pick becomes a card; delete re
   page,
 }) => {
   const { builder } = await openPricing(page, LO_EMAIL, "marcus.hale@clearquote-demo.test");
-  const group = builder.getByRole("region").nth(0);
+  const group = builder.getByTestId("quote-group").nth(0);
   await group.getByRole("button", { name: "Edit scenario" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Choose manually" }).click();
 

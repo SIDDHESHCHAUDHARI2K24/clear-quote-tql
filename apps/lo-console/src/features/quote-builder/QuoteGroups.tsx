@@ -39,7 +39,7 @@ export function QuoteGroups({
   return (
     <div className="flex flex-col gap-6">
       {groups.map((group) => (
-        <section key={group.id} aria-label={group.label} className="flex flex-col gap-3">
+        <section key={group.id} data-testid="quote-group" className="flex flex-col gap-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-md font-semibold text-navy-900">{group.label}</h3>
             <button

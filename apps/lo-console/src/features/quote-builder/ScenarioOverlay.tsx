@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, MoneyInput, Overlay, PercentInput } from "@cq/ui";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import type { QuotePreviewRequest } from "../pricing/api";
 import {
@@ -82,6 +82,8 @@ export function ScenarioOverlay({
   );
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<PricingProblem | null>(null);
+  // Only read inside handlers, never rendered: a ref, not state.
+  const createdId = useRef<string | null>(null);
 
   const downFraction = downPct === "" ? "" : percentInputValueToFraction(downPct);
   const valid = isDecimalText(price) && downFraction !== "" && isDecimalText(downPct);
@@ -111,6 +113,10 @@ export function ScenarioOverlay({
     let scenarioId: string;
     if (mode.kind === "edit") {
       scenarioId = mode.group.id;
+    } else if (createdId.current !== null) {
+      // Add mode, retrying after a later step failed: reuse the scenario
+      // the first attempt created instead of creating another one.
+      scenarioId = createdId.current;
     } else {
       const created = await createScenario(applicationId, {
         purchase_price: price,
@@ -120,6 +126,7 @@ export function ScenarioOverlay({
       });
       if (!created.ok) return created;
       scenarioId = created.data.id;
+      createdId.current = scenarioId;
     }
     const updated = await updateScenario(scenarioId, body());
     return updated.ok ? { ok: true, data: scenarioId } : updated;

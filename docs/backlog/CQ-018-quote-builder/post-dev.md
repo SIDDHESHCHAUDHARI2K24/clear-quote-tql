@@ -53,7 +53,7 @@ Backend changes:
 | Backend tests | `make test` (pytest backend) | 485 passed |
 | Seed tests | `make test` (pytest seed) | 30 passed (persona end statuses unchanged) |
 | Lint / types | `make lint` (ruff, ruff format, mypy, eslint, tsc, prettier) | clean, exit 0 |
-| Frontend | `make test` (`pnpm -r run test`) | lo-console 108, ui 141, borrower-portal 84, api-client 2: all passed |
+| Frontend | `make test` (`pnpm -r run test`) | lo-console 109, ui 141, borrower-portal 84, api-client 2: all passed |
 | react-doctor | `npx react-doctor -y --blocking error` (apps/lo-console) | exit 0, score 78/100, warnings only (complexity in `QuoteBuilder`/`QuoteCard`/`ScenarioOverlay`, pre-existing `PricingPanel`) |
 | E2E | `pnpm exec playwright test e2e/lo-console --workers=1` (slot 8, fresh `make demo-reset`) | 27 passed (8 new CQ-018 + every CQ-016/017 spec) |
 | No money math | `quote-builder-no-money-math.test.ts` | 22 passed; every file in `features/quote-builder` is scanned |
@@ -62,7 +62,11 @@ Backend changes:
 
 | Severity | Finding | Resolution |
 | --- | --- | --- |
-| — | See the "Code review" section below | — |
+| Major | `ScenarioOverlay` Add mode: a retry after a failed PUT or autoquote POSTed a new scenario each time, leaving empty groups | A `createdId` ref reuses the scenario the first attempt created. New Vitest test: "Add: retrying Save & AutoQuote after a failed autoquote reuses the created scenario" (1 create, 2 PUTs to the same id). |
+| Major | `_reprice_scenario`: a quote whose product left the grid was rebuilt from its old rate/points and marked `stale=False` with a fresh `priced_at` (it looked re-priced) | Now its engine output is recomputed at the refreshed inputs, but it stays `stale=True`, keeps its `priced_at`, and is left out of `quote_ids`. Extended `test_products_grid_and_manual_pick`. |
+| Minor | An investment card showed "No prepayment penalty" when the scenario had no PPP set, though OB priced it at the 5-year default | `_prepay_label(None)` → the 5-year default. Only an explicit `0` shows "No prepayment penalty". |
+| Major (found in e2e) | Group `<section aria-label="At DSCR 1.00">` made CQ-017's `getByLabel('DSCR')` (a substring match) resolve to 3 elements whenever the builder loaded first | Groups carry `data-testid="quote-group"` and no accessible name, so CQ-017's spec is untouched. The full `e2e/lo-console` run after a fresh `make demo-reset` passes 27/27. |
+| Note | Reprice updates Par/Buydown quotes in place even when a draft package names them | By design. A sent package reads its frozen `quote_package_versions` snapshot, so borrowers are unaffected. |
 
 ## How to test manually
 

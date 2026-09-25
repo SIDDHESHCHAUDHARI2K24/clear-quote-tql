@@ -213,8 +213,17 @@ def _short_pct(fraction: Decimal) -> str:
     return text.rstrip("0").rstrip(".") if "." in text else text
 
 
+_DEFAULT_INVESTMENT_PPP_YEARS = 5
+"""What the OB request sends for an investment scenario with no PPP set
+(`ob_request._DEFAULT_INVESTMENT_PPP_YEARS`)."""
+
+
 def _prepay_label(years: int | None) -> str:
-    if not years:
+    """Investment only. `None` means the scenario never set one, so it was
+    priced at OB's 5-year default; only an explicit `0` is no penalty."""
+    if years is None:
+        years = _DEFAULT_INVESTMENT_PPP_YEARS
+    if years == 0:
         return "No prepayment penalty"
     return f"{years}-year prepay"
 
@@ -581,7 +590,17 @@ async def _reprice_scenario(
             await _delete_quote_row(db, quote)
             continue
         fresh = next((row for row in products if _same_product(quote, row)), None)
-        _apply_product(quote, scenario, fresh or _product_from_quote(quote), now)
+        if fresh is None:
+            # The product is no longer offered at these inputs: recompute
+            # its engine output at the old rate/points so the card reflects
+            # the new inputs, but keep it stale (not re-priced) -- code
+            # review finding.
+            quote.computed = computation_json(
+                compute_for_product(scenario, _product_from_quote(quote))
+            )
+            quote.stale = True
+            continue
+        _apply_product(quote, scenario, fresh, now)
         others.append(quote)
     await db.flush()
     return par_quote, buydown_quote, others

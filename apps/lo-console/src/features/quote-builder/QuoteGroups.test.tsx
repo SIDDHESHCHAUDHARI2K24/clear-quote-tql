@@ -26,7 +26,7 @@ function renderGroups(view: ScenariosView) {
 describe("QuoteGroups", () => {
   it("AC1: Marcus Hale shows 4 quotes in 2 groups (DSCR 1.00 and his own DSCR)", () => {
     renderGroups(marcusFixture as ScenariosView);
-    const groups = screen.getAllByRole("region");
+    const groups = screen.getAllByTestId("quote-group");
     expect(groups).toHaveLength(2);
     expect(within(groups[0]).getByRole("heading")).toHaveTextContent("At DSCR 1.00");
     expect(within(groups[1]).getByRole("heading")).toHaveTextContent(/^At your DSCR \(0\.\d\d\)$/);
@@ -40,7 +40,7 @@ describe("QuoteGroups", () => {
 
   it("AC1: a same-bucket investment set shows one group with the note", () => {
     renderGroups(kathleenFixture as ScenariosView);
-    expect(screen.getAllByRole("region")).toHaveLength(1);
+    expect(screen.getAllByTestId("quote-group")).toHaveLength(1);
     expect(screen.getByText("Your DSCR prices the same as 1.00")).toBeInTheDocument();
   });
 
@@ -58,7 +58,7 @@ describe("QuoteGroups", () => {
 
   it("shows credits as negative points in green and money from the API verbatim", () => {
     renderGroups(marcusFixture as ScenariosView);
-    const par = within(screen.getAllByRole("region")[0]).getByRole("article", {
+    const par = within(screen.getAllByTestId("quote-group")[0]).getByRole("article", {
       name: "Par quote",
     });
     const quote = (marcusFixture as ScenariosView).groups[0].quotes[0];

@@ -281,6 +281,20 @@ async def test_products_grid_and_manual_pick(
     assert (await client.post(f"/api/v1/applications/{application_id}/reprice")).status_code == 200
     cards = {c["id"]: c for c in _cards(await _scenarios(client, application_id))}
     assert manual_id in cards
+    assert cards[manual_id]["stale"] is False
+
+    # Code review: a manual pick whose product left the grid is recomputed
+    # but stays stale (never reported as re-priced).
+    quote = await db_session.get(Quote, uuid.UUID(manual_id))
+    assert quote is not None
+    quote.product = "Discontinued Product"
+    await db_session.flush()
+    response = await client.post(f"/api/v1/applications/{application_id}/reprice")
+    assert manual_id not in response.json()["quote_ids"]
+    cards = {c["id"]: c for c in _cards(await _scenarios(client, application_id))}
+    assert cards[manual_id]["stale"] is True
+    others = [c for i, c in cards.items() if i != manual_id]
+    assert not any(c["stale"] for c in others)
 
 
 async def test_reprice_clears_stale(

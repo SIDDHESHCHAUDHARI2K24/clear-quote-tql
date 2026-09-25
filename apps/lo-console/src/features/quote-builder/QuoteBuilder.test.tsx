@@ -103,6 +103,36 @@ describe("QuoteBuilder", () => {
     expect(postMock).toHaveBeenCalledTimes(1);
   });
 
+  it("Add: retrying Save & AutoQuote after a failed autoquote reuses the created scenario", async () => {
+    getMock.mockResolvedValue(ok(marcus));
+    const created = { ...marcus.groups[0], id: "created-scenario" };
+    postMock
+      .mockResolvedValueOnce(ok(created)) // POST .../scenarios
+      .mockResolvedValueOnce(
+        fail(502, { error: { code: "PROVIDER_UNAVAILABLE", message: "down" } }),
+      )
+      .mockResolvedValueOnce(ok({ par: {}, buydown: null })); // retry autoquote
+    putMock.mockResolvedValue(ok(created));
+
+    render(<QuoteBuilder hasStaleQuotes={false} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Add scenario" }));
+    const dialog = screen.getByRole("dialog");
+    const save = within(dialog).getByRole("button", { name: "Save & AutoQuote" });
+    await userEvent.click(save);
+    await within(dialog).findByRole("alert");
+    await userEvent.click(save);
+
+    await waitFor(() => expect(postMock).toHaveBeenCalledTimes(3));
+    const createCalls = postMock.mock.calls.filter(
+      ([route]) => route === "/api/v1/applications/{application_id}/scenarios",
+    );
+    expect(createCalls).toHaveLength(1);
+    expect(putMock).toHaveBeenCalledTimes(2);
+    for (const [, options] of putMock.mock.calls) {
+      expect(options.params.path.scenario_id).toBe("created-scenario");
+    }
+  });
+
   it("AC8: Re-price calls /reprice, then the stale banner clears", async () => {
     getMock
       .mockResolvedValueOnce(ok(withQuotes(marcus, { stale: true })))
@@ -136,7 +166,7 @@ describe("QuoteBuilder", () => {
     postMock.mockResolvedValueOnce(ok({ id: "new" }));
 
     render(<QuoteBuilder hasStaleQuotes={false} />);
-    const group = await screen.findByRole("region", { name: "At DSCR 1.00" });
+    const group = (await screen.findAllByTestId("quote-group"))[0];
     await userEvent.click(within(group).getByRole("button", { name: "Edit scenario" }));
     await userEvent.click(screen.getByRole("button", { name: "Choose manually" }));
 
