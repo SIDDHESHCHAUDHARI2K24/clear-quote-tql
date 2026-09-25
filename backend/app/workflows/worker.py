@@ -67,6 +67,8 @@ from app.workflows.activities import (
 )
 from app.workflows.application_pipeline import ApplicationPipelineWorkflow
 from app.workflows.constants import APPLICATION_PIPELINE_TASK_QUEUE
+from app.workflows.send_activities import SEND_ACTIVITIES
+from app.workflows.send_quote_package import SendQuotePackageWorkflow
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +85,14 @@ CONTRACT_ACTIVITIES: list[Callable[..., Any]] = [
 # workflow calls when a `resume` signal is processed -- not one of the six
 # contract activities, but it still has to be registered on the same task
 # queue to run.
-ACTIVITIES: list[Callable[..., Any]] = [*CONTRACT_ACTIVITIES, record_pipeline_resumed]
-WORKFLOWS: list[type] = [ApplicationPipelineWorkflow]
+ACTIVITIES: list[Callable[..., Any]] = [
+    *CONTRACT_ACTIVITIES,
+    record_pipeline_resumed,
+    # CQ-020: SendQuotePackageWorkflow shares the same task queue (one
+    # worker process per slot, `make worker`).
+    *SEND_ACTIVITIES,
+]
+WORKFLOWS: list[type] = [ApplicationPipelineWorkflow, SendQuotePackageWorkflow]
 
 
 def build_worker(client: Client) -> Worker:

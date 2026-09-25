@@ -38,3 +38,16 @@ IMPORT_ENRICH_RETRY_POLICY = RetryPolicy(
 # `draft_quote_set`: spec.md only pins the non-retryable list for these —
 # every other field stays Temporal's default.
 DEFAULT_RETRY_POLICY = RetryPolicy(non_retryable_error_types=NON_RETRYABLE_ERROR_TYPES)
+
+# CQ-020 (plan.md Decision 15): the SendQuotePackage activities. Bounded so a
+# broken SMTP/MinIO ends in `send_status = failed` instead of retrying
+# forever; `PackageNotReadyError` (Freeze found blockers) is final. CRM's
+# `ProviderUnavailableError` stays retryable here, unlike the pipeline: the
+# email has already gone out by the Record step.
+SEND_RETRY_POLICY = RetryPolicy(
+    initial_interval=timedelta(seconds=1),
+    backoff_coefficient=2.0,
+    maximum_interval=timedelta(seconds=30),
+    maximum_attempts=5,
+    non_retryable_error_types=["PackageNotReadyError"],
+)
