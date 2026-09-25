@@ -16,11 +16,17 @@ blocking flag clears (spec "After any edit"; plan.md Decisions #8, #9).
    that failed (or was terminated, cancelled or timed out) is started
    again under the same id (`ALLOW_DUPLICATE_FAILED_ONLY`).
 
-Steps 2-4 run under the application row lock (review M1), and step 4 is
-skipped while an earlier resume is still pending (the last `pipeline.*`
-event is our own `pipeline.resume_requested`) and the run is still
-running, so two quick edits send one signal and write one event. A run
-that closed meanwhile is restarted as usual.
+Steps 2-3 run under the application row lock (review M1). Step 4 asks
+Temporal (`describe`, short `rpc_timeout`) with the lock released
+(lock-hardening minor 1), then takes the lock again only to re-check the
+status and flags, check for a pending resume and write the
+`pipeline.resume_requested` event. A signal is skipped while an earlier
+resume is still pending (the last `pipeline.*` event is our own
+`pipeline.resume_requested`, less than `RESUME_PENDING_TTL` old) and the
+run is still running, so two quick edits send one signal and write one
+event. An older pending resume is treated as lost (e.g. the API crashed
+before signalling) and the signal, which is idempotent, is sent again
+(minor 4). A run that closed meanwhile is restarted as usual.
 """
 
 from __future__ import annotations
@@ -29,15 +35,17 @@ import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client, WorkflowExecutionStatus
 from temporalio.common import WorkflowIDReusePolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
 from temporalio.service import RPCError, RPCStatusCode
 
+from app.core.clock import now
 from app.core.enums import ApplicationStatus, FlagSeverity
 from app.core.errors import AppError
 from app.features.applications.locking import lock_application
@@ -65,6 +73,12 @@ ResumeReason = Literal[
 ]
 
 TemporalProvider = Callable[[], Awaitable[Client]]
+
+RESUME_PENDING_TTL = timedelta(seconds=60)
+"""How long a `pipeline.resume_requested` counts as pending (minor 4)."""
+
+DESCRIBE_RPC_TIMEOUT = timedelta(seconds=3)
+"""`describe` timeout: an edit must not wait long on a slow Temporal."""
 
 
 async def get_temporal_provider() -> TemporalProvider:
@@ -133,11 +147,25 @@ _RESTARTABLE = frozenset(
 
 
 async def _resume_pending(db: AsyncSession, application_id: uuid.UUID) -> bool:
-    """True when the latest `pipeline.*` event is a resume we requested and
-    the pipeline has not written anything since (review minor 8)."""
+    """True when the latest `pipeline.*` event is a resume we requested less
+    than `RESUME_PENDING_TTL` ago and the pipeline has not written anything
+    since (review minor 8, lock-hardening minor 4).
+
+    Ordering (lock-hardening nit, accepted): `created_at` is the DB's
+    transaction start time, so an event written by a transaction that began
+    before ours but committed after it sorts first. The pipeline's verify
+    waits on the lock *inside* its transaction, so its `pipeline.flagged`
+    can sort before our resume and we would wrongly see "pending". That
+    window ends when the TTL expires, and a fresh edit then signals again,
+    so it is accepted rather than adding a `clock_timestamp()` column."""
     latest = (
         await db.execute(
-            select(ActivityEvent.type, ActivityEvent.payload)
+            select(
+                ActivityEvent.type,
+                ActivityEvent.payload,
+                ActivityEvent.at,
+                (func.clock_timestamp() - ActivityEvent.created_at).label("db_age"),
+            )
             .where(
                 ActivityEvent.application_id == application_id,
                 ActivityEvent.type.startswith("pipeline."),
@@ -151,20 +179,27 @@ async def _resume_pending(db: AsyncSession, application_id: uuid.UUID) -> bool:
     if latest is None or latest.type != events.RESUME_REQUESTED:
         return False
     payload = latest.payload if isinstance(latest.payload, dict) else {}
-    return payload.get("reason") in ("resumed", "started")
+    if payload.get("reason") not in ("resumed", "started"):
+        return False
+    # Expired on either clock: the DB clock (`created_at`, unaffected by a
+    # frozen or future `CLOCK_NOW`) or the app clock (`at`, stamped by
+    # `events.add_event` with `clock.now()`, so a demo or test that moves
+    # `CLOCK_NOW` forward expires it too).
+    expired = latest.db_age >= RESUME_PENDING_TTL or now() - latest.at >= RESUME_PENDING_TTL
+    return not expired
 
 
 async def _plan_resume(
-    client: Client, application_id: uuid.UUID, pending: bool = False
+    client: Client, application_id: uuid.UUID
 ) -> tuple[ResumeReason, Callable[[], Awaitable[None]] | None]:
-    """Decides how to resume without touching the DB: signal a running run,
-    start one when none exists (seeded apps), or give up on a closed run.
-    Returns the reason plus the Temporal call to make (deferred, see
-    `ResumeOutcome.dispatch`)."""
+    """Decides how to resume without touching the DB (call it without the
+    application lock): signal a running run, start one when none exists
+    (seeded apps), or give up on a closed run. Returns the reason plus the
+    Temporal call to make (deferred, see `ResumeOutcome.dispatch`)."""
     workflow_id = application_workflow_id(str(application_id))
     handle = client.get_workflow_handle(workflow_id)
     try:
-        description = await handle.describe()
+        description = await handle.describe(rpc_timeout=DESCRIBE_RPC_TIMEOUT)
     except RPCError as exc:
         if exc.status != RPCStatusCode.NOT_FOUND:
             raise
@@ -188,15 +223,31 @@ async def _plan_resume(
 
         return "started", _start
     if description.status is WorkflowExecutionStatus.RUNNING:
-        if pending:
-            # Our last resume is still waiting to be picked up by this run.
-            return "already_requested", None
 
         async def _signal() -> None:
             await handle.signal(ApplicationPipelineWorkflow.resume)
 
         return "resumed", _signal
     return "workflow_closed", None
+
+
+async def _not_resumable(
+    db: AsyncSession, application_id: uuid.UUID, *, blocking_open: bool | None = None
+) -> ResumeReason | None:
+    """Why the pipeline must not be resumed now, or None. Reads the open
+    flags itself unless `blocking_open` is given."""
+    status = (
+        await db.execute(select(Application.status).where(Application.id == application_id))
+    ).scalar_one()
+    if status is not ApplicationStatus.NEEDS_ATTENTION:
+        return "not_needs_attention"
+    if blocking_open is None:
+        blocking_open = any(
+            flag.severity is FlagSeverity.BLOCKING for flag in await _open_flags(db, application_id)
+        )
+    if blocking_open:
+        return "blocking_flags_remain"
+    return None
 
 
 async def reverify_and_maybe_resume(
@@ -245,28 +296,31 @@ async def reverify_and_maybe_resume(
                 payload=payload,
             )
 
-    status = (
-        await db.execute(select(Application.status).where(Application.id == application_id))
-    ).scalar_one()
-    if status is not ApplicationStatus.NEEDS_ATTENTION:
-        await db.commit()
-        return ResumeOutcome(requested=False, reason="not_needs_attention")
-    if blocking_open:
-        await db.commit()
-        return ResumeOutcome(requested=False, reason="blocking_flags_remain")
-    pending = await _resume_pending(db, application_id)
+    blocked = await _not_resumable(db, application_id, blocking_open=blocking_open)
+    # Commits the flag events and releases the lock: Temporal is asked
+    # without it (lock-hardening minor 1).
+    await db.commit()
+    if blocked is not None:
+        return ResumeOutcome(requested=False, reason=blocked)
 
     try:
         client = await temporal()
-        reason, dispatch = await _plan_resume(client, application_id, pending)
+        reason, dispatch = await _plan_resume(client, application_id)
     except Exception:
         logger.exception("Could not resume the pipeline for %s", application_id)
-        await db.commit()
         return ResumeOutcome(requested=False, reason="temporal_unavailable")
 
-    if reason == "already_requested":
+    # Under the lock again: only the re-check, the pending check and the
+    # event write. The pipeline may have moved on while Temporal answered.
+    await lock_application(db, application_id)
+    blocked = await _not_resumable(db, application_id)
+    if blocked is not None:
         await db.commit()
-        return ResumeOutcome(requested=True, reason=reason)
+        return ResumeOutcome(requested=False, reason=blocked)
+    if reason == "resumed" and await _resume_pending(db, application_id):
+        # Our last resume is still waiting to be picked up by this run.
+        await db.commit()
+        return ResumeOutcome(requested=True, reason="already_requested")
 
     requested = reason in ("resumed", "started")
     events.add_event(

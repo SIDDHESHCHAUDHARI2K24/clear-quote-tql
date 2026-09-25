@@ -25,19 +25,26 @@ from app.features.borrower.consent.models import Consent, ConsentStatus, Consent
 from app.features.clients.models import Client
 from app.features.notifications.email.service import send_email
 from app.integrations.los.mock import MockLosClient
+from app.integrations.los.schemas import LoanFileDTO
 
 CONSENT_TTL = timedelta(days=14)
 
 
-async def import_liabilities(
-    db: AsyncSession, application: Application, user_id: uuid.UUID
-) -> None:
-    """Replaces every imported liability with the LOS's current list and
-    keeps LO-added rows (plan.md #15)."""
+async def fetch_loan_file(db: AsyncSession, application: Application) -> LoanFileDTO:
+    """Reads the application's loan file from the (mock) LOS. Call it before
+    taking the application lock: the provider call can be slow
+    (lock-hardening minor 2)."""
     if not application.los_loan_guid:
         raise ValidationAppError("This application has no LOS loan to import liabilities from.")
-    loan_file = await MockLosClient(db).get_loan_file(application.los_loan_guid)
+    return await MockLosClient(db).get_loan_file(application.los_loan_guid)
 
+
+async def import_liabilities(
+    db: AsyncSession, application: Application, user_id: uuid.UUID, loan_file: LoanFileDTO
+) -> None:
+    """Replaces every imported liability with `loan_file`'s current list
+    (from `fetch_loan_file`) and keeps LO-added rows (plan.md #15). Runs
+    under the application lock."""
     manual = await provenance.load_manual_rows(db, application.id)
     rows = (
         (await db.execute(select(Liability).where(Liability.application_id == application.id)))
