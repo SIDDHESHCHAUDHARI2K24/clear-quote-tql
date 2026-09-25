@@ -71,7 +71,9 @@ jobs:
 
       - run: uv run ruff format --check backend
 
-      - run: uv run mypy backend/app
+      # Same paths as `make lint`'s mypy line, kept in sync deliberately —
+      # never diverge from the Makefile target.
+      - run: uv run mypy backend/app backend/conftest.py backend/tests backend/scripts
 
       - run: uv run pytest backend
 

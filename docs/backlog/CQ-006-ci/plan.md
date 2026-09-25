@@ -15,7 +15,8 @@ Gap check against spec.md: the spec is unusually prescriptive (it pins the workf
 | 5 | Decision | `uv run mypy backend/app` (spec) vs `make lint`'s wider `backend/app backend/conftest.py backend/tests backend/scripts` | Spec says "pin exactly" for the workflow jobs section, so the CI step uses the narrower `uv run mypy backend/app` verbatim from spec.md, not `make lint`'s wider path list. Not calling `make lint`/`make test` directly from CI — spec pins the individual commands per job instead of the Makefile targets, so CI step failures point at exactly one tool. |
 | 6 | Decision | Root `prettier --check .` scope | Spec pins `pnpm exec prettier --check .` (matches `make lint`'s last line) — run as-is; `.prettierignore` (already in repo) scopes out generated/build output. |
 | 7 | Decision | CI validation without pushing | Per orchestrator instruction: do not push or open a PR. Validate with `actionlint` (installed via `brew install actionlint`) and by running every job's steps locally with the same commands/env against a local Postgres (via `make up`), recording output in `post-dev.md`. AC1 ("CI green on main") is marked Pending — requires human-approved push. |
-| 8 | **Big gap found — flagged, not fixed here** | `backend/app/features/system/tests/test_health.py::test_health_ok` does not monkeypatch `check_valkey`/`check_minio`/`check_temporal` — it hits real infra. CQ-004's own spec.md (Notes) explicitly says "in CI (CQ-006) only Postgres runs as a real service container; Valkey/MinIO/Temporal health checks are tested by monkeypatching their clients" and CQ-006's spec.md relies on that same assumption ("CQ-004's health checks are monkeypatched in tests, so these never need to resolve in CI"). The merged CQ-004 code does not actually do this for `test_health_ok` (only `test_health_degraded` monkeypatches, and only `check_valkey`). Verified: with the CI job's real dummy `VALKEY_URL`/`S3_*`/`TEMPORAL_*` values (no such services reachable), `uv run pytest backend` gets 2 failures in `test_health.py` (503 instead of 200); with all four values pointed at this machine's real `make up` stack (matching `.env.example`), all 16 tests pass. This is a bug in already-merged CQ-004 code, not a CQ-006 design gap, and `test_health.py` is out of this item's edit scope (`.github/` + own docs folder only). **Recommended fix** (for CQ-004 owner / orchestrator to apply, not applied here): in `test_health_ok`, monkeypatch `check_minio` and `check_temporal` (and `check_valkey`) to return `CheckResult(name=..., status="ok")`, mirroring the existing `_failing_valkey_check` pattern in `test_health_degraded`. Flagged prominently in this agent's final report; AC3/AC4/AC5 evidence in `post-dev.md` documents both runs. |
+| 8 | Bug found, then **orchestrator-authorised fix applied** | `backend/app/features/system/tests/test_health.py::test_health_ok` did not monkeypatch `check_valkey`/`check_minio`/`check_temporal` — it hit real infra, contradicting CQ-004's own spec.md ("Valkey/MinIO/Temporal health checks are tested by monkeypatching their clients"). Initially flagged and left unfixed (outside this item's `.github/`+docs scope). Orchestrator authorised a scope extension to fix it on this branch. Applied: `test_health_ok` and `test_health_degraded` now share a `_patch_non_db_checks_ok` helper that monkeypatches `check_valkey`/`check_minio`/`check_temporal` to `"ok"`; `test_health_degraded` then overrides `check_valkey` back to a failure, same as before. Verified with the CI job's exact dummy env: 16/16 pass. |
+| 9 | Orchestrator-authorised | CI `backend` job's mypy step widened from `uv run mypy backend/app` to `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts`, matching `make lint`'s scope exactly (CQ-004 widened `make lint`'s mypy coverage after CQ-006's spec.md was written) so the two can't drift. Verified: `Success: no issues found in 23 source files`. |
 
 ## Why
 
@@ -64,10 +65,11 @@ Single implementer (this agent), no subagent dispatch needed — one file, no in
 ## Progress
 
 - [x] T1
-- [x] T2 (with the caveat logged as decision #8 above)
+- [x] T2 (fixed per decisions #8, #9 — 16/16 pass with CI's exact dummy env)
 - [x] T3
 - [x] T4
 - [x] T5
+- [x] T6 — orchestrator-authorised scope extension: fix `test_health.py`, widen CI mypy to match `make lint`
 
 ## Orchestrator update (mid-session)
 
