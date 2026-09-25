@@ -37,6 +37,8 @@ Fix forward on a new branch from `main`, review, and merge through a PR. A rever
 - CQ-005/CQ-004: declare the 503 response on `/health` in the OpenAPI schema.
 - CQ-009: property-match ranking is a price proxy until CQ-023.
 - CQ-013: scenarios snapshot `ConfigSnapshot()` defaults, not the `settings` table (no loader yet); HOA is always $0 until a source exists.
+- CQ-010/CQ-012: reserves-months choice treats NULL occupancy as investment implicitly (`verification/service.py`); make it explicit.
+- CQ-010: a plaintext demo staff password exists in old commits of the public `cq-010-seed-data` branch (`ea72560`, `a036651`); never reuse it as `SEED_STAFF_PASSWORD`.
 
 ## Verification record
 
