@@ -141,6 +141,12 @@ async def test_readiness_blocks_instead_of_500_when_investment_strategy_is_missi
     assert application is not None
     assert application.occupancy is not None
     assert application.occupancy.value == "investment"
+    # The default draft is created first, while the strategy is still set
+    # (a fresh application with no draft yet and no strategy is a
+    # different, unrelated gap in `new_default_package`'s own recommendation
+    # drafting -- out of scope for this finding, which is about the
+    # readiness call over an *existing* package).
+    await client.get(f"/api/v1/applications/{application_id}/package")
     await db_session.execute(
         update(Application).where(Application.id == application_id).values(strategy=None)
     )
