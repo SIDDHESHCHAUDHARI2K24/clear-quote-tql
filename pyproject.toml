@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "Clear Quote — Total Quality Lending prototype mortgage quoting system"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.14.0",
     "asyncpg>=0.31.0",
     "boto3>=1.43.102",
+    "cryptography>=44.0.0",
     "fastapi>=0.141.1",
     "pydantic-settings>=2.15.0",
     "redis>=8.1.0",
