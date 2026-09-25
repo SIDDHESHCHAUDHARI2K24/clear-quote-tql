@@ -37,7 +37,7 @@ Built all 9 emulated-integration `Protocol`/`Mock*` pairs (LOS, Pricing, Rent, S
 | Full lint (backend + frontend) | `make lint` | All green (ruff, ruff format, mypy, eslint x4 packages, tsc x4, prettier) — `node_modules` installed by reviewer during stage 6 |
 | Full test (backend + frontend) | `make test` | `134 passed` backend; `1+27+4+4 = 36` frontend tests passed across `packages/api-client`, `packages/ui`, `apps/borrower-portal`, `apps/lo-console` |
 | CI (initial push) | `git push -u origin cq-009-mock-integrations`; `gh run watch 36101491478 --exit-status` | Run [36101491478](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36101491478) — success |
-| CI (fix round 1) | see bottom of this file | recorded after push |
+| CI (fix round 1) | `git push`; `gh run watch 36102399491 --repo SIDDHESHCHAUDHARI2K24/clear-quote-tql --exit-status` | Run [36102399491](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36102399491) — success; `backend` and `frontend` jobs both green (unrelated GH Actions cache-service warnings in the annotations, no failures) |
 
 ## Review findings (stage 6)
 
