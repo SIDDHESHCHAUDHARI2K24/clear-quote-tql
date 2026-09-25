@@ -22,9 +22,10 @@ from conftest import StaffSession
 
 MakeStaff = Callable[..., Awaitable[StaffSession]]
 
-SEND_TIME_HEADER_FIELDS = ("prepared_at", "rates_as_of", "expires_at", "expired", "superseded")
+SEND_TIME_HEADER_FIELDS = ("prepared_at", "expires_at", "expired", "superseded")
 """The only fields allowed to differ between the preview and the sent
-report: they are set from the send time (plan.md Decision 3)."""
+report: they are set from the send time (plan.md Decision 3). `rates_as_of`
+comes from the same date but is compared, so it must match on the day."""
 
 PORTAL_ONLY_FIELDS = ("borrower_action", "newest_report_token")
 """CQ-022/CQ-024 extras the portal adds around the `ReportViewModel`."""
