@@ -50,12 +50,21 @@ Fresh reviewer (Sonnet, did not write the code):
 
 No critical/major open.
 
+## After merge to main
+
+Phase 2 was merged with Phase 1 on 2026-09-25 (see `docs/backlog/phase-p2-merge-plan.md`). What changed for this item:
+
+- Demo users now come only from `make demo-reset`. Staff are the persona users in `seed/users.yaml` at `@clearquote-demo.test`: LOs `jordan.lee` and `morgan.reyes`, Manager `casey.nguyen` and Admin `riley.admin`. Every persona client also gets a borrower account (for example `marcus.hale@clearquote-demo.test`) when `SEED_BORROWER_PASSWORD` is set.
+- The `DEMO_STAFF_PASSWORD` / `DEMO_BORROWER_PASSWORD` env vars are gone, and no password value is committed anywhere. Seeded passwords come from `SEED_STAFF_PASSWORD` (required by `make demo-reset`) and `SEED_BORROWER_PASSWORD` (optional; blank means no borrower accounts), both blank in `.env.example`. The seed hashes them with argon2 (`app.core.security.hash_password`), the same scheme login verifies against.
+- `backend/scripts/seed_dev_users.py`, `DEV_USERS`, `seed_dev_users` and `seed_dev_borrowers` were retired. `backend/scripts/create_user.py` remains for creating individual staff users.
+- Phase 1's pricing and pipeline routes now require a staff session (`CurrentStaff`) and scope applications with `scope_applications`: an LO sees only their own, a Manager or Admin sees all, and out-of-scope ids return 404. `DEV_LO_ID` and `get_current_lo_stub` were removed.
+
 ## How to test manually
 
-1. `make up`; in the worktree `uv run alembic upgrade head && uv run python backend/scripts/seed_dev_users.py`.
-2. `make api` (or port 8012 in the P2 worktree) and `pnpm --filter @cq/lo-console dev`.
-3. Open http://localhost:3010 → redirected to `/login`. Sign in as `lo@clearquote.test` / `DEMO_STAFF_PASSWORD`.
-4. Open Mailpit http://localhost:8025, copy the 6-digit code, enter it → "Signed in as Jordan Avery (Loan Officer)". Log out → back at `/login`.
+1. `make up`. Set `SEED_STAFF_PASSWORD` in your local `.env` (any value of at least 8 characters), then run `make demo-reset`.
+2. `make api` and `pnpm --filter @cq/lo-console dev`.
+3. Open http://localhost:3010 and you are redirected to `/login`. Sign in as `jordan.lee@clearquote-demo.test` with your `SEED_STAFF_PASSWORD`.
+4. Open Mailpit at http://localhost:8025, copy the 6-digit code and enter it. The page shows "Signed in as Jordan Lee (Loan Officer)". Log out and you are back at `/login`.
 
 ## Follow-ups
 
