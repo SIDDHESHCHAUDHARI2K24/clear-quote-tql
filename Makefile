@@ -1,4 +1,4 @@
-.PHONY: up down logs lint test api-client demo-reset
+.PHONY: up down logs lint test api api-client demo-reset
 
 # Local stack (Postgres, Valkey, MinIO, Mailpit, Temporal), project name
 # `clear-quote` (infra/docker-compose.yml). --wait blocks until every
@@ -15,7 +15,7 @@ logs:
 lint:
 	uv run ruff check backend
 	uv run ruff format --check backend
-	uv run mypy backend/app
+	uv run mypy backend/app backend/conftest.py backend/tests backend/scripts
 	pnpm -r run lint
 	pnpm -r run typecheck
 	pnpm exec prettier --check .
@@ -24,23 +24,19 @@ test:
 	uv run pytest backend
 	pnpm -r run test
 
-# CQ-004 adds backend/scripts/export_openapi.py, which overwrites
-# packages/api-client/openapi.json with the real app.openapi() export. Until
-# it exists, this target uses CQ-005's hand-written stub (GET /health only,
-# in the exact shape pinned by CQ-004's spec.md) so the frontend can still
-# generate a typed client. No further Makefile edit is needed once CQ-004
-# lands: this step just starts finding the script.
+# backend/scripts/export_openapi.py (CQ-004) overwrites
+# packages/api-client/openapi.json with the real app.openapi() export, then
+# openapi-typescript regenerates the typed client from it.
 api-client:
-	@if [ -f backend/scripts/export_openapi.py ]; then \
-		uv run python backend/scripts/export_openapi.py; \
-	else \
-		echo "api-client: backend/scripts/export_openapi.py not found yet (CQ-004) -- generating from the packages/api-client/openapi.json stub instead"; \
-	fi
+	uv run python backend/scripts/export_openapi.py
 	pnpm --filter @cq/api-client run generate
 
 # CQ-010 replaces this body with the real demo reset (drop DB, migrate, seed).
 demo-reset:
 	@echo "demo-reset: not implemented until CQ-010"
 
-# make api    -- added by CQ-004: uv run uvicorn app.main:app --port 8000 --reload
+# Dev server, port 8000 is pinned for this project (CQ-004).
+api:
+	uv run uvicorn app.main:app --port 8000 --reload
+
 # make worker -- added by CQ-011: cd backend && uv run python -m app.workflows.worker

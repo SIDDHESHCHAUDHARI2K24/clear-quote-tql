@@ -4,24 +4,54 @@ import { useEffect, useState } from "react";
 
 import { api } from "../lib/api-client";
 
-type ApiState = "loading" | "reachable" | "unreachable";
+type HealthState =
+  | { kind: "loading" }
+  | { kind: "ok" }
+  | { kind: "degraded"; failingChecks: string[] }
+  | { kind: "unreachable" };
+
+// The /health OpenAPI contract (CQ-004) only documents a 200 response; the
+// same HealthReport body is also returned on 503 ("degraded"). openapi-fetch
+// resolves (never rejects) on a non-2xx HTTP status, and — because 503 isn't
+// a documented response — puts that body under `error`, not `data`. So we
+// read the report from whichever of `data`/`error` is present, and only
+// treat a network-level failure (a rejected promise) as "unreachable".
+function isHealthReport(
+  value: unknown,
+): value is { status: "ok" | "degraded"; checks: Record<string, string> } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "status" in value &&
+    "checks" in value &&
+    typeof (value as { checks: unknown }).checks === "object"
+  );
+}
 
 export default function Home() {
-  const [state, setState] = useState<ApiState>("loading");
+  const [state, setState] = useState<HealthState>({ kind: "loading" });
 
   useEffect(() => {
     let cancelled = false;
 
-    // A network failure (backend not running, DNS/CORS failure, etc.)
-    // rejects this promise; openapi-fetch does not catch that itself, so we
-    // must — the page must never throw, whether or not the API is up.
     api
       .GET("/health")
-      .then(() => {
-        if (!cancelled) setState("reachable");
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        const report = isHealthReport(data) ? data : isHealthReport(error) ? error : undefined;
+        if (!report) {
+          setState({ kind: "unreachable" });
+        } else if (report.status === "ok") {
+          setState({ kind: "ok" });
+        } else {
+          const failingChecks = Object.entries(report.checks)
+            .filter(([, value]) => value !== "ok")
+            .map(([name]) => name);
+          setState({ kind: "degraded", failingChecks });
+        }
       })
       .catch(() => {
-        if (!cancelled) setState("unreachable");
+        if (!cancelled) setState({ kind: "unreachable" });
       });
 
     return () => {
@@ -34,11 +64,17 @@ export default function Home() {
       <h1 className="text-2xl font-semibold text-navy-900">Clear Quote — Borrower Portal</h1>
       <p
         role="status"
-        className={state === "unreachable" ? "text-status-danger" : "text-status-success"}
+        className={
+          state.kind === "unreachable" || state.kind === "degraded"
+            ? "text-status-danger"
+            : "text-status-success"
+        }
       >
-        {state === "loading" && "Checking API…"}
-        {state === "reachable" && "API reachable"}
-        {state === "unreachable" && "API unreachable"}
+        {state.kind === "loading" && "Checking API…"}
+        {state.kind === "ok" && "API reachable"}
+        {state.kind === "degraded" &&
+          `API degraded — failing checks: ${state.failingChecks.join(", ")}`}
+        {state.kind === "unreachable" && "API unreachable"}
       </p>
     </main>
   );

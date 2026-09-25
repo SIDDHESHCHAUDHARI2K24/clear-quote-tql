@@ -9,11 +9,11 @@ Status here is updated by the agent at stage 8 and by the human at merge.
 | [CQ-001](CQ-001-agent-tooling/spec.md) | Agent tooling & process | P0 | — | In Review |
 | [CQ-002](CQ-002-monorepo-scaffold/spec.md) | Monorepo scaffold | P0 | CQ-001 | In Review |
 | [CQ-003](CQ-003-local-infra/spec.md) | Local infrastructure | P0 | CQ-002 | In Review |
-| [CQ-004](CQ-004-backend-skeleton/spec.md) | Backend skeleton | P0 | CQ-003 | To Do |
+| [CQ-004](CQ-004-backend-skeleton/spec.md) | Backend skeleton | P0 | CQ-003 | In Review |
 | [CQ-005](CQ-005-frontend-skeleton/spec.md) | Frontend skeleton & design system | P0 | CQ-002 | In Review |
-| [CQ-006](CQ-006-ci/spec.md) | CI | P0 | CQ-004, CQ-005 | To Do |
-| [CQ-007](CQ-007-data-model/spec.md) | Data model & migrations | P1 | CQ-004 | To Do |
-| [CQ-008](CQ-008-quote-engine/spec.md) | Quote engine | P1 | CQ-004 | To Do |
+| [CQ-006](CQ-006-ci/spec.md) | CI | P0 | CQ-004, CQ-005 | In Progress |
+| [CQ-007](CQ-007-data-model/spec.md) | Data model & migrations | P1 | CQ-004 | In Progress |
+| [CQ-008](CQ-008-quote-engine/spec.md) | Quote engine | P1 | CQ-004 | In Progress |
 | [CQ-009](CQ-009-mock-integrations/spec.md) | Mock integrations | P1 | CQ-007 | To Do |
 | [CQ-010](CQ-010-seed-data/spec.md) | Seed data & demo reset | P1 | CQ-008, CQ-009 | To Do |
 | [CQ-011](CQ-011-temporal-pipeline/spec.md) | Temporal pipeline | P1 | CQ-009, CQ-012, CQ-013 | To Do |
