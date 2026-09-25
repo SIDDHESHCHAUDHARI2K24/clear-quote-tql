@@ -32,8 +32,8 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-import bcrypt
 import yaml
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -44,12 +44,14 @@ from app.core.enums import (
     UserRole,
 )
 from app.core.errors import AppError
+from app.core.security import hash_password
 from app.features.applications.models import Application, BusinessVesting
 from app.features.applications.property.models import Property, PropertyAddressStatus, PropertyType
 from app.features.applications.service import import_from_los
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.service import run_and_persist
-from app.features.auth.models import User
+from app.features.auth.models import BorrowerAccount, User
+from app.features.auth.users.service import normalize_email
 from app.features.clients.models import Client
 from app.features.notifications.outbox.models import EmailStatus, OutboxEmail
 from app.features.quotes.send.models import BorrowerAction, QuotePackage
@@ -122,7 +124,7 @@ def _staff_password() -> str:
     if not password:
         raise MissingStaffPasswordError(
             "SEED_STAFF_PASSWORD is not set. `make demo-reset` needs a demo "
-            "password to bcrypt-hash for the seeded staff users (2 LO, 1 "
+            "password to argon2-hash for the seeded staff users (2 LO, 1 "
             "Manager, 1 Admin) -- set it in your .env (see .env.example) "
             "before running `make demo-reset` again."
         )
@@ -130,12 +132,13 @@ def _staff_password() -> str:
 
 
 async def seed_users(db: AsyncSession) -> UserSeedResult:
-    """AC4: exactly 2 LO, 1 Manager, 1 Admin, each with a bcrypt hash of the
-    shared demo password read from `SEED_STAFF_PASSWORD` (review round 1,
-    finding #3 -- no plaintext password is committed to the repo)."""
-    password_hash = bcrypt.hashpw(_staff_password().encode("utf-8"), bcrypt.gensalt()).decode(
-        "ascii"
-    )
+    """AC4: exactly 2 LO, 1 Manager, 1 Admin, each with an argon2 hash
+    (`app.core.security.hash_password`, matching `core/security.verify_password`
+    used by real staff login -- phase-p2 merge, X1) of the shared demo
+    password read from `SEED_STAFF_PASSWORD` (review round 1, finding #3 --
+    no plaintext password is committed to the repo). Hashed once, not once
+    per user -- argon2 is deliberately CPU-expensive."""
+    password_hash = hash_password(_staff_password())
     result = UserSeedResult()
     for row in load_users_fixture():
         user = User(
@@ -153,6 +156,71 @@ async def seed_users(db: AsyncSession) -> UserSeedResult:
         result.by_key[row["key"]] = user.id
         if user.role is UserRole.LO:
             result.lo_ids.append(user.id)
+    await db.commit()
+    return result
+
+
+# --- Borrower accounts (phase-p2 merge, X4) --------------------------------
+
+
+@dataclass
+class BorrowerSeedResult:
+    # client_id -> borrower_accounts.id, for every client this call gave (or
+    # already found) an account.
+    account_ids: dict[uuid.UUID, uuid.UUID] = field(default_factory=dict)
+
+
+async def seed_borrower_accounts(
+    db: AsyncSession, *, client_ids: list[uuid.UUID]
+) -> BorrowerSeedResult:
+    """Gives each client in `client_ids` (persona clients, from
+    `seed_persona`'s `PersonaSeedResult.client_id`) a `borrower_accounts` row
+    -- argon2 hash of `SEED_BORROWER_PASSWORD`, `email_verified_at=now` --
+    so `make demo-reset` personas can sign in to the Borrower Portal.
+
+    `SEED_BORROWER_PASSWORD` is optional (unlike `SEED_STAFF_PASSWORD`):
+    borrower login isn't required for the LO demo, so an unset value logs a
+    clear line and returns an empty result rather than raising -- `demo-reset`
+    must never fail over this.
+
+    Idempotent: a client that already has an account is left untouched (its
+    id is still returned) and no second row is inserted, so calling this
+    more than once against the same database is safe. Hashes the shared
+    password once, not once per client. Does not commit until every account
+    is written.
+    """
+    password = get_settings().seed_borrower_password
+    result = BorrowerSeedResult()
+    if not password:
+        print(
+            "seed: SEED_BORROWER_PASSWORD is not set -- skipping persona "
+            "borrower accounts (Borrower Portal login will be unavailable "
+            "for seeded personas)."
+        )
+        return result
+
+    password_hash = hash_password(password)
+    now = datetime.now(UTC)
+    for client_id in client_ids:
+        existing = (
+            await db.execute(select(BorrowerAccount).where(BorrowerAccount.client_id == client_id))
+        ).scalar_one_or_none()
+        if existing is not None:
+            result.account_ids[client_id] = existing.id
+            continue
+
+        client = await db.get(Client, client_id)
+        assert client is not None, f"seed_borrower_accounts: no client row for {client_id}"
+        account = BorrowerAccount(
+            client_id=client_id,
+            email=normalize_email(client.email),
+            password_hash=password_hash,
+            email_verified_at=now,
+        )
+        db.add(account)
+        await db.flush()
+        result.account_ids[client_id] = account.id
+
     await db.commit()
     return result
 

@@ -3,10 +3,11 @@
 #
 # Review round 1, finding #3: no plaintext password lives here (or anywhere
 # else in the repo) -- `seed/loader.py::seed_users` reads the shared demo
-# password from env `SEED_STAFF_PASSWORD` (see `.env.example`) and bcrypt-
-# hashes it once per user at seed time. `make demo-reset` fails with a
-# clear message if that env var is unset, rather than silently seeding an
-# unusable/guessable password.
+# password from env `SEED_STAFF_PASSWORD` (see `.env.example`) and argon2-
+# hashes it once (not once per user) at seed time (phase-p2 merge, X1: the
+# same `app.core.security.hash_password` real staff login verifies against).
+# `make demo-reset` fails with a clear message if that env var is unset,
+# rather than silently seeding an unusable/guessable password.
 #
 # Jordan Lee's `id` is pinned to match `DEV_LO_ID`'s default
 # (backend/conftest.py, .env.example) -- CQ-013's pricing routes' stub auth

@@ -8,7 +8,6 @@ dependencies = [
     "alembic>=1.14.0",
     "argon2-cffi>=25.1.0",
     "asyncpg>=0.31.0",
-    "bcrypt>=4.2.0",
     "boto3>=1.43.102",
     "cryptography>=44.0.0",
     "fastapi>=0.141.1",
@@ -72,7 +71,7 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 # CQ-010: no third-party type stubs published for these.
-module = ["reportlab.*", "bcrypt.*"]
+module = ["reportlab.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
