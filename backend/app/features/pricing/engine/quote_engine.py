@@ -39,6 +39,15 @@ class LtvOutOfRangeError(ValueError):
     which is a pure lookup with no notion of a program maximum."""
 
 
+class NonPositivePriceError(ValueError):
+    """Raised by `down_payment_pct_from_amount`/`insurance_annual_rate_from_amount`
+    when `purchase_price` is not strictly positive -- dividing by a zero or
+    negative price would otherwise produce a divide-by-zero or a
+    nonsensical inverted/negative rate. A plain `ValueError` subclass so a
+    Pydantic `model_validator` that calls these functions (CQ-017
+    `QuotePreviewRequest`) has it turned into a normal 422, not a 500."""
+
+
 def _round_currency(value: Decimal) -> Decimal:
     return value.quantize(_CENT, rounding=ROUND_HALF_UP)
 
@@ -62,6 +71,50 @@ def loan_amount(purchase_price: Decimal, down_payment_pct: Decimal) -> Decimal:
 def ltv_pct(down_payment_pct: Decimal) -> Decimal:
     """LTV as a 0-1 fraction: `1 - d`."""
     return Decimal("1") - down_payment_pct
+
+
+def down_payment_pct_from_amount(purchase_price: Decimal, down_payment_amount: Decimal) -> Decimal:
+    """`down_payment_amount / purchase_price`, rounded to the same 4dp
+    precision as `ltv_pct`/`QuoteComputation.ltv_pct` (both are 0-1
+    fractions, e.g. `0.2500` for 25%).
+
+    The linked down-payment %/$ input pair (CQ-017 spec.md AC2) must not
+    compute this conversion in TypeScript (AGENTS.md: "money math lives
+    only in quote_engine") -- `/quotes/preview` accepts either
+    `down_payment_pct` or `down_payment_amount` and resolves the missing
+    side with this function server-side before `compute_quote` ever runs.
+
+    Raises `NonPositivePriceError` (a `ValueError` subclass) when
+    `purchase_price` isn't strictly positive, so a caller inside a Pydantic
+    `model_validator` (CQ-017 `QuotePreviewRequest`) surfaces this as a
+    normal 422, not a 500 from a bare `ZeroDivisionError`.
+    """
+    if purchase_price <= 0:
+        raise NonPositivePriceError(
+            f"purchase_price must be positive to derive a down payment percentage, "
+            f"got {purchase_price}"
+        )
+    return _round_ltv(down_payment_amount / purchase_price)
+
+
+def insurance_annual_rate_from_amount(
+    purchase_price: Decimal, insurance_annual_amount: Decimal
+) -> Decimal:
+    """`insurance_annual_amount / purchase_price`, unrounded -- the same
+    0-1-fraction scale `ScenarioInputs.insurance_annual_rate` uses
+    everywhere else (matches `pricing.scenarios.service._gather_base_
+    scenario_inputs`'s own unrounded formula for the same conversion).
+
+    CQ-017: the pricing panel only ever shows/edits the dollar amount
+    (`homeowners_ins_annual`'s `field_values` row); it must not divide that
+    by `purchase_price` itself to get the rate `/quotes/preview` needs
+    (AGENTS.md: money math lives only in `quote_engine`).
+    """
+    if purchase_price <= 0:
+        raise NonPositivePriceError(
+            f"purchase_price must be positive to derive an insurance rate, got {purchase_price}"
+        )
+    return insurance_annual_amount / purchase_price
 
 
 def principal_and_interest(loan: Decimal, note_rate: Decimal, term_months: int) -> Decimal:
@@ -314,6 +367,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
         return QuoteComputation(
             loan_amount=rounded_loan_amount,
             down_payment_amount=rounded_down_payment,
+            down_payment_pct=inputs.down_payment_pct,
             ltv_pct=rounded_ltv_pct,
             monthly_pi=rounded_pi,
             monthly_tax=rounded_tax,
@@ -381,6 +435,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
     return QuoteComputation(
         loan_amount=rounded_loan_amount,
         down_payment_amount=rounded_down_payment,
+        down_payment_pct=inputs.down_payment_pct,
         ltv_pct=rounded_ltv_pct,
         monthly_pi=rounded_pi,
         monthly_tax=rounded_tax,

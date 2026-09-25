@@ -16,6 +16,10 @@ export interface MoneyInputProps {
   invalid?: boolean;
   sourceBadge?: SourceBadgeProps;
   "aria-label": string;
+  // Optional passthrough to the native input's blur event (CQ-017: commits
+  // an inline-edited enriched field's override on blur, rather than on
+  // every keystroke).
+  onBlur?: () => void;
 }
 
 // Allows a plain decimal string while typing: digits with at most one
@@ -31,6 +35,7 @@ export function MoneyInput({
   invalid = false,
   sourceBadge,
   "aria-label": ariaLabel,
+  onBlur,
 }: MoneyInputProps) {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
@@ -57,6 +62,7 @@ export function MoneyInput({
         className="num flex-1 bg-transparent py-2 text-navy-900 outline-none"
         value={value}
         onChange={handleChange}
+        onBlur={onBlur}
         disabled={disabled}
         aria-invalid={invalid || undefined}
         aria-label={ariaLabel}
