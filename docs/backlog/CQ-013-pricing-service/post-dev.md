@@ -112,6 +112,14 @@ CQ-012 merged into `phase-p0-p1` mid-task; branch fast-forward-merged it in. `wr
 - `create_scenario` persists `quotes: []` (Decision 10) — quotes come from `/autoquote` or manual `/quotes`, matching the actual two-step Quote Builder UI, not literally the route table's naive reading.
 - `draft_default_quote_set` does not compute a recommendation (Decision 11) — see contracts note above.
 
+## Push + CI (stage 8)
+
+- Commits: `5b58748` (CQ-013: feat: pricing service and API), `acdb6bc` (CQ-013: fix: default DEV_LO_ID in conftest so CI doesn't 401 pricing routes).
+- Branch pushed: `cq-013-pricing-service` → `origin/cq-013-pricing-service`.
+- CI run `5b58748`: **failed** (run id `36105244845`) — 6 tests 401'd because the GitHub Actions `backend` job's env block (CQ-006-owned) has no `DEV_LO_ID`, unlike my local `.env`. Root cause: I'd only set `DEV_LO_ID` in my own `.env`, not as a `conftest.py` `os.environ.setdefault(...)` default the way `APP_ENV`/`FIELD_ENCRYPTION_KEY`/`INTEGRATION_LATENCY_ENABLED` already are — so the suite wasn't actually self-contained yet.
+- Fix (`acdb6bc`): added `os.environ.setdefault("DEV_LO_ID", "00000000-0000-0000-0000-000000000001")` to `backend/conftest.py`, matching the established pattern. Verified locally by running the full suite with `.env` moved aside and only the CI workflow's exact env vars set (`env -u DEV_LO_ID APP_ENV=test ... uv run pytest backend` — see command in the session) — 205 passed.
+- CI run `acdb6bc`: **passed** (run id `36105462096`) — both `backend` and `frontend` jobs green.
+
 ## Review
 
 (left for the fresh-subagent reviewer, stage 6)
