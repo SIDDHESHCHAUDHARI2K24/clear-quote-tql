@@ -1,0 +1,115 @@
+# Local backing services for Clear Quote (CQ-003). The FastAPI app and the
+# Temporal worker run on the host via `uv run` (CQ-004, CQ-011) — not here.
+#
+# `make up`   -> docker compose -f infra/docker-compose.yml up -d --wait
+# `make down` -> docker compose -f infra/docker-compose.yml down
+# `make logs` -> docker compose -f infra/docker-compose.yml logs -f
+#
+# Project name is pinned to `clear-quote` (below) so containers/volumes/
+# networks never collide with the unrelated `kaneo-evaluation` compose
+# project already running on this machine (which owns ports 5183, 9000,
+# 9001 — never touched here).
+name: clear-quote
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cq
+      POSTGRES_PASSWORD: cq
+      POSTGRES_DB: cq_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/10-init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  valkey:
+    image: valkey/valkey:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping || redis-cli ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: cq-minio
+      MINIO_ROOT_PASSWORD: cq-minio-secret
+    ports:
+      - "9010:9000"
+      - "9011:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      # Container-internal port (9000), not the remapped host port (9010).
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 cq-minio cq-minio-secret &&
+      mc mb --ignore-existing local/clear-quote &&
+      echo 'bucket clear-quote ready'
+      "
+    restart: "no"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_USER: cq
+      POSTGRES_PWD: cq
+      POSTGRES_SEEDS: postgres
+    ports:
+      - "7233:7233"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: "http://localhost:3010,http://localhost:3020"
+    ports:
+      - "8080:8080"
+    depends_on:
+      temporal:
+        condition: service_started
+      # `docker compose up --wait` only recognizes a one-shot, exit(0)
+      # container (minio-init) as reaching its expected terminal state when
+      # some other service declares this exact depends_on condition on it;
+      # otherwise --wait treats any non-running container as a failure
+      # regardless of exit code (verified empirically against this Docker
+      # Compose version). temporal-ui has no functional need for the
+      # bucket; this edge exists purely so `make up` succeeds.
+      minio-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
+  minio_data:
