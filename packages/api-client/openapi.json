@@ -5,6 +5,358 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/applications/{application_id}/field-values/{field_key}": {
+      "patch": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Patch Field Value",
+        "operationId": "patch_field_value_api_v1_applications__application_id__field_values__field_key__patch",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "field_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Field Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldValueOverrideRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldValueRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/field-values/{field_key}/revert": {
+      "post": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Revert Field Value Route",
+        "operationId": "revert_field_value_route_api_v1_applications__application_id__field_values__field_key__revert_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "field_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Field Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldValueRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/preview": {
+      "post": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Preview Quote",
+        "description": "Engine-only, no adapter latency, no persistence -- must respond\nunder 300ms (spec.md AC1).",
+        "operationId": "preview_quote_api_v1_quotes_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuotePreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotePreviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/scenarios": {
+      "post": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Post Scenario",
+        "operationId": "post_scenario_api_v1_applications__application_id__scenarios_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}/products": {
+      "get": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Get Products",
+        "operationId": "get_products_api_v1_scenarios__scenario_id__products_get",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PricedProductRow-Output"
+                  },
+                  "title": "Response Get Products Api V1 Scenarios  Scenario Id  Products Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}/autoquote": {
+      "post": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Post Autoquote",
+        "operationId": "post_autoquote_api_v1_scenarios__scenario_id__autoquote_post",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoQuoteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}/quotes": {
+      "post": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Post Manual Quote",
+        "operationId": "post_manual_quote_api_v1_scenarios__scenario_id__quotes_post",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualQuoteCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -29,6 +381,417 @@
   },
   "components": {
     "schemas": {
+      "AutoQuoteResponse": {
+        "properties": {
+          "par": {
+            "$ref": "#/components/schemas/QuoteRead"
+          },
+          "buydown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuoteRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "par",
+          "buydown"
+        ],
+        "title": "AutoQuoteResponse"
+      },
+      "ConfigSnapshot": {
+        "properties": {
+          "lender_processing_fee": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Lender Processing Fee",
+            "default": "995.00"
+          },
+          "lender_underwriting_fee": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Lender Underwriting Fee",
+            "default": "795.00"
+          },
+          "title_rate_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Title Rate Pct",
+            "default": "0.007"
+          },
+          "insurance_rate_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Insurance Rate Pct",
+            "default": "0.005"
+          },
+          "prepaid_interest_days": {
+            "type": "integer",
+            "title": "Prepaid Interest Days",
+            "default": 15
+          },
+          "prepaid_insurance_months": {
+            "type": "integer",
+            "title": "Prepaid Insurance Months",
+            "default": 14
+          },
+          "prepaid_tax_months": {
+            "type": "integer",
+            "title": "Prepaid Tax Months",
+            "default": 3
+          },
+          "str_expense_ratio": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Str Expense Ratio",
+            "default": "0.20"
+          },
+          "cap_rate_multiplier": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cap Rate Multiplier",
+            "default": "0.75"
+          },
+          "land_allocation_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Land Allocation Pct",
+            "default": "0.20"
+          },
+          "accelerated_property_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Accelerated Property Pct",
+            "default": "0.25"
+          },
+          "bonus_depreciation_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Bonus Depreciation Pct",
+            "default": "1.00"
+          },
+          "investor_marginal_tax_rate": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Investor Marginal Tax Rate",
+            "default": "0.32"
+          },
+          "target_dscr": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Target Dscr",
+            "default": "1.00"
+          },
+          "reserves_months_primary": {
+            "type": "integer",
+            "title": "Reserves Months Primary",
+            "default": 2
+          },
+          "reserves_months_investment": {
+            "type": "integer",
+            "title": "Reserves Months Investment",
+            "default": 6
+          },
+          "mi_matrix": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "string",
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                },
+                {
+                  "items": {
+                    "prefixItems": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                      }
+                    ],
+                    "type": "array",
+                    "maxItems": 2,
+                    "minItems": 2
+                  },
+                  "type": "array"
+                }
+              ],
+              "type": "array",
+              "maxItems": 3,
+              "minItems": 3
+            },
+            "type": "array",
+            "title": "Mi Matrix",
+            "default": [
+              [
+                "80.00",
+                "85.00",
+                [
+                  [
+                    679,
+                    "0.0058"
+                  ],
+                  [
+                    719,
+                    "0.0042"
+                  ],
+                  [
+                    759,
+                    "0.0031"
+                  ],
+                  [
+                    null,
+                    "0.0019"
+                  ]
+                ]
+              ],
+              [
+                "85.00",
+                "90.00",
+                [
+                  [
+                    679,
+                    "0.0086"
+                  ],
+                  [
+                    719,
+                    "0.0062"
+                  ],
+                  [
+                    759,
+                    "0.0044"
+                  ],
+                  [
+                    null,
+                    "0.0030"
+                  ]
+                ]
+              ],
+              [
+                "90.00",
+                "95.00",
+                [
+                  [
+                    679,
+                    "0.0113"
+                  ],
+                  [
+                    719,
+                    "0.0083"
+                  ],
+                  [
+                    759,
+                    "0.0059"
+                  ],
+                  [
+                    null,
+                    "0.0039"
+                  ]
+                ]
+              ],
+              [
+                "95.00",
+                "97.00",
+                [
+                  [
+                    679,
+                    "0.0186"
+                  ],
+                  [
+                    719,
+                    "0.0135"
+                  ],
+                  [
+                    759,
+                    "0.0096"
+                  ],
+                  [
+                    null,
+                    "0.0063"
+                  ]
+                ]
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "title": "ConfigSnapshot",
+        "description": "Pricing configuration, snapshotted per-quote so old quotes never change\nwhen defaults change later (`scenarios.config_snapshot` stores one of\nthese as JSON per CQ-007)."
+      },
+      "DSCRBucket": {
+        "type": "string",
+        "enum": [
+          "BELOW_1_00",
+          "ONE_TO_1_25",
+          "GE_1_25"
+        ],
+        "title": "DSCRBucket",
+        "description": "DSCR classification bucket. Boundaries are inclusive on the lower edge."
+      },
+      "FieldSource": {
+        "type": "string",
+        "enum": [
+          "encompass",
+          "rentcast",
+          "airdna",
+          "smartasset",
+          "steadily",
+          "optimal_blue",
+          "credit_bureau",
+          "property_search",
+          "lo_entry",
+          "formula",
+          "default",
+          "lo_override"
+        ],
+        "title": "FieldSource",
+        "description": "Drives the source badge + \"revert to source\" UI on `field_values`."
+      },
+      "FieldValueOverrideRequest": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "FieldValueOverrideRequest",
+        "description": "Every overridable pricing field (spec.md's fixed 5-key list) is a\ncurrency or rate `Decimal`."
+      },
+      "FieldValueRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "field_key": {
+            "type": "string",
+            "title": "Field Key"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FieldSource"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          },
+          "overridden_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overridden By"
+          },
+          "overridden_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overridden At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "application_id",
+          "field_key",
+          "value",
+          "source",
+          "source_ref",
+          "overridden_by",
+          "overridden_at"
+        ],
+        "title": "FieldValueRead"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
       "HealthReport": {
         "properties": {
           "status": {
@@ -53,6 +816,964 @@
           "checks"
         ],
         "title": "HealthReport"
+      },
+      "ManualQuoteCreateRequest": {
+        "properties": {
+          "product": {
+            "$ref": "#/components/schemas/PricedProductRow-Input"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product",
+          "label"
+        ],
+        "title": "ManualQuoteCreateRequest"
+      },
+      "PricedProductRow-Input": {
+        "properties": {
+          "investor_name": {
+            "type": "string",
+            "title": "Investor Name"
+          },
+          "product_name": {
+            "type": "string",
+            "title": "Product Name"
+          },
+          "lock_period_days": {
+            "type": "integer",
+            "title": "Lock Period Days"
+          },
+          "note_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Note Rate"
+          },
+          "price_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Price Pct"
+          },
+          "discount_points_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Discount Points Pct"
+          },
+          "discount_points_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Discount Points Amount"
+          },
+          "is_par_rate": {
+            "type": "boolean",
+            "title": "Is Par Rate"
+          },
+          "is_buydown_rate": {
+            "type": "boolean",
+            "title": "Is Buydown Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "investor_name",
+          "product_name",
+          "lock_period_days",
+          "note_rate",
+          "price_pct",
+          "discount_points_pct",
+          "discount_points_amount",
+          "is_par_rate",
+          "is_buydown_rate"
+        ],
+        "title": "PricedProductRow"
+      },
+      "PricedProductRow-Output": {
+        "properties": {
+          "investor_name": {
+            "type": "string",
+            "title": "Investor Name"
+          },
+          "product_name": {
+            "type": "string",
+            "title": "Product Name"
+          },
+          "lock_period_days": {
+            "type": "integer",
+            "title": "Lock Period Days"
+          },
+          "note_rate": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Note Rate"
+          },
+          "price_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Price Pct"
+          },
+          "discount_points_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Discount Points Pct"
+          },
+          "discount_points_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Discount Points Amount"
+          },
+          "is_par_rate": {
+            "type": "boolean",
+            "title": "Is Par Rate"
+          },
+          "is_buydown_rate": {
+            "type": "boolean",
+            "title": "Is Buydown Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "investor_name",
+          "product_name",
+          "lock_period_days",
+          "note_rate",
+          "price_pct",
+          "discount_points_pct",
+          "discount_points_amount",
+          "is_par_rate",
+          "is_buydown_rate"
+        ],
+        "title": "PricedProductRow"
+      },
+      "QuotePreviewRequest": {
+        "properties": {
+          "purchase_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Purchase Price"
+          },
+          "down_payment_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Down Payment Pct"
+          },
+          "note_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Note Rate"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/StrategyType"
+          },
+          "fico": {
+            "type": "integer",
+            "title": "Fico"
+          },
+          "property_tax_annual_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Property Tax Annual Rate"
+          },
+          "insurance_annual_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Insurance Annual Rate"
+          },
+          "term_months": {
+            "type": "integer",
+            "title": "Term Months",
+            "default": 360
+          },
+          "hoa_monthly": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Hoa Monthly",
+            "default": "0"
+          },
+          "discount_points_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Discount Points Pct",
+            "default": "0"
+          },
+          "seller_credits": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Seller Credits",
+            "default": "0"
+          },
+          "market_rent_ltr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Rent Ltr"
+          },
+          "str_gross_annual_revenue": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Str Gross Annual Revenue"
+          },
+          "target_dscr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Dscr"
+          },
+          "bonus_depreciation_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bonus Depreciation Pct"
+          },
+          "investor_marginal_tax_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investor Marginal Tax Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_price",
+          "down_payment_pct",
+          "note_rate",
+          "strategy",
+          "fico",
+          "property_tax_annual_rate",
+          "insurance_annual_rate"
+        ],
+        "title": "QuotePreviewRequest"
+      },
+      "QuotePreviewResponse": {
+        "properties": {
+          "loan_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Loan Amount"
+          },
+          "ltv_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Ltv Pct"
+          },
+          "monthly_pi": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Pi"
+          },
+          "monthly_tax": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Tax"
+          },
+          "monthly_insurance": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Insurance"
+          },
+          "monthly_mi": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Mi"
+          },
+          "monthly_hoa": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Hoa"
+          },
+          "total_monthly_payment": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Monthly Payment"
+          },
+          "discount_points_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Discount Points Amount"
+          },
+          "lender_fees": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Lender Fees"
+          },
+          "title_fees": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Title Fees"
+          },
+          "prepaid_interest": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Prepaid Interest"
+          },
+          "prepaid_insurance": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Prepaid Insurance"
+          },
+          "prepaid_taxes": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Prepaid Taxes"
+          },
+          "total_prepaids": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Prepaids"
+          },
+          "total_closing_costs": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Closing Costs"
+          },
+          "cash_to_close": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cash To Close"
+          },
+          "config_snapshot": {
+            "$ref": "#/components/schemas/ConfigSnapshot"
+          },
+          "qualifying_rent": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qualifying Rent"
+          },
+          "underwritten_str_rent": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Underwritten Str Rent"
+          },
+          "dscr_ratio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dscr Ratio"
+          },
+          "dscr_bucket": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DSCRBucket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "monthly_cashflow": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow"
+          },
+          "annual_cashflow": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annual Cashflow"
+          },
+          "break_even_rent_ltr": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Break Even Rent Ltr"
+          },
+          "str_annual_rent_target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Str Annual Rent Target"
+          },
+          "cap_rate_pct": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Rate Pct"
+          },
+          "land_value_allocation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Value Allocation"
+          },
+          "depreciable_building_basis": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depreciable Building Basis"
+          },
+          "accelerated_basis_amount": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accelerated Basis Amount"
+          },
+          "year_one_tax_deduction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year One Tax Deduction"
+          },
+          "year_one_tax_savings": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year One Tax Savings"
+          },
+          "monthly_cashflow_incl_tax": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow Incl Tax"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loan_amount",
+          "ltv_pct",
+          "monthly_pi",
+          "monthly_tax",
+          "monthly_insurance",
+          "monthly_mi",
+          "monthly_hoa",
+          "total_monthly_payment",
+          "discount_points_amount",
+          "lender_fees",
+          "title_fees",
+          "prepaid_interest",
+          "prepaid_insurance",
+          "prepaid_taxes",
+          "total_prepaids",
+          "total_closing_costs",
+          "cash_to_close",
+          "config_snapshot"
+        ],
+        "title": "QuotePreviewResponse"
+      },
+      "QuoteRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "scenario_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Scenario Id"
+          },
+          "investor": {
+            "type": "string",
+            "title": "Investor"
+          },
+          "product": {
+            "type": "string",
+            "title": "Product"
+          },
+          "rate": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Rate"
+          },
+          "points": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Points"
+          },
+          "lock_days": {
+            "type": "integer",
+            "title": "Lock Days"
+          },
+          "computed": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "priced_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Priced At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scenario_id",
+          "investor",
+          "product",
+          "rate",
+          "points",
+          "lock_days",
+          "computed",
+          "label",
+          "priced_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "QuoteRead"
+      },
+      "ScenarioCreateRequest": {
+        "properties": {
+          "purchase_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Purchase Price"
+          },
+          "down_payment_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Down Payment Pct"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/StrategyType"
+          },
+          "prepayment_penalty_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepayment Penalty Years"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_price",
+          "down_payment_pct",
+          "strategy"
+        ],
+        "title": "ScenarioCreateRequest",
+        "description": "The LO-owned pricing inputs (system-design's \"only inputs the LO\nowns\" table) minus note rate, which is chosen per-quote, not at\nscenario-creation time. FICO, tax, insurance, HOA and rent/STR are\nenrichment-owned and read from `field_values` server-side."
+      },
+      "ScenarioRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputs"
+          },
+          "config_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Snapshot"
+          },
+          "dscr_bucket": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dscr Bucket"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteRead"
+            },
+            "type": "array",
+            "title": "Quotes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "application_id",
+          "inputs",
+          "config_snapshot",
+          "dscr_bucket",
+          "quotes"
+        ],
+        "title": "ScenarioRead"
+      },
+      "StrategyType": {
+        "type": "string",
+        "enum": [
+          "PRIMARY",
+          "LTR",
+          "STR"
+        ],
+        "title": "StrategyType",
+        "description": "The engine's single occupancy/strategy field.\n\nMapping from `applications.occupancy` + `applications.strategy` (CQ-007)\nonto this enum is CQ-013's job, not this item's."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   }

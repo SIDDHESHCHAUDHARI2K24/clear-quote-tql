@@ -44,15 +44,20 @@ os.environ.setdefault("INTEGRATION_LATENCY_ENABLED", "false")
 
 import asyncio  # noqa: E402
 
+import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
+from fakeredis import aioredis as fakeredis_aioredis  # noqa: E402
 from fastapi import FastAPI  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
+from sqlalchemy import delete  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine  # noqa: E402
 
 from app.core.config import get_settings  # noqa: E402
 from app.core.db import get_db  # noqa: E402
+from app.integrations.common import failure_toggle  # noqa: E402
+from app.integrations.common.models import IntegrationCall  # noqa: E402
 from app.main import app as fastapi_app  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -83,6 +88,27 @@ async def test_engine() -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(test_database_url)
     yield engine
     await engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def _fake_valkey(monkeypatch: pytest.MonkeyPatch) -> None:
+    """CQ-009 Decision (moved up from `app/integrations/conftest.py` by
+    CQ-013 so `pricing`/`quotes` feature tests -- which also exercise mock
+    adapters through `failure_toggle.is_forced_to_fail` -- get an isolated
+    in-process fake instead of the real, possibly-shared local Valkey."""
+    fake_client = fakeredis_aioredis.FakeRedis(decode_responses=True)
+    monkeypatch.setattr(failure_toggle, "_client", fake_client)
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _clean_integration_calls(test_engine: AsyncEngine) -> AsyncIterator[None]:
+    """CQ-009 Decision (moved up, see `_fake_valkey`): `common.logging.
+    record_call` commits through its own short-lived session, independent of
+    `db_session`'s rollback-based isolation, so it leaves a real row behind
+    that nothing else cleans up. Truncate after every test instead."""
+    yield
+    async with test_engine.begin() as conn:
+        await conn.execute(delete(IntegrationCall))
 
 
 @pytest_asyncio.fixture
