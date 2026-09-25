@@ -7,12 +7,13 @@ records the first-view transition race-safely.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import cast
 
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.auth import ensure_borrower_owns_client
 from app.core.enums import ApplicationStatus
 from app.core.errors import NotFoundError
@@ -50,7 +51,17 @@ async def _mark_viewed_if_first_load(
         return
 
     if application.status is ApplicationStatus.SENT:
-        application.status = ApplicationStatus.VIEWED
+        # CQ-030 review: conditional, so a concurrent stale job that already
+        # committed SENT -> STALE is never overwritten with VIEWED.
+        await db.execute(
+            update(Application)
+            .where(
+                Application.id == application.id,
+                Application.status == ApplicationStatus.SENT,
+            )
+            .values(status=ApplicationStatus.VIEWED)
+            .execution_options(synchronize_session="fetch")
+        )
 
     db.add(
         ActivityEvent(
@@ -112,7 +123,9 @@ async def get_report_for_token(
     except NotFoundError:
         raise NotFoundError("Report not found") from None
 
-    now = datetime.now(UTC)
+    # CQ-030: `core/clock.now()` (honours `CLOCK_NOW`, E2) so a demo with a
+    # frozen clock shows the same `expired` state the stale job computed.
+    now = clock.now()
     # `_mark_viewed_if_first_load` only ever writes `viewed_at`, which
     # nothing below reads -- no `db.refresh()` needed (fresh-subagent
     # review finding: it was a spurious extra SELECT on this hot path;

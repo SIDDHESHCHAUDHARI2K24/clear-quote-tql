@@ -54,7 +54,7 @@ Supporting tests: `test_validation.py` (18 rule tests, plus column-precision bou
 | Seed tests | `make test` (pytest seed) | 32 passed |
 | Frontend tests | `make test` (pnpm -r test) | ui 163, lo-console 60, borrower-portal 95, api-client 2: all passed |
 | Lint / types | `make lint` (ruff, ruff format, mypy, eslint, tsc, prettier) | exit 0 |
-| Migration | `alembic heads`; `alembic downgrade -1 && alembic upgrade head`; `alembic check` | single head `620ac6b6be31`; round trip OK; "No new upgrade operations detected." |
+| Migration | `alembic heads`; `alembic downgrade -1 && alembic upgrade head`; `alembic check` | single head `620ac6b6be31` (re-chained off `c30a57a1e0d1` in review round 1); round trip OK; "No new upgrade operations detected." |
 | demo-reset | `make demo-reset` (slot 18) | done in 2.1 s |
 | E2E (slot 18, API 8118 + `make worker`, queue `cq-s18`) | `evidence/e2e_apply.py` | `evidence/e2e-032a-slot18.log` |
 
@@ -91,14 +91,14 @@ Fresh-reviewer findings on PR #14, fixed by a separate fix worker (test first fo
 
 Small changes outside owned files: `core/encryption.py` (`encrypt_str`/`decrypt_str`), `core/errors.py` (422 handler) and `main.py` (middleware registration).
 
-Round-1 verification (slot 18):
+Round-1 verification (slot 18), run after merging `origin/phase-p5-p6` (CQ-027 and CQ-030 had landed):
 
-- `make lint`: exit 0.
-- `make test`: backend 557 passed, seed 32, and the frontend suites (ui 163, lo-console 60, borrower-portal 95, api-client 2).
-- Portal apply tests run 3× in a row: 63 passed each time.
-- E2E `evidence/e2e_apply.py` with the API on 8118 and `make worker` on `cq-s18`: the application reaches **Priced** with 2 quotes. Log: `evidence/e2e-032a-slot18-review1.log`.
-
-The Temporal workflow tests (`backend/app/workflows/tests`) were flaky on this loaded machine, on this branch **and on the unchanged base commit** (the base hung on one run). The failure is "another operation is in progress" at teardown, as the activities outlive the test on the shared connection. The P5/P6 conftest rewrite (a per-test `db_lock` and per-test workers) addresses this, and this branch now merges it.
+- **Migration:** `620ac6b6be31` is re-chained off `c30a57a1e0d1`. `alembic heads` shows one head. The downgrade/upgrade round trip works, and `alembic check` reports "No new upgrade operations detected". `cq_test_s18` was recreated so it migrates along the new chain.
+- **Lint:** `make lint` exit 0.
+- **Tests:** `make test` exit 0: backend 662 passed (twice), seed 32, ui 163, lo-console 90, borrower-portal 113, api-client 2.
+- **Flake check:** the portal apply tests passed 3× in a row, 63 each time.
+- **Pipeline test fixtures:** `test_submit_pipeline.py` now takes the new per-test fixtures from the workflows conftest (`db_lock`, per-test `temporal_worker`, `terminate_started_workflows`, `bound_default_retries`). Because submit now starts the workflow before its own email write, the test holds `db_lock` around the submit request, so activities never share the test's one connection mid-request. Before the merge, the workflow tests flaked on this loaded machine with "another operation is in progress", on this branch and on the unchanged base commit alike. The new conftest's `db_lock` is the fix for that.
+- **E2E:** `make demo-reset`, then `evidence/e2e_apply.py` with the API on 8118 and the worker on `cq-s18`. The application reaches **Priced** with 2 quotes, and every round-1 check passes. Log: `evidence/e2e-032a-slot18-review1.log`. It lists two "New application" emails because Mailpit also holds the pre-merge run's email to the same LO.
 
 ## How to test manually
 

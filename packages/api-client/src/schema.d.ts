@@ -73,6 +73,44 @@ export interface paths {
         patch: operations["patch_status_api_v1_applications__application_id__status_patch"];
         trace?: never;
     };
+    "/api/v1/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Applications */
+        get: operations["get_applications_api_v1_applications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/los": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Lo Options
+         * @description Backs the frontend's LO `Select` (spec.md "Frontend", Manager/Admin
+         *     only) -- 403s for an LO (E16), same as every other admin-scoped route.
+         */
+        get: operations["get_lo_options_api_v1_applications_los_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/applications/{application_id}/field-values/{field_key}": {
         parameters: {
             query?: never;
@@ -535,6 +573,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/support": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Support */
+        post: operations["submit_support_api_v1_portal_support_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Portal Home */
+        get: operations["get_portal_home_api_v1_portal_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/jobs/stale-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Stale Check */
+        post: operations["run_stale_check_api_v1_admin_jobs_stale_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -556,6 +645,60 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ApplicationListResponse
+         * @description `GET /applications` response: `core/pagination.Page[ApplicationRow]`
+         *     (`items`, `total`, `page`, `page_size`).
+         */
+        ApplicationListResponse: {
+            /** Items */
+            items: components["schemas"]["ApplicationRow"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * ApplicationRow
+         * @description One row of `GET /applications` (spec.md "Row"). Shared with CQ-026
+         *     (E9) -- keep this shape stable; CQ-026 imports it directly rather than
+         *     redefining it.
+         */
+        ApplicationRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Client Name */
+            client_name: string;
+            /** Property Label */
+            property_label: string | null;
+            /**
+             * Strategy
+             * @enum {string}
+             */
+            strategy: "primary" | "ltr" | "str";
+            /** Purchase Price */
+            purchase_price: string | null;
+            status: components["schemas"]["ApplicationStatus"];
+            /** Flag Count */
+            flag_count: number;
+            /**
+             * Lo Id
+             * Format: uuid
+             */
+            lo_id: string;
+            /** Lo Name */
+            lo_name: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /**
          * ApplicationStatus
          * @description Mirrors the application status machine in `system-design.md`,
@@ -669,6 +812,8 @@ export interface components {
             full_name: string;
             /** First Name */
             first_name: string;
+            /** Phone */
+            phone: string | null;
             latest_application: components["schemas"]["LatestApplicationOut"] | null;
         };
         /** BorrowerSignupRequest */
@@ -1084,6 +1229,22 @@ export interface components {
             /** Status */
             status: string;
         };
+        /**
+         * LoOption
+         * @description One entry of `GET /applications/los` -- the frontend's "LO" `Select`
+         *     for a Manager/Admin (spec.md "Frontend"). Nothing else in the backend
+         *     exposes a role=lo user list yet, so this item owns it (small, scoped
+         *     necessity -- plan.md).
+         */
+        LoOption: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Full Name */
+            full_name: string;
+        };
         /** LocationResponse */
         LocationResponse: {
             /** City */
@@ -1174,6 +1335,54 @@ export interface components {
             /** Started */
             started: boolean;
         };
+        /** PortalApplicationOut */
+        PortalApplicationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            stage: components["schemas"]["PortalStage"];
+            /** Label */
+            label: string;
+            next_action: components["schemas"]["PortalNextAction"];
+            /** Secondary Report Token */
+            secondary_report_token?: string | null;
+            lo?: components["schemas"]["PortalLoOut"] | null;
+        };
+        /** PortalHomeResponse */
+        PortalHomeResponse: {
+            /** First Name */
+            first_name: string;
+            /** Email */
+            email: string;
+            /** Applications */
+            applications: components["schemas"]["PortalApplicationOut"][];
+        };
+        /** PortalLoOut */
+        PortalLoOut: {
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string | null;
+            /** Email */
+            email: string;
+        };
+        /** PortalNextAction */
+        PortalNextAction: {
+            type: components["schemas"]["PortalNextActionType"];
+            /** Report Token */
+            report_token?: string | null;
+            /** Consent Id */
+            consent_id?: string | null;
+            /** Draft Id */
+            draft_id?: string | null;
+        };
+        /**
+         * PortalNextActionType
+         * @enum {string}
+         */
+        PortalNextActionType: "view_report" | "continue_application" | "authorize_credit_check" | "none";
         /** PortalReportActionRequest */
         PortalReportActionRequest: {
             type: components["schemas"]["BorrowerActionType"];
@@ -1220,6 +1429,18 @@ export interface components {
             /** Newest Report Token */
             newest_report_token?: string | null;
         };
+        /**
+         * PortalStage
+         * @description Borrower-facing stage (spec.md's mapping table), plus `draft` for an
+         *     open `application_drafts` row (CQ-032a) that has no `Application` yet.
+         * @enum {string}
+         */
+        PortalStage: "applied" | "in_review" | "preapproved" | "option_selected" | "closed" | "draft";
+        /**
+         * PreferredContact
+         * @enum {string}
+         */
+        PreferredContact: "email" | "phone";
         /** PricedProductRow */
         "PricedProductRow-Input": {
             /** Investor Name */
@@ -1612,6 +1833,26 @@ export interface components {
             /** Phone */
             phone: string | null;
         };
+        /**
+         * StaleCheckResponse
+         * @description The counts one `mark_stale` run changed. Every count is zero on a
+         *     repeat run.
+         */
+        StaleCheckResponse: {
+            /**
+             * Ran At
+             * Format: date-time
+             */
+            ran_at: string;
+            /** Quotes Marked Stale */
+            quotes_marked_stale: number;
+            /** Versions Expired */
+            versions_expired: number;
+            /** Applications Marked Stale */
+            applications_marked_stale: number;
+            /** Application Ids */
+            application_ids: string[];
+        };
         /** StateMetros */
         StateMetros: {
             /** State */
@@ -1671,6 +1912,35 @@ export interface components {
             /** Pipeline Started */
             pipeline_started: boolean;
         };
+        /** SupportLoContact */
+        SupportLoContact: {
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone: string | null;
+        };
+        /** SupportRequestCreate */
+        SupportRequestCreate: {
+            topic: components["schemas"]["SupportTopic"];
+            /** Message */
+            message: string;
+            preferred_contact: components["schemas"]["PreferredContact"];
+            /** Phone */
+            phone?: string | null;
+        };
+        /** SupportRequestResponse */
+        SupportRequestResponse: {
+            /** Reference */
+            reference: string;
+            lo: components["schemas"]["SupportLoContact"];
+        };
+        /**
+         * SupportTopic
+         * @enum {string}
+         */
+        SupportTopic: "application" | "quote" | "documents" | "other";
         /**
          * TabName
          * @enum {string}
@@ -1857,6 +2127,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApplicationSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_applications_api_v1_applications_get: {
+        parameters: {
+            query?: {
+                /** @description Client name or email, partial, case-insensitive */
+                q?: string | null;
+                /** @description Manager/Admin only; ignored for an LO's own request */
+                lo_id?: string | null;
+                /** @description Comma list of status labels, plus the alias sent_or_later */
+                status?: string | null;
+                /** @description Comma list of primary, ltr, str */
+                strategy?: string | null;
+                amount_min?: number | string | null;
+                amount_max?: number | string | null;
+                state?: string | null;
+                has_property?: boolean | null;
+                created_from?: string | null;
+                created_to?: string | null;
+                sort?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_lo_options_api_v1_applications_los_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoOption"][];
                 };
             };
             /** @description Validation Error */
@@ -2715,6 +3065,103 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_support_api_v1_portal_support_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportRequestCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portal_home_api_v1_portal_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalHomeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_stale_check_api_v1_admin_jobs_stale_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaleCheckResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

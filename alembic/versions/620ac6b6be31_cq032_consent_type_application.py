@@ -8,7 +8,7 @@ of the new type `application`.
 deletes the `application` rows and rebuilds the enum without the value.
 
 Revision ID: 620ac6b6be31
-Revises: 3b55187d53d7
+Revises: c30a57a1e0d1
 Create Date: 2026-09-25 16:00:00.000000
 
 """
@@ -19,7 +19,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "620ac6b6be31"
-down_revision: Union[str, None] = "3b55187d53d7"
+down_revision: Union[str, None] = "c30a57a1e0d1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -10,6 +10,7 @@ workflow fixtures are re-used from `app/workflows/tests/conftest.py`
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
@@ -31,12 +32,16 @@ from app.integrations.property_search.models import ProviderListing
 from app.workflows.tests.conftest import (  # noqa: F401
     activities_session_factory,
     bind_activities_to_test_session,
+    bound_default_retries,
+    db_lock,
     seed_dscr_curve_all_buckets,
     seed_str_revenue,
     seed_tax_rate,
+    started_workflows,
     temporal_client,
     temporal_env,
     temporal_worker,
+    terminate_started_workflows,
     wait_for_status,
 )
 
@@ -75,6 +80,7 @@ async def test_submitted_tampa_str_reaches_priced(
     seed_dscr_curve_all_buckets: Callable[..., Awaitable[None]],  # noqa: F811
     seed_str_revenue: Callable[..., Awaitable[None]],  # noqa: F811
     wait_for_status: Callable[..., Awaitable[ApplicationStatus]],  # noqa: F811
+    db_lock: asyncio.Lock,  # noqa: F811
 ) -> None:
     await seed_tax_rate(state="FL", county="Hillsborough")
     await seed_dscr_curve_all_buckets()
@@ -89,7 +95,11 @@ async def test_submitted_tampa_str_reaches_priced(
         )
         assert response.json()["tab_valid"] is True, response.json()
 
-    submitted = await client.post(f"{BASE}/{draft_id}/submit")
+    # Submit starts the workflow before its own last writes (the LO email),
+    # and here the worker's activities share this test's one connection:
+    # hold the test's db_lock so they wait until the request is done.
+    async with db_lock:
+        submitted = await client.post(f"{BASE}/{draft_id}/submit")
     assert submitted.status_code == 200, submitted.json()
     assert submitted.json()["pipeline_started"] is True
     app_id = uuid.UUID(submitted.json()["application_id"])
@@ -102,6 +112,22 @@ async def test_submitted_tampa_str_reaches_priced(
     )
     assert status is ApplicationStatus.PRICED
 
+    async with db_lock:
+        quotes, event_types = await _quotes_and_events(db_session, app_id)
+    assert quotes > 0
+    assert "pipeline.imported" not in event_types
+    assert "pipeline.verified" in event_types
+    # Membership, not position: events written in the same instant have no
+    # guaranteed order.
+    assert "pipeline.priced" in event_types
+    # No LO action: the only non-pipeline events are the submit's own.
+    assert {t for t in event_types if not t.startswith("pipeline.")} == {
+        "application.submitted",
+        "application.assigned",
+    }
+
+
+async def _quotes_and_events(db_session: AsyncSession, app_id: uuid.UUID) -> tuple[int, list[str]]:
     quotes = (
         await db_session.execute(
             select(func.count())
@@ -110,8 +136,6 @@ async def test_submitted_tampa_str_reaches_priced(
             .where(Scenario.application_id == app_id)
         )
     ).scalar_one()
-    assert quotes > 0
-
     event_types = (
         (
             await db_session.execute(
@@ -123,13 +147,4 @@ async def test_submitted_tampa_str_reaches_priced(
         .scalars()
         .all()
     )
-    assert "pipeline.imported" not in event_types
-    assert "pipeline.verified" in event_types
-    # Membership, not position: events written in the same instant have no
-    # guaranteed order.
-    assert "pipeline.priced" in event_types
-    # No LO action: the only non-pipeline events are the submit's own.
-    assert {t for t in event_types if not t.startswith("pipeline.")} == {
-        "application.submitted",
-        "application.assigned",
-    }
+    return quotes, list(event_types)
