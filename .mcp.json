@@ -2,10 +2,22 @@
   "mcpServers": {
     "kaneo": {
       "command": "npx",
-      "args": ["-y", "@kaneo/mcp", "serve"],
+      "args": [
+        "-y",
+        "@kaneo/mcp",
+        "serve"
+      ],
       "env": {
         "KANEO_API_URL": "http://localhost:5183"
       }
+    },
+    "codegraph": {
+      "type": "stdio",
+      "command": "codegraph",
+      "args": [
+        "serve",
+        "--mcp"
+      ]
     }
   }
 }

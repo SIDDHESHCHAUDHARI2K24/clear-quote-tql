@@ -1,0 +1,91 @@
+key: ben_ford
+first_name: Ben
+last_name: Ford
+email: ben.ford@clearquote-demo.test
+occupancy: primary
+strategy: null
+purchase_price: "260000.00"
+down_payment_pct: "0.10"
+ppp_years: 0
+fico: 730
+beds: null
+loan_number: LOS-1000008
+current_residence_months: 14
+missing_fields:
+  - previous_street_address
+pipeline_end_status: needs_attention
+seed_end_status: needs_attention
+market:
+  city: Fort Wayne
+  state: IN
+  zip: "46802"
+  county: Allen
+property_type: single_family
+vesting: personal_name
+llc_entity_name: null
+co_borrower: null
+fico_bureau_scores:
+  experian: 732
+  equifax: 728
+  transunion: 730
+  middle: 730
+los_record:
+  borrower_first_name: Ben
+  borrower_last_name: Ford
+  borrower_full_name: Ben Ford
+  borrower_ssn: "100011008"
+  borrower_dob: "1994-01-09"
+  marital_status: Unmarried
+  dependents_count: 0
+  borrower_email: ben.ford@clearquote-demo.test
+  borrower_cell_phone: "2605558008"
+  borrower_home_phone: null
+  business_vesting: Personal Name
+  llc_entity_name: null
+  current_street_address: 5 Elm St
+  current_city: Fort Wayne
+  current_state: IN
+  current_zip: "46802"
+  current_housing_status: Rent
+  current_residence_years: 1
+  current_residence_months: 2
+  vom_completed: true
+  has_subject_property: true
+  property_address_status: Specific_Address
+  subject_street_address: 1200 Broadway
+  subject_city: Fort Wayne
+  subject_state: IN
+  subject_zip: "46802"
+  subject_county: Allen
+  property_type: Single_Family
+  number_of_units: 1
+  loan_purpose: Purchase
+  occupancy_type: Primary_Residence
+  investment_strategy: null
+  loan_program_name: Conventional 30 YR Fixed
+  amortization_term_years: 30
+  amortization_type: Fixed
+  purchase_price: "260000.00"
+  appraised_value: "260000.00"
+  down_payment_pct: "0.10"
+  prepayment_penalty_term: None
+  automated_uw_system: DU
+  lead_source: Zillow
+  previous_street_address: null
+  previous_residence_years: null
+  has_co_borrower: false
+  no_co_applicant_check: false
+  employment:
+    - employer_name: Sweetwater Sound
+      monthly_income: "6800.00"
+      years_at_job: "4.0"
+      self_employed: false
+  liabilities:
+    - creditor_name: Wells Fargo
+      account_type: Auto Loan
+      monthly_payment: "180.00"
+      balance: "4000.00"
+  assets:
+    - account_type: Checking
+      institution: Chase Bank
+      verified_amount: "18000.00"

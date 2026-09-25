@@ -6,19 +6,19 @@ Status here is updated by the agent at stage 8 and by the human at merge.
 
 | ID | Item | Phase | Depends on | Status |
 | --- | --- | --- | --- | --- |
-| [CQ-001](CQ-001-agent-tooling/spec.md) | Agent tooling & process | P0 | — | To Do |
-| [CQ-002](CQ-002-monorepo-scaffold/spec.md) | Monorepo scaffold | P0 | CQ-001 | To Do |
-| [CQ-003](CQ-003-local-infra/spec.md) | Local infrastructure | P0 | CQ-002 | To Do |
-| [CQ-004](CQ-004-backend-skeleton/spec.md) | Backend skeleton | P0 | CQ-003 | To Do |
-| [CQ-005](CQ-005-frontend-skeleton/spec.md) | Frontend skeleton & design system | P0 | CQ-002 | To Do |
-| [CQ-006](CQ-006-ci/spec.md) | CI | P0 | CQ-004, CQ-005 | To Do |
-| [CQ-007](CQ-007-data-model/spec.md) | Data model & migrations | P1 | CQ-004 | To Do |
-| [CQ-008](CQ-008-quote-engine/spec.md) | Quote engine | P1 | CQ-004 | To Do |
-| [CQ-009](CQ-009-mock-integrations/spec.md) | Mock integrations | P1 | CQ-007 | To Do |
-| [CQ-010](CQ-010-seed-data/spec.md) | Seed data & demo reset | P1 | CQ-008, CQ-009 | To Do |
-| [CQ-011](CQ-011-temporal-pipeline/spec.md) | Temporal pipeline | P1 | CQ-009, CQ-012, CQ-013 | To Do |
-| [CQ-012](CQ-012-verification-rules/spec.md) | Verification rules | P1 | CQ-007 | To Do |
-| [CQ-013](CQ-013-pricing-service/spec.md) | Pricing service & API | P1 | CQ-008, CQ-009 | To Do |
+| [CQ-001](CQ-001-agent-tooling/spec.md) | Agent tooling & process | P0 | — | In Review |
+| [CQ-002](CQ-002-monorepo-scaffold/spec.md) | Monorepo scaffold | P0 | CQ-001 | In Review |
+| [CQ-003](CQ-003-local-infra/spec.md) | Local infrastructure | P0 | CQ-002 | In Review |
+| [CQ-004](CQ-004-backend-skeleton/spec.md) | Backend skeleton | P0 | CQ-003 | In Review |
+| [CQ-005](CQ-005-frontend-skeleton/spec.md) | Frontend skeleton & design system | P0 | CQ-002 | In Review |
+| [CQ-006](CQ-006-ci/spec.md) | CI | P0 | CQ-004, CQ-005 | In Review |
+| [CQ-007](CQ-007-data-model/spec.md) | Data model & migrations | P1 | CQ-004 | In Review |
+| [CQ-008](CQ-008-quote-engine/spec.md) | Quote engine | P1 | CQ-004 | In Review |
+| [CQ-009](CQ-009-mock-integrations/spec.md) | Mock integrations | P1 | CQ-007 | In Review |
+| [CQ-010](CQ-010-seed-data/spec.md) | Seed data & demo reset | P1 | CQ-008, CQ-009 | In Review |
+| [CQ-011](CQ-011-temporal-pipeline/spec.md) | Temporal pipeline | P1 | CQ-009, CQ-012, CQ-013 | In Review |
+| [CQ-012](CQ-012-verification-rules/spec.md) | Verification rules | P1 | CQ-007 | In Review |
+| [CQ-013](CQ-013-pricing-service/spec.md) | Pricing service & API | P1 | CQ-008, CQ-009 | In Review |
 | [CQ-014](CQ-014-staff-auth/spec.md) | Staff auth | P2 | CQ-004, CQ-007 | To Do |
 | [CQ-015](CQ-015-borrower-auth/spec.md) | Borrower auth | P2 | CQ-014 | To Do |
 | [CQ-016](CQ-016-application-workspace/spec.md) | Application workspace shell | P3 | CQ-014, CQ-011 | To Do |

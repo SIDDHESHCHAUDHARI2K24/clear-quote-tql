@@ -1,0 +1,19 @@
+import { describe, expect, it } from "vitest";
+
+import * as ui from "./index";
+
+describe("@cq/ui barrel exports", () => {
+  it("exports every pinned component and type helper", () => {
+    expect(typeof ui.Button).toBe("function");
+    expect(typeof ui.Card).toBe("function");
+    expect(typeof ui.MoneyInput).toBe("function");
+    expect(typeof ui.Overlay).toBe("function");
+    expect(typeof ui.PercentInput).toBe("function");
+    expect(typeof ui.SourceBadge).toBe("function");
+    expect(typeof ui.StatusPill).toBe("function");
+    expect(typeof ui.Table).toBe("function");
+    expect(typeof ui.Tabs).toBe("function");
+    expect(ui.APPLICATION_STATUSES).toHaveLength(12);
+    expect(ui.SOURCE_BADGE_SOURCES).toHaveLength(12);
+  });
+});

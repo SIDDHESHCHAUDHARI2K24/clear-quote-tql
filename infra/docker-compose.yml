@@ -1,0 +1,113 @@
+# Local backing services for Clear Quote (CQ-003). The FastAPI app and the
+# Temporal worker run on the host via `uv run` (CQ-004, CQ-011) — not here.
+#
+# `make up`   -> docker compose -f infra/docker-compose.yml up -d --wait
+# `make down` -> docker compose -f infra/docker-compose.yml down
+# `make logs` -> docker compose -f infra/docker-compose.yml logs -f
+#
+# Project name is pinned to `clear-quote` (below) so containers/volumes/
+# networks never collide with the unrelated `kaneo-evaluation` compose
+# project already running on this machine (which owns ports 5183, 9000,
+# 9001 — never touched here).
+name: clear-quote
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cq
+      POSTGRES_PASSWORD: cq
+      POSTGRES_DB: cq_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/10-init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  valkey:
+    image: valkey/valkey:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping || redis-cli ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # `minio/minio` (Docker Hub and quay.io) is gone -- MinIO went
+  # source-only distribution (removals started ~Oct 2025); see CQ-006
+  # post-dev.md's "CI clean-up pass" (plan.md Decision #17). CI already
+  # runs `bitnamilegacy/minio` as its `services:` container -- pinned here
+  # to the exact same tag so local and CI never diverge (CQ-003 fix,
+  # follow-up to CQ-006 Decision #17). `MINIO_DEFAULT_BUCKETS` creates both
+  # buckets the app/seed use at container start, so the old `minio-init`
+  # one-shot service (and `minio/mc:latest`, also unpullable) is gone too.
+  minio:
+    image: bitnamilegacy/minio:2025.5.24-debian-12-r5
+    environment:
+      MINIO_ROOT_USER: cq-minio
+      MINIO_ROOT_PASSWORD: cq-minio-secret
+      MINIO_DEFAULT_BUCKETS: "clear-quote,clearquote-demo-docs"
+    ports:
+      - "9010:9000"
+      - "9011:9001"
+    volumes:
+      # New volume name, not the old `minio_data`: that volume's root dir is
+      # owned by root (written by the old `minio/minio` image, which ran as
+      # root); Bitnami's `minio` image runs as a non-root user and gets
+      # "Permission denied" writing into it. Object data doesn't carry over
+      # either way (CQ-003 fix, orchestrator-acknowledged) -- `minio_data`
+      # is left in place, unused, for later manual cleanup.
+      - minio_bitnami_data:/bitnami/minio/data
+    healthcheck:
+      # Container-internal port (9000), not the remapped host port (9010).
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_USER: cq
+      POSTGRES_PWD: cq
+      POSTGRES_SEEDS: postgres
+    ports:
+      - "7233:7233"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: "http://localhost:3010,http://localhost:3020"
+    ports:
+      - "8080:8080"
+    depends_on:
+      temporal:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  # Orphaned (no longer referenced by any service): held the old
+  # `minio/minio`-image data, owned by root, incompatible with the
+  # Bitnami image's non-root user. Left in place, not removed, per the
+  # orchestrator's brief -- clean up manually later with
+  # `docker volume rm clear-quote_minio_data` once confirmed unneeded.
+  minio_data:
+  minio_bitnami_data:
