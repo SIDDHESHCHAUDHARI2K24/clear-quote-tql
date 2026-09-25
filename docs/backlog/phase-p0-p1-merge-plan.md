@@ -40,10 +40,16 @@ Fix forward on a new branch from `main`, review, and merge through a PR. A rever
 - CQ-010/CQ-012: reserves-months choice treats NULL occupancy as investment implicitly (`verification/service.py`); make it explicit.
 - CQ-010: a plaintext demo staff password exists in old commits (`ea72560`, `a036651`) that are part of `phase-p0-p1`'s history and will be in `main`'s history after the merge. Human decision (2026-09-25): accept it as burned (already public, never a working login) and never reuse it as `SEED_STAFF_PASSWORD`.
 - CQ-011: `worker.py` duplicates `alembic/env.py`'s model import list with no drift check; `pipeline.enriched` is reused for three activities (coarse for the future timeline UI); pipeline endpoints have no auth until CQ-014.
+- CQ-003/CQ-006: MinIO runs on the frozen `bitnamilegacy/minio` image (upstream MinIO images are no longer published); revisit before CQ-035. Old unused volume `clear-quote_minio_data` can be removed locally.
+- Tests: `backend/conftest.py` and `seed/tests/conftest.py` use `os.environ.setdefault` for test settings; harden to fixtures that force test values.
 
 ## G4 result
 
 Whole-phase review: `docs/backlog/phase-p0-p1-review.md`. First run FAIL on two majors: (1) stale api-client after CQ-011 — fixed in the CI clean-up pass together with a CI drift guard; (2) demo password in history — accepted by the human as above.
+
+## G3 result
+
+CI clean-up pass merged (branch `cq-006-ci-cleanup`, review APPROVE). CI run 36119132631 green: backend, seed, frontend and api-client-drift jobs; no Node-20 annotations.
 
 ## Verification record
 
