@@ -32,7 +32,7 @@ def _snapshot(property_label: str | None = "12 Oak St, Carmel, IN 46032") -> dic
             "name": "Jordan Lee",
             "title": "Loan Officer",
             "nmls": "1234567",
-            "phone": "(317) 555-0100",
+            "phone": "3175550100",
             "email": "jordan.lee@clearquote-demo.test",
         },
     }
@@ -50,6 +50,8 @@ def test_email_template_summary_and_link() -> None:
     # Table-based and inline-styled: no <style> block, no external CSS.
     assert "<table" in email.html and "<style" not in email.html and "<link" not in email.html
     assert "NMLS 1234567" in email.html
+    assert "(317) 555-0100" in email.text
+    assert "good through October 16, 2026" in email.text
 
 
 def test_email_template_tbd_and_escaping() -> None:

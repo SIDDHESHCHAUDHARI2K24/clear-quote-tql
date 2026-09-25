@@ -15,6 +15,7 @@ display (whole dollars, thousands separators). No money math.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from html import escape
 from typing import Any
@@ -40,6 +41,23 @@ def _usd(value: str | None) -> str:
         return value
     sign = "-" if amount < 0 else ""
     return f"{sign}${abs(amount):,}"
+
+
+def _phone(value: str) -> str:
+    digits = "".join(ch for ch in value if ch.isdigit())
+    if len(digits) == 10:
+        return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+    return value
+
+
+def _long_date(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError:
+        return value
+    return f"{parsed:%B} {parsed.day}, {parsed.year}"
 
 
 def _recommended_option(snapshot: dict[str, Any]) -> dict[str, Any] | None:
@@ -69,9 +87,9 @@ def render_borrower_email(snapshot: dict[str, Any], *, report_url: str) -> Borro
     lo_name = lo.get("name") or "Your loan officer"
     lo_title = lo.get("title") or "Loan Officer"
     lo_nmls = lo.get("nmls") or ""
-    lo_phone = lo.get("phone") or ""
+    lo_phone = _phone(lo.get("phone") or "")
     lo_email = lo.get("email") or ""
-    expires = header.get("expires_at")
+    expires = _long_date(header.get("expires_at"))
     rows = summary_rows(snapshot)
 
     intro = (

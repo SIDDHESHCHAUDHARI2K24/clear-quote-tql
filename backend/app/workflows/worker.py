@@ -112,6 +112,11 @@ def build_worker(client: Client) -> Worker:
         ", ".join(fn.__name__ for fn in CONTRACT_ACTIVITIES),
         APPLICATION_PIPELINE_TASK_QUEUE,
     )
+    logger.info(
+        "Registered SendQuotePackageWorkflow and %d activities (%s)",
+        len(SEND_ACTIVITIES),
+        ", ".join(fn.__name__ for fn in SEND_ACTIVITIES),
+    )
     return worker
 
 
