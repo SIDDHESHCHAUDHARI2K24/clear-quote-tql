@@ -33,7 +33,8 @@ Built all 9 emulated-integration `Protocol`/`Mock*` pairs (LOS, Pricing, Rent, S
 | Ruff lint | `uv run ruff check backend` | `All checks passed!` |
 | Ruff format | `uv run ruff format --check backend` | `168 files already formatted` |
 | Mypy | `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` | `Success: no issues found in 168 source files` |
-| Frontend lint (`pnpm -r run lint`) | `make lint` | **Not run to completion** — `node_modules` isn't installed in this worktree (`eslint: command not found`); pre-existing environment state unrelated to this item (no frontend files touched by CQ-009) |
+| Frontend lint (`pnpm -r run lint`) | `make lint` | **Not run to completion locally** — `node_modules` isn't installed in this worktree (`eslint: command not found`); pre-existing environment state unrelated to this item (no frontend files touched by CQ-009). Confirmed green in CI instead (see below). |
+| CI (push) | `git push -u origin cq-009-mock-integrations`; `gh run watch 36101491478 --repo SIDDHESHCHAUDHARI2K24/clear-quote-tql --exit-status` | Run [36101491478](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36101491478) — **success**. `backend` job (ruff check/format, mypy, pytest) and `frontend` job (eslint, tsc, prettier, tests) both green. |
 
 ## Review findings (stage 6)
 
