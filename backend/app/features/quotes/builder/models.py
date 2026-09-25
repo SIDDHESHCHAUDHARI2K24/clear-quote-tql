@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, false, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,6 +28,10 @@ class Quote(Base):
     label: Mapped[str] = mapped_column(String)
     """`Par` / `Buydown` / `Manual`."""
     priced_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    stale: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
+    """P3/P4 foundation: CQ-017 sets this when a field-value override or
+    revert (`pricing/enrichment`) changes an input this quote was priced
+    from, so the pricing panel can flag it as needing a reprice (CQ-018)."""
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

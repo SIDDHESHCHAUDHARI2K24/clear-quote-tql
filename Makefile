@@ -1,4 +1,4 @@
-.PHONY: up down logs lint test api api-client demo-reset worker
+.PHONY: up down logs lint test api api-client demo-reset worker e2e
 
 # Local stack (Postgres, Valkey, MinIO, Mailpit, Temporal), project name
 # `clear-quote` (infra/docker-compose.yml). --wait blocks until every
@@ -52,3 +52,12 @@ api:
 # the repo-root .env instead of a nonexistent backend/.env (CQ-011 fix).
 worker:
 	uv run python -m app.workflows.worker
+
+# Playwright (H3, docs/backlog/phase-p3-p4-foundation.md). Not part of
+# `make test` -- CI has no running stack (API, worker, Next dev servers,
+# Mailpit) for these to talk to. A worker runs this by hand per
+# docs/backlog/phase-p3-p4-plan.md's "E2E recipe", with LO_BASE_URL and
+# PORTAL_BASE_URL set to its own worktree slot's ports
+# (scripts/worktree-env.sh <slot>).
+e2e:
+	pnpm exec playwright test
