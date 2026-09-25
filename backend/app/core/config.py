@@ -89,6 +89,10 @@ class Settings(BaseSettings):
     stale_check_interval_seconds: int = 3600
     clock_now: str | None = None
 
+    # CQ-028a: borrower-portal base URL for links in emails (the hard-pull
+    # consent request links to `{portal_base_url}/tasks/credit-check/{id}`).
+    portal_base_url: str = "http://localhost:3020"
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, value: object) -> object:

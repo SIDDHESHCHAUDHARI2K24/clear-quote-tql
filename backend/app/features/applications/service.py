@@ -36,6 +36,7 @@ import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import ApplicationStatus, FieldSource, Occupancy
@@ -199,6 +200,29 @@ async def import_from_los(application_id: uuid.UUID, db: AsyncSession) -> Import
         raise ValueError(f"No application with id {application_id}")
     if not application.los_loan_guid:
         raise ValueError(f"Application {application_id} has no los_loan_guid to import from")
+
+    # CQ-028a (plan.md Decision #9): import once. A pipeline started for an
+    # application whose data is already local (a seeded persona resumed from
+    # the verification tabs) must not duplicate rows, nor overwrite the LO's
+    # fixes (e.g. Aisha's occupancy) with the LOS values again.
+    already_imported = (
+        await db.execute(
+            select(ApplicationParty.id)
+            .where(ApplicationParty.application_id == application_id)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if already_imported is not None:
+        return ImportResult(
+            application_id=application_id,
+            parties_created=0,
+            housing_rows_created=0,
+            employment_rows_created=0,
+            liabilities_created=0,
+            assets_created=0,
+            occupancy=application.occupancy,
+            representative_fico=None,
+        )
 
     los_client = MockLosClient(db)
     loan_file = await los_client.get_loan_file(application.los_loan_guid)
