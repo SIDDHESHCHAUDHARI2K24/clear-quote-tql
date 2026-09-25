@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import get_scoped_application
+from app.core.auth import CurrentStaff, get_scoped_application
 from app.core.db import get_db
 from app.features.applications.models import Application
 from app.features.pricing.engine.quote_engine import compute_quote
@@ -33,9 +33,17 @@ router = APIRouter(tags=["pricing"])
 
 
 @router.post("/quotes/preview", response_model=QuotePreviewResponse)
-async def preview_quote(request: QuotePreviewRequest) -> QuotePreviewResponse:
+async def preview_quote(
+    request: QuotePreviewRequest,
+    _user: CurrentStaff,
+) -> QuotePreviewResponse:
     """Engine-only, no adapter latency, no persistence -- must respond
-    under 300ms (spec.md AC1)."""
+    under 300ms (spec.md AC1). CQ-017: requires a signed-in staff user
+    (was previously reachable with no auth at all -- this route computes
+    real numbers for real applications, unlike `/scenarios/{id}/products`
+    which already required `CurrentStaff` via `ensure_scenario_in_scope`);
+    not scoped to any one application since it's a pure engine call with
+    no persistence."""
     computation = compute_quote(request, ConfigSnapshot())
     return QuotePreviewResponse.model_validate(computation.model_dump())
 

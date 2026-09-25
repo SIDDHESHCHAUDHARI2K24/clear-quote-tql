@@ -141,3 +141,38 @@ async def test_scenario_create_route_propagates_pricing_validation_error(
     body = response.json()
     assert body["error"]["code"] == "PRICING_VALIDATION_ERROR"
     assert "ZipCode" in body["error"]["details"]["missing_fields"]
+
+
+async def test_scenario_create_with_zero_purchase_price_is_422_not_500(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    set_field_value: Callable[..., Awaitable[object]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+) -> None:
+    """PR review round (fresh stage-6, PR #9): `_gather_base_scenario_
+    inputs` calls `quote_engine.insurance_annual_rate_from_amount`, which
+    raises `NonPositivePriceError` (a plain `ValueError`) for a
+    non-positive `purchase_price`. `ScenarioCreateRequest.purchase_price`
+    has no `gt=0` constraint, so a zero price reaches the service layer --
+    this must degrade to the same 422 shape as every other "can't price"
+    guard in `_gather_base_scenario_inputs`, never a bare 500."""
+    staff = await make_staff_session()
+    application = await make_application(occupancy=Occupancy.PRIMARY, lo=staff.user)
+    await set_field_value(application.id, "representative_fico", Decimal("740"))
+    await set_field_value(application.id, "property_tax_annual_rate", Decimal("0.01"))
+    await set_field_value(application.id, "homeowners_ins_annual", Decimal("1500.00"))
+    await db_session.commit()
+
+    response = await client.post(
+        f"/api/v1/applications/{application.id}/scenarios",
+        json={
+            "purchase_price": "0.00",
+            "down_payment_pct": "0.20",
+            "strategy": "PRIMARY",
+        },
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["error"]["code"] == "VALIDATION_ERROR"

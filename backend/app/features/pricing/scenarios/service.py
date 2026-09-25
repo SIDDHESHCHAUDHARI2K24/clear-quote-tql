@@ -20,7 +20,11 @@ from app.core.enums import Occupancy, Strategy
 from app.core.errors import NotFoundError, ValidationAppError
 from app.features.applications.models import Application
 from app.features.applications.verification.models import FieldValue
-from app.features.pricing.engine.quote_engine import compute_quote
+from app.features.pricing.engine.quote_engine import (
+    NonPositivePriceError,
+    compute_quote,
+    insurance_annual_rate_from_amount,
+)
 from app.features.pricing.engine.types import (
     ConfigSnapshot,
     DSCRBucket,
@@ -168,7 +172,20 @@ async def _gather_base_scenario_inputs(
     insurance_annual = await _field_decimal(db, application.id, "homeowners_ins_annual")
     if insurance_annual is None:
         raise ValidationAppError("Cannot price: missing homeowners_ins_annual.")
-    insurance_rate = insurance_annual / purchase_price
+    # CQ-017 review round: money math lives only in `quote_engine`
+    # (AGENTS.md); this was dividing inline.
+    #
+    # PR review round (fresh stage-6, PR #9): `insurance_annual_rate_from_
+    # amount` raises `NonPositivePriceError` (a plain `ValueError`) for a
+    # non-positive `purchase_price` -- nothing upstream of this function
+    # catches bare `ValueError`s, so left alone that surfaced as a generic
+    # 500 instead of the clean 422 every other "can't price" guard in this
+    # function returns. `requested_price` has no DB check constraint
+    # preventing 0/negative, so this is reachable.
+    try:
+        insurance_rate = insurance_annual_rate_from_amount(purchase_price, insurance_annual)
+    except NonPositivePriceError as exc:
+        raise ValidationAppError(f"Cannot price: {exc}") from exc
 
     hoa_monthly = await _field_decimal(db, application.id, "hoa_fee_monthly") or Decimal("0")
 

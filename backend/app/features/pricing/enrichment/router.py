@@ -36,8 +36,9 @@ async def patch_field_value(
 async def revert_field_value_route(
     application_id: uuid.UUID,
     field_key: str,
+    user: CurrentStaff,
     db: AsyncSession = Depends(get_db),
     _application: Application = Depends(get_scoped_application),
 ) -> FieldValueRead:
-    row = await revert_field_value(db, application_id, field_key)
+    row = await revert_field_value(db, application_id, field_key, user.id)
     return FieldValueRead.model_validate(row)

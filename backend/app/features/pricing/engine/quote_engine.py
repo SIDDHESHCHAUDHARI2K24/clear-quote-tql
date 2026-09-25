@@ -39,15 +39,6 @@ class LtvOutOfRangeError(ValueError):
     which is a pure lookup with no notion of a program maximum."""
 
 
-# --- Insurance rate conversion (shared with CQ-017) -------------------------
-# Copied verbatim from CQ-017 (pricing panel)'s
-# `backend/app/features/pricing/engine/quote_engine.py` (origin/cq-017-pricing-panel
-# @ 12cefaf) -- both items independently needed "insurance $/yr -> rate"
-# conversion done inside `quote_engine`, not by a caller (AGENTS.md: "money
-# math lives only in quote_engine"), and coordinated on this exact name/
-# signature/behavior so the merge keeps a single copy instead of a rename.
-
-
 class NonPositivePriceError(ValueError):
     """Raised by `down_payment_pct_from_amount`/`insurance_annual_rate_from_amount`
     when `purchase_price` is not strictly positive -- dividing by a zero or
@@ -55,6 +46,55 @@ class NonPositivePriceError(ValueError):
     nonsensical inverted/negative rate. A plain `ValueError` subclass so a
     Pydantic `model_validator` that calls these functions (CQ-017
     `QuotePreviewRequest`) has it turned into a normal 422, not a 500."""
+
+
+def _round_currency(value: Decimal) -> Decimal:
+    return value.quantize(_CENT, rounding=ROUND_HALF_UP)
+
+
+def _round_2dp(value: Decimal) -> Decimal:
+    return value.quantize(_CENT, rounding=ROUND_HALF_UP)
+
+
+def _round_ltv(value: Decimal) -> Decimal:
+    return value.quantize(_LTV_PRECISION, rounding=ROUND_HALF_UP)
+
+
+# --- Payment -----------------------------------------------------------------
+
+
+def loan_amount(purchase_price: Decimal, down_payment_pct: Decimal) -> Decimal:
+    """`L = P x (1 - d)`."""
+    return purchase_price * (Decimal("1") - down_payment_pct)
+
+
+def ltv_pct(down_payment_pct: Decimal) -> Decimal:
+    """LTV as a 0-1 fraction: `1 - d`."""
+    return Decimal("1") - down_payment_pct
+
+
+def down_payment_pct_from_amount(purchase_price: Decimal, down_payment_amount: Decimal) -> Decimal:
+    """`down_payment_amount / purchase_price`, rounded to the same 4dp
+    precision as `ltv_pct`/`QuoteComputation.ltv_pct` (both are 0-1
+    fractions, e.g. `0.2500` for 25%).
+
+    The linked down-payment %/$ input pair (CQ-017 spec.md AC2) must not
+    compute this conversion in TypeScript (AGENTS.md: "money math lives
+    only in quote_engine") -- `/quotes/preview` accepts either
+    `down_payment_pct` or `down_payment_amount` and resolves the missing
+    side with this function server-side before `compute_quote` ever runs.
+
+    Raises `NonPositivePriceError` (a `ValueError` subclass) when
+    `purchase_price` isn't strictly positive, so a caller inside a Pydantic
+    `model_validator` (CQ-017 `QuotePreviewRequest`) surfaces this as a
+    normal 422, not a 500 from a bare `ZeroDivisionError`.
+    """
+    if purchase_price <= 0:
+        raise NonPositivePriceError(
+            f"purchase_price must be positive to derive a down payment percentage, "
+            f"got {purchase_price}"
+        )
+    return _round_ltv(down_payment_amount / purchase_price)
 
 
 def insurance_annual_rate_from_amount(purchase_price: Decimal, annual_premium: Decimal) -> Decimal:
@@ -81,34 +121,6 @@ def insurance_annual_rate_from_amount(purchase_price: Decimal, annual_premium: D
             f"purchase_price must be positive to derive an insurance rate, got {purchase_price}"
         )
     return annual_premium / purchase_price
-
-
-# --- end shared block --------------------------------------------------------
-
-
-def _round_currency(value: Decimal) -> Decimal:
-    return value.quantize(_CENT, rounding=ROUND_HALF_UP)
-
-
-def _round_2dp(value: Decimal) -> Decimal:
-    return value.quantize(_CENT, rounding=ROUND_HALF_UP)
-
-
-def _round_ltv(value: Decimal) -> Decimal:
-    return value.quantize(_LTV_PRECISION, rounding=ROUND_HALF_UP)
-
-
-# --- Payment -----------------------------------------------------------------
-
-
-def loan_amount(purchase_price: Decimal, down_payment_pct: Decimal) -> Decimal:
-    """`L = P x (1 - d)`."""
-    return purchase_price * (Decimal("1") - down_payment_pct)
-
-
-def ltv_pct(down_payment_pct: Decimal) -> Decimal:
-    """LTV as a 0-1 fraction: `1 - d`."""
-    return Decimal("1") - down_payment_pct
 
 
 def principal_and_interest(loan: Decimal, note_rate: Decimal, term_months: int) -> Decimal:
@@ -387,6 +399,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
         return QuoteComputation(
             loan_amount=rounded_loan_amount,
             down_payment_amount=rounded_down_payment,
+            down_payment_pct=inputs.down_payment_pct,
             ltv_pct=rounded_ltv_pct,
             monthly_pi=rounded_pi,
             monthly_tax=rounded_tax,
@@ -454,6 +467,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
     return QuoteComputation(
         loan_amount=rounded_loan_amount,
         down_payment_amount=rounded_down_payment,
+        down_payment_pct=inputs.down_payment_pct,
         ltv_pct=rounded_ltv_pct,
         monthly_pi=rounded_pi,
         monthly_tax=rounded_tax,

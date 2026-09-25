@@ -403,17 +403,35 @@
           "pricing"
         ],
         "summary": "Preview Quote",
-        "description": "Engine-only, no adapter latency, no persistence -- must respond\nunder 300ms (spec.md AC1).",
+        "description": "Engine-only, no adapter latency, no persistence -- must respond\nunder 300ms (spec.md AC1). CQ-017: requires a signed-in staff user\n(was previously reachable with no auth at all -- this route computes\nreal numbers for real applications, unlike `/scenarios/{id}/products`\nwhich already required `CurrentStaff` via `ensure_scenario_in_scope`);\nnot scoped to any one application since it's a pure engine call with\nno persistence.",
         "operationId": "preview_quote_api_v1_quotes_preview_post",
+        "parameters": [
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/QuotePreviewRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -682,6 +700,65 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/pricing": {
+      "get": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Get Pricing",
+        "operationId": "get_pricing_api_v1_applications__application_id__pricing_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingViewResponse"
                 }
               }
             }
@@ -2787,208 +2864,191 @@
         ],
         "title": "PricedProductRow"
       },
-      "QuotePreviewRequest": {
+      "PricingFieldView": {
         "properties": {
-          "purchase_price": {
+          "field_key": {
+            "type": "string",
+            "title": "Field Key"
+          },
+          "value": {
             "anyOf": [
-              {
-                "type": "number"
-              },
               {
                 "type": "string",
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
               }
             ],
+            "title": "Value"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FieldSource"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          },
+          "overridden": {
+            "type": "boolean",
+            "title": "Overridden"
+          },
+          "original_value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_key",
+          "value",
+          "source",
+          "source_ref",
+          "overridden",
+          "original_value"
+        ],
+        "title": "PricingFieldView",
+        "description": "One of the 5 pricing-overridable `field_values` rows (spec.md:\ntaxes, insurance, HOA, LTR rent / STR revenue), with enough to render a\n`SourceBadge` and an inline override/revert control."
+      },
+      "PricingInputsView": {
+        "properties": {
+          "purchase_price": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Purchase Price"
           },
           "down_payment_pct": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              }
-            ],
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Down Payment Pct"
-          },
-          "note_rate": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              }
-            ],
-            "title": "Note Rate"
           },
           "strategy": {
             "$ref": "#/components/schemas/StrategyType"
           },
-          "fico": {
-            "type": "integer",
-            "title": "Fico"
-          },
-          "property_tax_annual_rate": {
+          "prepayment_penalty_years": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "integer"
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "null"
               }
             ],
-            "title": "Property Tax Annual Rate"
+            "title": "Prepayment Penalty Years"
+          },
+          "fico": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fico"
           },
           "insurance_annual_rate": {
             "anyOf": [
               {
-                "type": "number"
-              },
-              {
                 "type": "string",
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
               }
             ],
             "title": "Insurance Annual Rate"
-          },
-          "term_months": {
-            "type": "integer",
-            "title": "Term Months",
-            "default": 360
-          },
-          "hoa_monthly": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              }
-            ],
-            "title": "Hoa Monthly",
-            "default": "0"
-          },
-          "discount_points_pct": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              }
-            ],
-            "title": "Discount Points Pct",
-            "default": "0"
-          },
-          "seller_credits": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              }
-            ],
-            "title": "Seller Credits",
-            "default": "0"
-          },
-          "market_rent_ltr": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Market Rent Ltr"
-          },
-          "str_gross_annual_revenue": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Str Gross Annual Revenue"
-          },
-          "target_dscr": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Target Dscr"
-          },
-          "bonus_depreciation_pct": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bonus Depreciation Pct"
-          },
-          "investor_marginal_tax_rate": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Investor Marginal Tax Rate"
           }
         },
         "type": "object",
         "required": [
           "purchase_price",
           "down_payment_pct",
-          "note_rate",
           "strategy",
+          "prepayment_penalty_years",
           "fico",
-          "property_tax_annual_rate",
           "insurance_annual_rate"
         ],
-        "title": "QuotePreviewRequest"
+        "title": "PricingInputsView",
+        "description": "The raw, non-badge-carrying pieces `/quotes/preview` also needs but\nthat don't appear in `PricingFieldView` (FICO has no source badge in\nspec.md's field list; `insurance_annual_rate` is a rate the engine\nconsumes, derived server-side from `homeowners_ins_annual` -- the panel\nonly ever shows the dollar `homeowners_ins_annual` badge/value, never\nthis fraction, but every future preview call still needs to send it, so\nit's handed over ready-computed rather than making the frontend divide\ntwo money fields itself)."
       },
-      "QuotePreviewResponse": {
+      "PricingViewResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "inputs": {
+            "$ref": "#/components/schemas/PricingInputsView"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/PricingFieldView"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "note_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Rate"
+          },
+          "breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuoteComputation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "has_stale_quotes": {
+            "type": "boolean",
+            "title": "Has Stale Quotes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "inputs",
+          "fields",
+          "note_rate",
+          "breakdown",
+          "has_stale_quotes"
+        ],
+        "title": "PricingViewResponse"
+      },
+      "QuoteComputation": {
         "properties": {
           "loan_amount": {
             "type": "string",
@@ -2999,6 +3059,11 @@
             "type": "string",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Down Payment Amount"
+          },
+          "down_payment_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Down Payment Pct"
           },
           "ltv_pct": {
             "type": "string",
@@ -3285,6 +3350,7 @@
         "required": [
           "loan_amount",
           "down_payment_amount",
+          "down_payment_pct",
           "ltv_pct",
           "monthly_pi",
           "monthly_tax",
@@ -3303,7 +3369,551 @@
           "cash_to_close",
           "config_snapshot"
         ],
-        "title": "QuotePreviewResponse"
+        "title": "QuoteComputation",
+        "description": "Every money number Clear Quote shows, computed once by `compute_quote`.\n\nAll currency fields are `Decimal` rounded to cents; `dscr_ratio` is\nrounded to 2dp; `cap_rate_pct` is rounded to 2dp of percent (e.g. `6.42`\nmeans 6.42%). Investment-only fields are `None` on `PRIMARY` scenarios \u2014\nprimary loans never carry rent/DSCR/cashflow/cost-seg numbers."
+      },
+      "QuotePreviewRequest": {
+        "properties": {
+          "purchase_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Purchase Price"
+          },
+          "down_payment_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Down Payment Pct"
+          },
+          "note_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Note Rate"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/StrategyType"
+          },
+          "fico": {
+            "type": "integer",
+            "title": "Fico"
+          },
+          "property_tax_annual_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Property Tax Annual Rate"
+          },
+          "insurance_annual_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Insurance Annual Rate"
+          },
+          "term_months": {
+            "type": "integer",
+            "title": "Term Months",
+            "default": 360
+          },
+          "hoa_monthly": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Hoa Monthly",
+            "default": "0"
+          },
+          "discount_points_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Discount Points Pct",
+            "default": "0"
+          },
+          "seller_credits": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Seller Credits",
+            "default": "0"
+          },
+          "market_rent_ltr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Rent Ltr"
+          },
+          "str_gross_annual_revenue": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Str Gross Annual Revenue"
+          },
+          "target_dscr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Dscr"
+          },
+          "bonus_depreciation_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bonus Depreciation Pct"
+          },
+          "investor_marginal_tax_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investor Marginal Tax Rate"
+          },
+          "down_payment_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Down Payment Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_price",
+          "note_rate",
+          "strategy",
+          "fico",
+          "property_tax_annual_rate",
+          "insurance_annual_rate"
+        ],
+        "title": "QuotePreviewRequest",
+        "description": "CQ-017: the pricing panel's linked down-payment %/$ input needs to\nsend *either* side and have the engine resolve the other, server-side\n(AGENTS.md: money math lives only in `quote_engine`). `down_payment_pct`\nis redeclared optional here (`ScenarioInputs` requires it); a `before`\nvalidator resolves `down_payment_amount` -> `down_payment_pct` before\n`ScenarioInputs`'s own field/strategy validation ever runs, so every\ndownstream consumer of this model still sees a plain, always-populated\n`down_payment_pct` exactly like before."
+      },
+      "QuotePreviewResponse": {
+        "properties": {
+          "loan_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Loan Amount"
+          },
+          "down_payment_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Down Payment Amount"
+          },
+          "down_payment_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Down Payment Pct"
+          },
+          "ltv_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Ltv Pct"
+          },
+          "monthly_pi": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Pi"
+          },
+          "monthly_tax": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Tax"
+          },
+          "monthly_insurance": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Insurance"
+          },
+          "monthly_mi": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Mi"
+          },
+          "monthly_hoa": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Hoa"
+          },
+          "total_monthly_payment": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Monthly Payment"
+          },
+          "discount_points_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Discount Points Amount"
+          },
+          "lender_fees": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Lender Fees"
+          },
+          "title_fees": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Title Fees"
+          },
+          "prepaid_interest": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Prepaid Interest"
+          },
+          "prepaid_insurance": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Prepaid Insurance"
+          },
+          "prepaid_taxes": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Prepaid Taxes"
+          },
+          "total_prepaids": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Prepaids"
+          },
+          "total_closing_costs": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Closing Costs"
+          },
+          "cash_to_close": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cash To Close"
+          },
+          "config_snapshot": {
+            "$ref": "#/components/schemas/ConfigSnapshot"
+          },
+          "qualifying_rent": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qualifying Rent"
+          },
+          "underwritten_str_rent": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Underwritten Str Rent"
+          },
+          "str_gross_monthly_revenue": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Str Gross Monthly Revenue"
+          },
+          "dscr_ratio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dscr Ratio"
+          },
+          "dscr_bucket": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DSCRBucket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "monthly_cashflow": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow"
+          },
+          "annual_cashflow": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annual Cashflow"
+          },
+          "break_even_rent_ltr": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Break Even Rent Ltr"
+          },
+          "str_annual_rent_target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Str Annual Rent Target"
+          },
+          "cap_rate_pct": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Rate Pct"
+          },
+          "land_value_allocation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Value Allocation"
+          },
+          "depreciable_building_basis": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depreciable Building Basis"
+          },
+          "accelerated_basis_amount": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accelerated Basis Amount"
+          },
+          "year_one_tax_deduction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year One Tax Deduction"
+          },
+          "year_one_tax_savings": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year One Tax Savings"
+          },
+          "monthly_cashflow_incl_tax": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow Incl Tax"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loan_amount",
+          "down_payment_amount",
+          "down_payment_pct",
+          "ltv_pct",
+          "monthly_pi",
+          "monthly_tax",
+          "monthly_insurance",
+          "monthly_mi",
+          "monthly_hoa",
+          "total_monthly_payment",
+          "discount_points_amount",
+          "lender_fees",
+          "title_fees",
+          "prepaid_interest",
+          "prepaid_insurance",
+          "prepaid_taxes",
+          "total_prepaids",
+          "total_closing_costs",
+          "cash_to_close",
+          "config_snapshot"
+        ],
+        "title": "QuotePreviewResponse",
+        "description": "`QuoteComputation` now carries `down_payment_pct` itself (the value\n`compute_quote` actually used) -- this subclass no longer needs to add\nit separately; kept only so the two request/response types stay\nvisually paired in this file, matching the module docstring's \"= X\nfields\" convention."
       },
       "QuoteRead": {
         "properties": {

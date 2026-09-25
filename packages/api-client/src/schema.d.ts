@@ -119,7 +119,12 @@ export interface paths {
         /**
          * Preview Quote
          * @description Engine-only, no adapter latency, no persistence -- must respond
-         *     under 300ms (spec.md AC1).
+         *     under 300ms (spec.md AC1). CQ-017: requires a signed-in staff user
+         *     (was previously reachable with no auth at all -- this route computes
+         *     real numbers for real applications, unlike `/scenarios/{id}/products`
+         *     which already required `CurrentStaff` via `ensure_scenario_in_scope`);
+         *     not scoped to any one application since it's a pure engine call with
+         *     no persistence.
          */
         post: operations["preview_quote_api_v1_quotes_preview_post"];
         delete?: never;
@@ -190,6 +195,23 @@ export interface paths {
         put?: never;
         /** Post Manual Quote */
         post: operations["post_manual_quote_api_v1_scenarios__scenario_id__quotes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/pricing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pricing */
+        get: operations["get_pricing_api_v1_applications__application_id__pricing_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1032,12 +1054,162 @@ export interface components {
             /** Is Buydown Rate */
             is_buydown_rate: boolean;
         };
-        /** QuotePreviewRequest */
+        /**
+         * PricingFieldView
+         * @description One of the 5 pricing-overridable `field_values` rows (spec.md:
+         *     taxes, insurance, HOA, LTR rent / STR revenue), with enough to render a
+         *     `SourceBadge` and an inline override/revert control.
+         */
+        PricingFieldView: {
+            /** Field Key */
+            field_key: string;
+            /** Value */
+            value: string | null;
+            source: components["schemas"]["FieldSource"];
+            /** Source Ref */
+            source_ref: string | null;
+            /** Overridden */
+            overridden: boolean;
+            /** Original Value */
+            original_value: string | null;
+        };
+        /**
+         * PricingInputsView
+         * @description The raw, non-badge-carrying pieces `/quotes/preview` also needs but
+         *     that don't appear in `PricingFieldView` (FICO has no source badge in
+         *     spec.md's field list; `insurance_annual_rate` is a rate the engine
+         *     consumes, derived server-side from `homeowners_ins_annual` -- the panel
+         *     only ever shows the dollar `homeowners_ins_annual` badge/value, never
+         *     this fraction, but every future preview call still needs to send it, so
+         *     it's handed over ready-computed rather than making the frontend divide
+         *     two money fields itself).
+         */
+        PricingInputsView: {
+            /** Purchase Price */
+            purchase_price: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
+            strategy: components["schemas"]["StrategyType"];
+            /** Prepayment Penalty Years */
+            prepayment_penalty_years: number | null;
+            /** Fico */
+            fico: number | null;
+            /** Insurance Annual Rate */
+            insurance_annual_rate: string | null;
+        };
+        /** PricingViewResponse */
+        PricingViewResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            inputs: components["schemas"]["PricingInputsView"];
+            /** Fields */
+            fields: components["schemas"]["PricingFieldView"][];
+            /** Note Rate */
+            note_rate: string | null;
+            breakdown: components["schemas"]["QuoteComputation"] | null;
+            /** Has Stale Quotes */
+            has_stale_quotes: boolean;
+        };
+        /**
+         * QuoteComputation
+         * @description Every money number Clear Quote shows, computed once by `compute_quote`.
+         *
+         *     All currency fields are `Decimal` rounded to cents; `dscr_ratio` is
+         *     rounded to 2dp; `cap_rate_pct` is rounded to 2dp of percent (e.g. `6.42`
+         *     means 6.42%). Investment-only fields are `None` on `PRIMARY` scenarios —
+         *     primary loans never carry rent/DSCR/cashflow/cost-seg numbers.
+         */
+        QuoteComputation: {
+            /** Loan Amount */
+            loan_amount: string;
+            /** Down Payment Amount */
+            down_payment_amount: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
+            /** Ltv Pct */
+            ltv_pct: string;
+            /** Monthly Pi */
+            monthly_pi: string;
+            /** Monthly Tax */
+            monthly_tax: string;
+            /** Monthly Insurance */
+            monthly_insurance: string;
+            /** Monthly Mi */
+            monthly_mi: string | null;
+            /** Monthly Hoa */
+            monthly_hoa: string;
+            /** Total Monthly Payment */
+            total_monthly_payment: string;
+            /** Discount Points Amount */
+            discount_points_amount: string;
+            /** Lender Fees */
+            lender_fees: string;
+            /** Title Fees */
+            title_fees: string;
+            /** Prepaid Interest */
+            prepaid_interest: string;
+            /** Prepaid Insurance */
+            prepaid_insurance: string;
+            /** Prepaid Taxes */
+            prepaid_taxes: string;
+            /** Total Prepaids */
+            total_prepaids: string;
+            /** Total Closing Costs */
+            total_closing_costs: string;
+            /** Cash To Close */
+            cash_to_close: string;
+            config_snapshot: components["schemas"]["ConfigSnapshot"];
+            /** Qualifying Rent */
+            qualifying_rent?: string | null;
+            /** Underwritten Str Rent */
+            underwritten_str_rent?: string | null;
+            /** Str Gross Monthly Revenue */
+            str_gross_monthly_revenue?: string | null;
+            /** Dscr Ratio */
+            dscr_ratio?: string | null;
+            dscr_bucket?: components["schemas"]["DSCRBucket"] | null;
+            /** Monthly Cashflow */
+            monthly_cashflow?: string | null;
+            /** Annual Cashflow */
+            annual_cashflow?: string | null;
+            /** Break Even Rent Ltr */
+            break_even_rent_ltr?: string | null;
+            /** Str Annual Rent Target */
+            str_annual_rent_target?: string | null;
+            /** Cap Rate Pct */
+            cap_rate_pct?: string | null;
+            /** Land Value Allocation */
+            land_value_allocation?: string | null;
+            /** Depreciable Building Basis */
+            depreciable_building_basis?: string | null;
+            /** Accelerated Basis Amount */
+            accelerated_basis_amount?: string | null;
+            /** Year One Tax Deduction */
+            year_one_tax_deduction?: string | null;
+            /** Year One Tax Savings */
+            year_one_tax_savings?: string | null;
+            /** Monthly Cashflow Incl Tax */
+            monthly_cashflow_incl_tax?: string | null;
+        };
+        /**
+         * QuotePreviewRequest
+         * @description CQ-017: the pricing panel's linked down-payment %/$ input needs to
+         *     send *either* side and have the engine resolve the other, server-side
+         *     (AGENTS.md: money math lives only in `quote_engine`). `down_payment_pct`
+         *     is redeclared optional here (`ScenarioInputs` requires it); a `before`
+         *     validator resolves `down_payment_amount` -> `down_payment_pct` before
+         *     `ScenarioInputs`'s own field/strategy validation ever runs, so every
+         *     downstream consumer of this model still sees a plain, always-populated
+         *     `down_payment_pct` exactly like before.
+         */
         QuotePreviewRequest: {
             /** Purchase Price */
             purchase_price: number | string;
             /** Down Payment Pct */
-            down_payment_pct: number | string;
+            down_payment_pct?: number | string | null;
             /** Note Rate */
             note_rate: number | string;
             strategy: components["schemas"]["StrategyType"];
@@ -1077,13 +1249,24 @@ export interface components {
             bonus_depreciation_pct?: number | string | null;
             /** Investor Marginal Tax Rate */
             investor_marginal_tax_rate?: number | string | null;
+            /** Down Payment Amount */
+            down_payment_amount?: number | string | null;
         };
-        /** QuotePreviewResponse */
+        /**
+         * QuotePreviewResponse
+         * @description `QuoteComputation` now carries `down_payment_pct` itself (the value
+         *     `compute_quote` actually used) -- this subclass no longer needs to add
+         *     it separately; kept only so the two request/response types stay
+         *     visually paired in this file, matching the module docstring's "= X
+         *     fields" convention.
+         */
         QuotePreviewResponse: {
             /** Loan Amount */
             loan_amount: string;
             /** Down Payment Amount */
             down_payment_amount: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
             /** Ltv Pct */
             ltv_pct: string;
             /** Monthly Pi */
@@ -1678,7 +1861,9 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
         };
         requestBody: {
             content: {
@@ -1833,6 +2018,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pricing_api_v1_applications__application_id__pricing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricingViewResponse"];
                 };
             };
             /** @description Validation Error */
