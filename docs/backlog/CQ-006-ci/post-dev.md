@@ -26,7 +26,7 @@ CI's `backend` job mypy step was `uv run mypy backend/app` (spec.md's literal te
 | Criterion | Status | Evidence |
 | --- | --- | --- |
 | AC1 — CI green on `main` | **Pending — orchestrator verifies after push** | Not evidenceable from this worktree; per orchestrator, `main`/`phase-p0-p1` are on `origin` and the orchestrator will push this branch and read the real run. |
-| AC2 — triggers on every branch push + PR | Pass (static) / Pending (live trigger) | `.github/workflows/ci.yml`'s `on:` block matches spec.md verbatim: `push.branches: ["**"]`, `pull_request` (no branch filter). Confirmed with `actionlint` (no errors) and a read of the file. A live scratch-branch push to observe a run starting was not performed — pushing is reserved for the orchestrator. |
+| AC2 — triggers on every branch push + PR | **Pass** | `.github/workflows/ci.yml`'s `on:` block matches spec.md verbatim: `push.branches: ["**"]`, `pull_request` (no branch filter). Confirmed with `actionlint` (no errors) and a read of the file. Both trigger kinds now evidenced by real runs (CI clean-up pass, review round 1 finding #1): push run [36098019743](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36098019743) (event `push`, branch `cq-006-ci`); `pull_request` run [36098405665](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36098405665) (event `pull_request`, PR #1, head `phase-p0-p1`) — both `gh run view --json event` confirmed. |
 | AC3 — `backend` job's postgres service + `uv run pytest backend` passes | **Pass** | Local emulation: `docker compose -f infra/docker-compose.yml up -d --wait` (same `postgres:16-alpine` image/creds/db as the job's service container) + `uv run pytest backend` with the job's exact env vars (dummy `VALKEY_URL`/`S3_*`/`TEMPORAL_*`, unresolvable): **16 passed** after the `test_health.py` fix above. |
 | AC4 — backend job fails on ruff/format/mypy/pytest failure | Pass | Added `import os` unused mid-file to `backend/app/features/system/service.py`: `uv run ruff check backend` → exit 1 (E402, F401). Reverted (`git checkout --`), confirmed exit 0 again. Added `x=1` (misformatted): `uv run ruff format --check backend` → exit 1 ("1 file would be reformatted"). Reverted. Working tree confirmed clean after (`git status --short`). |
 | AC5 — frontend job runs lint/typecheck/prettier/test, passes on the scaffold | Pass | From repo root: `pnpm install --frozen-lockfile` (480 packages, from lockfile, no changes) → `pnpm -r run lint` (4/4 workspaces, no errors) → `pnpm -r run typecheck` (4/4 workspaces, no errors) → `pnpm exec prettier --check .` ("All matched files use Prettier code style!") → `pnpm -r run test` (4/4 workspaces: 34 tests passed across `@cq/ui`, `@cq/api-client`, `lo-console`, `borrower-portal`). |
@@ -89,4 +89,49 @@ APPROVE. No critical/major findings; 2 minor (both non-blocking, tracked above),
 ## Follow-ups
 
 - Once the human configures branch protection on `main` requiring both `backend` and `frontend` jobs (out of scope for this item, per spec.md), AC1's exit check is fully closed.
-- If a later item needs Valkey/MinIO/Temporal in CI for real integration coverage, add service containers then (per CQ-004's spec.md Decision) rather than widening this item retroactively.
+- If a later item needs Valkey/Temporal in CI for real integration coverage, add service containers then (per CQ-004's spec.md Decision) rather than widening this item retroactively. **MinIO is now real in CI** (see "CI clean-up pass" below, G3/CQ-010) — Valkey and Temporal remain dummy/monkeypatched.
+
+## CI clean-up pass (deferred, 2026-09-25)
+
+Fixes review round 1 findings #1–#2 and wires in `pytest seed` (CQ-010) per `docs/backlog/phase-p0-p1-merge-plan.md` gate G3. Plan.md Decisions #10–16 above.
+
+### Review finding #1 — AC2 evidence updated
+
+See the AC2 row above: push run [36098019743](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36098019743) and `pull_request` run [36098405665](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36098405665), both confirmed via `gh run view --json event,headBranch,conclusion,status` (`success`/`completed` for both).
+
+### Review finding #2 — actions bumped off Node-20 majors
+
+| Action | Was | Now | Breaking-change check |
+| --- | --- | --- | --- |
+| `actions/checkout` | `@v4` | `@v7` | v5/v6/v7 release notes read; only change relevant to us is the Node 24 runtime requirement (met by `ubuntu-latest`) and a fork-PR checkout restriction for `pull_request_target`/`workflow_run` triggers, which this workflow doesn't use. |
+| `actions/setup-node` | `@v4` | `@v7`, added `package-manager-cache: false` | v5 auto-enables pnpm caching from `package.json`'s `packageManager` field before `corepack enable` runs in this job — disabled to keep the job's existing explicit pnpm-store caching as the only path (plan.md Decision #13). |
+| `actions/cache` | `@v4` | `@v6` | v5/v6 release notes read; Node 24 runtime only, no input/behavior changes affecting this workflow's usage (`path`/`key`/`restore-keys`). |
+| `astral-sh/setup-uv` | `@v3` | `@v10.2.0` (exact tag — no moving major published from v8 onward) | v4–v10 release notes read; `enable-cache`/`cache-dependency-glob` inputs unchanged, `activate-environment`'s v6 default change doesn't apply (this workflow never sets `python-version` on the action), `prune-cache`'s v9 default flip to `false` is a cache-size tradeoff only. |
+
+Verified with `actionlint .github/workflows/ci.yml` (exit 0, no errors) before pushing.
+
+### G3 — `pytest seed` (CQ-010) now runs in CI
+
+`backend` job additions: a `Start MinIO` step (`docker run` — GitHub Actions `services:` containers can't be given a command, and `minio/minio`'s default `CMD` needs one, so it isn't declared as a `services:` entry), a `Create MinIO buckets` step (`boto3`, creates `clear-quote` and `clearquote-demo-docs`), and `- run: uv run pytest seed` as the job's final step — the same command text as `make test`'s second line. `S3_*` env vars switched from dummy/unresolvable values to the real MinIO container's credentials (`cq-minio`/`cq-minio-secret`, `http://localhost:9010`, matching `infra/docker-compose.yml`); `VALKEY_URL`/`TEMPORAL_*` stay dummy (still only monkeypatched/faked, never touched for real by `pytest seed`). Added `SEED_STAFF_PASSWORD: ci-dummy-demo-password` explicitly (belt-and-suspenders — `seed/tests/conftest.py` already `os.environ.setdefault()`s a throwaway value; review round 1 finding #3 on CQ-010: no real password is ever committed).
+
+### Test log (this pass)
+
+All commands run from this worktree against the shared `clear-quote` stack's real Postgres (`cq_test`) and MinIO, using the job's exact env var values (`S3_ENDPOINT=http://localhost:9010`, `S3_ACCESS_KEY=cq-minio`, `S3_SECRET_KEY=cq-minio-secret`, etc.):
+
+| Check | Command | Result |
+| --- | --- | --- |
+| actionlint | `actionlint .github/workflows/ci.yml` | Exit 0, no output |
+| Bucket-creation script | `uv run python - <<'PY' ... PY` (the exact heredoc from the workflow) | `clear-quote: already exists`, `clearquote-demo-docs: already exists` |
+| Backend — ruff/format/mypy | `uv run ruff check backend && uv run ruff format --check backend && uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` | All pass — "All checks passed!", "202 files already formatted", "Success: no issues found in 202 source files" |
+| Backend — pytest | `uv run pytest backend` (job's exact env) | **214 passed** |
+| Seed — pytest | `uv run pytest seed` (job's exact env, including real `S3_*`) | **23 passed** (includes `test_documents_watermarked.py`'s real MinIO round-trip, AC6) |
+| `make lint` (repo root) | `make lint` | ruff/ruff format/mypy/eslint/tsc/prettier all pass |
+| `make test` (repo root) | `make test` | `uv run pytest backend` (214), `uv run pytest seed` (23), `pnpm -r run test` (4/4 workspaces, 36 tests) all pass |
+
+### Real CI run (post-push)
+
+Filled in after pushing — see "Acceptance evidence" AC1 row and the run link below.
+
+- Run id / URL: _pending_
+- Result: _pending_
+- Deprecation annotations: _pending_ (`gh run view <id>` checked for Node-20 deprecation warnings — the whole point of the action bumps above)

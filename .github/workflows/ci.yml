@@ -43,13 +43,18 @@ jobs:
       SECRET_KEY: ci-dummy-secret
       DATABASE_URL: postgresql+asyncpg://cq:cq@localhost:5432/cq_dev
       TEST_DATABASE_URL: postgresql+asyncpg://cq:cq@localhost:5432/cq_test
-      # Dummy values below: CQ-004's /health checks are monkeypatched in
-      # tests, so these never need to resolve in CI (see CQ-006 spec Notes).
+      # Valkey/Temporal stay dummy: CQ-004's /health checks are monkeypatched
+      # in tests, and seed/tests/conftest.py fakes Valkey via fakeredis --
+      # neither ever needs to resolve in CI (see CQ-006 spec Notes).
       VALKEY_URL: redis://localhost:6379/0
+      # S3_* point at the real MinIO container started below (same
+      # credentials/port as infra/docker-compose.yml's `minio` service) --
+      # CQ-010's seed/tests/test_documents_watermarked.py does a real
+      # upload/download round-trip against it (G3 CI clean-up pass).
       S3_ENDPOINT: http://localhost:9010
       S3_BUCKET: clear-quote
-      S3_ACCESS_KEY: cq-dummy
-      S3_SECRET_KEY: cq-dummy
+      S3_ACCESS_KEY: cq-minio
+      S3_SECRET_KEY: cq-minio-secret
       S3_REGION: us-east-1
       SMTP_HOST: localhost
       SMTP_PORT: "1025"
@@ -57,15 +62,75 @@ jobs:
       TEMPORAL_ADDRESS: localhost:7233
       TEMPORAL_NAMESPACE: default
       TEMPORAL_TASK_QUEUE: clear-quote-pipeline
+      # seed/tests/conftest.py already os.environ.setdefault()s a throwaway
+      # value, so this is belt-and-suspenders, not strictly required -- kept
+      # explicit so CI's env is self-documenting about what `pytest seed`
+      # needs (review round 1 finding #3: no real password is ever
+      # committed).
+      SEED_STAFF_PASSWORD: ci-dummy-demo-password
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v3
+      # No moving major tag published from v8 onward (supply-chain hardening
+      # -- see astral-sh/setup-uv's v8.0.0 release notes); pin the exact
+      # version instead of `@v10`.
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
       - run: uv sync --frozen
+
+      # `pytest seed` (CQ-010, added below) needs a real MinIO round-trip in
+      # seed/tests/test_documents_watermarked.py. GitHub Actions service
+      # containers can't be given a run command, and minio/minio's default
+      # CMD doesn't start the server on its own (infra/docker-compose.yml
+      # sets `command: server /data ...` explicitly) -- so it's started as a
+      # plain `docker run` step instead of a `services:` entry, using the
+      # same image/credentials as the local compose stack.
+      - name: Start MinIO
+        run: |
+          docker run -d --name ci-minio \
+            -p 9010:9000 -p 9011:9001 \
+            -e MINIO_ROOT_USER=cq-minio -e MINIO_ROOT_PASSWORD=cq-minio-secret \
+            minio/minio:latest server /data --console-address ":9001"
+          ready=""
+          for _ in $(seq 1 30); do
+            if curl -sf http://localhost:9010/minio/health/live >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ -z "$ready" ]; then
+            echo "MinIO did not become healthy in time" >&2
+            docker logs ci-minio
+            exit 1
+          fi
+
+      # `clear-quote` is the app's own bucket (CQ-004); `clearquote-demo-docs`
+      # is CQ-010's sample-document bucket (seed/generators/documents.py).
+      # Local infra creates the former via `minio-init` and the latter
+      # on-demand via `ensure_demo_docs_bucket` -- created explicitly here
+      # since there's no `minio-init`-equivalent step in this job.
+      - name: Create MinIO buckets
+        run: |
+          uv run python - <<'PY'
+          import boto3
+
+          client = boto3.client(
+              "s3",
+              endpoint_url="http://localhost:9010",
+              aws_access_key_id="cq-minio",
+              aws_secret_access_key="cq-minio-secret",
+              region_name="us-east-1",
+          )
+          for bucket in ("clear-quote", "clearquote-demo-docs"):
+              try:
+                  client.head_bucket(Bucket=bucket)
+              except Exception:
+                  client.create_bucket(Bucket=bucket)
+          PY
 
       - run: uv run ruff check backend
 
@@ -77,14 +142,24 @@ jobs:
 
       - run: uv run pytest backend
 
+      # CQ-010 (G3): same command as `make test`'s second line -- kept
+      # identical so the two can't drift.
+      - run: uv run pytest seed
+
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
+          # v5 started auto-enabling its own pnpm caching whenever
+          # package.json has a `packageManager` field (ours does, CQ-002) --
+          # that would try to resolve the pnpm cache dir before `corepack
+          # enable`/pnpm is even on PATH below. Keep the explicit
+          # store-path + actions/cache steps this job already had instead.
+          package-manager-cache: false
 
       - run: corepack enable
 
@@ -92,7 +167,7 @@ jobs:
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
