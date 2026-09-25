@@ -4,7 +4,7 @@ Covers AC3 (auto-fix rules never raise a `flags` row), AC6 (`write_flag`
 upserts on `(application_id, field_key, rule)`), and the review-round
 follow-ups: `run_and_persist` writes no `activity_events`, flags auto-resolve
 when their rule later passes, co-borrower SSN/DOB get their own field_keys,
-`_latest_scenario_snapshot` reads a real `Quote.computed` blob, and a
+`latest_scenario_snapshot` reads a real `Quote.computed` blob, and a
 malformed SSN is caught through the real encrypted-column round trip.
 """
 
@@ -22,7 +22,7 @@ from app.features.applications.models import Application, ApplicationParty, Part
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.models import Flag
 from app.features.applications.verification.service import (
-    _latest_scenario_snapshot,
+    latest_scenario_snapshot,
     run_and_persist,
     write_flag,
 )
@@ -371,7 +371,7 @@ async def test_latest_scenario_snapshot_reads_quote_computed(
         total_monthly_payment="2201.34",
     )
 
-    snapshot = await _latest_scenario_snapshot(db_session, application.id)
+    snapshot = await latest_scenario_snapshot(db_session, application.id)
 
     assert snapshot is not None
     assert snapshot.total_cash_to_close == Decimal("15234.56")

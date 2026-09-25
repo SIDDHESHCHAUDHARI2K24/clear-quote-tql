@@ -36,7 +36,11 @@ _BORROWER_EVENT_TYPES = {
     "quote.ask_other",
     "quote.ask_updated",
     "quote.option_selected",
+    "application.submitted",
+    "support.requested",
 }
+
+_ACTOR_BORROWER = "borrower"
 
 
 def _payload_summary(payload: Any) -> str | None:
@@ -125,29 +129,51 @@ def describe_event(event_type: str, payload: Any) -> str:  # noqa: PLR0911
     if event_type == "application.closed":
         reason = data.get("reason")
         return f"Application closed: {reason}" if reason else "Application closed"
+    if event_type == "application.submitted":
+        return "Submitted the application"
+    if event_type == "application.assigned":
+        lo_name = data.get("lo_name")
+        return f"Assigned to {lo_name}" if lo_name else "Assigned to a loan officer"
+    if event_type == "support.requested":
+        topic = data.get("topic")
+        return f"Requested support: {topic}" if topic else "Requested support"
+
+    # Event types written outside this service (CQ-028a's
+    # applications/sections/events.py, CQ-030's stale events, and any
+    # future writer) carry their own human-readable `message` in the
+    # payload -- prefer it over the generic humanized fallback below (M2).
+    message = data.get("message")
+    if isinstance(message, str) and message:
+        return message
 
     return event_type.replace(".", " ").replace("_", " ").capitalize()
 
 
-async def _resolve_actor(
-    db: AsyncSession,
+def _staff_actor_id(event: ActivityEvent) -> uuid.UUID | None:
+    """The staff `User.id` an event's `actor` names, or `None` when the
+    actor is the borrower, the system, or not a real user id."""
+    if event.type in _BORROWER_EVENT_TYPES or event.actor in (_ACTOR_SYSTEM, _ACTOR_BORROWER):
+        return None
+    try:
+        return uuid.UUID(event.actor)
+    except ValueError:
+        return None
+
+
+def _resolve_actor(
     event: ActivityEvent,
     *,
     borrower_name: str,
-    user_cache: dict[uuid.UUID, str],
+    staff_names: dict[uuid.UUID, str],
 ) -> ActivityActor:
-    if event.type in _BORROWER_EVENT_TYPES:
+    if event.type in _BORROWER_EVENT_TYPES or event.actor == _ACTOR_BORROWER:
         return ActivityActor(kind="borrower", name=borrower_name)
     if event.actor == _ACTOR_SYSTEM:
         return ActivityActor(kind="system", name="System")
-    try:
-        user_id = uuid.UUID(event.actor)
-    except ValueError:
+    user_id = _staff_actor_id(event)
+    if user_id is None:
         return ActivityActor(kind="system", name="System")
-    if user_id not in user_cache:
-        user = await db.get(User, user_id)
-        user_cache[user_id] = user.full_name if user is not None else "Unknown user"
-    return ActivityActor(kind="staff", name=user_cache[user_id])
+    return ActivityActor(kind="staff", name=staff_names.get(user_id, "Unknown user"))
 
 
 async def list_activity(
@@ -165,11 +191,18 @@ async def list_activity(
 
     client = await db.get(Client, application.client_id)
     borrower_name = client.full_name if client is not None else "Borrower"
-    user_cache: dict[uuid.UUID, str] = {}
+
+    # One batched lookup for every staff actor on the page instead of a
+    # per-row `db.get` (code review finding, minor 1).
+    staff_ids = {uid for event in result.items if (uid := _staff_actor_id(event)) is not None}
+    staff_names: dict[uuid.UUID, str] = {}
+    if staff_ids:
+        rows = await db.execute(select(User.id, User.full_name).where(User.id.in_(staff_ids)))
+        staff_names = dict(rows.all())
 
     items: list[ActivityEventOut] = []
     for event in result.items:
-        actor = await _resolve_actor(db, event, borrower_name=borrower_name, user_cache=user_cache)
+        actor = _resolve_actor(event, borrower_name=borrower_name, staff_names=staff_names)
         items.append(
             ActivityEventOut(
                 id=event.id,

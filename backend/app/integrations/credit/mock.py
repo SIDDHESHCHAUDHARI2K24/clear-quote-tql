@@ -3,7 +3,18 @@
 Soft pull populates `experian_score` only (per catalog: "Soft pull only
 pulls Experian") -- that split is baked into the seeded row itself (CQ-010),
 not computed here; this mock only returns what's stored.
+
+CQ-032 (plan.md decision 12, phase-p5-p6-plan.md E14): a borrower who
+applies through the portal has no LOS loan number and no seeded report.
+Their credit key is `portal_credit_key(application_id)` (`PORTAL-...`);
+when no seeded row exists for such a key, the mock synthesizes a
+deterministic report from the key's SHA-256 (soft pull: Experian only;
+hard pull: all three bureaus plus the middle score) instead of failing.
+Seeded keys are unaffected.
 """
+
+import hashlib
+import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +27,41 @@ from app.integrations.credit.models import CreditPullType, ProviderCreditReport
 from app.integrations.credit.schemas import CreditReportDTO
 
 ADAPTER = "credit"
+
+PORTAL_KEY_PREFIX = "PORTAL-"
+_SYNTHETIC_MIN_SCORE = 680
+_SYNTHETIC_SCORE_SPAN = 120
+
+
+def portal_credit_key(application_id: uuid.UUID) -> str:
+    """The credit-bureau key for a portal (wizard) application."""
+    return f"{PORTAL_KEY_PREFIX}{application_id.hex[:12].upper()}"
+
+
+def _synthetic_report(loan_number: str, pull_type: CreditPullType) -> CreditReportDTO:
+    digest = hashlib.sha256(loan_number.encode("utf-8")).digest()
+    scores = [
+        _SYNTHETIC_MIN_SCORE + int.from_bytes(digest[i : i + 2], "big") % _SYNTHETIC_SCORE_SPAN
+        for i in (0, 2, 4)
+    ]
+    experian, equifax, transunion = scores
+    if pull_type is CreditPullType.SOFT_PULL:
+        return CreditReportDTO(
+            pull_type=pull_type,
+            experian_score=experian,
+            equifax_score=None,
+            transunion_score=None,
+            middle_score=experian,
+            tradelines=[],
+        )
+    return CreditReportDTO(
+        pull_type=pull_type,
+        experian_score=experian,
+        equifax_score=equifax,
+        transunion_score=transunion,
+        middle_score=sorted(scores)[1],
+        tradelines=[],
+    )
 
 
 class MockCreditClient:
@@ -45,6 +91,12 @@ class MockCreditClient:
                 )
             )
         ).scalar_one_or_none()
+
+        if record is None and loan_number.startswith(PORTAL_KEY_PREFIX):
+            await record_call(
+                self._session, ADAPTER, request_summary, success=True, latency_ms=latency_ms
+            )
+            return _synthetic_report(loan_number, pull_type)
 
         if record is None:
             await record_call(

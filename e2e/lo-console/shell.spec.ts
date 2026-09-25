@@ -60,7 +60,7 @@ test("an LO has no admin entries and is refused /admin pages", async ({ page }) 
   await expect(page.getByRole("heading", { name: "Not authorized" })).toBeVisible();
 });
 
-test("the nav links go to the stub pages", async ({ page }) => {
+test("the nav links go to the stub pages (Dashboard is CQ-025's real page)", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await staffLogin(page, LO, password!);
   const nav = page.getByRole("navigation", { name: "Main" });
@@ -71,7 +71,6 @@ test("the nav links go to the stub pages", async ({ page }) => {
   for (const [label, path, item] of [
     ["Clients", "/clients", "CQ-026"],
     ["Applications", "/applications", null],
-    ["Dashboard", "/", "CQ-025"],
   ] as const) {
     await nav.getByRole("link", { name: label }).click();
     await page.waitForURL(path);
@@ -79,6 +78,16 @@ test("the nav links go to the stub pages", async ({ page }) => {
     if (item) await expect(page.getByText(`Built in ${item}`)).toBeVisible();
     await expect(nav.getByRole("link", { name: label })).toHaveAttribute("aria-current", "page");
   }
+
+  // CQ-025 replaced the Dashboard stub -- still reachable from the nav, but
+  // it's the real dashboard now (no "Built in CQ-025" stub text).
+  await nav.getByRole("link", { name: "Dashboard" }).click();
+  await page.waitForURL("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Dashboard" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await page.screenshot({ path: `${EVIDENCE}/lo-dashboard-stub.png` });
 
   // CQ-029 built the real Outbox page (was a stub when this spec was

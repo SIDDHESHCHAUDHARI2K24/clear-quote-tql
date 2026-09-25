@@ -77,6 +77,27 @@ describe("OutboxList (AC2)", () => {
     );
   });
 
+  // Minor 8 (review round 1): `/outbox?application_id=` scopes the list.
+  it("passes applicationId through to the query", async () => {
+    getMock.mockResolvedValueOnce({
+      data: { items: [row()], total: 1, page: 1, page_size: 25 },
+      response: { status: 200 },
+    });
+    const applicationId = crypto.randomUUID();
+    render(<OutboxList onSelect={vi.fn()} applicationId={applicationId} />);
+
+    await waitFor(() =>
+      expect(getMock).toHaveBeenLastCalledWith(
+        "/api/v1/outbox",
+        expect.objectContaining({
+          params: expect.objectContaining({
+            query: expect.objectContaining({ application_id: applicationId }),
+          }),
+        }),
+      ),
+    );
+  });
+
   // Code review finding: search used to fire one GET per keystroke.
   it("debounces the search input instead of fetching on every keystroke", async () => {
     getMock.mockResolvedValueOnce({

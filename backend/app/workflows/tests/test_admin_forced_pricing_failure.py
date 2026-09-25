@@ -18,6 +18,7 @@ small necessity, and log it" rule.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from decimal import Decimal
 
@@ -43,6 +44,7 @@ async def test_forced_pricing_failure_then_recovery(
     seed_str_revenue: Callable[..., Awaitable[None]],
     temporal_client: Client,
     db_session: AsyncSession,
+    db_lock: asyncio.Lock,
     wait_for_status: Callable[..., Awaitable[ApplicationStatus]],
 ) -> None:
     application = await make_persona_application(
@@ -70,21 +72,27 @@ async def test_forced_pricing_failure_then_recovery(
     status = await wait_for_status(db_session, application.id, {ApplicationStatus.NEEDS_ATTENTION})
     assert status is ApplicationStatus.NEEDS_ATTENTION
 
-    blocked_event = (
-        (
-            await db_session.execute(
-                select(ActivityEvent)
-                .where(
-                    ActivityEvent.application_id == application.id,
-                    ActivityEvent.type == "pipeline.pricing_blocked",
+    # Minor 7 (review round 1): this connection is shared with the
+    # per-test worker's activity sessions (`conftest.py`'s
+    # `activities_session_factory`), so a direct `db_session` read here
+    # must hold `db_lock` too, or it can race an activity mid-flight into
+    # asyncpg's "another operation is in progress" flake.
+    async with db_lock:
+        blocked_event = (
+            (
+                await db_session.execute(
+                    select(ActivityEvent)
+                    .where(
+                        ActivityEvent.application_id == application.id,
+                        ActivityEvent.type == "pipeline.pricing_blocked",
+                    )
+                    .order_by(ActivityEvent.at.desc())
+                    .limit(1)
                 )
-                .order_by(ActivityEvent.at.desc())
-                .limit(1)
             )
+            .scalars()
+            .first()
         )
-        .scalars()
-        .first()
-    )
     assert blocked_event is not None
     assert isinstance(blocked_event.payload, dict)
     assert blocked_event.payload["message"] == "Cannot price: pricing unavailable"
@@ -98,5 +106,6 @@ async def test_forced_pricing_failure_then_recovery(
 
     assert result == "priced"
 
-    await db_session.refresh(application)
+    async with db_lock:
+        await db_session.refresh(application)
     assert application.status == ApplicationStatus.PRICED

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import CurrentStaff, get_scoped_application
 from app.core.db import get_db
 from app.features.applications.models import Application
+from app.features.applications.sections.events import record_field_event
 from app.features.pricing.enrichment.schemas import FieldValueOverrideRequest, FieldValueRead
 from app.features.pricing.enrichment.service import override_field_value, revert_field_value
 
@@ -26,7 +27,12 @@ async def patch_field_value(
     _application: Application = Depends(get_scoped_application),
 ) -> FieldValueRead:
     row = await override_field_value(db, application_id, field_key, request.value, user.id)
-    return FieldValueRead.model_validate(row)
+    result = FieldValueRead.model_validate(row)
+    # CQ-028a (AC7): activity event naming the field.
+    await record_field_event(
+        db, application_id, user_id=user.id, reverted=False, field_key=field_key
+    )
+    return result
 
 
 @router.post(
@@ -36,8 +42,14 @@ async def patch_field_value(
 async def revert_field_value_route(
     application_id: uuid.UUID,
     field_key: str,
+    user: CurrentStaff,
     db: AsyncSession = Depends(get_db),
     _application: Application = Depends(get_scoped_application),
 ) -> FieldValueRead:
     row = await revert_field_value(db, application_id, field_key)
-    return FieldValueRead.model_validate(row)
+    result = FieldValueRead.model_validate(row)
+    # CQ-028a (AC7): activity event naming the field.
+    await record_field_event(
+        db, application_id, user_id=user.id, reverted=True, field_key=field_key
+    )
+    return result

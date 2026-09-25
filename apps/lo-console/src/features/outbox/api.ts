@@ -1,11 +1,19 @@
 import type { components } from "@cq/api-client";
 
-import { api } from "../../lib/api-client";
+import { API_BASE_URL, api } from "../../lib/api-client";
 
 export type OutboxEmailRow = components["schemas"]["OutboxEmailRow"];
 export type OutboxEmailDetail = components["schemas"]["OutboxEmailDetail"];
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export { API_BASE_URL };
+
+// Mirrors the backend's `EmailType` (notifications/outbox/schemas.py) --
+// the `?type=` query param is now a FastAPI `Literal` of these four values
+// (an unknown value is a 422, review round 1 minor 5), but the `Select`
+// filter (OutboxList.tsx) works with a plain string (its `onChange` comes
+// from a raw `<select>` element), so `OutboxListParams.type` stays `string`
+// and is narrowed at this one call site instead.
+export type EmailType = "otp" | "borrower_action" | "quote_sent" | "other";
 
 export interface OutboxListParams {
   q?: string;
@@ -19,7 +27,7 @@ export async function fetchOutboxList(params: OutboxListParams) {
     params: {
       query: {
         q: params.q || null,
-        type: params.type || null,
+        type: (params.type || null) as EmailType | null,
         application_id: params.applicationId || null,
         page: params.page ?? 1,
       },

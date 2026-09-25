@@ -4,10 +4,17 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
 from app.features.notifications.outbox.models import EmailStatus
+
+# Single source of truth: must match `service.py`'s `_TYPE_SUBJECT_RULES`
+# keys plus `"other"` (`KNOWN_EMAIL_TYPES`). A `Literal` here (rather than
+# `str`) makes an unknown `?type=` a 422, not a silent empty result (code
+# review round 1, minor 5).
+EmailType = Literal["otp", "borrower_action", "quote_sent", "other"]
 
 
 class OutboxEmailRow(BaseModel):

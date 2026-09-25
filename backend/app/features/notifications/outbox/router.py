@@ -7,6 +7,7 @@ from __future__ import annotations
 import mimetypes
 import uuid
 from collections.abc import AsyncIterator
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
@@ -17,7 +18,7 @@ from app.core.db import get_db
 from app.core.errors import NotFoundError
 from app.core.pagination import Page
 from app.core.storage import ObjectNotFoundError, astream_object
-from app.features.notifications.outbox.schemas import OutboxEmailDetail, OutboxEmailRow
+from app.features.notifications.outbox.schemas import EmailType, OutboxEmailDetail, OutboxEmailRow
 from app.features.notifications.outbox.service import (
     get_attachment_key,
     get_outbox_email_detail,
@@ -31,7 +32,7 @@ router = APIRouter(tags=["outbox"])
 async def list_outbox_emails(
     user: CurrentStaff,
     q: str | None = None,
-    type: str | None = Query(default=None),  # noqa: A002
+    type: EmailType | None = Query(default=None),  # noqa: A002
     application_id: uuid.UUID | None = None,
     page: int | None = Query(default=1),
     page_size: int | None = Query(default=None),
@@ -85,8 +86,17 @@ async def download_attachment(
         async for chunk in chunks:
             yield chunk
 
+    # RFC 5987 `filename*` (nit, review round 1): a non-ASCII attachment
+    # filename (e.g. a borrower's accented name) survives instead of being
+    # mangled by the plain `filename="..."` fallback most browsers still
+    # need too.
+    ascii_filename = filename.encode("ascii", "replace").decode("ascii")
+    content_disposition = (
+        f"attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{quote(filename)}"
+    )
+
     return StreamingResponse(
         _body(),
         media_type=content_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": content_disposition},
     )

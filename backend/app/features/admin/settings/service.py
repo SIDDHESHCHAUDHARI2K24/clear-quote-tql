@@ -7,11 +7,12 @@ rate, reserves months, stale days) is already a 1:1 `settings` table row
 `EXPECTED` dict) -- `source="settings_table"`. The two "default down
 payment" values the spec also lists have no `settings` row: they're
 hardcoded in `pricing/scenarios/service.py`
-(`_DEFAULT_DOWN_PAYMENT_PRIMARY`/`_INVESTMENT`) -- imported directly below
-(source="code_default", plan.md decision 7) rather than re-hardcoded here,
-per code review: two independently-maintained copies of the same literal
-would let this page silently show a stale default if the pricing module's
-own constant ever changes.
+(`DEFAULT_DOWN_PAYMENT_PRIMARY`/`_INVESTMENT`, public aliases -- review
+finding 6) -- imported directly below (source="code_default", plan.md
+decision 7) rather than re-hardcoded here, per code review: two
+independently-maintained copies of the same literal would let this page
+silently show a stale default if the pricing module's own constant ever
+changes.
 """
 
 from __future__ import annotations
@@ -21,18 +22,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.admin.settings.schemas import SettingValue
 from app.features.pricing.scenarios.service import (
-    _DEFAULT_DOWN_PAYMENT_INVESTMENT,
-    _DEFAULT_DOWN_PAYMENT_PRIMARY,
+    DEFAULT_DOWN_PAYMENT_INVESTMENT,
+    DEFAULT_DOWN_PAYMENT_PRIMARY,
 )
 from app.features.settings.models import Setting
 
 _CODE_DEFAULTS: dict[str, tuple[float, str]] = {
     "default_down_payment_primary_pct": (
-        float(_DEFAULT_DOWN_PAYMENT_PRIMARY),
+        float(DEFAULT_DOWN_PAYMENT_PRIMARY),
         "Default down payment used when creating a PRIMARY scenario with none given",
     ),
     "default_down_payment_investment_pct": (
-        float(_DEFAULT_DOWN_PAYMENT_INVESTMENT),
+        float(DEFAULT_DOWN_PAYMENT_INVESTMENT),
         "Default down payment used when creating an investment (LTR/STR) scenario with none given",
     ),
 }

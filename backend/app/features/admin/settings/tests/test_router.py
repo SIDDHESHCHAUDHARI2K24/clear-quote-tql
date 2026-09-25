@@ -4,18 +4,18 @@ stored on a newly created scenario (plan.md decision 7)."""
 
 from __future__ import annotations
 
-import json
 from collections.abc import Awaitable, Callable
 from decimal import Decimal
 
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import UserRole
+from app.core.enums import Occupancy, Strategy, UserRole
 from app.features.applications.models import Application
-from app.features.pricing.engine.types import ConfigSnapshot, ScenarioInputs, StrategyType
 from app.features.pricing.scenarios.models import Scenario
+from app.features.pricing.scenarios.service import create_default_scenarios
 from app.features.settings.tests.test_defaults import EXPECTED as SETTINGS_TABLE_DEFAULTS
+from app.integrations.pricing.models import ProviderRateSheet, RateSheetProgram
 from conftest import StaffSession
 
 # `settings` key -> `ConfigSnapshot` field, for every key the two share
@@ -73,42 +73,138 @@ async def test_settings_lists_every_documented_key(
         assert by_key[key]["source"] == "code_default"
 
 
-async def test_settings_match_snapshot(
+def _seed_conventional_curve(db_session: AsyncSession) -> None:
+    offsets = [
+        Decimal("-0.250"),
+        Decimal("-0.125"),
+        Decimal("0.000"),
+        Decimal("0.125"),
+        Decimal("0.250"),
+    ]
+    for index, offset in enumerate(offsets):
+        db_session.add(
+            ProviderRateSheet(
+                investor_name=f"Investor {index}",
+                product_name="Conventional 30 Yr Fixed",
+                program=RateSheetProgram.CONVENTIONAL,
+                base_rate=Decimal("7.000") + offset,
+                base_price=Decimal("100.000") - offset * Decimal("4"),
+                min_fico=680,
+                max_ltv=Decimal("97.00"),
+                lock_days=30,
+                active=True,
+            )
+        )
+
+
+def _seed_dscr_curve(db_session: AsyncSession) -> None:
+    offsets = [
+        Decimal("-0.250"),
+        Decimal("-0.125"),
+        Decimal("0.000"),
+        Decimal("0.125"),
+        Decimal("0.250"),
+    ]
+    for index, offset in enumerate(offsets):
+        db_session.add(
+            ProviderRateSheet(
+                investor_name=f"DSCR Investor {index}",
+                product_name="DSCR 30 Yr Fixed",
+                program=RateSheetProgram.DSCR,
+                base_rate=Decimal("7.500") + offset,
+                base_price=Decimal("100.000") - offset * Decimal("4"),
+                min_fico=680,
+                max_ltv=Decimal("80.00"),
+                dscr_bucket="ONE_TO_1_25",
+                lock_days=30,
+                active=True,
+            )
+        )
+
+
+async def _match_snapshot_against_settings(
     client: AsyncClient,
     db_session: AsyncSession,
-    make_application: Callable[..., Awaitable[Application]],
-    make_staff_session: Callable[..., Awaitable[StaffSession]],
+    scenario_id: object,
+    *,
+    down_payment_key: str,
 ) -> None:
-    """AC6: builds a scenario the same way `create_scenario`/`auto_price`
-    persist one (`config = ConfigSnapshot()`, `inputs.down_payment_pct` =
-    the primary default) and checks the settings page's values against it."""
-    owner = await make_staff_session(role=UserRole.ADMIN)
-    application = await make_application(lo=owner.user)
-
-    config = ConfigSnapshot()
-    down_payment_pct = Decimal("0.20")  # `_DEFAULT_DOWN_PAYMENT_PRIMARY`
-    inputs = ScenarioInputs(
-        purchase_price=Decimal("300000.00"),
-        down_payment_pct=down_payment_pct,
-        note_rate=Decimal("0.07"),
-        strategy=StrategyType.PRIMARY,
-        fico=740,
-        property_tax_annual_rate=Decimal("0.012"),
-        insurance_annual_rate=Decimal("0.005"),
-    )
-    scenario = Scenario(
-        application_id=application.id,
-        inputs=json.loads(inputs.model_dump_json()),
-        config_snapshot=json.loads(config.model_dump_json()),
-    )
-    db_session.add(scenario)
-    await db_session.commit()
+    """AC6's actual assertion, shared by the primary and investment cases
+    below: the settings page's values equal the `config_snapshot`/
+    `inputs.down_payment_pct` persisted on a scenario the real
+    `create_default_scenarios` service just built."""
+    scenario = await db_session.get(Scenario, scenario_id)
+    assert scenario is not None
+    assert isinstance(scenario.config_snapshot, dict)
+    assert isinstance(scenario.inputs, dict)
 
     response = await client.get("/api/v1/admin/settings")
     by_key = {row["key"]: row["value"] for row in response.json()["settings"]}
 
-    snapshot_json = json.loads(config.model_dump_json())
     for settings_key, snapshot_field in _SNAPSHOT_FIELD_BY_SETTINGS_KEY.items():
-        assert float(by_key[settings_key]) == float(snapshot_json[snapshot_field]), settings_key
+        assert float(by_key[settings_key]) == float(scenario.config_snapshot[snapshot_field]), (
+            settings_key
+        )
 
-    assert float(by_key["default_down_payment_primary_pct"]) == float(down_payment_pct)
+    assert float(by_key[down_payment_key]) == float(scenario.inputs["down_payment_pct"])
+
+
+async def test_settings_match_snapshot_primary(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    set_field_value: Callable[..., Awaitable[object]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+) -> None:
+    """AC6, primary: builds a scenario through the real
+    `create_default_scenarios` service call (not a hand-assembled
+    `Scenario` row -- code review round 1, minor 2) and checks the settings
+    page's values against the persisted `config_snapshot` and the primary
+    down-payment default (0.20 -- `DEFAULT_DOWN_PAYMENT_PRIMARY`)."""
+    await make_staff_session(role=UserRole.ADMIN)
+    application = await make_application(occupancy=Occupancy.PRIMARY)
+    await set_field_value(application.id, "representative_fico", Decimal("760"))
+    await set_field_value(application.id, "property_tax_annual_rate", Decimal("0.01"))
+    await set_field_value(application.id, "homeowners_ins_annual", Decimal("1500.00"))
+    _seed_conventional_curve(db_session)
+    await db_session.commit()
+
+    result = await create_default_scenarios(db_session, application.id)
+
+    await _match_snapshot_against_settings(
+        client,
+        db_session,
+        result.groups[0].scenario_id,
+        down_payment_key="default_down_payment_primary_pct",
+    )
+
+
+async def test_settings_match_snapshot_investment(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    set_field_value: Callable[..., Awaitable[object]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+) -> None:
+    """AC6, investment: same as the primary case above but for an
+    investment (LTR) application, against the investment down-payment
+    default (0.25 -- `DEFAULT_DOWN_PAYMENT_INVESTMENT`)."""
+    await make_staff_session(role=UserRole.ADMIN)
+    application = await make_application(
+        occupancy=Occupancy.INVESTMENT, strategy=Strategy.LTR, requested_price=Decimal("342000.00")
+    )
+    await set_field_value(application.id, "representative_fico", Decimal("740"))
+    await set_field_value(application.id, "property_tax_annual_rate", Decimal("0.01"))
+    await set_field_value(application.id, "homeowners_ins_annual", Decimal("1500.00"))
+    await set_field_value(application.id, "market_rent_ltr", Decimal("2440.00"))
+    _seed_dscr_curve(db_session)
+    await db_session.commit()
+
+    result = await create_default_scenarios(db_session, application.id)
+
+    await _match_snapshot_against_settings(
+        client,
+        db_session,
+        result.groups[0].scenario_id,
+        down_payment_key="default_down_payment_investment_pct",
+    )

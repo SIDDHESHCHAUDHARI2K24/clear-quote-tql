@@ -7,7 +7,7 @@ shape only.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,6 +42,15 @@ class Flag(Base):
     __tablename__ = "flags"
     __table_args__ = (
         Index("ix_flags_application_id_resolved_at", "application_id", "resolved_at"),
+        # CQ-028a review M1: at most one open flag per (application, field, rule).
+        Index(
+            "uq_flags_open_application_field_rule",
+            "application_id",
+            "field_key",
+            "rule",
+            unique=True,
+            postgresql_where=text("resolved_at IS NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

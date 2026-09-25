@@ -22,6 +22,9 @@ from app.core.db import Base, pg_enum
 
 class ConsentType(enum.StrEnum):
     HARD_PULL = "hard_pull"
+    APPLICATION = "application"
+    """CQ-032: the apply wizard's tab-4 consent (soft-pull authorization,
+    contact consent, terms), recorded `accepted` at submit."""
 
 
 class ConsentStatus(enum.StrEnum):

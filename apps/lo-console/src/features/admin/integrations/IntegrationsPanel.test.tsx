@@ -109,6 +109,55 @@ describe("IntegrationsPanel (AC4/AC5)", () => {
     expect(checkbox).not.toBeDisabled();
   });
 
+  // Review round 1, minor 6: a failed toggle used to revert silently --
+  // nothing told the admin the PUT didn't take.
+  it("shows a visible alert when the toggle PUT returns an error", async () => {
+    getMock.mockResolvedValueOnce({
+      data: { adapters: [adapter({ force_failure: false })] },
+      response: { status: 200 },
+    });
+    render(<IntegrationsPanel />);
+    const checkbox = await screen.findByRole("checkbox", { name: "Force pricing to fail" });
+
+    putMock.mockResolvedValueOnce({ data: undefined, error: { detail: "Forbidden" } });
+    const user = userEvent.setup();
+    await user.click(checkbox);
+
+    expect(await screen.findByText("Forbidden")).toBeInTheDocument();
+    await waitFor(() => expect(checkbox).not.toBeChecked());
+  });
+
+  // Review round 1, minor 6: pending state is now a `Set`, so toggling one
+  // adapter while another adapter's PUT is still in flight doesn't disable
+  // (or fail to disable) the wrong row.
+  it("tracks pending adapters independently", async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        adapters: [adapter({ adapter: "pricing" }), adapter({ adapter: "credit" })],
+      },
+      response: { status: 200 },
+    });
+    render(<IntegrationsPanel />);
+    const pricingCheckbox = await screen.findByRole("checkbox", { name: "Force pricing to fail" });
+    const creditCheckbox = screen.getByRole("checkbox", { name: "Force credit to fail" });
+
+    let resolvePut: (value: { data: AdapterStatus; error: undefined }) => void = () => {};
+    putMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePut = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    await user.click(pricingCheckbox);
+
+    // The in-flight adapter is disabled; the other one is untouched.
+    await waitFor(() => expect(pricingCheckbox).toBeDisabled());
+    expect(creditCheckbox).not.toBeDisabled();
+
+    resolvePut({ data: adapter({ adapter: "pricing", force_failure: true }), error: undefined });
+    await waitFor(() => expect(pricingCheckbox).not.toBeDisabled());
+  });
+
   // CQ-030 has merged: the "Run stale check now" button is no longer
   // hidden behind STALE_CHECK_JOB_AVAILABLE.
   it("runs the stale check and shows the returned counts", async () => {
@@ -136,6 +185,25 @@ describe("IntegrationsPanel (AC4/AC5)", () => {
     expect(
       await screen.findByText("Marked 3 quotes stale, expired 2 versions, flagged 1 application."),
     ).toBeInTheDocument();
+  });
+
+  // Review round 1, minor 6: an uncaught rejection from `fetchIntegrations`
+  // (a network drop, not just an `{error}` response) used to leave the
+  // panel stuck on "Loading integrations…" forever.
+  it("shows an error with a Retry action when loading rejects, and Retry re-fetches", async () => {
+    getMock.mockRejectedValueOnce(new Error("network drop"));
+    render(<IntegrationsPanel />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load/i);
+
+    getMock.mockResolvedValueOnce({
+      data: { adapters: [adapter()] },
+      response: { status: 200 },
+    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByText("pricing")).toBeInTheDocument();
   });
 
   it("shows an error if the stale check request fails", async () => {

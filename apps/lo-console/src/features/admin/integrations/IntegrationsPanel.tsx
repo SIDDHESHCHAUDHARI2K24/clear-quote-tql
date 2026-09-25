@@ -49,7 +49,12 @@ function describeStaleCheckResult(result: StaleCheckResult): string {
  * failure is forced. */
 export function IntegrationsPanel() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
-  const [pendingAdapter, setPendingAdapter] = useState<string | null>(null);
+  // A Set, not a single adapter (review round 1, minor 6): with only one
+  // `pendingAdapter` slot, toggling a second adapter while the first
+  // toggle's PUT was still in flight silently clobbered/lost track of the
+  // first one's pending state.
+  const [pendingAdapters, setPendingAdapters] = useState<Set<string>>(new Set());
+  const [toggleError, setToggleError] = useState<string | null>(null);
   const [staleCheck, setStaleCheck] = useState<StaleCheckState>({ kind: "idle" });
 
   async function runStaleCheck() {
@@ -74,16 +79,27 @@ export function IntegrationsPanel() {
 
   function load() {
     setState({ kind: "loading" });
-    fetchIntegrations().then(({ data, error }) => {
-      if (error || !data) {
+    fetchIntegrations()
+      .then(({ data, error }) => {
+        if (error || !data) {
+          setState({
+            kind: "error",
+            message: extractErrorMessage(error, "Couldn't load the integration panel. Try again."),
+          });
+          return;
+        }
+        setState({ kind: "ready", adapters: data.adapters });
+      })
+      // Review round 1, minor 6: an uncaught rejection (a network drop, not
+      // just an `{error}` response) left the panel stuck on "Loading
+      // integrations…" forever -- `.catch` it into the same error state
+      // with a Retry action.
+      .catch(() => {
         setState({
           kind: "error",
-          message: extractErrorMessage(error, "Couldn't load the integration panel. Try again."),
+          message: "Couldn't load the integration panel. Try again.",
         });
-        return;
-      }
-      setState({ kind: "ready", adapters: data.adapters });
-    });
+      });
   }
 
   useEffect(load, []);
@@ -102,20 +118,24 @@ export function IntegrationsPanel() {
   }
 
   async function toggle(adapter: string, nextValue: boolean) {
-    setPendingAdapter(adapter);
+    setPendingAdapters((current) => new Set(current).add(adapter));
+    setToggleError(null);
     // Optimistic update: a controlled checkbox otherwise snaps back to its
-    // old `checked` value the instant this re-render (from `setPendingAdapter`)
-    // lands, before the PUT resolves.
+    // old `checked` value the instant this re-render (from
+    // `setPendingAdapters`) lands, before the PUT resolves.
     applyAdapterUpdate(adapter, nextValue);
     // Code review finding: without try/finally, a rejected promise (a
     // network drop, not just an `{error}` response) would skip both
-    // clearing `pendingAdapter` and reverting the optimistic update,
+    // clearing the pending state and reverting the optimistic update,
     // leaving the checkbox stuck disabled and possibly showing a state
     // Valkey never actually reached.
     try {
       const { data, error } = await putIntegrationForceFailure(adapter, nextValue);
       if (error || !data) {
         applyAdapterUpdate(adapter, !nextValue);
+        // Review round 1, minor 6: a failed toggle used to revert silently
+        // -- nothing told the admin the PUT didn't take.
+        setToggleError(extractErrorMessage(error, `Couldn't update ${adapter}. Try again.`));
         return;
       }
       setState((current) =>
@@ -128,8 +148,13 @@ export function IntegrationsPanel() {
       );
     } catch {
       applyAdapterUpdate(adapter, !nextValue);
+      setToggleError(`Couldn't update ${adapter}. Try again.`);
     } finally {
-      setPendingAdapter(null);
+      setPendingAdapters((current) => {
+        const next = new Set(current);
+        next.delete(adapter);
+        return next;
+      });
     }
   }
 
@@ -143,9 +168,14 @@ export function IntegrationsPanel() {
 
   if (state.kind === "error") {
     return (
-      <p role="alert" className="text-sm text-status-danger">
-        {state.message}
-      </p>
+      <div className="flex flex-col items-start gap-2">
+        <p role="alert" className="text-sm text-status-danger">
+          {state.message}
+        </p>
+        <Button variant="secondary" onClick={load}>
+          Retry
+        </Button>
+      </div>
     );
   }
 
@@ -161,6 +191,12 @@ export function IntegrationsPanel() {
           At least one integration is forced to fail. The pipeline will surface that error until
           it&apos;s turned back off.
         </div>
+      )}
+
+      {toggleError && (
+        <p role="alert" className="text-sm text-status-danger">
+          {toggleError}
+        </p>
       )}
 
       <div className="flex flex-col items-start gap-2">
@@ -235,7 +271,7 @@ export function IntegrationsPanel() {
                   <input
                     type="checkbox"
                     checked={row.force_failure}
-                    disabled={pendingAdapter === row.adapter}
+                    disabled={pendingAdapters.has(row.adapter)}
                     onChange={(event) => toggle(row.adapter, event.target.checked)}
                     aria-label={`Force ${row.adapter} to fail`}
                   />

@@ -39,8 +39,11 @@ from app.features.quotes.builder.models import Quote
 from app.integrations.pricing.mock import MockPricingClient
 from app.integrations.pricing.schemas import PricedProductDTO
 
-_DEFAULT_DOWN_PAYMENT_PRIMARY = Decimal("0.20")
-_DEFAULT_DOWN_PAYMENT_INVESTMENT = Decimal("0.25")
+DEFAULT_DOWN_PAYMENT_PRIMARY = Decimal("0.20")
+"""Public (CQ-029 review finding 6): `admin/settings/service.py` imports
+this as the single source of truth for the settings page's "default down
+payment" row, instead of re-hardcoding the literal."""
+DEFAULT_DOWN_PAYMENT_INVESTMENT = Decimal("0.25")
 _MI_REMOVAL_DOWN_PAYMENT = Decimal("0.20")
 _BUYDOWN_MAX_POINTS = Decimal("0.01")
 """1.00 point == 0.01 as a fraction, the same scale as `PricedProductDTO.
@@ -598,14 +601,14 @@ async def create_default_scenarios(
 
     if application.occupancy is Occupancy.PRIMARY:
         resolved_down_payment = (
-            down_payment_pct if down_payment_pct is not None else _DEFAULT_DOWN_PAYMENT_PRIMARY
+            down_payment_pct if down_payment_pct is not None else DEFAULT_DOWN_PAYMENT_PRIMARY
         )
         result = await _create_default_scenarios_primary(
             db, application, config, resolved_down_payment
         )
     else:
         resolved_down_payment = (
-            down_payment_pct if down_payment_pct is not None else _DEFAULT_DOWN_PAYMENT_INVESTMENT
+            down_payment_pct if down_payment_pct is not None else DEFAULT_DOWN_PAYMENT_INVESTMENT
         )
         resolved_ppp = prepayment_penalty_years if prepayment_penalty_years is not None else 5
         result = await _create_default_scenarios_investment(

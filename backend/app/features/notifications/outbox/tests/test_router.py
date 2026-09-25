@@ -230,3 +230,101 @@ async def test_outbox_attachment_stream_404s_cleanly_for_a_missing_object(
     response = await client.get(f"/api/v1/outbox/{email.id}/attachments/{key}")
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "NOT_FOUND"
+
+
+async def test_outbox_attachment_key_not_on_this_email_404s(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    make_outbox_email: Callable[..., Awaitable[OutboxEmail]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+) -> None:
+    """Minor 4 (review round 1): the owning LO asks for a key that is a
+    real object in storage but isn't in *this* email's `attachment_keys`
+    -- `get_attachment_key` must still 404 it (never stream an arbitrary
+    object key just because the caller can see the email)."""
+    live_client = _live_client_or_skip()
+    bucket = storage.get_settings().s3_bucket
+    real_key = f"outbox/tests/{uuid.uuid4()}.pdf"
+    await storage.ensure_bucket(bucket, client=live_client)
+    await storage.put_object(real_key, b"%PDF-1.4 fixture", "application/pdf", client=live_client)
+
+    owner = await make_staff_session(role=UserRole.LO)
+    application = await make_application(lo=owner.user)
+    email = await make_outbox_email(
+        application=application, attachment_keys=["outbox/tests/registered.pdf"]
+    )
+    await db_session.commit()
+
+    response = await client.get(f"/api/v1/outbox/{email.id}/attachments/{real_key}")
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "NOT_FOUND"
+
+    await storage.delete_object(real_key, client=live_client)
+
+
+async def test_outbox_attachment_content_disposition(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    make_outbox_email: Callable[..., Awaitable[OutboxEmail]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+) -> None:
+    """Nit (review round 1): `Content-Disposition` carries both a plain
+    ASCII `filename` (older clients) and an RFC 5987 `filename*` (so a
+    non-ASCII filename survives)."""
+    live_client = _live_client_or_skip()
+    bucket = storage.get_settings().s3_bucket
+    key = f"outbox/tests/{uuid.uuid4()}-quote.pdf"
+    await storage.ensure_bucket(bucket, client=live_client)
+    await storage.put_object(key, b"%PDF-1.4 fixture", "application/pdf", client=live_client)
+
+    owner = await make_staff_session(role=UserRole.LO)
+    application = await make_application(lo=owner.user)
+    email = await make_outbox_email(application=application, attachment_keys=[key])
+    await db_session.commit()
+
+    response = await client.get(f"/api/v1/outbox/{email.id}/attachments/{key}")
+    assert response.status_code == 200
+    disposition = response.headers["content-disposition"]
+    filename = key.rsplit("/", 1)[-1]
+    assert f'filename="{filename}"' in disposition
+    assert f"filename*=UTF-8''{filename}" in disposition
+
+    await storage.delete_object(key, client=live_client)
+
+
+async def test_outbox_unknown_type_is_422(
+    client: AsyncClient,
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+) -> None:
+    """Minor 5 (review round 1): `type` is a `Literal` of the known email
+    types, so a typo'd/unknown `?type=` is a 422, not a silent empty
+    result."""
+    await make_staff_session(role=UserRole.LO)
+    response = await client.get("/api/v1/outbox", params={"type": "not-a-real-type"})
+    assert response.status_code == 422
+
+
+async def test_outbox_application_id_filter(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    make_outbox_email: Callable[..., Awaitable[OutboxEmail]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+) -> None:
+    """Minor 8: `GET /outbox?application_id=` (the Outbox page's URL param,
+    apps/lo-console/src/app/(staff)/outbox/page.tsx) scopes the list to
+    just that application."""
+    owner = await make_staff_session(role=UserRole.LO)
+    application_a = await make_application(lo=owner.user)
+    application_b = await make_application(lo=owner.user)
+    await make_outbox_email(application=application_a, to_email="a@x.test")
+    await make_outbox_email(application=application_b, to_email="b@x.test")
+    await db_session.commit()
+
+    response = await client.get("/api/v1/outbox", params={"application_id": str(application_a.id)})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["to_email"] == "a@x.test"

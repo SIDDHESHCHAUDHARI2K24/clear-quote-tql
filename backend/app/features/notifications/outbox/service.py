@@ -28,6 +28,7 @@ from app.features.clients.models import Client
 from app.features.notifications.outbox.models import EmailStatus, OutboxEmail
 from app.features.notifications.outbox.schemas import (
     AttachmentOut,
+    EmailType,
     OutboxEmailDetail,
     OutboxEmailRow,
 )
@@ -81,7 +82,7 @@ def infer_email_type(subject: str) -> str:
     return "other"
 
 
-def _type_sql_condition(type_name: str) -> Any:
+def _type_sql_condition(type_name: EmailType) -> Any:
     if type_name in _TYPE_SUBJECT_RULES:
         substrings = _TYPE_SUBJECT_RULES[type_name]
         return or_(*[OutboxEmail.subject.ilike(f"%{s}%") for s in substrings])
@@ -136,7 +137,7 @@ async def list_outbox(
     user: User,
     *,
     q: str | None,
-    type: str | None,  # noqa: A002
+    type: EmailType | None,  # noqa: A002
     application_id: uuid.UUID | None,
     page: int | None,
     page_size: int | None,

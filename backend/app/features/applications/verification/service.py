@@ -22,14 +22,16 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import ApplicationTab, FlagSeverity, Occupancy
+from app.core.enums import ApplicationTab, FieldSource, FlagSeverity, Occupancy
 from app.features.applications.assets.models import Asset, Employment
 from app.features.applications.credit.models import Liability
 from app.features.applications.housing.models import HousingHistory
+from app.features.applications.locking import lock_application
 from app.features.applications.models import Application, ApplicationParty, PartyRole
-from app.features.applications.verification.models import Flag
+from app.features.applications.verification.models import FieldValue, Flag
 from app.features.applications.verification.rules import evaluate_rules, flag_message
 from app.features.applications.verification.schemas import (
     HousingSnapshot,
@@ -49,6 +51,32 @@ _AUTO_FIX_ATTR: dict[str, str] = {
     "phone_copy": "home_phone",
     "no_co_applicant": "no_co_applicant_check",
 }
+
+AUTO_PREFIX = "auto:"
+"""`field_values` key prefix marking a value a rule copied automatically
+(CQ-028a review): `auto:borrower_home_phone` means `phone_copy` filled the
+home phone from the cell phone, so the verification tabs keep it following
+the cell phone. Like CQ-028a's `orig:`/`row:` keys it contains `:`, which
+no catalog key does."""
+
+
+def auto_marker_key(field_key: str) -> str:
+    return f"{AUTO_PREFIX}{field_key}"
+
+
+async def mark_auto_copied(db: AsyncSession, application_id: uuid.UUID, field_key: str) -> None:
+    """Idempotently writes the `auto:{field_key}` marker. Does not commit."""
+    await db.execute(
+        insert(FieldValue)
+        .values(
+            id=uuid.uuid4(),
+            application_id=application_id,
+            field_key=auto_marker_key(field_key),
+            value=FieldSource.FORMULA.value,
+            source=FieldSource.FORMULA,
+        )
+        .on_conflict_do_nothing(index_elements=["application_id", "field_key"])
+    )
 
 
 @dataclass
@@ -73,14 +101,14 @@ class VerificationRunResult:
     were therefore resolved."""
 
 
-async def _setting_int(db: AsyncSession, key: str) -> int:
+async def setting_int(db: AsyncSession, key: str) -> int:
     row = await db.get(Setting, key)
     if row is None:
         raise RuntimeError(f"Missing required setting: {key!r} (seed_settings_defaults not run?)")
     return int(row.value)  # type: ignore[arg-type]
 
 
-async def _latest_scenario_snapshot(
+async def latest_scenario_snapshot(
     db: AsyncSession, application_id: uuid.UUID
 ) -> ScenarioSnapshot | None:
     """Reads the application's most-recently-priced `Quote.computed` (CQ-008's
@@ -172,9 +200,9 @@ async def _build_context(db: AsyncSession, application: Application) -> Verifica
         if application.occupancy is Occupancy.PRIMARY
         else "reserves_months_investment"
     )
-    reserves_months = await _setting_int(db, reserves_key)
+    reserves_months = await setting_int(db, reserves_key)
 
-    latest_scenario = await _latest_scenario_snapshot(db, application.id)
+    latest_scenario = await latest_scenario_snapshot(db, application.id)
 
     return VerificationContext(
         occupancy=application.occupancy,
@@ -205,7 +233,10 @@ async def write_flag(
     Coleman). `message` (P5/P6 foundation, E8) is the human-readable text;
     `None` falls back to `rules.flag_message(rule, field_key)`.
     Does not commit — the caller controls the transaction boundary.
+    Takes the application row lock (CQ-028a review), so concurrent writers
+    (rules, the pricing validator, the DSCR loop) never both insert.
     """
+    await lock_application(db, application_id)
     text = message or flag_message(rule, field_key)
     existing = (
         await db.execute(
@@ -262,12 +293,21 @@ async def resolve_flag(
     return existing
 
 
-async def run_and_persist(application_id: uuid.UUID, db: AsyncSession) -> VerificationRunResult:
+async def run_and_persist(
+    application_id: uuid.UUID, db: AsyncSession, *, commit: bool = True
+) -> VerificationRunResult:
     """Assembles the application's `VerificationContext`, evaluates every
     rule, applies auto-fixes back onto `application_parties`, writes failing
     non-`info` results as `flags` rows, and resolves any previously-raised
     flag whose rule now passes. Commits once at the end. Does not write
-    `activity_events` — see module docstring."""
+    `activity_events` — see module docstring.
+
+    Takes the application row lock first (CQ-028a review M1), so the
+    pipeline's verify and the verification tabs' re-verify never race on
+    `flags`. `commit=False` leaves the transaction (and the lock) open, so
+    the pipeline's verify can set the status from these results before
+    anyone else re-verifies."""
+    await lock_application(db, application_id)
     application = await db.get(Application, application_id)
     if application is None:
         raise ValueError(f"No application with id {application_id}")
@@ -291,6 +331,8 @@ async def run_and_persist(application_id: uuid.UUID, db: AsyncSession) -> Verifi
             attr = _AUTO_FIX_ATTR.get(result.rule_id)
             if attr is not None and primary_party is not None:
                 setattr(primary_party, attr, result.fix_value)
+                if result.rule_id == "phone_copy":
+                    await mark_auto_copied(db, application_id, result.field_key)
                 run_result.auto_fixed.append(result)
         elif result.severity is not FlagSeverity.INFO:
             if not result.passed:
@@ -310,5 +352,6 @@ async def run_and_persist(application_id: uuid.UUID, db: AsyncSession) -> Verifi
                     run_result.flags_resolved.append(resolved)
 
     await db.flush()
-    await db.commit()
+    if commit:
+        await db.commit()
     return run_result

@@ -75,3 +75,8 @@ CQ-025's dashboard tile links use.
 
 - AC2 (Grace Kim) and the `sent_or_later` cross-check (AC3) are marked pending above -- re-verify once CQ-030 (stale job) and CQ-025 (dashboard) merge into `phase-p5-p6`, per the orchestrator's phase-verification step.
 - `applications.subject_state` (P5/P6 foundation column) is still unpopulated; this item's `state` filter joins `properties` directly instead (Decision #2). A later item could populate it and switch the filter to the indexed column if profiling ever shows the join is a bottleneck at full seed scale -- not needed today (AC5 measured 13-19 ms).
+
+
+## Orchestrator note (after CQ-025 merged)
+
+AC3 (`sent_or_later` equals the dashboard "Pre-approvals sent" tile) is now evidenced by `backend/app/features/dashboard/tests/::test_sent_or_later_matches_dashboard`. That test covers a Manager and one LO. The dashboard tile imports `build_sent_or_later_filter()` directly, so the two cannot drift. Status: met.

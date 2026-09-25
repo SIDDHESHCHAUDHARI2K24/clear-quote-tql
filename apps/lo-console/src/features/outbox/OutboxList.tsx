@@ -36,6 +36,9 @@ function formatSentAt(row: OutboxEmailRow): string {
 
 export interface OutboxListProps {
   onSelect: (row: OutboxEmailRow) => void;
+  /** `/outbox?application_id=` (minor 8, review round 1): scopes the list
+   * to one application, e.g. CQ-020's future "Open in Outbox" link. */
+  applicationId?: string;
 }
 
 type LoadState =
@@ -47,7 +50,7 @@ type LoadState =
  * (AC2/AC3). */
 const SEARCH_DEBOUNCE_MS = 300;
 
-export function OutboxList({ onSelect }: OutboxListProps) {
+export function OutboxList({ onSelect, applicationId }: OutboxListProps) {
   // `qInput` is what the text field shows (updates every keystroke); `q`
   // is what actually drives the fetch, debounced -- code review finding:
   // without this, every keystroke fired its own full `GET /outbox` (a
@@ -69,7 +72,7 @@ export function OutboxList({ onSelect }: OutboxListProps) {
   useEffect(() => {
     let cancelled = false;
     setState({ kind: "loading" });
-    fetchOutboxList({ q, type, page }).then(({ data, error }) => {
+    fetchOutboxList({ q, type, applicationId, page }).then(({ data, error }) => {
       if (cancelled) return;
       if (error || !data) {
         setState({
@@ -89,7 +92,7 @@ export function OutboxList({ onSelect }: OutboxListProps) {
     return () => {
       cancelled = true;
     };
-  }, [q, type, page]);
+  }, [q, type, applicationId, page]);
 
   const columns: TableColumn<OutboxEmailRow>[] = [
     { key: "to", header: "To", render: (row) => row.to_email },
