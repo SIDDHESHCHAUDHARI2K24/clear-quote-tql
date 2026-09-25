@@ -11,7 +11,7 @@ import { isPublicPath } from "@cq/ui";
 // on a 401.
 const SESSION_COOKIE = "cq_borrower_session";
 
-const PUBLIC_PATHS = new Set(["/login", "/signup", "/gallery"]);
+const PUBLIC_PATHS = new Set(["/login", "/signup", "/gallery", "/gallery/report"]);
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -22,7 +22,19 @@ export function middleware(request: NextRequest) {
   }
 
   if (!hasSession && !isPublicPath(pathname, PUBLIC_PATHS)) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const loginUrl = new URL("/login", request.url);
+    // H2 (docs/backlog/phase-p3-p4-plan.md): a signed-out visit to a
+    // protected path (e.g. `/report/{token}`) redirects to
+    // `/login?next=<path>` so OTP success can return here (`nextParam.ts`
+    // validates this on the way back out -- middleware itself only ever
+    // builds `next` from the request's own same-origin pathname/search, so
+    // nothing unsafe originates here). `/` is the default post-login
+    // destination already, so it's left off to keep the common case's URL
+    // (and this file's existing tests) unchanged.
+    if (pathname !== "/") {
+      loginUrl.searchParams.set("next", pathname + request.nextUrl.search);
+    }
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();

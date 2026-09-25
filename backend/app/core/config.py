@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     temporal_namespace: str
     temporal_task_queue: str
 
+    # CQ-020: the borrower portal's public origin; the send workflow builds
+    # the emailed report link `{portal_base_url}/report/{token}` from it (H2:
+    # no magic link). `scripts/worktree-env.sh` writes each slot's port.
+    portal_base_url: str = "http://localhost:3020"
+
     cors_origins: Annotated[list[str], NoDecode] = []
 
     # CQ-014: staff/borrower session and OTP tuning. Defaults match the

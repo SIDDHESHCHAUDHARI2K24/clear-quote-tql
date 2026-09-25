@@ -69,6 +69,7 @@ EXPECTED_TABLES = {
     "scenarios",
     "quotes",
     "quote_packages",
+    "quote_package_versions",
     "consents",
     "outbox_emails",
     "settings",

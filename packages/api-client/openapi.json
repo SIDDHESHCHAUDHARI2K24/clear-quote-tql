@@ -123,6 +123,134 @@
         }
       }
     },
+    "/api/v1/applications/{application_id}/summary": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Get Application Summary",
+        "operationId": "get_application_summary_api_v1_applications__application_id__summary_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/status": {
+      "patch": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Patch Status",
+        "operationId": "patch_status_api_v1_applications__application_id__status_patch",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusPatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/applications/{application_id}/field-values/{field_key}": {
       "patch": {
         "tags": [
@@ -275,17 +403,35 @@
           "pricing"
         ],
         "summary": "Preview Quote",
-        "description": "Engine-only, no adapter latency, no persistence -- must respond\nunder 300ms (spec.md AC1).",
+        "description": "Engine-only, no adapter latency, no persistence -- must respond\nunder 300ms (spec.md AC1). CQ-017: requires a signed-in staff user\n(was previously reachable with no auth at all -- this route computes\nreal numbers for real applications, unlike `/scenarios/{id}/products`\nwhich already required `CurrentStaff` via `ensure_scenario_in_scope`);\nnot scoped to any one application since it's a pure engine call with\nno persistence.",
         "operationId": "preview_quote_api_v1_quotes_preview_post",
+        "parameters": [
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/QuotePreviewRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -363,6 +509,63 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ScenarioRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "quote-builder"
+        ],
+        "summary": "Get Application Scenarios",
+        "operationId": "get_application_scenarios_api_v1_applications__application_id__scenarios_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationScenariosRead"
                 }
               }
             }
@@ -554,6 +757,922 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/pricing": {
+      "get": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Get Pricing",
+        "operationId": "get_pricing_api_v1_applications__application_id__pricing_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingViewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}": {
+      "put": {
+        "tags": [
+          "quote-builder"
+        ],
+        "summary": "Put Scenario",
+        "operationId": "put_scenario_api_v1_scenarios__scenario_id__put",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scenario Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioGroupRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{quote_id}": {
+      "delete": {
+        "tags": [
+          "quote-builder"
+        ],
+        "summary": "Delete Quote Route",
+        "operationId": "delete_quote_route_api_v1_quotes__quote_id__delete",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/{quote_id}/recommend": {
+      "post": {
+        "tags": [
+          "quote-builder"
+        ],
+        "summary": "Post Recommend",
+        "operationId": "post_recommend_api_v1_quotes__quote_id__recommend_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/reprice": {
+      "post": {
+        "tags": [
+          "quote-builder"
+        ],
+        "summary": "Post Reprice",
+        "operationId": "post_reprice_api_v1_applications__application_id__reprice_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepriceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/package": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Package",
+        "operationId": "get_package_api_v1_applications__application_id__package_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Put Package",
+        "operationId": "put_package_api_v1_applications__application_id__package_put",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/readiness": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Readiness",
+        "operationId": "get_readiness_api_v1_packages__package_id__readiness_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageReadiness"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/report": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Report",
+        "operationId": "get_report_api_v1_packages__package_id__report_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportViewModel"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/letter.html": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Letter Html",
+        "operationId": "get_letter_html_api_v1_packages__package_id__letter_html_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/send": {
+      "post": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Post Send",
+        "operationId": "post_send_api_v1_packages__package_id__send_post",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendStarted"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "PACKAGE_NOT_READY; `details.blockers` lists why"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/send-status": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Send Status",
+        "operationId": "get_send_status_api_v1_packages__package_id__send_status_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/versions": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Versions",
+        "operationId": "get_versions_api_v1_packages__package_id__versions_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SentVersion"
+                  },
+                  "title": "Response Get Versions Api V1 Packages  Package Id  Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{package_id}/letter.pdf": {
+      "get": {
+        "tags": [
+          "send"
+        ],
+        "summary": "Get Letter Pdf",
+        "operationId": "get_letter_pdf_api_v1_packages__package_id__letter_pdf_get",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/pdf": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/matches": {
+      "get": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Get Matches",
+        "operationId": "get_matches_api_v1_applications__application_id__matches_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchListResponse"
                 }
               }
             }
@@ -902,6 +2021,132 @@
         }
       }
     },
+    "/api/v1/portal/reports/{token}": {
+      "get": {
+        "tags": [
+          "portal-reports"
+        ],
+        "summary": "Get Report",
+        "operationId": "get_report_api_v1_portal_reports__token__get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          },
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/reports/{token}/actions": {
+      "post": {
+        "tags": [
+          "portal-actions"
+        ],
+        "summary": "Submit Report Action",
+        "operationId": "submit_report_action_api_v1_portal_reports__token__actions_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          },
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalReportActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalReportActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -926,6 +2171,248 @@
   },
   "components": {
     "schemas": {
+      "ApplicationScenariosRead": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "PRIMARY",
+                  "LTR",
+                  "STR"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy"
+          },
+          "recommended_quote_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Quote Id"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioGroupRead"
+            },
+            "type": "array",
+            "title": "Groups"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "strategy",
+          "recommended_quote_id",
+          "groups"
+        ],
+        "title": "ApplicationScenariosRead"
+      },
+      "ApplicationStatus": {
+        "type": "string",
+        "enum": [
+          "intake",
+          "verifying",
+          "needs_attention",
+          "ready_to_price",
+          "priced",
+          "sent",
+          "viewed",
+          "option_selected",
+          "inquiry",
+          "stale",
+          "withdrawn",
+          "closed"
+        ],
+        "title": "ApplicationStatus",
+        "description": "Mirrors the application status machine in `system-design.md`,\nincluding the terminal `withdrawn`/`closed` states set by the LO."
+      },
+      "ApplicationSummaryResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "client_name": {
+            "type": "string",
+            "title": "Client Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatus"
+          },
+          "last_pipeline_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Pipeline Stage"
+          },
+          "occupancy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Occupancy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Strategy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "program": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "purchasing_power": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchasing Power"
+          },
+          "down_payment_pct": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Down Payment Pct"
+          },
+          "down_payment_amount": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Down Payment Amount"
+          },
+          "ppp_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ppp Years"
+          },
+          "note_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Rate"
+          },
+          "tabs": {
+            "items": {
+              "$ref": "#/components/schemas/TabStateResponse"
+            },
+            "type": "array",
+            "title": "Tabs"
+          },
+          "default_tab": {
+            "$ref": "#/components/schemas/ApplicationTab"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "client_name",
+          "status",
+          "last_pipeline_stage",
+          "occupancy",
+          "strategy",
+          "program",
+          "location",
+          "purchasing_power",
+          "down_payment_pct",
+          "down_payment_amount",
+          "ppp_years",
+          "note_rate",
+          "tabs",
+          "default_tab"
+        ],
+        "title": "ApplicationSummaryResponse",
+        "description": "`GET /applications/{id}/summary` (spec.md). Also the response shape\nfor `PATCH /applications/{id}/status` (plan.md decision #9) so the LO\nconsole header/status pill refresh from one response."
+      },
+      "ApplicationTab": {
+        "type": "string",
+        "enum": [
+          "borrowers",
+          "housing",
+          "credit",
+          "assets",
+          "property",
+          "pricing",
+          "send"
+        ],
+        "title": "ApplicationTab",
+        "description": "Matches the 7 workspace tabs."
+      },
       "AutoQuoteResponse": {
         "properties": {
           "par": {
@@ -948,6 +2435,15 @@
           "buydown"
         ],
         "title": "AutoQuoteResponse"
+      },
+      "BorrowerActionType": {
+        "type": "string",
+        "enum": [
+          "move_forward",
+          "ask_other",
+          "ask_updated"
+        ],
+        "title": "BorrowerActionType"
       },
       "BorrowerLoginRequest": {
         "properties": {
@@ -1041,6 +2537,123 @@
           "password"
         ],
         "title": "BorrowerSignupRequest"
+      },
+      "Breakdown": {
+        "properties": {
+          "payment_lines": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownLine"
+            },
+            "title": "Payment Lines",
+            "type": "array"
+          },
+          "payment_total": {
+            "title": "Payment Total",
+            "type": "string"
+          },
+          "cash_to_close_lines": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownLine"
+            },
+            "title": "Cash To Close Lines",
+            "type": "array"
+          },
+          "cash_to_close_total": {
+            "title": "Cash To Close Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_lines",
+          "payment_total",
+          "cash_to_close_lines",
+          "cash_to_close_total"
+        ],
+        "title": "Breakdown",
+        "type": "object"
+      },
+      "BreakdownLine": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "amount"
+        ],
+        "title": "BreakdownLine",
+        "type": "object"
+      },
+      "CashflowTable": {
+        "properties": {
+          "rent_label": {
+            "title": "Rent Label",
+            "type": "string"
+          },
+          "gross_amount": {
+            "title": "Gross Amount",
+            "type": "string"
+          },
+          "expense_ratio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expense Ratio"
+          },
+          "qualifying_rent": {
+            "title": "Qualifying Rent",
+            "type": "string"
+          },
+          "pitia": {
+            "title": "Pitia",
+            "type": "string"
+          },
+          "monthly_cashflow": {
+            "title": "Monthly Cashflow",
+            "type": "string"
+          },
+          "annual_cashflow": {
+            "title": "Annual Cashflow",
+            "type": "string"
+          },
+          "dscr": {
+            "title": "Dscr",
+            "type": "string"
+          },
+          "cap_rate_pct": {
+            "title": "Cap Rate Pct",
+            "type": "string"
+          },
+          "monthly_cashflow_incl_tax": {
+            "title": "Monthly Cashflow Incl Tax",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rent_label",
+          "gross_amount",
+          "expense_ratio",
+          "qualifying_rent",
+          "pitia",
+          "monthly_cashflow",
+          "annual_cashflow",
+          "dscr",
+          "cap_rate_pct",
+          "monthly_cashflow_incl_tax"
+        ],
+        "title": "CashflowTable",
+        "type": "object"
       },
       "ChallengeResponse": {
         "properties": {
@@ -1286,6 +2899,64 @@
         "title": "ConfigSnapshot",
         "description": "Pricing configuration, snapshotted per-quote so old quotes never change\nwhen defaults change later (`scenarios.config_snapshot` stores one of\nthese as JSON per CQ-007)."
       },
+      "CostSegTable": {
+        "properties": {
+          "purchase_price": {
+            "title": "Purchase Price",
+            "type": "string"
+          },
+          "land_allocation_pct": {
+            "title": "Land Allocation Pct",
+            "type": "string"
+          },
+          "land_value_allocation": {
+            "title": "Land Value Allocation",
+            "type": "string"
+          },
+          "depreciable_building_basis": {
+            "title": "Depreciable Building Basis",
+            "type": "string"
+          },
+          "accelerated_property_pct": {
+            "title": "Accelerated Property Pct",
+            "type": "string"
+          },
+          "accelerated_basis_amount": {
+            "title": "Accelerated Basis Amount",
+            "type": "string"
+          },
+          "bonus_depreciation_pct": {
+            "title": "Bonus Depreciation Pct",
+            "type": "string"
+          },
+          "year_one_tax_deduction": {
+            "title": "Year One Tax Deduction",
+            "type": "string"
+          },
+          "investor_marginal_tax_rate": {
+            "title": "Investor Marginal Tax Rate",
+            "type": "string"
+          },
+          "year_one_tax_savings": {
+            "title": "Year One Tax Savings",
+            "type": "string"
+          }
+        },
+        "required": [
+          "purchase_price",
+          "land_allocation_pct",
+          "land_value_allocation",
+          "depreciable_building_basis",
+          "accelerated_property_pct",
+          "accelerated_basis_amount",
+          "bonus_depreciation_pct",
+          "year_one_tax_deduction",
+          "investor_marginal_tax_rate",
+          "year_one_tax_savings"
+        ],
+        "title": "CostSegTable",
+        "type": "object"
+      },
       "DSCRBucket": {
         "type": "string",
         "enum": [
@@ -1468,6 +3139,72 @@
         ],
         "title": "HealthReport"
       },
+      "HeroNumbers": {
+        "properties": {
+          "monthly_payment": {
+            "title": "Monthly Payment",
+            "type": "string"
+          },
+          "cash_to_close": {
+            "title": "Cash To Close",
+            "type": "string"
+          },
+          "loan_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Amount"
+          },
+          "monthly_cashflow": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow"
+          },
+          "year1_tax_savings": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year1 Tax Savings"
+          },
+          "year1_tax_savings_monthly": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year1 Tax Savings Monthly"
+          }
+        },
+        "required": [
+          "monthly_payment",
+          "cash_to_close",
+          "loan_amount",
+          "monthly_cashflow",
+          "year1_tax_savings",
+          "year1_tax_savings_monthly"
+        ],
+        "title": "HeroNumbers",
+        "type": "object"
+      },
       "LatestApplicationOut": {
         "properties": {
           "id": {
@@ -1487,6 +3224,50 @@
         ],
         "title": "LatestApplicationOut"
       },
+      "LocationResponse": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "zip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip"
+          }
+        },
+        "type": "object",
+        "required": [
+          "city",
+          "state",
+          "zip"
+        ],
+        "title": "LocationResponse"
+      },
       "ManualQuoteCreateRequest": {
         "properties": {
           "product": {
@@ -1503,6 +3284,151 @@
           "label"
         ],
         "title": "ManualQuoteCreateRequest"
+      },
+      "MatchListResponse": {
+        "properties": {
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/MatchOut"
+            },
+            "type": "array",
+            "title": "Matches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matches"
+        ],
+        "title": "MatchListResponse"
+      },
+      "MatchOut": {
+        "properties": {
+          "matched_property_id": {
+            "type": "string",
+            "title": "Matched Property Id"
+          },
+          "property_image_url": {
+            "type": "string",
+            "title": "Property Image Url"
+          },
+          "property_address": {
+            "type": "string",
+            "title": "Property Address"
+          },
+          "bed_bath_sqft": {
+            "type": "string",
+            "title": "Bed Bath Sqft"
+          },
+          "deal_grade_badge": {
+            "type": "string",
+            "title": "Deal Grade Badge"
+          },
+          "property_tagline": {
+            "type": "string",
+            "title": "Property Tagline"
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Price"
+          },
+          "total_monthly_payment": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Monthly Payment"
+          },
+          "rent_estimate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Estimate"
+          },
+          "rent_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Label"
+          },
+          "monthly_cashflow": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow"
+          },
+          "cash_to_close": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cash To Close"
+          },
+          "cap_rate_pct": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Rate Pct"
+          },
+          "year1_tax_savings": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year1 Tax Savings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matched_property_id",
+          "property_image_url",
+          "property_address",
+          "bed_bath_sqft",
+          "deal_grade_badge",
+          "property_tagline",
+          "price",
+          "total_monthly_payment",
+          "rent_estimate",
+          "rent_label",
+          "monthly_cashflow",
+          "cash_to_close",
+          "cap_rate_pct",
+          "year1_tax_savings"
+        ],
+        "title": "MatchOut"
+      },
+      "Occupancy": {
+        "type": "string",
+        "enum": [
+          "primary",
+          "investment"
+        ],
+        "title": "Occupancy",
+        "description": "Per override O2: Primary, LTR or STR only \u2014 no `second_home`."
       },
       "OtpVerifyRequest": {
         "properties": {
@@ -1523,6 +3449,174 @@
           "code"
         ],
         "title": "OtpVerifyRequest"
+      },
+      "PackageRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "quote_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Quote Ids"
+          },
+          "recommended_quote_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Quote Id"
+          },
+          "recommendation_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation Text"
+          },
+          "lo_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lo Note"
+          },
+          "recipient_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Email"
+          },
+          "attachments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "application_id",
+          "quote_ids",
+          "recommended_quote_id",
+          "recommendation_text",
+          "lo_note",
+          "recipient_email",
+          "attachments",
+          "sent_at",
+          "updated_at"
+        ],
+        "title": "PackageRead"
+      },
+      "PackageReadiness": {
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "blockers": {
+            "items": {
+              "$ref": "#/components/schemas/ReadinessBlocker"
+            },
+            "type": "array",
+            "title": "Blockers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ready",
+          "blockers"
+        ],
+        "title": "PackageReadiness"
+      },
+      "PackageUpdate": {
+        "properties": {
+          "quote_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Quote Ids"
+          },
+          "recommended_quote_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Quote Id"
+          },
+          "lo_note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lo Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quote_ids"
+        ],
+        "title": "PackageUpdate"
       },
       "PipelineResumeResponse": {
         "properties": {
@@ -1559,6 +3653,149 @@
           "started"
         ],
         "title": "PipelineStartResponse"
+      },
+      "PortalReportActionRequest": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/BorrowerActionType"
+          },
+          "quote_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote Id"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "PortalReportActionRequest"
+      },
+      "PortalReportActionResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatus"
+          },
+          "borrower_action": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Borrower Action"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "borrower_action",
+          "at"
+        ],
+        "title": "PortalReportActionResponse"
+      },
+      "PortalReportResponse": {
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/ReportHeader"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/ReportStrategy"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ReportOption"
+            },
+            "type": "array",
+            "title": "Options"
+          },
+          "recommendation": {
+            "$ref": "#/components/schemas/ReportRecommendation"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/ReportMatch"
+            },
+            "type": "array",
+            "title": "Matches"
+          },
+          "disclosures": {
+            "$ref": "#/components/schemas/ReportDisclosures"
+          },
+          "lo": {
+            "$ref": "#/components/schemas/ReportLo"
+          },
+          "borrower_action": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Borrower Action"
+          },
+          "newest_report_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newest Report Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "header",
+          "strategy",
+          "options",
+          "recommendation",
+          "matches",
+          "disclosures",
+          "lo"
+        ],
+        "title": "PortalReportResponse",
+        "description": "`ReportViewModel` plus the two fields only a live request can answer:\n`borrower_action` (from `QuotePackageVersion.borrower_action`, `None`\nuntil CQ-024) and `newest_report_token` (set only when this version is\nsuperseded, per spec.md's \"SupersededBanner ... a link to the newest\nversion\")."
       },
       "PricedProductRow-Input": {
         "properties": {
@@ -1629,6 +3866,36 @@
           "is_buydown_rate": {
             "type": "boolean",
             "title": "Is Buydown Rate"
+          },
+          "monthly_pi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Pi"
+          },
+          "points_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points Pct"
           }
         },
         "type": "object",
@@ -1686,6 +3953,30 @@
           "is_buydown_rate": {
             "type": "boolean",
             "title": "Is Buydown Rate"
+          },
+          "monthly_pi": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Pi"
+          },
+          "points_pct": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points Pct"
           }
         },
         "type": "object",
@@ -1701,6 +3992,652 @@
           "is_buydown_rate"
         ],
         "title": "PricedProductRow"
+      },
+      "PricingFieldView": {
+        "properties": {
+          "field_key": {
+            "type": "string",
+            "title": "Field Key"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FieldSource"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          },
+          "overridden": {
+            "type": "boolean",
+            "title": "Overridden"
+          },
+          "original_value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_key",
+          "value",
+          "source",
+          "source_ref",
+          "overridden",
+          "original_value"
+        ],
+        "title": "PricingFieldView",
+        "description": "One of the 5 pricing-overridable `field_values` rows (spec.md:\ntaxes, insurance, HOA, LTR rent / STR revenue), with enough to render a\n`SourceBadge` and an inline override/revert control."
+      },
+      "PricingInputsView": {
+        "properties": {
+          "purchase_price": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Purchase Price"
+          },
+          "down_payment_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Down Payment Pct"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/StrategyType"
+          },
+          "prepayment_penalty_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepayment Penalty Years"
+          },
+          "fico": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fico"
+          },
+          "insurance_annual_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurance Annual Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_price",
+          "down_payment_pct",
+          "strategy",
+          "prepayment_penalty_years",
+          "fico",
+          "insurance_annual_rate"
+        ],
+        "title": "PricingInputsView",
+        "description": "The raw, non-badge-carrying pieces `/quotes/preview` also needs but\nthat don't appear in `PricingFieldView` (FICO has no source badge in\nspec.md's field list; `insurance_annual_rate` is a rate the engine\nconsumes, derived server-side from `homeowners_ins_annual` -- the panel\nonly ever shows the dollar `homeowners_ins_annual` badge/value, never\nthis fraction, but every future preview call still needs to send it, so\nit's handed over ready-computed rather than making the frontend divide\ntwo money fields itself)."
+      },
+      "PricingViewResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "inputs": {
+            "$ref": "#/components/schemas/PricingInputsView"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/PricingFieldView"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "note_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Rate"
+          },
+          "breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuoteComputation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "has_stale_quotes": {
+            "type": "boolean",
+            "title": "Has Stale Quotes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "inputs",
+          "fields",
+          "note_rate",
+          "breakdown",
+          "has_stale_quotes"
+        ],
+        "title": "PricingViewResponse"
+      },
+      "QuoteCardRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "scenario_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Scenario Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "investor": {
+            "type": "string",
+            "title": "Investor"
+          },
+          "product": {
+            "type": "string",
+            "title": "Product"
+          },
+          "rate_pct": {
+            "type": "string",
+            "title": "Rate Pct"
+          },
+          "points_pct": {
+            "type": "string",
+            "title": "Points Pct"
+          },
+          "points_amount": {
+            "type": "string",
+            "title": "Points Amount"
+          },
+          "note_rate": {
+            "type": "string",
+            "title": "Note Rate"
+          },
+          "discount_points_pct": {
+            "type": "string",
+            "title": "Discount Points Pct"
+          },
+          "lock_days": {
+            "type": "integer",
+            "title": "Lock Days"
+          },
+          "monthly_payment": {
+            "type": "string",
+            "title": "Monthly Payment"
+          },
+          "cash_to_close": {
+            "type": "string",
+            "title": "Cash To Close"
+          },
+          "down_payment_pct": {
+            "type": "string",
+            "title": "Down Payment Pct"
+          },
+          "prepay_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepay Label"
+          },
+          "dscr_ratio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dscr Ratio"
+          },
+          "monthly_cashflow": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow"
+          },
+          "priced_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Priced At"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          },
+          "recommended": {
+            "type": "boolean",
+            "title": "Recommended"
+          },
+          "computed": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Computed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scenario_id",
+          "label",
+          "investor",
+          "product",
+          "rate_pct",
+          "points_pct",
+          "points_amount",
+          "note_rate",
+          "discount_points_pct",
+          "lock_days",
+          "monthly_payment",
+          "cash_to_close",
+          "down_payment_pct",
+          "prepay_label",
+          "dscr_ratio",
+          "monthly_cashflow",
+          "priced_at",
+          "stale",
+          "recommended",
+          "computed"
+        ],
+        "title": "QuoteCardRead"
+      },
+      "QuoteComputation": {
+        "properties": {
+          "loan_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Loan Amount"
+          },
+          "down_payment_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Down Payment Amount"
+          },
+          "down_payment_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Down Payment Pct"
+          },
+          "ltv_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Ltv Pct"
+          },
+          "monthly_pi": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Pi"
+          },
+          "monthly_tax": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Tax"
+          },
+          "monthly_insurance": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Insurance"
+          },
+          "monthly_mi": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Mi"
+          },
+          "monthly_hoa": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Hoa"
+          },
+          "total_monthly_payment": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Monthly Payment"
+          },
+          "discount_points_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Discount Points Amount"
+          },
+          "lender_fees": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Lender Fees"
+          },
+          "title_fees": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Title Fees"
+          },
+          "prepaid_interest": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Prepaid Interest"
+          },
+          "prepaid_insurance": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Prepaid Insurance"
+          },
+          "prepaid_taxes": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Prepaid Taxes"
+          },
+          "total_prepaids": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Prepaids"
+          },
+          "total_closing_costs": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Closing Costs"
+          },
+          "cash_to_close": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cash To Close"
+          },
+          "config_snapshot": {
+            "$ref": "#/components/schemas/ConfigSnapshot"
+          },
+          "qualifying_rent": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qualifying Rent"
+          },
+          "underwritten_str_rent": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Underwritten Str Rent"
+          },
+          "str_gross_monthly_revenue": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Str Gross Monthly Revenue"
+          },
+          "dscr_ratio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dscr Ratio"
+          },
+          "dscr_bucket": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DSCRBucket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "monthly_cashflow": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow"
+          },
+          "annual_cashflow": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annual Cashflow"
+          },
+          "break_even_rent_ltr": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Break Even Rent Ltr"
+          },
+          "str_annual_rent_target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Str Annual Rent Target"
+          },
+          "cap_rate_pct": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Rate Pct"
+          },
+          "land_value_allocation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Value Allocation"
+          },
+          "depreciable_building_basis": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depreciable Building Basis"
+          },
+          "accelerated_basis_amount": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accelerated Basis Amount"
+          },
+          "year_one_tax_deduction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year One Tax Deduction"
+          },
+          "year_one_tax_savings": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year One Tax Savings"
+          },
+          "monthly_cashflow_incl_tax": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow Incl Tax"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loan_amount",
+          "down_payment_amount",
+          "down_payment_pct",
+          "ltv_pct",
+          "monthly_pi",
+          "monthly_tax",
+          "monthly_insurance",
+          "monthly_mi",
+          "monthly_hoa",
+          "total_monthly_payment",
+          "discount_points_amount",
+          "lender_fees",
+          "title_fees",
+          "prepaid_interest",
+          "prepaid_insurance",
+          "prepaid_taxes",
+          "total_prepaids",
+          "total_closing_costs",
+          "cash_to_close",
+          "config_snapshot"
+        ],
+        "title": "QuoteComputation",
+        "description": "Every money number Clear Quote shows, computed once by `compute_quote`.\n\nAll currency fields are `Decimal` rounded to cents; `dscr_ratio` is\nrounded to 2dp; `cap_rate_pct` is rounded to 2dp of percent (e.g. `6.42`\nmeans 6.42%). Investment-only fields are `None` on `PRIMARY` scenarios \u2014\nprimary loans never carry rent/DSCR/cashflow/cost-seg numbers."
       },
       "QuotePreviewRequest": {
         "properties": {
@@ -1724,6 +4661,9 @@
               {
                 "type": "string",
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
               }
             ],
             "title": "Down Payment Pct"
@@ -1889,19 +4829,34 @@
               }
             ],
             "title": "Investor Marginal Tax Rate"
+          },
+          "down_payment_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Down Payment Amount"
           }
         },
         "type": "object",
         "required": [
           "purchase_price",
-          "down_payment_pct",
           "note_rate",
           "strategy",
           "fico",
           "property_tax_annual_rate",
           "insurance_annual_rate"
         ],
-        "title": "QuotePreviewRequest"
+        "title": "QuotePreviewRequest",
+        "description": "CQ-017: the pricing panel's linked down-payment %/$ input needs to\nsend *either* side and have the engine resolve the other, server-side\n(AGENTS.md: money math lives only in `quote_engine`). `down_payment_pct`\nis redeclared optional here (`ScenarioInputs` requires it); a `before`\nvalidator resolves `down_payment_amount` -> `down_payment_pct` before\n`ScenarioInputs`'s own field/strategy validation ever runs, so every\ndownstream consumer of this model still sees a plain, always-populated\n`down_payment_pct` exactly like before."
       },
       "QuotePreviewResponse": {
         "properties": {
@@ -1909,6 +4864,16 @@
             "type": "string",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Loan Amount"
+          },
+          "down_payment_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Down Payment Amount"
+          },
+          "down_payment_pct": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Down Payment Pct"
           },
           "ltv_pct": {
             "type": "string",
@@ -2023,6 +4988,18 @@
               }
             ],
             "title": "Underwritten Str Rent"
+          },
+          "str_gross_monthly_revenue": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Str Gross Monthly Revenue"
           },
           "dscr_ratio": {
             "anyOf": [
@@ -2182,6 +5159,8 @@
         "type": "object",
         "required": [
           "loan_amount",
+          "down_payment_amount",
+          "down_payment_pct",
           "ltv_pct",
           "monthly_pi",
           "monthly_tax",
@@ -2200,7 +5179,8 @@
           "cash_to_close",
           "config_snapshot"
         ],
-        "title": "QuotePreviewResponse"
+        "title": "QuotePreviewResponse",
+        "description": "`QuoteComputation` now carries `down_payment_pct` itself (the value\n`compute_quote` actually used) -- this subclass no longer needs to add\nit separately; kept only so the two request/response types stay\nvisually paired in this file, matching the module docstring's \"= X\nfields\" convention."
       },
       "QuoteRead": {
         "properties": {
@@ -2298,6 +5278,482 @@
         ],
         "title": "QuoteRead"
       },
+      "ReadinessBlocker": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "tab": {
+            "type": "string",
+            "title": "Tab"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "tab"
+        ],
+        "title": "ReadinessBlocker"
+      },
+      "RecommendResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "recommended_quote_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Quote Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "recommended_quote_id"
+        ],
+        "title": "RecommendResponse"
+      },
+      "ReportDisclosures": {
+        "properties": {
+          "core": {
+            "title": "Core",
+            "type": "string"
+          },
+          "investment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment"
+          },
+          "tax": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax"
+          }
+        },
+        "required": [
+          "core",
+          "investment",
+          "tax"
+        ],
+        "title": "ReportDisclosures",
+        "type": "object"
+      },
+      "ReportHeader": {
+        "properties": {
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "property_label": {
+            "title": "Property Label",
+            "type": "string"
+          },
+          "purchase_price": {
+            "title": "Purchase Price",
+            "type": "string"
+          },
+          "prepared_at": {
+            "title": "Prepared At",
+            "type": "string"
+          },
+          "rates_as_of": {
+            "title": "Rates As Of",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "expired": {
+            "title": "Expired",
+            "type": "boolean"
+          },
+          "superseded": {
+            "title": "Superseded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "first_name",
+          "property_label",
+          "purchase_price",
+          "prepared_at",
+          "rates_as_of",
+          "expires_at",
+          "expired",
+          "superseded"
+        ],
+        "title": "ReportHeader",
+        "type": "object"
+      },
+      "ReportLo": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "nmls": {
+            "title": "Nmls",
+            "type": "string"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "title",
+          "nmls",
+          "phone",
+          "email"
+        ],
+        "title": "ReportLo",
+        "type": "object"
+      },
+      "ReportMatch": {
+        "description": "CQ-023's match cards (data-field-catalog \u00a711). Every money/rate field\nis a decimal string, same convention as every other `ReportViewModel`\nfield (module docstring) -- `packages/ui/src/report/MatchCard.tsx` never\ndoes arithmetic on these. Investment-only fields (`rent_estimate`,\n`rent_label`, `monthly_cashflow`, `cap_rate_pct`, `year1_tax_savings`)\nare `None` for primary matches (spec.md: \"Primary matches omit rent,\ncashflow, cap rate and tax savings\").",
+        "properties": {
+          "matched_property_id": {
+            "title": "Matched Property Id",
+            "type": "string"
+          },
+          "property_image_url": {
+            "title": "Property Image Url",
+            "type": "string"
+          },
+          "property_address": {
+            "title": "Property Address",
+            "type": "string"
+          },
+          "bed_bath_sqft": {
+            "title": "Bed Bath Sqft",
+            "type": "string"
+          },
+          "deal_grade_badge": {
+            "title": "Deal Grade Badge",
+            "type": "string"
+          },
+          "property_tagline": {
+            "title": "Property Tagline",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "string"
+          },
+          "total_monthly_payment": {
+            "title": "Total Monthly Payment",
+            "type": "string"
+          },
+          "rent_estimate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Estimate"
+          },
+          "rent_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Label"
+          },
+          "monthly_cashflow": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cashflow"
+          },
+          "cash_to_close": {
+            "title": "Cash To Close",
+            "type": "string"
+          },
+          "cap_rate_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Rate Pct"
+          },
+          "year1_tax_savings": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year1 Tax Savings"
+          }
+        },
+        "required": [
+          "matched_property_id",
+          "property_image_url",
+          "property_address",
+          "bed_bath_sqft",
+          "deal_grade_badge",
+          "property_tagline",
+          "price",
+          "total_monthly_payment",
+          "rent_estimate",
+          "rent_label",
+          "monthly_cashflow",
+          "cash_to_close",
+          "cap_rate_pct",
+          "year1_tax_savings"
+        ],
+        "title": "ReportMatch",
+        "type": "object"
+      },
+      "ReportOption": {
+        "properties": {
+          "quote_id": {
+            "title": "Quote Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "recommended": {
+            "title": "Recommended",
+            "type": "boolean"
+          },
+          "rate": {
+            "title": "Rate",
+            "type": "string"
+          },
+          "points_pct": {
+            "title": "Points Pct",
+            "type": "string"
+          },
+          "points_amount": {
+            "title": "Points Amount",
+            "type": "string"
+          },
+          "down_payment_pct": {
+            "title": "Down Payment Pct",
+            "type": "string"
+          },
+          "prepay_label": {
+            "title": "Prepay Label",
+            "type": "string"
+          },
+          "hero": {
+            "$ref": "#/components/schemas/HeroNumbers"
+          },
+          "breakdown": {
+            "$ref": "#/components/schemas/Breakdown"
+          },
+          "cashflow": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CashflowTable"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cost_seg": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostSegTable"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "quote_id",
+          "label",
+          "recommended",
+          "rate",
+          "points_pct",
+          "points_amount",
+          "down_payment_pct",
+          "prepay_label",
+          "hero",
+          "breakdown",
+          "cashflow",
+          "cost_seg"
+        ],
+        "title": "ReportOption",
+        "type": "object"
+      },
+      "ReportRecommendation": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "lo_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lo Note"
+          }
+        },
+        "required": [
+          "text",
+          "lo_note"
+        ],
+        "title": "ReportRecommendation",
+        "type": "object"
+      },
+      "ReportStrategy": {
+        "description": "Lowercase mirror of `pricing.engine.types.StrategyType`, per spec.md's\nbinding `strategy`: `primary` | `ltr` | `str` (the engine's own enum is\nuppercase `PRIMARY`/`LTR`/`STR` -- this is a presentation-layer rename,\nnot a new business concept).",
+        "enum": [
+          "primary",
+          "ltr",
+          "str"
+        ],
+        "title": "ReportStrategy",
+        "type": "string"
+      },
+      "ReportViewModel": {
+        "description": "The one contract. See module docstring.",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/ReportHeader"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/ReportStrategy"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ReportOption"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "recommendation": {
+            "$ref": "#/components/schemas/ReportRecommendation"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/ReportMatch"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "disclosures": {
+            "$ref": "#/components/schemas/ReportDisclosures"
+          },
+          "lo": {
+            "$ref": "#/components/schemas/ReportLo"
+          }
+        },
+        "required": [
+          "header",
+          "strategy",
+          "options",
+          "recommendation",
+          "matches",
+          "disclosures",
+          "lo"
+        ],
+        "title": "ReportViewModel",
+        "type": "object"
+      },
+      "RepriceResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "quote_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Quote Ids"
+          },
+          "priced_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Priced At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "quote_ids",
+          "priced_at"
+        ],
+        "title": "RepriceResponse"
+      },
       "ScenarioCreateRequest": {
         "properties": {
           "purchase_price": {
@@ -2358,6 +5814,122 @@
         ],
         "title": "ScenarioCreateRequest",
         "description": "The LO-owned pricing inputs (system-design's \"only inputs the LO\nowns\" table) minus note rate, which is chosen per-quote, not at\nscenario-creation time. FICO, tax, insurance, HOA and rent/STR are\nenrichment-owned and read from `field_values` server-side."
+      },
+      "ScenarioGroupRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "dscr_bucket": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DSCRBucket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inputs": {
+            "$ref": "#/components/schemas/ScenarioInputsRead"
+          },
+          "engine_inputs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Engine Inputs"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteCardRead"
+            },
+            "type": "array",
+            "title": "Quotes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "note",
+          "dscr_bucket",
+          "inputs",
+          "engine_inputs",
+          "quotes",
+          "created_at"
+        ],
+        "title": "ScenarioGroupRead"
+      },
+      "ScenarioInputsRead": {
+        "properties": {
+          "purchase_price": {
+            "type": "string",
+            "title": "Purchase Price"
+          },
+          "down_payment_pct": {
+            "type": "string",
+            "title": "Down Payment Pct"
+          },
+          "prepayment_penalty_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepayment Penalty Years"
+          },
+          "lock_days": {
+            "type": "integer",
+            "title": "Lock Days"
+          },
+          "fico": {
+            "type": "integer",
+            "title": "Fico"
+          },
+          "strategy": {
+            "type": "string",
+            "enum": [
+              "PRIMARY",
+              "LTR",
+              "STR"
+            ],
+            "title": "Strategy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_price",
+          "down_payment_pct",
+          "prepayment_penalty_years",
+          "lock_days",
+          "fico",
+          "strategy"
+        ],
+        "title": "ScenarioInputsRead"
       },
       "ScenarioRead": {
         "properties": {
@@ -2451,6 +6023,305 @@
         ],
         "title": "ScenarioRead"
       },
+      "ScenarioUpdateRequest": {
+        "properties": {
+          "purchase_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Purchase Price"
+          },
+          "down_payment_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Down Payment Pct"
+          },
+          "prepayment_penalty_years": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepayment Penalty Years"
+          },
+          "lock_days": {
+            "type": "integer",
+            "maximum": 90.0,
+            "minimum": 15.0,
+            "title": "Lock Days",
+            "default": 30
+          },
+          "dscr_bucket": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DSCRBucket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_price",
+          "down_payment_pct"
+        ],
+        "title": "ScenarioUpdateRequest",
+        "description": "`PUT /scenarios/{id}` -- the LO-owned inputs the overlay edits.\nEnrichment-owned inputs (FICO, tax, insurance, HOA, rent) are always\nre-read from `field_values` server-side."
+      },
+      "SendStarted": {
+        "properties": {
+          "package_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Package Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "queued",
+              "rendering",
+              "emailing",
+              "done",
+              "failed"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package_id",
+          "workflow_id",
+          "status"
+        ],
+        "title": "SendStarted",
+        "description": "`POST /packages/{id}/send` 202. A double click while a send is in\nflight returns the running send's `workflow_id` (nothing new starts)."
+      },
+      "SendStatus": {
+        "properties": {
+          "package_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Package Id"
+          },
+          "workflow_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "queued",
+              "rendering",
+              "emailing",
+              "done",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "recipient_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Email"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package_id",
+          "workflow_id",
+          "status",
+          "error",
+          "version",
+          "recipient_email",
+          "sent_at"
+        ],
+        "title": "SendStatus",
+        "description": "`GET /packages/{id}/send-status`, poll until `done` or `failed`."
+      },
+      "SentVersion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "superseded": {
+            "type": "boolean",
+            "title": "Superseded"
+          },
+          "viewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewed At"
+          },
+          "report_url": {
+            "type": "string",
+            "title": "Report Url"
+          },
+          "letter_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Letter Url"
+          },
+          "outbox_email_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outbox Email Id"
+          },
+          "email_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "sent",
+                  "failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Status"
+          },
+          "recipient_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "sent_at",
+          "expires_at",
+          "superseded",
+          "viewed_at",
+          "report_url",
+          "letter_url",
+          "outbox_email_id",
+          "email_status",
+          "recipient_email"
+        ],
+        "title": "SentVersion",
+        "description": "One row of the Send tab's \"Sent versions\" list (newest first)."
+      },
       "StaffLoginRequest": {
         "properties": {
           "email": {
@@ -2535,6 +6406,44 @@
         ],
         "title": "StaffUserOut"
       },
+      "StatusPatchRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "withdrawn",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusPatchRequest",
+        "description": "spec.md: \"accepts only Withdrawn or Closed ... any other value\nreturns 422\" -- the `Literal` does that natively via Pydantic/FastAPI\nrequest validation, no extra code needed (plan.md decision #8)."
+      },
+      "Strategy": {
+        "type": "string",
+        "enum": [
+          "ltr",
+          "str"
+        ],
+        "title": "Strategy",
+        "description": "Null on `applications.strategy` when `occupancy = primary`."
+      },
       "StrategyType": {
         "type": "string",
         "enum": [
@@ -2544,6 +6453,33 @@
         ],
         "title": "StrategyType",
         "description": "The engine's single occupancy/strategy field.\n\nMapping from `applications.occupancy` + `applications.strategy` (CQ-007)\nonto this enum is CQ-013's job, not this item's."
+      },
+      "TabStateResponse": {
+        "properties": {
+          "tab": {
+            "$ref": "#/components/schemas/ApplicationTab"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "flagged",
+              "pending"
+            ],
+            "title": "State"
+          },
+          "flag_count": {
+            "type": "integer",
+            "title": "Flag Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tab",
+          "state",
+          "flag_count"
+        ],
+        "title": "TabStateResponse"
       },
       "UserRole": {
         "type": "string",

@@ -10,7 +10,7 @@ import { isPublicPath } from "@cq/ui";
 // `GET /api/v1/auth/staff/me` and redirects back to /login on a 401.
 const SESSION_COOKIE = "cq_staff_session";
 
-const PUBLIC_PATHS = new Set(["/login", "/gallery"]);
+const PUBLIC_PATHS = new Set(["/login", "/gallery", "/gallery/report"]);
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

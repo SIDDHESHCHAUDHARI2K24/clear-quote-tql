@@ -39,6 +39,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/applications/{application_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Application Summary */
+        get: operations["get_application_summary_api_v1_applications__application_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Status */
+        patch: operations["patch_status_api_v1_applications__application_id__status_patch"];
+        trace?: never;
+    };
     "/api/v1/applications/{application_id}/field-values/{field_key}": {
         parameters: {
             query?: never;
@@ -85,7 +119,12 @@ export interface paths {
         /**
          * Preview Quote
          * @description Engine-only, no adapter latency, no persistence -- must respond
-         *     under 300ms (spec.md AC1).
+         *     under 300ms (spec.md AC1). CQ-017: requires a signed-in staff user
+         *     (was previously reachable with no auth at all -- this route computes
+         *     real numbers for real applications, unlike `/scenarios/{id}/products`
+         *     which already required `CurrentStaff` via `ensure_scenario_in_scope`);
+         *     not scoped to any one application since it's a pure engine call with
+         *     no persistence.
          */
         post: operations["preview_quote_api_v1_quotes_preview_post"];
         delete?: never;
@@ -101,7 +140,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get Application Scenarios */
+        get: operations["get_application_scenarios_api_v1_applications__application_id__scenarios_get"];
         put?: never;
         /** Post Scenario */
         post: operations["post_scenario_api_v1_applications__application_id__scenarios_post"];
@@ -156,6 +196,245 @@ export interface paths {
         put?: never;
         /** Post Manual Quote */
         post: operations["post_manual_quote_api_v1_scenarios__scenario_id__quotes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/pricing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pricing */
+        get: operations["get_pricing_api_v1_applications__application_id__pricing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scenarios/{scenario_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Scenario */
+        put: operations["put_scenario_api_v1_scenarios__scenario_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quotes/{quote_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Quote Route */
+        delete: operations["delete_quote_route_api_v1_quotes__quote_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quotes/{quote_id}/recommend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Recommend */
+        post: operations["post_recommend_api_v1_quotes__quote_id__recommend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/reprice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Reprice */
+        post: operations["post_reprice_api_v1_applications__application_id__reprice_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Package */
+        get: operations["get_package_api_v1_applications__application_id__package_get"];
+        /** Put Package */
+        put: operations["put_package_api_v1_applications__application_id__package_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Readiness */
+        get: operations["get_readiness_api_v1_packages__package_id__readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Report */
+        get: operations["get_report_api_v1_packages__package_id__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/letter.html": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Letter Html */
+        get: operations["get_letter_html_api_v1_packages__package_id__letter_html_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Send */
+        post: operations["post_send_api_v1_packages__package_id__send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/send-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Send Status */
+        get: operations["get_send_status_api_v1_packages__package_id__send_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Versions */
+        get: operations["get_versions_api_v1_packages__package_id__versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/letter.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Letter Pdf */
+        get: operations["get_letter_pdf_api_v1_packages__package_id__letter_pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Matches */
+        get: operations["get_matches_api_v1_applications__application_id__matches_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -315,6 +594,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/reports/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Report */
+        get: operations["get_report_api_v1_portal_reports__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/reports/{token}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Report Action */
+        post: operations["submit_report_action_api_v1_portal_reports__token__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -336,11 +649,79 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ApplicationScenariosRead */
+        ApplicationScenariosRead: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Strategy */
+            strategy: ("PRIMARY" | "LTR" | "STR") | null;
+            /** Recommended Quote Id */
+            recommended_quote_id: string | null;
+            /** Groups */
+            groups: components["schemas"]["ScenarioGroupRead"][];
+        };
+        /**
+         * ApplicationStatus
+         * @description Mirrors the application status machine in `system-design.md`,
+         *     including the terminal `withdrawn`/`closed` states set by the LO.
+         * @enum {string}
+         */
+        ApplicationStatus: "intake" | "verifying" | "needs_attention" | "ready_to_price" | "priced" | "sent" | "viewed" | "option_selected" | "inquiry" | "stale" | "withdrawn" | "closed";
+        /**
+         * ApplicationSummaryResponse
+         * @description `GET /applications/{id}/summary` (spec.md). Also the response shape
+         *     for `PATCH /applications/{id}/status` (plan.md decision #9) so the LO
+         *     console header/status pill refresh from one response.
+         */
+        ApplicationSummaryResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Client Name */
+            client_name: string;
+            status: components["schemas"]["ApplicationStatus"];
+            /** Last Pipeline Stage */
+            last_pipeline_stage: string | null;
+            occupancy: components["schemas"]["Occupancy"] | null;
+            strategy: components["schemas"]["Strategy"] | null;
+            /** Program */
+            program: string | null;
+            location: components["schemas"]["LocationResponse"] | null;
+            /** Purchasing Power */
+            purchasing_power: string | null;
+            /** Down Payment Pct */
+            down_payment_pct: string | null;
+            /** Down Payment Amount */
+            down_payment_amount: string | null;
+            /** Ppp Years */
+            ppp_years: number | null;
+            /** Note Rate */
+            note_rate: string | null;
+            /** Tabs */
+            tabs: components["schemas"]["TabStateResponse"][];
+            default_tab: components["schemas"]["ApplicationTab"];
+        };
+        /**
+         * ApplicationTab
+         * @description Matches the 7 workspace tabs.
+         * @enum {string}
+         */
+        ApplicationTab: "borrowers" | "housing" | "credit" | "assets" | "property" | "pricing" | "send";
         /** AutoQuoteResponse */
         AutoQuoteResponse: {
             par: components["schemas"]["QuoteRead"];
             buydown: components["schemas"]["QuoteRead"] | null;
         };
+        /**
+         * BorrowerActionType
+         * @enum {string}
+         */
+        BorrowerActionType: "move_forward" | "ask_other" | "ask_updated";
         /** BorrowerLoginRequest */
         BorrowerLoginRequest: {
             /** Email */
@@ -376,6 +757,47 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** Breakdown */
+        Breakdown: {
+            /** Payment Lines */
+            payment_lines: components["schemas"]["BreakdownLine"][];
+            /** Payment Total */
+            payment_total: string;
+            /** Cash To Close Lines */
+            cash_to_close_lines: components["schemas"]["BreakdownLine"][];
+            /** Cash To Close Total */
+            cash_to_close_total: string;
+        };
+        /** BreakdownLine */
+        BreakdownLine: {
+            /** Label */
+            label: string;
+            /** Amount */
+            amount: string;
+        };
+        /** CashflowTable */
+        CashflowTable: {
+            /** Rent Label */
+            rent_label: string;
+            /** Gross Amount */
+            gross_amount: string;
+            /** Expense Ratio */
+            expense_ratio: string | null;
+            /** Qualifying Rent */
+            qualifying_rent: string;
+            /** Pitia */
+            pitia: string;
+            /** Monthly Cashflow */
+            monthly_cashflow: string;
+            /** Annual Cashflow */
+            annual_cashflow: string;
+            /** Dscr */
+            dscr: string;
+            /** Cap Rate Pct */
+            cap_rate_pct: string;
+            /** Monthly Cashflow Incl Tax */
+            monthly_cashflow_incl_tax: string;
         };
         /** ChallengeResponse */
         ChallengeResponse: {
@@ -571,6 +993,29 @@ export interface components {
                 ][]
             ][];
         };
+        /** CostSegTable */
+        CostSegTable: {
+            /** Purchase Price */
+            purchase_price: string;
+            /** Land Allocation Pct */
+            land_allocation_pct: string;
+            /** Land Value Allocation */
+            land_value_allocation: string;
+            /** Depreciable Building Basis */
+            depreciable_building_basis: string;
+            /** Accelerated Property Pct */
+            accelerated_property_pct: string;
+            /** Accelerated Basis Amount */
+            accelerated_basis_amount: string;
+            /** Bonus Depreciation Pct */
+            bonus_depreciation_pct: string;
+            /** Year One Tax Deduction */
+            year_one_tax_deduction: string;
+            /** Investor Marginal Tax Rate */
+            investor_marginal_tax_rate: string;
+            /** Year One Tax Savings */
+            year_one_tax_savings: string;
+        };
         /**
          * DSCRBucket
          * @description DSCR classification bucket. Boundaries are inclusive on the lower edge.
@@ -635,6 +1080,21 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** HeroNumbers */
+        HeroNumbers: {
+            /** Monthly Payment */
+            monthly_payment: string;
+            /** Cash To Close */
+            cash_to_close: string;
+            /** Loan Amount */
+            loan_amount: string | null;
+            /** Monthly Cashflow */
+            monthly_cashflow: string | null;
+            /** Year1 Tax Savings */
+            year1_tax_savings: string | null;
+            /** Year1 Tax Savings Monthly */
+            year1_tax_savings_monthly: string | null;
+        };
         /** LatestApplicationOut */
         LatestApplicationOut: {
             /**
@@ -645,18 +1105,117 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** LocationResponse */
+        LocationResponse: {
+            /** City */
+            city: string | null;
+            /** State */
+            state: string | null;
+            /** Zip */
+            zip: string | null;
+        };
         /** ManualQuoteCreateRequest */
         ManualQuoteCreateRequest: {
             product: components["schemas"]["PricedProductRow-Input"];
             /** Label */
             label: string;
         };
+        /** MatchListResponse */
+        MatchListResponse: {
+            /** Matches */
+            matches: components["schemas"]["MatchOut"][];
+        };
+        /** MatchOut */
+        MatchOut: {
+            /** Matched Property Id */
+            matched_property_id: string;
+            /** Property Image Url */
+            property_image_url: string;
+            /** Property Address */
+            property_address: string;
+            /** Bed Bath Sqft */
+            bed_bath_sqft: string;
+            /** Deal Grade Badge */
+            deal_grade_badge: string;
+            /** Property Tagline */
+            property_tagline: string;
+            /** Price */
+            price: string;
+            /** Total Monthly Payment */
+            total_monthly_payment: string;
+            /** Rent Estimate */
+            rent_estimate: string | null;
+            /** Rent Label */
+            rent_label: string | null;
+            /** Monthly Cashflow */
+            monthly_cashflow: string | null;
+            /** Cash To Close */
+            cash_to_close: string;
+            /** Cap Rate Pct */
+            cap_rate_pct: string | null;
+            /** Year1 Tax Savings */
+            year1_tax_savings: string | null;
+        };
+        /**
+         * Occupancy
+         * @description Per override O2: Primary, LTR or STR only — no `second_home`.
+         * @enum {string}
+         */
+        Occupancy: "primary" | "investment";
         /** OtpVerifyRequest */
         OtpVerifyRequest: {
             /** Challenge Id */
             challenge_id: string;
             /** Code */
             code: string;
+        };
+        /** PackageRead */
+        PackageRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Quote Ids */
+            quote_ids: string[];
+            /** Recommended Quote Id */
+            recommended_quote_id: string | null;
+            /** Recommendation Text */
+            recommendation_text: string | null;
+            /** Lo Note */
+            lo_note: string | null;
+            /** Recipient Email */
+            recipient_email: string | null;
+            /** Attachments */
+            attachments: string[];
+            /** Sent At */
+            sent_at: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** PackageReadiness */
+        PackageReadiness: {
+            /** Ready */
+            ready: boolean;
+            /** Blockers */
+            blockers: components["schemas"]["ReadinessBlocker"][];
+        };
+        /** PackageUpdate */
+        PackageUpdate: {
+            /** Quote Ids */
+            quote_ids: string[];
+            /** Recommended Quote Id */
+            recommended_quote_id?: string | null;
+            /** Lo Note */
+            lo_note?: string | null;
         };
         /** PipelineResumeResponse */
         PipelineResumeResponse: {
@@ -674,6 +1233,52 @@ export interface components {
             workflow_id: string;
             /** Started */
             started: boolean;
+        };
+        /** PortalReportActionRequest */
+        PortalReportActionRequest: {
+            type: components["schemas"]["BorrowerActionType"];
+            /** Quote Id */
+            quote_id?: string | null;
+            /** Message */
+            message?: string | null;
+        };
+        /** PortalReportActionResponse */
+        PortalReportActionResponse: {
+            status: components["schemas"]["ApplicationStatus"];
+            /** Borrower Action */
+            borrower_action: {
+                [key: string]: string | null;
+            } | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+        };
+        /**
+         * PortalReportResponse
+         * @description `ReportViewModel` plus the two fields only a live request can answer:
+         *     `borrower_action` (from `QuotePackageVersion.borrower_action`, `None`
+         *     until CQ-024) and `newest_report_token` (set only when this version is
+         *     superseded, per spec.md's "SupersededBanner ... a link to the newest
+         *     version").
+         */
+        PortalReportResponse: {
+            header: components["schemas"]["ReportHeader"];
+            strategy: components["schemas"]["ReportStrategy"];
+            /** Options */
+            options: components["schemas"]["ReportOption"][];
+            recommendation: components["schemas"]["ReportRecommendation"];
+            /** Matches */
+            matches: components["schemas"]["ReportMatch"][];
+            disclosures: components["schemas"]["ReportDisclosures"];
+            lo: components["schemas"]["ReportLo"];
+            /** Borrower Action */
+            borrower_action?: {
+                [key: string]: unknown;
+            } | null;
+            /** Newest Report Token */
+            newest_report_token?: string | null;
         };
         /** PricedProductRow */
         "PricedProductRow-Input": {
@@ -695,6 +1300,10 @@ export interface components {
             is_par_rate: boolean;
             /** Is Buydown Rate */
             is_buydown_rate: boolean;
+            /** Monthly Pi */
+            monthly_pi?: number | string | null;
+            /** Points Pct */
+            points_pct?: number | string | null;
         };
         /** PricedProductRow */
         "PricedProductRow-Output": {
@@ -716,13 +1325,223 @@ export interface components {
             is_par_rate: boolean;
             /** Is Buydown Rate */
             is_buydown_rate: boolean;
+            /** Monthly Pi */
+            monthly_pi?: string | null;
+            /** Points Pct */
+            points_pct?: string | null;
         };
-        /** QuotePreviewRequest */
+        /**
+         * PricingFieldView
+         * @description One of the 5 pricing-overridable `field_values` rows (spec.md:
+         *     taxes, insurance, HOA, LTR rent / STR revenue), with enough to render a
+         *     `SourceBadge` and an inline override/revert control.
+         */
+        PricingFieldView: {
+            /** Field Key */
+            field_key: string;
+            /** Value */
+            value: string | null;
+            source: components["schemas"]["FieldSource"];
+            /** Source Ref */
+            source_ref: string | null;
+            /** Overridden */
+            overridden: boolean;
+            /** Original Value */
+            original_value: string | null;
+        };
+        /**
+         * PricingInputsView
+         * @description The raw, non-badge-carrying pieces `/quotes/preview` also needs but
+         *     that don't appear in `PricingFieldView` (FICO has no source badge in
+         *     spec.md's field list; `insurance_annual_rate` is a rate the engine
+         *     consumes, derived server-side from `homeowners_ins_annual` -- the panel
+         *     only ever shows the dollar `homeowners_ins_annual` badge/value, never
+         *     this fraction, but every future preview call still needs to send it, so
+         *     it's handed over ready-computed rather than making the frontend divide
+         *     two money fields itself).
+         */
+        PricingInputsView: {
+            /** Purchase Price */
+            purchase_price: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
+            strategy: components["schemas"]["StrategyType"];
+            /** Prepayment Penalty Years */
+            prepayment_penalty_years: number | null;
+            /** Fico */
+            fico: number | null;
+            /** Insurance Annual Rate */
+            insurance_annual_rate: string | null;
+        };
+        /** PricingViewResponse */
+        PricingViewResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            inputs: components["schemas"]["PricingInputsView"];
+            /** Fields */
+            fields: components["schemas"]["PricingFieldView"][];
+            /** Note Rate */
+            note_rate: string | null;
+            breakdown: components["schemas"]["QuoteComputation"] | null;
+            /** Has Stale Quotes */
+            has_stale_quotes: boolean;
+        };
+        /** QuoteCardRead */
+        QuoteCardRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Scenario Id
+             * Format: uuid
+             */
+            scenario_id: string;
+            /** Label */
+            label: string;
+            /** Investor */
+            investor: string;
+            /** Product */
+            product: string;
+            /** Rate Pct */
+            rate_pct: string;
+            /** Points Pct */
+            points_pct: string;
+            /** Points Amount */
+            points_amount: string;
+            /** Note Rate */
+            note_rate: string;
+            /** Discount Points Pct */
+            discount_points_pct: string;
+            /** Lock Days */
+            lock_days: number;
+            /** Monthly Payment */
+            monthly_payment: string;
+            /** Cash To Close */
+            cash_to_close: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
+            /** Prepay Label */
+            prepay_label: string | null;
+            /** Dscr Ratio */
+            dscr_ratio: string | null;
+            /** Monthly Cashflow */
+            monthly_cashflow: string | null;
+            /**
+             * Priced At
+             * Format: date-time
+             */
+            priced_at: string;
+            /** Stale */
+            stale: boolean;
+            /** Recommended */
+            recommended: boolean;
+            /** Computed */
+            computed: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * QuoteComputation
+         * @description Every money number Clear Quote shows, computed once by `compute_quote`.
+         *
+         *     All currency fields are `Decimal` rounded to cents; `dscr_ratio` is
+         *     rounded to 2dp; `cap_rate_pct` is rounded to 2dp of percent (e.g. `6.42`
+         *     means 6.42%). Investment-only fields are `None` on `PRIMARY` scenarios —
+         *     primary loans never carry rent/DSCR/cashflow/cost-seg numbers.
+         */
+        QuoteComputation: {
+            /** Loan Amount */
+            loan_amount: string;
+            /** Down Payment Amount */
+            down_payment_amount: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
+            /** Ltv Pct */
+            ltv_pct: string;
+            /** Monthly Pi */
+            monthly_pi: string;
+            /** Monthly Tax */
+            monthly_tax: string;
+            /** Monthly Insurance */
+            monthly_insurance: string;
+            /** Monthly Mi */
+            monthly_mi: string | null;
+            /** Monthly Hoa */
+            monthly_hoa: string;
+            /** Total Monthly Payment */
+            total_monthly_payment: string;
+            /** Discount Points Amount */
+            discount_points_amount: string;
+            /** Lender Fees */
+            lender_fees: string;
+            /** Title Fees */
+            title_fees: string;
+            /** Prepaid Interest */
+            prepaid_interest: string;
+            /** Prepaid Insurance */
+            prepaid_insurance: string;
+            /** Prepaid Taxes */
+            prepaid_taxes: string;
+            /** Total Prepaids */
+            total_prepaids: string;
+            /** Total Closing Costs */
+            total_closing_costs: string;
+            /** Cash To Close */
+            cash_to_close: string;
+            config_snapshot: components["schemas"]["ConfigSnapshot"];
+            /** Qualifying Rent */
+            qualifying_rent?: string | null;
+            /** Underwritten Str Rent */
+            underwritten_str_rent?: string | null;
+            /** Str Gross Monthly Revenue */
+            str_gross_monthly_revenue?: string | null;
+            /** Dscr Ratio */
+            dscr_ratio?: string | null;
+            dscr_bucket?: components["schemas"]["DSCRBucket"] | null;
+            /** Monthly Cashflow */
+            monthly_cashflow?: string | null;
+            /** Annual Cashflow */
+            annual_cashflow?: string | null;
+            /** Break Even Rent Ltr */
+            break_even_rent_ltr?: string | null;
+            /** Str Annual Rent Target */
+            str_annual_rent_target?: string | null;
+            /** Cap Rate Pct */
+            cap_rate_pct?: string | null;
+            /** Land Value Allocation */
+            land_value_allocation?: string | null;
+            /** Depreciable Building Basis */
+            depreciable_building_basis?: string | null;
+            /** Accelerated Basis Amount */
+            accelerated_basis_amount?: string | null;
+            /** Year One Tax Deduction */
+            year_one_tax_deduction?: string | null;
+            /** Year One Tax Savings */
+            year_one_tax_savings?: string | null;
+            /** Monthly Cashflow Incl Tax */
+            monthly_cashflow_incl_tax?: string | null;
+        };
+        /**
+         * QuotePreviewRequest
+         * @description CQ-017: the pricing panel's linked down-payment %/$ input needs to
+         *     send *either* side and have the engine resolve the other, server-side
+         *     (AGENTS.md: money math lives only in `quote_engine`). `down_payment_pct`
+         *     is redeclared optional here (`ScenarioInputs` requires it); a `before`
+         *     validator resolves `down_payment_amount` -> `down_payment_pct` before
+         *     `ScenarioInputs`'s own field/strategy validation ever runs, so every
+         *     downstream consumer of this model still sees a plain, always-populated
+         *     `down_payment_pct` exactly like before.
+         */
         QuotePreviewRequest: {
             /** Purchase Price */
             purchase_price: number | string;
             /** Down Payment Pct */
-            down_payment_pct: number | string;
+            down_payment_pct?: number | string | null;
             /** Note Rate */
             note_rate: number | string;
             strategy: components["schemas"]["StrategyType"];
@@ -762,11 +1581,24 @@ export interface components {
             bonus_depreciation_pct?: number | string | null;
             /** Investor Marginal Tax Rate */
             investor_marginal_tax_rate?: number | string | null;
+            /** Down Payment Amount */
+            down_payment_amount?: number | string | null;
         };
-        /** QuotePreviewResponse */
+        /**
+         * QuotePreviewResponse
+         * @description `QuoteComputation` now carries `down_payment_pct` itself (the value
+         *     `compute_quote` actually used) -- this subclass no longer needs to add
+         *     it separately; kept only so the two request/response types stay
+         *     visually paired in this file, matching the module docstring's "= X
+         *     fields" convention.
+         */
         QuotePreviewResponse: {
             /** Loan Amount */
             loan_amount: string;
+            /** Down Payment Amount */
+            down_payment_amount: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
             /** Ltv Pct */
             ltv_pct: string;
             /** Monthly Pi */
@@ -804,6 +1636,8 @@ export interface components {
             qualifying_rent?: string | null;
             /** Underwritten Str Rent */
             underwritten_str_rent?: string | null;
+            /** Str Gross Monthly Revenue */
+            str_gross_monthly_revenue?: string | null;
             /** Dscr Ratio */
             dscr_ratio?: string | null;
             dscr_bucket?: components["schemas"]["DSCRBucket"] | null;
@@ -874,6 +1708,175 @@ export interface components {
              */
             updated_at: string;
         };
+        /** ReadinessBlocker */
+        ReadinessBlocker: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Tab */
+            tab: string;
+        };
+        /** RecommendResponse */
+        RecommendResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Recommended Quote Id */
+            recommended_quote_id: string | null;
+        };
+        /** ReportDisclosures */
+        ReportDisclosures: {
+            /** Core */
+            core: string;
+            /** Investment */
+            investment: string | null;
+            /** Tax */
+            tax: string | null;
+        };
+        /** ReportHeader */
+        ReportHeader: {
+            /** First Name */
+            first_name: string;
+            /** Property Label */
+            property_label: string;
+            /** Purchase Price */
+            purchase_price: string;
+            /** Prepared At */
+            prepared_at: string;
+            /** Rates As Of */
+            rates_as_of: string;
+            /** Expires At */
+            expires_at: string | null;
+            /** Expired */
+            expired: boolean;
+            /** Superseded */
+            superseded: boolean;
+        };
+        /** ReportLo */
+        ReportLo: {
+            /** Name */
+            name: string;
+            /** Title */
+            title: string;
+            /** Nmls */
+            nmls: string;
+            /** Phone */
+            phone: string;
+            /** Email */
+            email: string;
+        };
+        /**
+         * ReportMatch
+         * @description CQ-023's match cards (data-field-catalog §11). Every money/rate field
+         *     is a decimal string, same convention as every other `ReportViewModel`
+         *     field (module docstring) -- `packages/ui/src/report/MatchCard.tsx` never
+         *     does arithmetic on these. Investment-only fields (`rent_estimate`,
+         *     `rent_label`, `monthly_cashflow`, `cap_rate_pct`, `year1_tax_savings`)
+         *     are `None` for primary matches (spec.md: "Primary matches omit rent,
+         *     cashflow, cap rate and tax savings").
+         */
+        ReportMatch: {
+            /** Matched Property Id */
+            matched_property_id: string;
+            /** Property Image Url */
+            property_image_url: string;
+            /** Property Address */
+            property_address: string;
+            /** Bed Bath Sqft */
+            bed_bath_sqft: string;
+            /** Deal Grade Badge */
+            deal_grade_badge: string;
+            /** Property Tagline */
+            property_tagline: string;
+            /** Price */
+            price: string;
+            /** Total Monthly Payment */
+            total_monthly_payment: string;
+            /** Rent Estimate */
+            rent_estimate: string | null;
+            /** Rent Label */
+            rent_label: string | null;
+            /** Monthly Cashflow */
+            monthly_cashflow: string | null;
+            /** Cash To Close */
+            cash_to_close: string;
+            /** Cap Rate Pct */
+            cap_rate_pct: string | null;
+            /** Year1 Tax Savings */
+            year1_tax_savings: string | null;
+        };
+        /** ReportOption */
+        ReportOption: {
+            /** Quote Id */
+            quote_id: string;
+            /** Label */
+            label: string;
+            /** Recommended */
+            recommended: boolean;
+            /** Rate */
+            rate: string;
+            /** Points Pct */
+            points_pct: string;
+            /** Points Amount */
+            points_amount: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
+            /** Prepay Label */
+            prepay_label: string;
+            hero: components["schemas"]["HeroNumbers"];
+            breakdown: components["schemas"]["Breakdown"];
+            cashflow: components["schemas"]["CashflowTable"] | null;
+            cost_seg: components["schemas"]["CostSegTable"] | null;
+        };
+        /** ReportRecommendation */
+        ReportRecommendation: {
+            /** Text */
+            text: string;
+            /** Lo Note */
+            lo_note: string | null;
+        };
+        /**
+         * ReportStrategy
+         * @description Lowercase mirror of `pricing.engine.types.StrategyType`, per spec.md's
+         *     binding `strategy`: `primary` | `ltr` | `str` (the engine's own enum is
+         *     uppercase `PRIMARY`/`LTR`/`STR` -- this is a presentation-layer rename,
+         *     not a new business concept).
+         * @enum {string}
+         */
+        ReportStrategy: "primary" | "ltr" | "str";
+        /**
+         * ReportViewModel
+         * @description The one contract. See module docstring.
+         */
+        ReportViewModel: {
+            header: components["schemas"]["ReportHeader"];
+            strategy: components["schemas"]["ReportStrategy"];
+            /** Options */
+            options: components["schemas"]["ReportOption"][];
+            recommendation: components["schemas"]["ReportRecommendation"];
+            /** Matches */
+            matches: components["schemas"]["ReportMatch"][];
+            disclosures: components["schemas"]["ReportDisclosures"];
+            lo: components["schemas"]["ReportLo"];
+        };
+        /** RepriceResponse */
+        RepriceResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Quote Ids */
+            quote_ids: string[];
+            /**
+             * Priced At
+             * Format: date-time
+             */
+            priced_at: string;
+        };
         /**
          * ScenarioCreateRequest
          * @description The LO-owned pricing inputs (system-design's "only inputs the LO
@@ -891,6 +1894,49 @@ export interface components {
             prepayment_penalty_years?: number | null;
             /** Label */
             label?: string | null;
+        };
+        /** ScenarioGroupRead */
+        ScenarioGroupRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Note */
+            note: string | null;
+            dscr_bucket: components["schemas"]["DSCRBucket"] | null;
+            inputs: components["schemas"]["ScenarioInputsRead"];
+            /** Engine Inputs */
+            engine_inputs: {
+                [key: string]: unknown;
+            };
+            /** Quotes */
+            quotes: components["schemas"]["QuoteCardRead"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ScenarioInputsRead */
+        ScenarioInputsRead: {
+            /** Purchase Price */
+            purchase_price: string;
+            /** Down Payment Pct */
+            down_payment_pct: string;
+            /** Prepayment Penalty Years */
+            prepayment_penalty_years: number | null;
+            /** Lock Days */
+            lock_days: number;
+            /** Fico */
+            fico: number;
+            /**
+             * Strategy
+             * @enum {string}
+             */
+            strategy: "PRIMARY" | "LTR" | "STR";
         };
         /** ScenarioRead */
         ScenarioRead: {
@@ -916,6 +1962,108 @@ export interface components {
             dscr_bucket: string | null;
             /** Quotes */
             quotes: components["schemas"]["QuoteRead"][];
+        };
+        /**
+         * ScenarioUpdateRequest
+         * @description `PUT /scenarios/{id}` -- the LO-owned inputs the overlay edits.
+         *     Enrichment-owned inputs (FICO, tax, insurance, HOA, rent) are always
+         *     re-read from `field_values` server-side.
+         */
+        ScenarioUpdateRequest: {
+            /** Purchase Price */
+            purchase_price: number | string;
+            /** Down Payment Pct */
+            down_payment_pct: number | string;
+            /** Prepayment Penalty Years */
+            prepayment_penalty_years?: number | null;
+            /**
+             * Lock Days
+             * @default 30
+             */
+            lock_days: number;
+            dscr_bucket?: components["schemas"]["DSCRBucket"] | null;
+        };
+        /**
+         * SendStarted
+         * @description `POST /packages/{id}/send` 202. A double click while a send is in
+         *     flight returns the running send's `workflow_id` (nothing new starts).
+         */
+        SendStarted: {
+            /**
+             * Package Id
+             * Format: uuid
+             */
+            package_id: string;
+            /** Workflow Id */
+            workflow_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "idle" | "queued" | "rendering" | "emailing" | "done" | "failed";
+        };
+        /**
+         * SendStatus
+         * @description `GET /packages/{id}/send-status`, poll until `done` or `failed`.
+         */
+        SendStatus: {
+            /**
+             * Package Id
+             * Format: uuid
+             */
+            package_id: string;
+            /** Workflow Id */
+            workflow_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "idle" | "queued" | "rendering" | "emailing" | "done" | "failed";
+            /** Error */
+            error: string | null;
+            /** Version */
+            version: number | null;
+            /** Recipient Email */
+            recipient_email: string | null;
+            /** Sent At */
+            sent_at: string | null;
+        };
+        /**
+         * SentVersion
+         * @description One row of the Send tab's "Sent versions" list (newest first).
+         */
+        SentVersion: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Version */
+            version: number;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Superseded */
+            superseded: boolean;
+            /** Viewed At */
+            viewed_at: string | null;
+            /** Report Url */
+            report_url: string;
+            /** Letter Url */
+            letter_url: string | null;
+            /** Outbox Email Id */
+            outbox_email_id: string | null;
+            /** Email Status */
+            email_status: ("queued" | "sent" | "failed") | null;
+            /** Recipient Email */
+            recipient_email: string | null;
         };
         /** StaffLoginRequest */
         StaffLoginRequest: {
@@ -944,6 +2092,27 @@ export interface components {
             phone: string | null;
         };
         /**
+         * StatusPatchRequest
+         * @description spec.md: "accepts only Withdrawn or Closed ... any other value
+         *     returns 422" -- the `Literal` does that natively via Pydantic/FastAPI
+         *     request validation, no extra code needed (plan.md decision #8).
+         */
+        StatusPatchRequest: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "withdrawn" | "closed";
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * Strategy
+         * @description Null on `applications.strategy` when `occupancy = primary`.
+         * @enum {string}
+         */
+        Strategy: "ltr" | "str";
+        /**
          * StrategyType
          * @description The engine's single occupancy/strategy field.
          *
@@ -952,6 +2121,17 @@ export interface components {
          * @enum {string}
          */
         StrategyType: "PRIMARY" | "LTR" | "STR";
+        /** TabStateResponse */
+        TabStateResponse: {
+            tab: components["schemas"]["ApplicationTab"];
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ok" | "flagged" | "pending";
+            /** Flag Count */
+            flag_count: number;
+        };
         /**
          * UserRole
          * @enum {string}
@@ -1045,6 +2225,76 @@ export interface operations {
             };
         };
     };
+    get_application_summary_api_v1_applications__application_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_status_api_v1_applications__application_id__status_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     patch_field_value_api_v1_applications__application_id__field_values__field_key__patch: {
         parameters: {
             query?: never;
@@ -1122,7 +2372,9 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
         };
         requestBody: {
             content: {
@@ -1137,6 +2389,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuotePreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_application_scenarios_api_v1_applications__application_id__scenarios_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationScenariosRead"];
                 };
             };
             /** @description Validation Error */
@@ -1277,6 +2562,516 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pricing_api_v1_applications__application_id__pricing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricingViewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_scenario_api_v1_scenarios__scenario_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioGroupRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_quote_route_api_v1_quotes__quote_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_recommend_api_v1_quotes__quote_id__recommend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_reprice_api_v1_applications__application_id__reprice_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepriceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_package_api_v1_applications__application_id__package_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_package_api_v1_applications__application_id__package_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_readiness_api_v1_packages__package_id__readiness_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageReadiness"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_api_v1_packages__package_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportViewModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_letter_html_api_v1_packages__package_id__letter_html_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_send_api_v1_packages__package_id__send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendStarted"];
+                };
+            };
+            /** @description PACKAGE_NOT_READY; `details.blockers` lists why */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_send_status_api_v1_packages__package_id__send_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_versions_api_v1_packages__package_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentVersion"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_letter_pdf_api_v1_packages__package_id__letter_pdf_get: {
+        parameters: {
+            query?: {
+                version?: number | null;
+            };
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_matches_api_v1_applications__application_id__matches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1540,6 +3335,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BorrowerMeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_api_v1_portal_reports__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_report_action_api_v1_portal_reports__token__actions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalReportActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalReportActionResponse"];
                 };
             };
             /** @description Validation Error */

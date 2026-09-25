@@ -11,6 +11,7 @@ dependencies = [
     "boto3>=1.43.102",
     "cryptography>=44.0.0",
     "fastapi>=0.141.1",
+    "jinja2>=3.1.6",
     "pillow>=11.0.0",
     "pydantic-settings>=2.15.0",
     "pyyaml>=6.0.2",
@@ -19,6 +20,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.1.0",
     "temporalio>=1.33.0",
     "uvicorn[standard]>=0.53.0",
+    "weasyprint>=70.0",
 ]
 
 [build-system]
@@ -72,6 +74,17 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 # CQ-010: no third-party type stubs published for these.
 module = ["reportlab.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# CQ-024: backend/scripts/freeze_sent_version.py reads seed/personas/*.yaml
+# directly (no third-party type stubs published for pyyaml).
+module = ["yaml.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# CQ-020: WeasyPrint (letter PDF) ships no type stubs/py.typed.
+module = ["weasyprint.*", "weasyprint"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

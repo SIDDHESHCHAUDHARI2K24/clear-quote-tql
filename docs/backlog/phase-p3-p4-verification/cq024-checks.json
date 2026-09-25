@@ -1,0 +1,26 @@
+{
+  "lo_move_forward_emails_since_send": 1,
+  "lo_email_subject": "Marcus Hale would like to move forward with Buydown",
+  "lo_email_names_buydown": true,
+  "application_columns_with_quote": "recommended_quote_id",
+  "application_stored_quote_id": "1ae303ca-7483-44d4-a754-7bf099b46387",
+  "second_move_forward": {
+    "code": 409,
+    "body": {
+      "error": {
+        "code": "CONFLICT",
+        "message": "This option has already been acted on.",
+        "details": {
+          "status": "option_selected",
+          "borrower_action": {
+            "at": "2026-09-25T22:42:48.510211+00:00",
+            "type": "move_forward",
+            "message": null,
+            "quote_id": "9dbd8d53-2ee1-4c8b-95d6-bb69ab566255"
+          }
+        }
+      }
+    }
+  },
+  "lo_move_forward_emails_after_second_attempt": 1
+}

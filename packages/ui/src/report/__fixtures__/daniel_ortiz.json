@@ -1,0 +1,104 @@
+{
+  "header": {
+    "first_name": "Daniel",
+    "property_label": "902 E Washington St, Indianapolis, IN 46201",
+    "purchase_price": "285000.00",
+    "prepared_at": "2026-09-25",
+    "rates_as_of": "2026-09-25",
+    "expires_at": "2026-10-16",
+    "expired": false,
+    "superseded": false
+  },
+  "strategy": "primary",
+  "options": [
+    {
+      "quote_id": "daniel-par",
+      "label": "Par",
+      "recommended": true,
+      "rate": "6.500",
+      "points_pct": "0.000",
+      "points_amount": "0.00",
+      "down_payment_pct": "5.00",
+      "prepay_label": "No prepayment penalty",
+      "hero": {
+        "monthly_payment": "2219.22",
+        "cash_to_close": "21158.79",
+        "loan_amount": "270750.00",
+        "monthly_cashflow": null,
+        "year1_tax_savings": null,
+        "year1_tax_savings_monthly": null
+      },
+      "breakdown": {
+        "payment_lines": [
+          {
+            "label": "Principal & interest",
+            "amount": "1711.32"
+          },
+          {
+            "label": "Property taxes",
+            "amount": "201.88"
+          },
+          {
+            "label": "Homeowners insurance",
+            "amount": "118.75"
+          },
+          {
+            "label": "Mortgage insurance",
+            "amount": "187.27"
+          }
+        ],
+        "payment_total": "2219.22",
+        "cash_to_close_lines": [
+          {
+            "label": "Down payment",
+            "amount": "14250.00"
+          },
+          {
+            "label": "Lender fees",
+            "amount": "1790.00"
+          },
+          {
+            "label": "Discount points",
+            "amount": "0.00"
+          },
+          {
+            "label": "Title & escrow",
+            "amount": "1995.00"
+          },
+          {
+            "label": "Prepaid interest",
+            "amount": "855.66"
+          },
+          {
+            "label": "Prepaid insurance",
+            "amount": "1662.50"
+          },
+          {
+            "label": "Prepaid taxes",
+            "amount": "605.63"
+          }
+        ],
+        "cash_to_close_total": "21158.79"
+      },
+      "cashflow": null,
+      "cost_seg": null
+    }
+  ],
+  "recommendation": {
+    "text": "We recommend the par option to get you to closing fastest.",
+    "lo_note": "Let me know if you'd rather look at a lower down payment."
+  },
+  "matches": [],
+  "disclosures": {
+    "core": "This is not a commitment to lend. Rates, payments and closing costs are estimates based on the information available today and are subject to change once your file is fully underwritten. This is not a Loan Estimate.",
+    "investment": null,
+    "tax": null
+  },
+  "lo": {
+    "name": "Jordan Blake",
+    "title": "Loan Officer",
+    "nmls": "NMLS #1933377",
+    "phone": "(813) 555-0100",
+    "email": "jordan.blake@clearquote-demo.test"
+  }
+}

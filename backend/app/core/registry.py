@@ -16,10 +16,18 @@ from fastapi import FastAPI
 
 FEATURE_ROUTERS: list[str] = [
     "app.features.applications.router",
+    "app.features.applications.summary.router",
     "app.features.pricing.enrichment.router",
     "app.features.pricing.scenarios.router",
+    "app.features.pricing.panel.router",
+    "app.features.quotes.builder.router",
+    "app.features.quotes.send.router",
+    "app.features.quotes.delivery.router",
+    "app.features.matches.router",
     "app.features.auth.staff.router",
     "app.features.auth.borrower.router",
+    "app.features.portal.reports.router",
+    "app.features.portal.actions.router",
 ]
 
 

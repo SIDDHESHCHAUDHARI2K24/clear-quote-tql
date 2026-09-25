@@ -16,6 +16,7 @@ from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.registry import register_routers
 from app.core.valkey import close_valkey
+from app.features.quotes.report.schemas import report_view_model_openapi_components
 from app.features.system.router import router as system_router
 
 
@@ -25,6 +26,26 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     # CQ-014: releases the shared Valkey connection (OTP/session store) on
     # shutdown instead of leaking it across process restarts/reloads.
     await close_valkey()
+
+
+def _register_report_view_model_schema(app: FastAPI) -> None:
+    """CQ-021: `ReportViewModel` (backend/app/features/quotes/report/schemas.py)
+    has no endpoint of its own yet -- its builder is pure and reads no DB;
+    CQ-019/CQ-022 will expose it through real endpoints later. Rather than
+    add a throwaway endpoint just to get the type into the OpenAPI schema
+    (spec.md calls that "not ideal"), merge its `components/schemas` entries
+    into `app.openapi()`'s output directly, so `make api-client` generates
+    the TypeScript type today. See CQ-021 plan.md Decision 1."""
+    original_openapi = app.openapi
+
+    def custom_openapi() -> dict[str, object]:
+        schema = original_openapi()
+        schema.setdefault("components", {}).setdefault("schemas", {}).update(
+            report_view_model_openapi_components()
+        )
+        return schema
+
+    app.openapi = custom_openapi  # type: ignore[method-assign]
 
 
 def create_app() -> FastAPI:
@@ -43,6 +64,7 @@ def create_app() -> FastAPI:
 
     register_routers(app)
     register_exception_handlers(app)
+    _register_report_view_model_schema(app)
 
     # Mounted directly (not through the registry) so `/health` stays
     # unprefixed regardless of what `FEATURE_ROUTERS` contains.

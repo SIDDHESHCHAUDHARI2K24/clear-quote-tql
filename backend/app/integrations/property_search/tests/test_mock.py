@@ -19,6 +19,7 @@ def _listing(**overrides: object) -> ProviderListing:
         city="Tampa",
         state="FL",
         zip="33607",
+        county="Hillsborough",
         metro="Tampa",
         list_price=Decimal("250000.00"),
         beds=4,

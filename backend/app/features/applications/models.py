@@ -77,6 +77,26 @@ class Application(Base):
     # Denormalized from `properties`/`housing_history` for the
     # applications-list filter, per spec.
     subject_state: Mapped[str | None] = mapped_column(String(2), nullable=True, index=True)
+    last_pipeline_stage: Mapped[str | None] = mapped_column(String, nullable=True)
+    """P3/P4 foundation (phase-p3-p4-foundation.md): the pipeline activities
+    write the current Temporal stage name here so the workspace summary can
+    poll it without reaching into Temporal itself."""
+    recommended_quote_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "quotes.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="fk_applications_recommended_quote_id",
+        ),
+        nullable=True,
+        index=True,
+    )
+    """P3/P4 foundation: one recommended quote per application (CQ-018).
+    `use_alter=True` breaks the `applications` -> `quotes` (via `scenarios`
+    -> `applications`) foreign-key cycle so `Base.metadata` can still be
+    topologically sorted; the migration adds this constraint with a
+    separate `ALTER TABLE` after both tables exist."""
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

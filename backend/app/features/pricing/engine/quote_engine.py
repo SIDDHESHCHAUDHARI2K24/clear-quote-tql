@@ -14,7 +14,8 @@ populating `QuoteComputation`.
 
 from __future__ import annotations
 
-from decimal import ROUND_HALF_UP, Decimal
+from collections.abc import Iterable
+from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
 
 from app.features.pricing.engine.mi_matrix import mi_factor
 from app.features.pricing.engine.types import (
@@ -37,6 +38,15 @@ class LtvOutOfRangeError(ValueError):
     """Raised by `compute_quote` when a PRIMARY scenario's LTV exceeds the
     conventional financing maximum (97%). Not raised by `mi_factor` itself,
     which is a pure lookup with no notion of a program maximum."""
+
+
+class NonPositivePriceError(ValueError):
+    """Raised by `down_payment_pct_from_amount`/`insurance_annual_rate_from_amount`
+    when `purchase_price` is not strictly positive -- dividing by a zero or
+    negative price would otherwise produce a divide-by-zero or a
+    nonsensical inverted/negative rate. A plain `ValueError` subclass so a
+    Pydantic `model_validator` that calls these functions (CQ-017
+    `QuotePreviewRequest`) has it turned into a normal 422, not a 500."""
 
 
 def _round_currency(value: Decimal) -> Decimal:
@@ -62,6 +72,68 @@ def loan_amount(purchase_price: Decimal, down_payment_pct: Decimal) -> Decimal:
 def ltv_pct(down_payment_pct: Decimal) -> Decimal:
     """LTV as a 0-1 fraction: `1 - d`."""
     return Decimal("1") - down_payment_pct
+
+
+def down_payment_pct_from_amount(purchase_price: Decimal, down_payment_amount: Decimal) -> Decimal:
+    """`down_payment_amount / purchase_price`, rounded to the same 4dp
+    precision as `ltv_pct`/`QuoteComputation.ltv_pct` (both are 0-1
+    fractions, e.g. `0.2500` for 25%).
+
+    The linked down-payment %/$ input pair (CQ-017 spec.md AC2) must not
+    compute this conversion in TypeScript (AGENTS.md: "money math lives
+    only in quote_engine") -- `/quotes/preview` accepts either
+    `down_payment_pct` or `down_payment_amount` and resolves the missing
+    side with this function server-side before `compute_quote` ever runs.
+
+    Raises `NonPositivePriceError` (a `ValueError` subclass) when
+    `purchase_price` isn't strictly positive, so a caller inside a Pydantic
+    `model_validator` (CQ-017 `QuotePreviewRequest`) surfaces this as a
+    normal 422, not a 500 from a bare `ZeroDivisionError`.
+    """
+    if purchase_price <= 0:
+        raise NonPositivePriceError(
+            f"purchase_price must be positive to derive a down payment percentage, "
+            f"got {purchase_price}"
+        )
+    return _round_ltv(down_payment_amount / purchase_price)
+
+
+def discount_points_percent(loan: Decimal, discount_points_amount: Decimal) -> Decimal:
+    """Points as a display percent, 3dp (e.g. `0.875` for 0.875 points;
+    negative = lender credit), from a quote's own engine output. CQ-018's
+    quote cards need the exact figure: `quotes.points` is stored at 3dp as
+    a fraction (`0.009` for 0.875 points), too coarse to display."""
+    if loan <= 0:
+        raise NonPositivePriceError(f"loan must be positive to derive points, got {loan}")
+    return (discount_points_amount / loan * Decimal("100")).quantize(
+        Decimal("0.001"), rounding=ROUND_HALF_UP
+    )
+
+
+def insurance_annual_rate_from_amount(purchase_price: Decimal, annual_premium: Decimal) -> Decimal:
+    """`annual_premium / purchase_price`, unrounded -- the same
+    0-1-fraction scale `ScenarioInputs.insurance_annual_rate` uses
+    everywhere else (matches `pricing.scenarios.service._gather_base_
+    scenario_inputs`'s own unrounded formula for the same conversion, and
+    CQ-023's `features/matches/` usage of this same function -- signature
+    coordinated with that item so both branches merge without a rename).
+
+    CQ-017: the pricing panel only ever shows/edits the dollar amount
+    (`homeowners_ins_annual`'s `field_values` row); it must not divide that
+    by `purchase_price` itself to get the rate `/quotes/preview` needs
+    (AGENTS.md: money math lives only in `quote_engine`).
+
+    Raises `NonPositivePriceError` (a `ValueError` subclass, so a plain
+    `except ValueError` still catches it) when `purchase_price` isn't
+    strictly positive. Deliberately unrounded, matching every other
+    engine-internal rate value (`compute_quote` rounds once, only at
+    output) -- round at the call site's own display boundary if needed.
+    """
+    if purchase_price <= 0:
+        raise NonPositivePriceError(
+            f"purchase_price must be positive to derive an insurance rate, got {purchase_price}"
+        )
+    return annual_premium / purchase_price
 
 
 def principal_and_interest(loan: Decimal, note_rate: Decimal, term_months: int) -> Decimal:
@@ -156,9 +228,19 @@ def cash_to_close(
 # --- Investment: qualifying rent, DSCR, cashflow, cap rate --------------------
 
 
+def str_gross_monthly_revenue_amount(str_gross_annual_revenue: Decimal) -> Decimal:
+    """`str_gross_annual_revenue / 12` -- the pre-expense-ratio monthly figure.
+
+    Exposed as its own field on `QuoteComputation` (`str_gross_monthly_revenue`)
+    so consumers displaying both the gross and net STR figures (e.g. CQ-021's
+    report builder) never divide `ScenarioInputs.str_gross_annual_revenue`
+    themselves outside the engine."""
+    return str_gross_annual_revenue / Decimal("12")
+
+
 def underwritten_str_rent(str_gross_annual_revenue: Decimal, str_expense_ratio: Decimal) -> Decimal:
     """`gross_monthly_str_revenue x (1 - str_expense_ratio)`, `gross_monthly = annual / 12`."""
-    gross_monthly = str_gross_annual_revenue / Decimal("12")
+    gross_monthly = str_gross_monthly_revenue_amount(str_gross_annual_revenue)
     return gross_monthly * (Decimal("1") - str_expense_ratio)
 
 
@@ -239,7 +321,44 @@ def monthly_cashflow_incl_tax(monthly_cashflow: Decimal, year_one_tax_savings: D
     return monthly_cashflow + year_one_tax_savings / Decimal("12")
 
 
+# --- Property matches (CQ-023) --------------------------------------------------
+# Kept in its own block, at the end of the file, on purpose: CQ-017 (pricing
+# panel) also adds a public quote_engine function in this same PR window and
+# both items were told to expect an easy merge conflict here -- a dedicated
+# section, appended rather than interleaved among the existing ones, keeps
+# each item's diff a clean append instead of touching shared lines.
+
+_MATCH_FLOOR_MULTIPLIER = Decimal("0.70")
+_MATCH_CEILING_MULTIPLIER = Decimal("1.00")
+
+
+def match_floor_price(approved_purchase_price: Decimal) -> Decimal:
+    """data-field-catalog.md §11 `match_floor_price`: `approved_purchase_price
+    x 0.70`, rounded to cents like every other money value this module
+    produces. **Hard floor** -- a listing priced below this is never a
+    match, whatever else about it fits (buy-box, strategy)."""
+    return _round_currency(approved_purchase_price * _MATCH_FLOOR_MULTIPLIER)
+
+
+def match_ceiling_price(approved_purchase_price: Decimal) -> Decimal:
+    """data-field-catalog.md §11 `match_ceiling_price`: `approved_purchase_price
+    x 1.00`. **Hard ceiling** -- never show the borrower a home priced above
+    what they're approved for."""
+    return _round_currency(approved_purchase_price * _MATCH_CEILING_MULTIPLIER)
+
+
 # --- Orchestration -------------------------------------------------------------
+
+
+_ASSET_FLOOR_STEP = Decimal("1000")
+
+
+def verified_assets_floor(verified_amounts: Iterable[Decimal]) -> Decimal:
+    """catalog §3 `total_verified_assets` floored to the $1,000 below it:
+    the pre-approval letter's "Verified Assets $135K+" threshold (CQ-019).
+    Rounds down so the letter never overstates what was verified."""
+    total = sum(verified_amounts, Decimal("0"))
+    return (total / _ASSET_FLOOR_STEP).to_integral_value(rounding=ROUND_FLOOR) * _ASSET_FLOOR_STEP
 
 
 def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComputation:
@@ -282,6 +401,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
     )
 
     rounded_loan_amount = _round_currency(loan)
+    rounded_down_payment = _round_currency(down_payment)
     rounded_ltv_pct = _round_ltv(ltv)
     rounded_pi = _round_currency(pi)
     rounded_tax = _round_currency(tax)
@@ -302,6 +422,8 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
     if inputs.strategy is StrategyType.PRIMARY:
         return QuoteComputation(
             loan_amount=rounded_loan_amount,
+            down_payment_amount=rounded_down_payment,
+            down_payment_pct=inputs.down_payment_pct,
             ltv_pct=rounded_ltv_pct,
             monthly_pi=rounded_pi,
             monthly_tax=rounded_tax,
@@ -321,6 +443,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
             config_snapshot=config,
         )
 
+    rounded_str_gross_monthly_revenue: Decimal | None = None
     if inputs.strategy is StrategyType.LTR:
         assert inputs.market_rent_ltr is not None  # enforced by ScenarioInputs.__post_init__
         qualifying_rent = inputs.market_rent_ltr
@@ -331,6 +454,9 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
             inputs.str_gross_annual_revenue, config.str_expense_ratio
         )
         qualifying_rent = underwritten_str
+        rounded_str_gross_monthly_revenue = _round_currency(
+            str_gross_monthly_revenue_amount(inputs.str_gross_annual_revenue)
+        )
 
     dscr = dscr_ratio(qualifying_rent, payment)
     bucket = bucket_for_dscr(dscr)
@@ -364,6 +490,8 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
 
     return QuoteComputation(
         loan_amount=rounded_loan_amount,
+        down_payment_amount=rounded_down_payment,
+        down_payment_pct=inputs.down_payment_pct,
         ltv_pct=rounded_ltv_pct,
         monthly_pi=rounded_pi,
         monthly_tax=rounded_tax,
@@ -385,6 +513,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
         underwritten_str_rent=(
             _round_currency(underwritten_str) if underwritten_str is not None else None
         ),
+        str_gross_monthly_revenue=rounded_str_gross_monthly_revenue,
         dscr_ratio=_round_2dp(dscr),
         dscr_bucket=bucket,
         monthly_cashflow=_round_currency(cashflow),

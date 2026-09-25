@@ -24,7 +24,6 @@ special-casing needed any more.
 
 from __future__ import annotations
 
-import secrets
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
@@ -33,7 +32,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -54,7 +53,10 @@ from app.features.auth.models import BorrowerAccount, User
 from app.features.auth.users.service import normalize_email
 from app.features.clients.models import Client
 from app.features.notifications.outbox.models import EmailStatus, OutboxEmail
+from app.features.portal.reports.versions import freeze_package_version
+from app.features.quotes.builder.models import Quote
 from app.features.quotes.send.models import BorrowerAction, QuotePackage
+from app.features.quotes.send.service import new_default_package
 from app.integrations.credit.models import CreditPullType, ProviderCreditReport
 from app.integrations.insurance.models import ProviderInsuranceFactor
 from app.integrations.los.models import ProviderLosRecord
@@ -292,6 +294,7 @@ async def seed_providers(db: AsyncSession) -> None:
                 city=row["city"],
                 state=row["state"],
                 zip=row["zip"],
+                county=row["county"],
                 metro=row["metro"],
                 list_price=Decimal(str(row["list_price"])),
                 beds=row["beds"],
@@ -301,6 +304,7 @@ async def seed_providers(db: AsyncSession) -> None:
                 image_url=row["image_url"],
                 deal_grade=DealGrade(row["deal_grade"]),
                 tagline=row.get("tagline"),
+                str_permitted=bool(row.get("str_permitted", False)),
             )
         )
     for row in load_provider_fixture("insurance_factors.yaml"):
@@ -467,13 +471,14 @@ async def seed_persona(
 
             fixture_layer = persona.get("fixture_layer")
             if fixture_layer:
-                quote_ids = pricing_stage_result.quote_set_result.quote_ids
-                if quote_ids:
+                # CQ-019: the package follows the Send tab's default-draft
+                # rule (`default_package_selection`: the recommended quote,
+                # else the first group's Par, plus up to 2 alternatives in
+                # group order) -- CQ-018 review n1.
+                if pricing_stage_result.quote_set_result.quote_ids:
                     await apply_send_fixture(
                         db,
                         application_id=application.id,
-                        quote_ids=list(quote_ids),
-                        recommended_quote_id=quote_ids[0],
                         sent_days_ago=fixture_layer["sent_days_ago"],
                         viewed_days_ago=fixture_layer.get("viewed_days_ago"),
                         borrower_action=(
@@ -536,8 +541,6 @@ async def apply_send_fixture(
     db: AsyncSession,
     *,
     application_id: uuid.UUID,
-    quote_ids: list[uuid.UUID],
-    recommended_quote_id: uuid.UUID,
     sent_days_ago: int,
     viewed_days_ago: int | None,
     borrower_action: BorrowerAction | None,
@@ -555,17 +558,22 @@ async def apply_send_fixture(
     sent_at = now - timedelta(days=sent_days_ago)
     viewed_at = now - timedelta(days=viewed_days_ago) if viewed_days_ago is not None else None
 
-    package = QuotePackage(
-        application_id=application_id,
-        quote_ids=quote_ids,
-        recommended_quote_id=recommended_quote_id,
-        report_token=secrets.token_urlsafe(24),
-        sent_at=sent_at,
-        expires_at=sent_at + timedelta(days=7),
-        viewed_at=viewed_at,
-        borrower_action=borrower_action,
-    )
-    db.add(package)
+    seeded_application = await db.get(Application, application_id)
+    assert seeded_application is not None
+    # CQ-019: the same default-draft rule (and pre-drafted recommendation
+    # text) the Send tab's first GET uses.
+    package = await new_default_package(db, seeded_application)
+    assert package.recommended_quote_id is not None
+    recommended_quote_id = package.recommended_quote_id
+    package.sent_at = sent_at
+    package.expires_at = sent_at + timedelta(days=7)
+    package.viewed_at = viewed_at
+    package.borrower_action = borrower_action
+    # A package sent N days ago was priced then: backdate its quotes'
+    # `priced_at` so the 21-day `is_rate_stale` rule (catalog §12) sees
+    # Grace Kim's 25-day-old quotes as out of date (CQ-019 AC5). Timestamps
+    # only -- no money figure changes.
+    await db.execute(update(Quote).where(Quote.id.in_(package.quote_ids)).values(priced_at=sent_at))
     await db.flush()
 
     application = await db.get(Application, application_id)
@@ -594,6 +602,20 @@ async def apply_send_fixture(
         await _add_activity_event(
             db, application_id, "quote.option_selected", {"quote_id": str(recommended_quote_id)}
         )
+
+    # CQ-022: the demo report page reads `quote_package_versions`, not
+    # `quote_packages` (D2) -- freeze a real version through the same
+    # factory CQ-020's send workflow will use, so `/report/{token}` works
+    # for these personas after `make demo-reset` (spec.md "Seed" scope).
+    version = await freeze_package_version(db, package=package, sent_at=sent_at)
+    if viewed_at is not None:
+        version.viewed_at = viewed_at
+    if borrower_action is not None:
+        version.borrower_action = {
+            "type": borrower_action.value,
+            "quote_id": str(recommended_quote_id),
+        }
+    await db.flush()
 
     await db.commit()
     return package
