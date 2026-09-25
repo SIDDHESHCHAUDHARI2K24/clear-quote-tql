@@ -61,7 +61,19 @@ async def _after_edit(
     outcome = await reverify_and_maybe_resume(db, application_id, temporal)
     section = await build_section(db, application_id, tab)
     # Signal/start last: the resumed pipeline writes to this application.
-    outcome = await outcome.send()
+    sent = await outcome.send()
+    if outcome.requested and not sent.requested:
+        # The "pricing resumed" event is already committed; record that the
+        # Temporal call then failed so the timeline is not misleading.
+        events.add_event(
+            db,
+            application_id,
+            actor=events.SYSTEM_ACTOR,
+            type=events.RESUME_FAILED,
+            payload={"message": "Could not resume pricing: the workflow service is unavailable"},
+        )
+        await db.commit()
+    outcome = sent
     section.resume = ResumeResult(requested=outcome.requested, reason=outcome.reason)
     return section
 

@@ -103,13 +103,13 @@ Tabs 1–5 must show what the pipeline imported and checked, with flags inline, 
 
 ## Progress
 
-- [ ] T1 provenance, masking, events, fields
-- [ ] T2 engine ratios
-- [ ] T3 section read
-- [ ] T4 re-verify and resume, import guard
-- [ ] T5 field edits, SSN reveal, field-values hook
-- [ ] T6 collections
-- [ ] T7 credit actions
-- [ ] T8 property, metros, documents
-- [ ] T9 registry, api-client, E2E
+- [x] T1 provenance, masking, events, fields
+- [x] T2 engine ratios
+- [x] T3 section read
+- [x] T4 re-verify and resume, import guard
+- [x] T5 field edits, SSN reveal, field-values hook
+- [x] T6 collections
+- [x] T7 credit actions
+- [x] T8 property, metros, documents
+- [x] T9 registry, api-client, E2E
 - [ ] T10–T16 (028b)

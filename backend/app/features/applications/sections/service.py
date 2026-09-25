@@ -116,7 +116,8 @@ class _Ctx:
         override = self.overrides.get(field_key)
         shown = mask_ssn(value) if mask else to_json(value)
         if override is not None:
-            original = mask_ssn(override.value) if mask else override.value  # type: ignore[arg-type]
+            stored = provenance.unseal(override.value)
+            original = mask_ssn(stored) if mask else stored
             return SectionField(
                 field_key=field_key,
                 label=label,

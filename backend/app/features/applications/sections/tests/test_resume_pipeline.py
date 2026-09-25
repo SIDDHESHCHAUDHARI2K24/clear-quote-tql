@@ -11,16 +11,18 @@ production registration path.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from decimal import Decimal
 from typing import Any
 
 import pytest
+import pytest_asyncio
 from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client
+from temporalio.testing import WorkflowEnvironment
 
 from app.core.enums import ApplicationStatus, FlagSeverity, Strategy, UserRole
 from app.core.errors import AppError
@@ -31,9 +33,10 @@ from app.features.applications.verification.models import Flag
 from app.features.pricing.enrichment.service import validate_ob_required_fields
 from app.features.pricing.scenarios.models import Scenario
 from app.features.quotes.builder.models import Quote
+from app.workflows import worker as worker_module
 from app.workflows.application_pipeline import ApplicationPipelineWorkflow
 from app.workflows.constants import APPLICATION_PIPELINE_TASK_QUEUE, application_workflow_id
-from app.workflows.tests import conftest as workflow_fixtures  # noqa: E402
+from app.workflows.tests import conftest as workflow_fixtures
 from conftest import StaffSession
 
 # CQ-011's workflow fixtures, re-exported so pytest finds them in this module.
@@ -43,27 +46,31 @@ make_persona_application = workflow_fixtures.make_persona_application
 seed_dscr_curve_all_buckets = workflow_fixtures.seed_dscr_curve_all_buckets
 seed_market_rent = workflow_fixtures.seed_market_rent
 seed_tax_rate = workflow_fixtures.seed_tax_rate
-temporal_client = workflow_fixtures.temporal_client
-temporal_env = workflow_fixtures.temporal_env
-temporal_worker = workflow_fixtures.temporal_worker
 wait_for_status = workflow_fixtures.wait_for_status
 
-pytestmark = pytest.mark.usefixtures("temporal_worker")
 
+@pytest_asyncio.fixture
+async def real_temporal(app: FastAPI, fake_temporal: Any) -> AsyncIterator[Client]:
+    """A per-test time-skipping environment running the *real* worker
+    (`worker.build_worker`), replacing the sections conftest's fake
+    (depends on `fake_temporal` so this override is applied after it).
+    Function-scoped on purpose: a second session-scoped worker would outlive
+    this module and interfere with CQ-011's own workflow tests, which share
+    the monkeypatched activity session factory."""
+    env = await WorkflowEnvironment.start_time_skipping()
+    try:
+        async with worker_module.build_worker(env.client):
 
-@pytest.fixture
-def real_temporal(app: FastAPI, temporal_client: Client, fake_temporal: Any) -> Client:
-    """Replaces the sections conftest's fake with the time-skipping client
-    (depends on `fake_temporal` so this override is applied after it)."""
+            async def _client() -> Client:
+                return env.client
 
-    async def _client() -> Client:
-        return temporal_client
+            async def _provider() -> Any:
+                return _client
 
-    async def _provider() -> Any:
-        return _client
-
-    app.dependency_overrides[get_temporal_provider] = _provider
-    return temporal_client
+            app.dependency_overrides[get_temporal_provider] = _provider
+            yield env.client
+    finally:
+        await env.shutdown()
 
 
 async def _quote_count(db: AsyncSession, application_id: Any) -> int:

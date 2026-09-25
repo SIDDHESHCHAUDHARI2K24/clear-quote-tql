@@ -72,19 +72,19 @@ def _text(required: bool = False) -> Parser:
     return parse
 
 
-def _state(raw: Any) -> str | None:
+def _state(raw: Any) -> str:
     value = _text()(raw)
     if value is None:
-        return None
+        raise ValueError("is required")
     if not re.fullmatch(r"[A-Za-z]{2}", value):
         raise ValueError("must be a 2-letter state code")
     return value.upper()
 
 
-def _zip(raw: Any) -> str | None:
+def _zip(raw: Any) -> str:
     value = _text()(raw)
     if value is None:
-        return None
+        raise ValueError("is required")
     if not re.fullmatch(r"\d{5}", value):
         raise ValueError("must be a 5-digit zip")
     return value
@@ -382,14 +382,68 @@ async def _home_phone_is_auto_copied(
     return await provenance.get_override(db, application_id, key) is None
 
 
+async def _couple_strategy(
+    db: AsyncSession, application: Application, occupancy: Any, user_id: uuid.UUID
+) -> None:
+    """Primary loans carry no strategy: setting occupancy to primary clears it
+    (keeping the original in provenance, with an event); setting it back to
+    investment restores a strategy that was cleared that way."""
+    key = "investment_strategy"
+    column = APPLICATION_FIELDS[key]
+    if occupancy is Occupancy.PRIMARY and application.strategy is not None:
+        old = application.strategy
+        await provenance.record_override(
+            db,
+            application.id,
+            key,
+            original_value=to_json(old),
+            original_source=base_source(application),
+            user_id=user_id,
+        )
+        application.strategy = None
+        events.add_event(
+            db,
+            application.id,
+            actor=events.actor_for(user_id),
+            type=events.FIELD_EDITED,
+            payload={
+                "field_key": key,
+                "label": column.label,
+                "from": to_json(old),
+                "to": None,
+                "message": "Cleared Investment strategy (primary occupancy)",
+            },
+        )
+    elif occupancy is Occupancy.INVESTMENT and application.strategy is None:
+        override = await provenance.get_override(db, application.id, key)
+        if override is not None and override.value is not None:
+            application.strategy = column.parse(override.value)
+            restored = override.value
+            await db.delete(override)
+            events.add_event(
+                db,
+                application.id,
+                actor=events.actor_for(user_id),
+                type=events.FIELD_REVERTED,
+                payload={
+                    "field_key": key,
+                    "label": column.label,
+                    "from": None,
+                    "to": restored,
+                    "message": "Restored Investment strategy (investment occupancy)",
+                },
+            )
+
+
 async def _set_value(
     db: AsyncSession,
     application: Application,
     resolved: ResolvedField,
     new: Any,
+    user_id: uuid.UUID,
 ) -> None:
     """Writes the column, applying the side rules: cell -> auto-copied home
-    phone (AC3), and primary occupancy clears the strategy."""
+    phone (AC3), and occupancy <-> strategy coupling."""
     old = getattr(resolved.target, resolved.column.attr)
     party = resolved.party
     if (
@@ -412,8 +466,8 @@ async def _set_value(
             },
         )
     setattr(resolved.target, resolved.column.attr, new)
-    if resolved.column.attr == "occupancy" and new is Occupancy.PRIMARY:
-        application.strategy = None
+    if resolved.target is application and resolved.column.attr == "occupancy":
+        await _couple_strategy(db, application, new, user_id)
 
 
 async def apply_field_edit(
@@ -430,20 +484,27 @@ async def apply_field_edit(
         new = resolved.column.parse(raw_value)
     except ValueError as exc:
         raise _bad(resolved.column.label, str(exc)) from exc
+    if (
+        field_key == "investment_strategy"
+        and new is not None
+        and application.occupancy is Occupancy.PRIMARY
+    ):
+        raise ValidationAppError("Investment strategy applies to investment loans only.")
     old = getattr(resolved.target, resolved.column.attr)
     if new == old:
         return resolved
 
     if not resolved.manual_row:
+        original = to_json(old)
         await provenance.record_override(
             db,
             application.id,
             field_key,
-            original_value=to_json(old),
+            original_value=provenance.seal(original) if resolved.column.sensitive else original,
             original_source=base_source(application),
             user_id=user_id,
         )
-    await _set_value(db, application, resolved, new)
+    await _set_value(db, application, resolved, new, user_id)
     events.add_event(
         db,
         application.id,
@@ -464,16 +525,17 @@ async def revert_field(
     override = await provenance.get_override(db, application.id, field_key)
     if override is None:
         raise NotFoundError(f"{resolved.column.label} has no LO edit to revert.")
+    stored = provenance.unseal(override.value) if resolved.column.sensitive else override.value
     try:
-        original = resolved.column.parse(override.value)
+        original = resolved.column.parse(stored)
     except ValueError:
         # The original may be a value the parser now rejects (e.g. a null
         # required name from a partial LOS record); restore it verbatim.
-        original = override.value
+        original = stored
     old = getattr(resolved.target, resolved.column.attr)
     await db.delete(override)
     await db.flush()
-    await _set_value(db, application, resolved, original)
+    await _set_value(db, application, resolved, original, user_id)
     events.add_event(
         db,
         application.id,

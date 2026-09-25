@@ -18,6 +18,7 @@ None of these helpers commit.
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 
@@ -25,11 +26,27 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.clock import now
+from app.core.encryption import _fernet
 from app.core.enums import FieldSource
 from app.features.applications.verification.models import FieldValue
 
 ORIG_PREFIX = "orig:"
 ROW_PREFIX = "row:"
+
+
+def seal(value: Any) -> Any:
+    """Encrypts a sensitive original (SSN, DOB) before it is stored in the
+    plain JSONB `field_values.value` (same Fernet key as `EncryptedString`)."""
+    if value is None:
+        return None
+    token = _fernet().encrypt(json.dumps(value).encode("utf-8")).decode("ascii")
+    return {"enc": token}
+
+
+def unseal(value: Any) -> Any:
+    if isinstance(value, dict) and isinstance(value.get("enc"), str):
+        return json.loads(_fernet().decrypt(value["enc"].encode("ascii")).decode("utf-8"))
+    return value
 
 
 def row_marker_key(collection: str, row_id: uuid.UUID) -> str:

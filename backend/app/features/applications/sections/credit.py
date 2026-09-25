@@ -95,6 +95,7 @@ def hard_pull_request_html(*, first_name: str, link: str, expires_on: str) -> st
         "<p>Your loan officer is ready to finalize your pre-approval and needs your "
         "permission for a hard credit check.</p>"
         f'<p><a href="{href}" style="color:#1d4ed8;">Review and authorize the credit check</a></p>'
+        f'<p style="color:#5b6472;font-size:12px;">Or open this link: {href}</p>'
         f'<p style="color:#5b6472;font-size:12px;">This request expires on {expires_on}. '
         "If you did not expect it, you can decline on the same page.</p>"
         "</td></tr></table>"

@@ -29,6 +29,7 @@ HARD_PULL_REQUESTED = "credit.hard_pull_requested"
 PROPERTY_UPDATED = "property.updated"
 DOCUMENT_RECEIVED = "document.received"
 RESUME_REQUESTED = "pipeline.resume_requested"
+RESUME_FAILED = "pipeline.resume_failed"
 
 
 def actor_for(user_id: uuid.UUID | None) -> str:
