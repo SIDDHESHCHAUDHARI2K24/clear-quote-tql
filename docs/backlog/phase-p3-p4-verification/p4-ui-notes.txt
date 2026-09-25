@@ -1,0 +1,4 @@
+emailed link redirected to: http://localhost:3200/login?next=%2Freport%2Fxggm7yqgax-16A9ZhkQ27S7Ga8sz0zYp_66lfcD1VSo
+after sign-in landed on: http://localhost:3200/report/xggm7yqgax-16A9ZhkQ27S7Ga8sz0zYp_66lfcD1VSo
+after switching: http://localhost:3200/report/xggm7yqgax-16A9ZhkQ27S7Ga8sz0zYp_66lfcD1VSo?option=9dbd8d53-2ee1-4c8b-95d6-bb69ab566255
+LO header updated by poll alone (no navigation, 6 s): false
