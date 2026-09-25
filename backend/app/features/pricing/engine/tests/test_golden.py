@@ -49,8 +49,19 @@ def test_pi_273600_at_7_500() -> None:
 
 
 def test_str_annual_rent_target() -> None:
-    target = str_annual_rent_target(Decimal("1820.87"))
+    # Derived from config.str_expense_ratio (default 0.20 -> divide by 0.80);
+    # still reproduces the pinned golden value at the default ratio.
+    target = str_annual_rent_target(Decimal("1820.87"), ConfigSnapshot().str_expense_ratio)
     assert _round(target) == Decimal("27313.05")
+
+
+def test_str_annual_rent_target_non_default_expense_ratio() -> None:
+    # A reconfigured str_expense_ratio must move this formula too (review
+    # finding 4): 25% expense ratio -> divide by 0.75, not the old
+    # hardcoded 0.80.
+    target = str_annual_rent_target(Decimal("1820.87"), Decimal("0.25"))
+    assert _round(target) == Decimal("29133.92")
+    assert _round(target) != Decimal("27313.05")
 
 
 def test_str_underwritten_rent() -> None:
@@ -135,6 +146,14 @@ def test_full_scenario_matches_all_pinned_golden_values() -> None:
     assert quote.cap_rate_pct == Decimal("6.42")
     assert quote.year_one_tax_savings == Decimal("24275.78")
     assert quote.monthly_cashflow_incl_tax == Decimal("1758.87")
+
+    # Review finding 6: cost-seg sub-fields and break-even rent, asserted
+    # through the real compute_quote orchestration path (not just the
+    # standalone cost_segregation() function in test_cost_segregation.py).
+    assert quote.land_value_allocation == Decimal("68400.00")  # 342000 * 0.20
+    assert quote.depreciable_building_basis == Decimal("273600.00")  # 342000 * 0.80
+    assert quote.accelerated_basis_amount == Decimal("68400.00")  # 0.25 * 273600
+    assert quote.break_even_rent_ltr == Decimal("2704.11")  # payment * target_dscr (1.00)
 
     # Primary-only field is untouched on an investment scenario's opposite
     # number: MI never applies to LTR/STR regardless of LTV.

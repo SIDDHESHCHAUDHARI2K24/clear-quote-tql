@@ -1,19 +1,19 @@
 """Types for the pure quote calculation engine.
 
-`ScenarioInputs`, `ConfigSnapshot` and `QuoteComputation` are implemented as
-stdlib `@dataclass(frozen=True, kw_only=True)` rather than Pydantic v2 models
-(see docs/backlog/CQ-008-quote-engine/plan.md, Decision 2): this item must not
-add a new project dependency, and pydantic is not yet declared in
-pyproject.toml. Dataclasses give the same immutability guarantee with zero
-I/O and zero new dependency; `kw_only=True` lets defaulted and non-defaulted
-fields interleave in the spec's documented order.
+`ScenarioInputs`, `ConfigSnapshot` and `QuoteComputation` are frozen Pydantic
+v2 models, per spec.md's binding public API. (An earlier revision of this
+module used stdlib frozen dataclasses because pydantic was not yet a project
+dependency; CQ-004 has since landed `pydantic-settings` — which pulls in
+pydantic — as a real dependency, so the deviation no longer applies. See
+docs/backlog/CQ-008-quote-engine/plan.md, Decision 2 (revised).)
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
+
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.features.pricing.engine.mi_matrix import DEFAULT_MI_MATRIX, MiMatrix
 
@@ -38,14 +38,15 @@ class DSCRBucket(StrEnum):
     GE_1_25 = "GE_1_25"
 
 
-@dataclass(frozen=True, kw_only=True)
-class ScenarioInputs:
+class ScenarioInputs(BaseModel):
     """A scenario's inputs to the calculation engine. All money/rate fields are Decimal.
 
     `market_rent_ltr` is required (and only meaningful) when `strategy == LTR`;
     `str_gross_annual_revenue` is required (and only meaningful) when
     `strategy == STR`; both are `None` for `PRIMARY`.
     """
+
+    model_config = ConfigDict(frozen=True)
 
     purchase_price: Decimal
     down_payment_pct: Decimal
@@ -64,7 +65,8 @@ class ScenarioInputs:
     bonus_depreciation_pct: Decimal | None = None
     investor_marginal_tax_rate: Decimal | None = None
 
-    def __post_init__(self) -> None:
+    @model_validator(mode="after")
+    def _validate_strategy_fields(self) -> ScenarioInputs:
         if self.strategy is StrategyType.LTR:
             if self.market_rent_ltr is None:
                 raise ValueError("market_rent_ltr is required when strategy == LTR")
@@ -81,14 +83,16 @@ class ScenarioInputs:
                     "market_rent_ltr and str_gross_annual_revenue must be None when "
                     "strategy == PRIMARY"
                 )
+        return self
 
 
-@dataclass(frozen=True, kw_only=True)
-class ConfigSnapshot:
+class ConfigSnapshot(BaseModel):
     """Pricing configuration, snapshotted per-quote so old quotes never change
     when defaults change later (`scenarios.config_snapshot` stores one of
     these as JSON per CQ-007).
     """
+
+    model_config = ConfigDict(frozen=True)
 
     lender_processing_fee: Decimal = Decimal("995.00")
     lender_underwriting_fee: Decimal = Decimal("795.00")
@@ -109,8 +113,7 @@ class ConfigSnapshot:
     mi_matrix: MiMatrix = DEFAULT_MI_MATRIX
 
 
-@dataclass(frozen=True, kw_only=True)
-class QuoteComputation:
+class QuoteComputation(BaseModel):
     """Every money number Clear Quote shows, computed once by `compute_quote`.
 
     All currency fields are `Decimal` rounded to cents; `dscr_ratio` is
@@ -119,7 +122,11 @@ class QuoteComputation:
     primary loans never carry rent/DSCR/cashflow/cost-seg numbers.
     """
 
+    model_config = ConfigDict(frozen=True)
+
     loan_amount: Decimal
+    # 0-1 fraction (e.g. 0.95 for 95% LTV), like every other *_pct field on
+    # ScenarioInputs/ConfigSnapshot -- not a 0-100 percentage number.
     ltv_pct: Decimal
     monthly_pi: Decimal
     monthly_tax: Decimal

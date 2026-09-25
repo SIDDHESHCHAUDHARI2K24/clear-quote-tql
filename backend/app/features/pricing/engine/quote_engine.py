@@ -26,7 +26,17 @@ from app.features.pricing.engine.types import (
 )
 
 _CENT = Decimal("0.01")
-_STR_TARGET_DIVISOR = Decimal("0.80")
+# ltv_pct is a 0-1 fraction (unlike currency/dscr/cap-rate fields, which are
+# 2dp); 4dp preserves the same display precision as "2dp of percent" (e.g.
+# 0.8750 == 87.50%).
+_LTV_PRECISION = Decimal("0.0001")
+_MAX_PRIMARY_LTV = Decimal("0.97")
+
+
+class LtvOutOfRangeError(ValueError):
+    """Raised by `compute_quote` when a PRIMARY scenario's LTV exceeds the
+    conventional financing maximum (97%). Not raised by `mi_factor` itself,
+    which is a pure lookup with no notion of a program maximum."""
 
 
 def _round_currency(value: Decimal) -> Decimal:
@@ -35,6 +45,10 @@ def _round_currency(value: Decimal) -> Decimal:
 
 def _round_2dp(value: Decimal) -> Decimal:
     return value.quantize(_CENT, rounding=ROUND_HALF_UP)
+
+
+def _round_ltv(value: Decimal) -> Decimal:
+    return value.quantize(_LTV_PRECISION, rounding=ROUND_HALF_UP)
 
 
 # --- Payment -----------------------------------------------------------------
@@ -46,8 +60,8 @@ def loan_amount(purchase_price: Decimal, down_payment_pct: Decimal) -> Decimal:
 
 
 def ltv_pct(down_payment_pct: Decimal) -> Decimal:
-    """LTV on a 0-100 percentage scale: `(1 - d) x 100`."""
-    return (Decimal("1") - down_payment_pct) * Decimal("100")
+    """LTV as a 0-1 fraction: `1 - d`."""
+    return Decimal("1") - down_payment_pct
 
 
 def principal_and_interest(loan: Decimal, note_rate: Decimal, term_months: int) -> Decimal:
@@ -70,15 +84,19 @@ def monthly_insurance_amount(purchase_price: Decimal, insurance_annual_rate: Dec
 
 def monthly_mi_amount(
     loan: Decimal,
-    ltv_percentage: Decimal,
+    ltv_fraction: Decimal,
     fico: int,
     strategy: StrategyType,
     config: ConfigSnapshot,
 ) -> Decimal | None:
-    """`0` unless `strategy == PRIMARY` and a matrix factor applies (LTV > 80%)."""
+    """`0` unless `strategy == PRIMARY` and a matrix factor applies (LTV > 80%).
+
+    Callers must guard `ltv_fraction > 0.97` themselves (`compute_quote` raises
+    `LtvOutOfRangeError`) — this function does not raise, only looks up.
+    """
     if strategy is not StrategyType.PRIMARY:
         return None
-    factor = mi_factor(ltv_percentage, fico, config)
+    factor = mi_factor(ltv_fraction, fico, config)
     if factor is None:
         return None
     return loan * factor / Decimal("12")
@@ -166,10 +184,15 @@ def break_even_rent_ltr(total_payment: Decimal, target_dscr: Decimal) -> Decimal
     return total_payment * target_dscr
 
 
-def str_annual_rent_target(total_payment: Decimal) -> Decimal:
-    """`total_monthly_payment * 12 / 0.80` — 0.80 is a pinned literal in spec.md,
-    not `1 - config.str_expense_ratio` (they coincide only at the default)."""
-    return total_payment * Decimal("12") / _STR_TARGET_DIVISOR
+def str_annual_rent_target(total_payment: Decimal, str_expense_ratio: Decimal) -> Decimal:
+    """`total_monthly_payment * 12 / (1 - str_expense_ratio)`.
+
+    Derived from `config.str_expense_ratio` (spec.md, revised) rather than a
+    hardcoded `0.80`, so a reconfigured expense ratio moves this formula too.
+    At the default `str_expense_ratio = 0.20` this is `/ 0.80`, matching the
+    pinned golden value.
+    """
+    return total_payment * Decimal("12") / (Decimal("1") - str_expense_ratio)
 
 
 def cap_rate_pct(
@@ -229,6 +252,12 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
     loan = loan_amount(inputs.purchase_price, inputs.down_payment_pct)
     ltv = ltv_pct(inputs.down_payment_pct)
 
+    if inputs.strategy is StrategyType.PRIMARY and ltv > _MAX_PRIMARY_LTV:
+        raise LtvOutOfRangeError(
+            f"LTV {ltv * Decimal('100')}% exceeds the conventional financing maximum of "
+            f"{_MAX_PRIMARY_LTV * Decimal('100')}% for a PRIMARY scenario."
+        )
+
     pi = principal_and_interest(loan, inputs.note_rate, inputs.term_months)
     tax = monthly_tax_amount(inputs.purchase_price, inputs.property_tax_annual_rate)
     insurance = monthly_insurance_amount(inputs.purchase_price, inputs.insurance_annual_rate)
@@ -253,7 +282,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
     )
 
     rounded_loan_amount = _round_currency(loan)
-    rounded_ltv_pct = _round_2dp(ltv)
+    rounded_ltv_pct = _round_ltv(ltv)
     rounded_pi = _round_currency(pi)
     rounded_tax = _round_currency(tax)
     rounded_insurance = _round_currency(insurance)
@@ -309,7 +338,7 @@ def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComput
     annual_cashflow = cashflow * Decimal("12")
     target_dscr = inputs.target_dscr if inputs.target_dscr is not None else config.target_dscr
     break_even = break_even_rent_ltr(payment, target_dscr)
-    str_target = str_annual_rent_target(payment)
+    str_target = str_annual_rent_target(payment, config.str_expense_ratio)
     cap_rate = cap_rate_pct(qualifying_rent, inputs.purchase_price, config.cap_rate_multiplier)
 
     bonus_pct = (

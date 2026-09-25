@@ -12,12 +12,17 @@ No I/O, no DB, no new dependency; runs standalone with `uv run pytest backend/ap
 
 ## Deviations from spec
 
+**Resolved in review round 1** (see "Review findings resolution" below): the Pydantic-v2 deviation,
+the `ltv_pct` scale, and the `str_annual_rent_target` hardcoded constant have all been reverted to
+match spec.md (spec.md itself was also amended for the latter two, with orchestrator authorisation).
+
 | Spec said | Built | Why |
 | --- | --- | --- |
-| `ScenarioInputs`/`ConfigSnapshot`/`QuoteComputation` are "frozen Pydantic v2 model(s)" | `@dataclass(frozen=True, kw_only=True)` (stdlib) | `pyproject.toml` has `dependencies = []` — pydantic is not yet a project dependency (CQ-004 adds it). Per the execution brief, this item must not add a dependency and must stop and report instead if one is truly needed. Nothing in this pure-function item needs pydantic's validation/serialization machinery, so a frozen dataclass gives the same immutability with zero new dependency. `kw_only=True` (Python 3.12) also resolves the spec's field ordering (defaulted fields interleaved before required ones), which a plain positional dataclass can't express. Logged as plan.md Decision 2–3. |
-| `mi_factor(ltv_pct, fico, config)` — no `strategy` param, but "returns None when ... strategy != PRIMARY" | `mi_factor` is a pure LTV x FICO lookup with no strategy awareness; `compute_quote` only calls it when `strategy == PRIMARY` and hardcodes `monthly_mi = None` for LTR/STR | Reconciles the binding signature with the prose. `test_no_mi_on_investment` exercises this via `compute_quote`. Logged as plan.md Decision 4. |
+| `mi_factor(ltv_pct, fico, config)` — no `strategy` param, but "returns None when ... strategy != PRIMARY" | `mi_factor` is a pure LTV x FICO lookup with no strategy awareness; `compute_quote` only calls it when `strategy == PRIMARY` and hardcodes `monthly_mi = None` for LTR/STR | Reconciles the binding signature with the prose. `test_no_mi_on_investment` exercises this via `compute_quote`. Logged as plan.md Decision 4. Unchanged by review round 1. |
 
-No other deviations — all formulas, config defaults, MI matrix and DSCR bucket values match spec.md exactly.
+No other deviations — all formulas, config defaults, MI matrix and DSCR bucket values match spec.md
+exactly (spec.md's own text for `ltv_pct` scale and `str_annual_rent_target` was updated to match the
+engine, per orchestrator authorisation, rather than the engine deviating from spec).
 
 ## Acceptance evidence (stage 7)
 
@@ -32,14 +37,16 @@ No other deviations — all formulas, config defaults, MI matrix and DSCR bucket
 | AC7 | Pass | `test_golden.py::test_cost_segregation_342k` → PASSED (asserts `24275.78`) |
 | AC8 | Pass | `test_golden.py::test_cap_rate` → PASSED (asserts `6.42`) |
 | AC9 | Pass | `test_golden.py::test_cashflow_incl_tax_benefit` → PASSED (asserts `1758.87`) |
-| AC10 | Pass | `uv run pytest backend/app/features/pricing/engine/tests/test_mi_matrix.py` → `5 passed` (`test_mi_ltv95_fico700_applies`, `test_no_mi_at_80_ltv`, `test_no_mi_on_investment`) |
+| AC10 | Pass | `uv run pytest backend/app/features/pricing/engine/tests/test_mi_matrix.py` → `8 passed` (`test_mi_ltv95_fico700_applies`, `test_no_mi_at_80_ltv`, `test_no_mi_on_investment`, plus round-1 LTV-out-of-range tests) |
 | AC11 | Pass | `uv run pytest backend/app/features/pricing/engine/tests/test_dscr_bucket.py` → `2 passed` (boundaries 0.99/1.00/1.24/1.25 parametrized) |
 | AC12 | Pass | `uv run pytest backend/app/features/pricing/engine/tests/test_cash_to_close.py` → `2 passed` (`test_cash_to_close_with_credit`, `test_cash_to_close_formula`) |
-| AC13 | Pass | `uv run pytest backend/app/features/pricing/engine/tests/test_config_snapshot.py` → `2 passed` (`test_config_snapshot_defaults`, `test_config_snapshot_frozen`) |
+| AC13 | Pass | `uv run pytest backend/app/features/pricing/engine/tests/test_config_snapshot.py` → `2 passed` (`test_config_snapshot_defaults`, `test_config_snapshot_frozen`; frozen now asserted via `pydantic.ValidationError` post round-1) |
 | AC14 | Pass | `uv run pytest backend/app/features/pricing/engine/tests/test_golden.py::test_rounding_full_precision_internal` → PASSED (asserts `24275.78`, explicitly `!= 24276.00`) |
-| AC15 | Pass | `uv run ruff check backend/app/features/pricing/engine/` → `All checks passed!`; `uv run mypy backend/app/features/pricing/engine/` → `Success: no issues found in 11 source files` |
+| AC15 | Pass | `uv run ruff check backend` → `All checks passed!`; `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` (full `make lint` scope, post-merge) → `Success: no issues found in 36 source files` |
 
 ## Test log (stage 5)
+
+**Round 1 (pre-review, pre-merge — historical):**
 
 | Check | Command | Result |
 | --- | --- | --- |
@@ -48,12 +55,26 @@ No other deviations — all formulas, config defaults, MI matrix and DSCR bucket
 | Ruff (lint) | `uv run ruff check backend/app/features/pricing/engine/` | `All checks passed!` |
 | Ruff (format) | `uv run ruff format --check backend/app/features/pricing/engine/` | `11 files already formatted` |
 | Mypy (item scope) | `uv run mypy backend/app/features/pricing/engine/` | `Success: no issues found in 11 source files` |
-| Mypy (full backend/app, sanity) | `uv run mypy backend/app` | `Success: no issues found in 14 source files` |
-| Ruff (full backend, sanity) | `uv run ruff check backend` | `All checks passed!` |
 
-`make lint` / `make test` were not run as such — the Makefile is CQ-004's territory and doesn't yet
-target this module; the commands above are their `uv`-level equivalents for this item's tree, matching
-the spec's own test-plan commands.
+**Round 2 (post-merge, post-review-fixes — current):** `phase-p0-p1` merged in first (clean, brings
+CQ-004's pydantic/conftest.py). `make lint`'s actual mypy scope now runs, since `backend/app/core`,
+`backend/conftest.py`, `backend/tests`, `backend/scripts` all exist.
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Engine unit tests | `uv run pytest backend/app/features/pricing/engine -q` | `41 passed in 0.03s` |
+| Golden tests only | `uv run pytest backend/app/features/pricing/engine/tests/test_golden.py -v` | `11 passed` — all 8 spec-pinned golden values still correct to the cent |
+| Full backend collection (no import errors from the merge) | `uv run pytest backend --collect-only -q` | `57 tests collected` |
+| Ruff (lint, whole backend, as `make lint`) | `uv run ruff check backend` | `All checks passed!` |
+| Ruff (format, whole backend) | `uv run ruff format --check backend` | `36 files already formatted` |
+| Mypy (whole backend, as `make lint`) | `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` | `Success: no issues found in 36 source files` |
+
+`make lint` itself was not invoked (it also runs `pnpm -r run lint`/`typecheck`/`prettier`, outside this
+item's scope and untouched by this change); the `uv`-level commands above are its backend-relevant
+lines, run verbatim as `make lint` defines them.
+
+Needed a local `.env` (`cp .env.example .env`, gitignored, not committed) for `backend/conftest.py` to
+import at collection time — see plan.md Decision 14.
 
 ## Review findings (stage 6)
 
@@ -95,10 +116,29 @@ golden values re-derived by hand). Primary-loan field suppression (rule in AGENT
 never shows rent/DSCR/cashflow/cost-seg/PPP) holds — verified directly on a non-golden PRIMARY
 scenario, not just by reading the code.
 
+## Review findings resolution (round 1)
+
+Orchestrator reviewed the findings above and directed fixes for all six (CHANGES REQUESTED). All
+implemented in this branch, TDD, all 8 golden tests still passing to the cent throughout.
+
+| # | Severity | Resolution |
+| --- | --- | --- |
+| 1 | Major | Merged `phase-p0-p1` into this branch first (clean, brings CQ-004's pydantic dependency). `ScenarioInputs`/`ConfigSnapshot`/`QuoteComputation` are now `pydantic.BaseModel` subclasses with `model_config = ConfigDict(frozen=True)`, per spec.md. Cross-field validation moved to `@model_validator(mode="after")`. See plan.md Decision 9. |
+| 2 | Minor | `compute_quote` now raises `LtvOutOfRangeError(ValueError)` (defined in `quote_engine.py`) when `strategy == PRIMARY` and `ltv_pct > 0.97`, instead of silently falling through to `monthly_mi = None`. `mi_factor` itself is unchanged (still a pure lookup) — the guard lives at the orchestration level, where the "conventional financing caps at 97%" business rule actually belongs. See plan.md Decision 12. |
+| 3 | Minor | `ltv_pct` (both `QuoteComputation.ltv_pct` and `mi_factor`'s parameter) is now a 0–1 fraction, matching every other `*_pct` field. `mi_factor` converts to the 0–100 scale internally before comparing against `DEFAULT_MI_MATRIX`. spec.md updated (orchestrator-authorised). See plan.md Decision 11. |
+| 4 | Minor | `str_annual_rent_target` now takes `str_expense_ratio` and computes `total_payment * 12 / (1 - str_expense_ratio)`, reading `config.str_expense_ratio` from `compute_quote`, instead of a hardcoded `0.80`. spec.md updated (orchestrator-authorised); new test with a non-default ratio (0.25) proves the formula actually moves. See plan.md Decision 10. |
+| 5 | Minor | Added `tests/test_scenario_inputs_validation.py` — 9 tests covering every strategy's required/forbidden field (LTR requires `market_rent_ltr` and forbids `str_gross_annual_revenue`; STR the reverse; PRIMARY forbids both; one positive-construction test per strategy). |
+| 6 | Minor | `test_full_scenario_matches_all_pinned_golden_values` (test_golden.py) now asserts `land_value_allocation`, `depreciable_building_basis`, `accelerated_basis_amount` and `break_even_rent_ltr` through the real `compute_quote()` path, closing the coverage gap. |
+
+Net: 41 tests now pass (was 28), all 8 golden values still exact to the cent (re-verified in the
+Test log below), `ruff`/`mypy` clean on the whole `backend/` tree (not just this item's subtree, since
+`make lint`'s actual scope is now reachable post-merge).
+
 ## How to test manually
 
-1. `cd backend && uv run pytest app/features/pricing/engine -v` (or from repo root:
-   `uv run pytest backend/app/features/pricing/engine -v`) — no DB, no services required.
+1. `cp .env.example .env` (if not already present — needed for `backend/conftest.py` to import; see
+   Follow-ups). Then `cd backend && uv run pytest app/features/pricing/engine -v` (or from repo root:
+   `uv run pytest backend/app/features/pricing/engine -v`) — no DB, no services actually contacted.
 2. `uv run python3` and call `compute_quote(...)` directly with a `ScenarioInputs`/`ConfigSnapshot`
    pair to inspect a `QuoteComputation`; e.g. construct a `StrategyType.PRIMARY` scenario and confirm
    every investment-only field (`qualifying_rent`, `dscr_ratio`, `cap_rate_pct`, cost-seg fields, …)
@@ -111,9 +151,9 @@ scenario, not just by reading the code.
   re-pricing loop that calls `bucket_for_dscr` to compare assumed vs. computed buckets.
 - If real MGIC/Radian MI rate-card values become available, swap `DEFAULT_MI_MATRIX` in
   `mi_matrix.py` — `mi_factor`'s signature does not need to change.
-- If/when pydantic lands as a real project dependency (CQ-004), `ScenarioInputs`/`ConfigSnapshot`/
-  `QuoteComputation` could be re-expressed as pydantic v2 models without changing `compute_quote`'s
-  signature or field names, per spec's original intent — not done here per this item's
-  no-new-dependency constraint (see Deviations above).
 - `docs/backlog/README.md`'s CQ-008 row was intentionally left at "To Do" — this item's brief
   explicitly excludes editing that file; the orchestrator should flip it to "In Review".
+- A fresh clone/worktree needs a local `.env` (`cp .env.example .env`) before any `backend/` pytest
+  run, including this item's — `backend/conftest.py` (CQ-004) is auto-collected for anything under
+  `backend/` and reads `Settings()` at import time. No actual DB/Redis/etc. connection is required
+  for this item's own tests (`create_async_engine` is lazy); see plan.md Decision 14.

@@ -2,9 +2,15 @@
 
 Annual MI rate applied to `loan_amount`, financed monthly as
 `loan_amount * factor / 12`. Only meaningful when `strategy == PRIMARY` and
-`ltv_pct > 80` — see `ScenarioInputs`/`compute_quote` for how strategy gates
+`ltv_pct > 0.80` — see `ScenarioInputs`/`compute_quote` for how strategy gates
 this; `mi_factor` itself is a pure LTV x FICO lookup with no strategy
 parameter (spec.md's binding public API).
+
+`ltv_pct` is a 0-1 fraction (e.g. `0.95` for 95% LTV), matching every other
+`*_pct` field on `ScenarioInputs`/`ConfigSnapshot`. `DEFAULT_MI_MATRIX`'s own
+band bounds stay on a 0-100 percentage scale for readability (matching the
+table in spec.md, "80.01-85.00%"); `mi_factor` converts its `ltv_pct`
+argument to that scale internally before the band lookup.
 
 Values are invented for realism — no MGIC/Radian rate card was supplied (see
 spec.md's own "Decision" note). Swap `DEFAULT_MI_MATRIX` for a real rate card
@@ -84,17 +90,20 @@ class _HasMiMatrix(Protocol):
 
 
 def mi_factor(ltv_pct: Decimal, fico: int, config: _HasMiMatrix) -> Decimal | None:
-    """Look up the annual MI rate for `ltv_pct` (0-100 scale) x `fico`.
+    """Look up the annual MI rate for `ltv_pct` (0-1 fraction, e.g. `0.95`) x `fico`.
 
-    Returns `None` when `ltv_pct <= 80` (no MI required) or when `ltv_pct` is
-    above the top tabulated band (out of range for the matrix supplied).
-    Does not know about `strategy`: callers (`compute_quote`) only invoke this
-    when `strategy == PRIMARY`.
+    Returns `None` when `ltv_pct <= 0.80` (no MI required) or when `ltv_pct`
+    is above the top tabulated band (out of range for the matrix supplied —
+    `compute_quote` guards the >97% case itself with `LtvOutOfRangeError`
+    rather than relying on this silent `None`). Does not know about
+    `strategy`: callers (`compute_quote`) only invoke this when
+    `strategy == PRIMARY`.
     """
-    if ltv_pct <= Decimal("80"):
+    if ltv_pct <= Decimal("0.80"):
         return None
+    ltv_percentage = ltv_pct * Decimal("100")
     for lower, upper, fico_bands in config.mi_matrix:
-        if lower < ltv_pct <= upper:
+        if lower < ltv_percentage <= upper:
             for fico_upper, rate in fico_bands:
                 if fico_upper is None or fico <= fico_upper:
                     return rate

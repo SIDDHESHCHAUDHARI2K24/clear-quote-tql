@@ -1,9 +1,9 @@
 """AC13 — ConfigSnapshot defaults and immutability."""
 
-import dataclasses
 from decimal import Decimal
 
 import pytest
+from pydantic import ValidationError
 
 from app.features.pricing.engine.quote_engine import compute_quote
 from app.features.pricing.engine.types import ConfigSnapshot, ScenarioInputs, StrategyType
@@ -35,7 +35,7 @@ def test_config_snapshot_defaults() -> None:
 def test_config_snapshot_frozen() -> None:
     config = ConfigSnapshot()
 
-    with pytest.raises(dataclasses.FrozenInstanceError):
+    with pytest.raises(ValidationError):
         config.lender_processing_fee = Decimal("1.00")  # type: ignore[misc]
 
     # A stored QuoteComputation.config_snapshot must not change when a later,
