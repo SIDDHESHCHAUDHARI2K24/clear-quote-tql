@@ -595,11 +595,15 @@ def _apply_product(
 
 
 async def _quote_in_package(db: AsyncSession, quote_id: uuid.UUID) -> bool:
+    """A *sent* package pins its quotes; an unsent draft (the Send tab's,
+    CQ-019) never blocks a delete -- `_delete_quote_row` drops the quote
+    from it instead (CQ-019 code review #2)."""
     stmt = select(QuotePackage.id).where(
+        QuotePackage.sent_at.is_not(None),
         or_(
             QuotePackage.recommended_quote_id == quote_id,
             QuotePackage.quote_ids.contains([quote_id]),
-        )
+        ),
     )
     return (await db.execute(stmt.limit(1))).scalar_one_or_none() is not None
 
@@ -702,6 +706,9 @@ async def _delete_quote_row(db: AsyncSession, quote: Quote) -> bool:
             .where(Scenario.id == quote.scenario_id)
         )
     ).scalar_one()
+    from app.features.quotes.send.service import drop_quote_from_drafts
+
+    await drop_quote_from_drafts(db, quote.id)
     cleared = application.recommended_quote_id == quote.id
     if cleared:
         application.recommended_quote_id = None
@@ -796,6 +803,10 @@ async def recommend_quote(db: AsyncSession, quote: Quote, user: User) -> Applica
     quote = await _refetch_after_lock(db, quote.id)
     previous = application.recommended_quote_id
     application.recommended_quote_id = quote.id
+    # CQ-019 (code review #4): the Send tab's unsent draft follows the star.
+    from app.features.quotes.send.service import sync_draft_recommendation
+
+    await sync_draft_recommendation(db, application.id, quote.id)
     db.add(
         _event(
             application.id,

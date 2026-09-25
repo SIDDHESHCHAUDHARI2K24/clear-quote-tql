@@ -19,6 +19,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import date
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -86,6 +87,35 @@ def property_label(prop: Property | None) -> str | None:
     return ", ".join(pieces) if pieces else None
 
 
+_PRICING_TYPE = {"Par": "Par pricing", "Buydown": "Buydown pricing"}
+_WHY = {
+    "Par": "It balances your monthly payment and cash needed at closing.",
+    "Buydown": "It lowers your rate and monthly payment for points paid at closing.",
+}
+_WHY_MANUAL = "It is the product your loan officer picked for your goals."
+
+
+def _pct_label(fraction: Decimal) -> str:
+    """`0.20` -> `"20"`, `0.125` -> `"12.5"` (display scaling only)."""
+    text = str((fraction * Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+def draft_recommendation_text(quote: Quote, scenario: Scenario, strategy: StrategyType) -> str:
+    """e.g. "20% down · Par pricing at 7.500%, no prepay. It balances your
+    monthly payment and cash needed at closing." Primary loans never mention
+    a prepayment penalty (AGENTS.md)."""
+    down = _pct_label(ScenarioInputs.model_validate(scenario.inputs).down_payment_pct)
+    pricing = _PRICING_TYPE.get(quote.label, "Manual pricing")
+    rate = quote.rate.quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+    prepay = ""
+    years = ppp_years(strategy, scenario)
+    if strategy is not StrategyType.PRIMARY:
+        prepay = f", {years}-year prepay" if years else ", no prepay"
+    why = _WHY.get(quote.label, _WHY_MANUAL)
+    return f"{down}% down · {pricing} at {rate}%{prepay}. {why}"
+
+
 @dataclass(frozen=True)
 class PackageContext:
     """Every row a package's report and letter read, loaded once."""
@@ -147,6 +177,18 @@ async def load_package_context(db: AsyncSession, package: QuotePackage) -> Packa
     )
 
 
+def current_recommendation_text(
+    ctx: PackageContext, recommended_quote_id: uuid.UUID | None
+) -> str | None:
+    """Drafted from the recommended quote's *current* rate and scenario, so a
+    reprice or a down-payment edit (quote ids survive both) never leaves a
+    stale sentence (code review #1)."""
+    quote = next((q for q in ctx.quotes if q.id == recommended_quote_id), None)
+    if quote is None:
+        return None
+    return draft_recommendation_text(quote, ctx.scenarios[quote.scenario_id], ctx.strategy)
+
+
 async def build_package_view_model(
     db: AsyncSession,
     package: QuotePackage,
@@ -203,7 +245,10 @@ async def build_package_view_model(
         superseded=superseded,
         options=options,
         recommendation_text=(
-            recommendation_text or package.recommendation_text or DEFAULT_RECOMMENDATION_TEXT
+            recommendation_text
+            or current_recommendation_text(ctx, package.recommended_quote_id)
+            or package.recommendation_text
+            or DEFAULT_RECOMMENDATION_TEXT
         ),
         lo_note=lo_note if lo_note is not None else package.lo_note,
         lo_name=lo.full_name,

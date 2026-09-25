@@ -10,8 +10,9 @@ from __future__ import annotations
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import scope_applications
@@ -37,7 +38,12 @@ from app.features.quotes.send.schemas import (
     PackageUpdate,
     ReadinessBlocker,
 )
-from app.features.quotes.send.view_model import build_package_view_model, strategy_type
+from app.features.quotes.send.view_model import (
+    build_package_view_model,
+    current_recommendation_text,
+    load_package_context,
+    strategy_type,
+)
 
 PREVIEW_EXPIRY_DAYS = 21
 """Same as `portal/reports/versions.REPORT_EXPIRY_DAYS`: the preview shows
@@ -85,8 +91,58 @@ async def new_default_package(db: AsyncSession, application: Application) -> Quo
         report_token=secrets.token_urlsafe(24),
     )
     db.add(package)
+    # One recommendation per application (plan.md Decision 8): the default
+    # draft's pick becomes the application's when it had none (code review #4).
+    if application.recommended_quote_id is None and selection.recommended_quote_id is not None:
+        application.recommended_quote_id = selection.recommended_quote_id
     await db.flush()
     return package
+
+
+def _unsent_drafts_stmt(application_id: uuid.UUID | None = None) -> Select[Any]:
+    stmt = select(QuotePackage).where(QuotePackage.sent_at.is_(None))
+    if application_id is not None:
+        stmt = stmt.where(QuotePackage.application_id == application_id)
+    return stmt.with_for_update()
+
+
+async def drop_quote_from_drafts(db: AsyncSession, quote_id: uuid.UUID) -> None:
+    """Called by the Quote Builder before it deletes a quote: an unsent
+    draft never blocks a delete (code review #2); the quote just leaves the
+    draft, and the recommendation moves to the first quote left."""
+    drafts = (
+        await db.execute(
+            _unsent_drafts_stmt().where(
+                or_(
+                    QuotePackage.recommended_quote_id == quote_id,
+                    QuotePackage.quote_ids.contains([quote_id]),
+                )
+            )
+        )
+    ).scalars()
+    for package in drafts:
+        remaining = [q for q in package.quote_ids if q != quote_id]
+        package.quote_ids = remaining
+        if package.recommended_quote_id == quote_id or package.recommended_quote_id is None:
+            package.recommended_quote_id = remaining[0] if remaining else None
+    await db.flush()
+
+
+async def sync_draft_recommendation(
+    db: AsyncSession, application_id: uuid.UUID, quote_id: uuid.UUID
+) -> None:
+    """Called by the Quote Builder's star: the unsent draft follows the
+    application's recommendation (code review #4). A quote not yet in the
+    draft goes first, keeping at most `MAX_PACKAGE_QUOTES`."""
+    for package in (await db.execute(_unsent_drafts_stmt(application_id))).scalars():
+        ids = [q for q in package.quote_ids if q != quote_id]
+        package.quote_ids = (
+            [quote_id, *ids][:MAX_PACKAGE_QUOTES]
+            if quote_id not in package.quote_ids
+            else list(package.quote_ids)
+        )
+        package.recommended_quote_id = quote_id
+    await db.flush()
 
 
 async def get_or_create_package(db: AsyncSession, application: Application) -> QuotePackage:
@@ -116,7 +172,23 @@ async def get_scoped_package(db: AsyncSession, package_id: uuid.UUID, user: User
     return package
 
 
+async def _refresh_recommendation_text(db: AsyncSession, package: QuotePackage) -> None:
+    """Re-drafts the stored sentence from the recommended quote's current
+    rate/scenario; quote ids survive a reprice, so an id check alone would
+    leave "at 7.500%" after the rate moved (code review #1)."""
+    try:
+        ctx = await load_package_context(db, package)
+    except ValidationAppError:
+        return
+    fresh = current_recommendation_text(ctx, package.recommended_quote_id)
+    if fresh != package.recommendation_text:
+        package.recommendation_text = fresh
+        await db.commit()
+        await db.refresh(package)
+
+
 async def package_read(db: AsyncSession, package: QuotePackage) -> PackageRead:
+    await _refresh_recommendation_text(db, package)
     application = await db.get(Application, package.application_id)
     assert application is not None
     client_row = await db.get(Client, application.client_id)

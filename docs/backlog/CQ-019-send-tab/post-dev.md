@@ -47,11 +47,11 @@ Migration: `5bd9d8620699` (`quote_packages.recommendation_text`, off `e419a34bcd
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Backend tests | `make test` (`uv run pytest backend`, `uv run pytest seed`) | 517 passed; 31 passed |
+| Backend tests | `make test` (`uv run pytest backend`, `uv run pytest seed`) | 521 passed; 31 passed (after review fixes) |
 | Frontend tests | `make test` (`pnpm -r run test`) | api-client 2, ui 141, lo-console 138, borrower-portal 84 passed |
 | Lint / types | `make lint` (ruff, ruff format, mypy, eslint, tsc, prettier) | Clean |
 | react-doctor | `cd apps/lo-console && npx react-doctor -y --blocking error` | Exit 0; the 3 warnings it first raised in `features/send` fixed; remaining warnings are in other features |
-| E2E | `pnpm exec playwright test e2e/lo-console e2e/borrower-portal --workers=1` (slot 9, after `make demo-reset`) | 48 passed |
+| E2E | `pnpm exec playwright test e2e/lo-console e2e/borrower-portal --workers=1` (slot 9, after `make demo-reset`) | 48 passed (rerun after review fixes: 48 passed) |
 | Migrations | `uv run alembic heads` | `5bd9d8620699 (head)` |
 
 Note: a first `make test` hung in `test_resume_signal` because this slot's `make worker` was running on the same task queue; with the worker stopped it passed.
@@ -60,6 +60,10 @@ Note: a first `make test` hung in `test_resume_signal` because this slot's `make
 
 | Severity | Finding | Resolution |
 | --- | --- | --- |
+| Major | Recommendation text (rate, down payment) went stale after a reprice or scenario edit, because quote ids survive both; the sent report would carry it. | Fixed: the text is re-drafted from the recommended quote's current values on every package read, report preview and freeze (`view_model.current_recommendation_text`). Test `test_recommendation_text_follows_a_reprice`. |
+| Major | Opening the Send tab created a draft that made its quotes undeletable (409) and stopped reprice cleanup. | Fixed: `builder/service._quote_in_package` now only counts *sent* packages; deleting a quote drops it from unsent drafts (`send/service.drop_quote_from_drafts`). Tests `test_draft_quote_can_be_deleted_and_leaves_the_draft`, `test_sent_package_quote_still_cannot_be_deleted`; CQ-018's `test_delete_quote_in_package_is_409` now uses a sent package. |
+| Medium | The `quote_not_offered` blocker says "delete or re-pick", but deleting a drafted quote returned 409. | Fixed by the previous change (delete now works on a drafted quote). |
+| Medium | The draft's recommendation and `applications.recommended_quote_id` could disagree (default draft, seed, Builder star). | Fixed: the default draft sets the application's recommendation when it has none; the Builder star updates the unsent draft (`sync_draft_recommendation`, putting the quote first, max 3). Test `test_default_draft_and_builder_star_share_one_recommendation`. |
 
 ## How to test manually
 
@@ -73,4 +77,4 @@ Note: a first `make test` hung in `test_resume_signal` because this slot's `make
 - The report preview for a TBD persona takes ~6 s: CQ-023's matches call the mock providers (simulated latency) per listing on every preview load. Cache matches per application/recommended quote, or skip the latency in previews.
 - `backend/scripts/freeze_version.py` (used by `e2e/global-setup.ts`) creates its own package for Kathleen with every quote id; the Send tab then shows that newest package (more than 3 quotes possible). It should call `new_default_package` instead.
 - WeasyPrint needs `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` on macOS to find pango (CQ-020).
-- The Builder star and the Send radio are one field; starring a quote after a draft exists does not change the draft's selection (only its recommendation on the next PUT).
+- `builder/service.py` now calls into `send/service.py` (function-level imports to avoid an import cycle) for the draft sync on star/delete.
