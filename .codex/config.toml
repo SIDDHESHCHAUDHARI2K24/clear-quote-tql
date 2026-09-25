@@ -1,0 +1,6 @@
+# Project-scoped Codex config (used when the project is trusted).
+# If your Codex version ignores project config, copy this block into ~/.codex/config.toml.
+[mcp_servers.kaneo]
+command = "npx"
+args = ["-y", "@kaneo/mcp", "serve"]
+env = { KANEO_API_URL = "http://localhost:5183" }

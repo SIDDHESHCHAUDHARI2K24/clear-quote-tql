@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "kaneo": {
+      "command": "npx",
+      "args": ["-y", "@kaneo/mcp", "serve"],
+      "env": {
+        "KANEO_API_URL": "http://localhost:5183"
+      }
+    }
+  }
+}
