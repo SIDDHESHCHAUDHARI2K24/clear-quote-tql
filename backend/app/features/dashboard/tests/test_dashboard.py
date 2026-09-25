@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 
 from httpx import AsyncClient
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import ApplicationStatus, ApplicationTab, UserRole
@@ -15,6 +15,7 @@ from app.features.applications.models import Application
 from app.features.applications.property.models import Property, PropertyAddressStatus
 from app.features.applications.verification.models import Flag
 from app.features.auth.sessions.service import COOKIE_NAMES
+from app.features.quotes.send.models import QuotePackage, QuotePackageVersion
 
 
 async def test_dashboard_requires_auth(client: AsyncClient) -> None:
@@ -28,9 +29,18 @@ async def test_dashboard_tiles_match_sql(
     make_staff_session: Callable[..., Awaitable],
     make_application: Callable[..., Awaitable[Application]],
     make_property: Callable[..., Awaitable[Property]],
+    make_sent_version: Callable[..., Awaitable],
 ) -> None:
     """AC1: every tile count for a Manager equals a direct SQL count of the
-    spec.md definition (computed independently of `dashboard.service`)."""
+    spec.md definition (computed independently of `dashboard.service`).
+
+    "Pre-approvals sent" is "Stale after a send" (spec.md) -- a Stale
+    application only counts when a `quote_package_versions` row actually
+    exists for it (it was sent, then aged out); a Stale application that
+    aged out straight from Priced without ever being sent (CQ-030 spec.md)
+    must NOT count. The oracle SQL below encodes that with its own EXISTS
+    subquery, independent of `applications.listing.service`'s
+    `build_sent_or_later_filter()`."""
     await make_staff_session(role=UserRole.MANAGER)
 
     statuses = [
@@ -50,17 +60,22 @@ async def test_dashboard_tiles_match_sql(
     await make_property(apps[2].id, PropertyAddressStatus.SPECIFIC_ADDRESS)
     await make_property(apps[0].id, PropertyAddressStatus.TBD)
 
+    # apps[7] (STALE) was actually sent before it went stale -- must count.
+    await make_sent_version(apps[7].id, sent_at=datetime.now(UTC) - timedelta(days=25))
+    # A second STALE application that aged out straight from Priced,
+    # never sent -- must NOT count (CQ-030 spec.md).
+    stale_never_sent = await make_application(status=ApplicationStatus.STALE)
+
     response = await client.get("/api/v1/dashboard")
     assert response.status_code == 200
     tiles = response.json()["tiles"]
 
     not_active = {ApplicationStatus.WITHDRAWN.value, ApplicationStatus.CLOSED.value}
-    pre_approval_sent = {
+    pre_approval_sent_base = {
         ApplicationStatus.SENT.value,
         ApplicationStatus.VIEWED.value,
         ApplicationStatus.INQUIRY.value,
         ApplicationStatus.OPTION_SELECTED.value,
-        ApplicationStatus.STALE.value,
     }
     awaiting_review = {
         ApplicationStatus.PRICED.value,
@@ -74,9 +89,21 @@ async def test_dashboard_tiles_match_sql(
     sql_applications = (
         await db_session.execute(select(func.count()).where(Application.status.notin_(not_active)))
     ).scalar_one()
+    sent_exists = (
+        select(QuotePackageVersion.id)
+        .join(QuotePackage, QuotePackageVersion.package_id == QuotePackage.id)
+        .where(QuotePackage.application_id == Application.id)
+        .correlate(Application)
+        .exists()
+    )
     sql_pre_approvals_sent = (
         await db_session.execute(
-            select(func.count()).where(Application.status.in_(pre_approval_sent))
+            select(func.count()).where(
+                or_(
+                    Application.status.in_(pre_approval_sent_base),
+                    and_(Application.status == ApplicationStatus.STALE, sent_exists),
+                )
+            )
         )
     ).scalar_one()
     sql_with_property = (
@@ -111,9 +138,68 @@ async def test_dashboard_tiles_match_sql(
     assert tiles["needs_attention"] == sql_needs_attention
     assert tiles["stale_quotes"] == sql_stale_quotes
 
-    # Sanity: the counts are not all trivially zero.
-    assert tiles["applications"] == len(apps) - 2
+    # Sanity: the counts are not all trivially zero, and the Stale-but-
+    # never-sent application is excluded from "pre-approvals sent" while
+    # still counting in "applications" and "stale quotes".
+    assert tiles["applications"] == len(apps) - 2 + 1  # +1 for stale_never_sent
     assert tiles["with_property"] == 1
+    assert tiles["stale_quotes"] == 2  # apps[7] (sent) and stale_never_sent
+    assert tiles["pre_approvals_sent"] == 5  # SENT/VIEWED/INQUIRY/OPTION_SELECTED + apps[7]
+    assert stale_never_sent.status == ApplicationStatus.STALE
+
+
+async def test_sent_or_later_matches_dashboard(
+    client: AsyncClient,
+    make_staff_session: Callable[..., Awaitable],
+    make_application: Callable[..., Awaitable[Application]],
+    make_sent_version: Callable[..., Awaitable],
+) -> None:
+    """AC3/E10 cross-check: the dashboard's "Pre-approvals sent" tile count
+    equals `GET /api/v1/applications?status=sent_or_later`'s `total` --
+    both for a Manager (all files) and for one LO (their own files). Both
+    endpoints share `applications.listing.service.build_sent_or_later_filter()`
+    (plan.md Decision #6/E10), so this also exercises the fix that removed
+    the dashboard's own locally-duplicated status set."""
+    lo_session = await make_staff_session(role=UserRole.LO)
+    lo_user = lo_session.user
+    other_lo_session = await make_staff_session(role=UserRole.LO)
+    other_lo_user = other_lo_session.user
+
+    # This LO: one of each "sent or later" status, a Stale that was sent
+    # (counts) and a Stale that never was (must not count), plus a Priced
+    # application (must not count).
+    await make_application(lo=lo_user, status=ApplicationStatus.SENT)
+    await make_application(lo=lo_user, status=ApplicationStatus.VIEWED)
+    await make_application(lo=lo_user, status=ApplicationStatus.INQUIRY)
+    await make_application(lo=lo_user, status=ApplicationStatus.OPTION_SELECTED)
+    stale_sent = await make_application(lo=lo_user, status=ApplicationStatus.STALE)
+    await make_sent_version(stale_sent.id, sent_at=datetime.now(UTC) - timedelta(days=25))
+    await make_application(lo=lo_user, status=ApplicationStatus.STALE)  # never sent
+    await make_application(lo=lo_user, status=ApplicationStatus.PRICED)
+
+    # Another LO's sent application must not leak into the first LO's
+    # count, but must show up once a Manager looks at everything.
+    await make_application(lo=other_lo_user, status=ApplicationStatus.SENT)
+
+    client.cookies.set(COOKIE_NAMES["staff"], lo_session.token)
+    lo_dashboard = await client.get("/api/v1/dashboard")
+    assert lo_dashboard.status_code == 200
+    lo_tile = lo_dashboard.json()["tiles"]["pre_approvals_sent"]
+
+    lo_list = await client.get("/api/v1/applications", params={"status": "sent_or_later"})
+    assert lo_list.status_code == 200
+    lo_total = lo_list.json()["total"]
+
+    assert lo_tile == lo_total == 5  # sent, viewed, inquiry, option_selected, stale_sent
+
+    await make_staff_session(role=UserRole.MANAGER)
+    manager_dashboard = await client.get("/api/v1/dashboard")
+    manager_tile = manager_dashboard.json()["tiles"]["pre_approvals_sent"]
+
+    manager_list = await client.get("/api/v1/applications", params={"status": "sent_or_later"})
+    manager_total = manager_list.json()["total"]
+
+    assert manager_tile == manager_total == 6  # + the other LO's sent application
 
 
 async def test_dashboard_scoping(
@@ -218,6 +304,53 @@ async def test_dashboard_lists_personas(
     assert "Grace Kim" in stale_by_name
     assert stale_by_name["Grace Kim"]["days_old"] >= 21
     assert "Luis Romero" not in stale_by_name
+
+
+async def test_attention_reason_uses_the_most_recently_sent_version(
+    client: AsyncClient,
+    make_staff_session: Callable[..., Awaitable],
+    make_application: Callable[..., Awaitable[Application]],
+    make_sent_version: Callable[..., Awaitable],
+) -> None:
+    """Code-review finding (cq-025-fix): `_latest_sent_versions` must pick
+    the `QuotePackageVersion` with the most recent `sent_at`, not the one
+    with the highest `version` number -- `quote_packages.application_id`
+    has no unique constraint, so an application with more than one
+    `QuotePackage` row (not possible via today's application code, but not
+    prevented by the schema either) must still resolve to the version that
+    was actually sent most recently, matching `_build_stale`'s own
+    `latest_sent_at` definition. Simulates that with two separate
+    `QuotePackage` rows for the same application -- an older one with a
+    *higher* version number, and a newer one (by `sent_at`) with a *lower*
+    version number -- and asserts the newer one's reason wins."""
+    await make_staff_session(role=UserRole.MANAGER)
+    now = datetime.now(UTC)
+
+    application = await make_application(
+        status=ApplicationStatus.OPTION_SELECTED, client_name="Priya Older Package"
+    )
+    # Older package, sent 10 days ago, but a higher version number.
+    await make_sent_version(
+        application.id,
+        sent_at=now - timedelta(days=10),
+        version=5,
+        borrower_action={"type": "option_selected", "quote_id": "stale-quote"},
+        options=[{"quote_id": "stale-quote", "label": "Stale label -- must not win"}],
+    )
+    # Newer package, sent yesterday, with a lower version number.
+    await make_sent_version(
+        application.id,
+        sent_at=now - timedelta(days=1),
+        version=1,
+        borrower_action={"type": "option_selected", "quote_id": "fresh-quote"},
+        options=[{"quote_id": "fresh-quote", "label": "Fresh label -- must win"}],
+    )
+
+    response = await client.get("/api/v1/dashboard")
+    assert response.status_code == 200
+    attention_by_name = {row["client_name"]: row for row in response.json()["attention"]}
+
+    assert attention_by_name["Priya Older Package"]["reason"] == "Fresh label -- must win"
 
 
 async def test_attention_list_updates_after_resolve(

@@ -7,6 +7,13 @@ sees their own files and a Manager/Admin sees all files or one LO's (E16).
 No money math here (AGENTS.md) -- this reads already-priced `Quote.rate`/
 `priced_at` and already-sent `QuotePackageVersion` rows, never recomputes a
 number.
+
+The "Pre-approvals sent" tile uses
+`applications.listing.service.build_sent_or_later_filter()` -- the same
+filter `GET /applications?status=sent_or_later` applies (CQ-027 spec.md
+AC3, plan.md Decision #6/E10) -- rather than a locally duplicated status
+set, so a Stale application that aged out straight from Priced without
+ever being sent (CQ-030 spec.md) is excluded from both.
 """
 
 from __future__ import annotations
@@ -21,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import clock
 from app.core.auth import scope_applications
 from app.core.enums import ApplicationStatus, UserRole
+from app.features.applications.listing.service import build_sent_or_later_filter
 from app.features.applications.models import Application
 from app.features.applications.property.models import Property, PropertyAddressStatus
 from app.features.applications.timeline.models import ActivityEvent
@@ -30,9 +38,9 @@ from app.features.clients.models import Client
 from app.features.dashboard.schemas import (
     ActivityItem,
     AttentionItem,
+    DashboardLoOption,
     DashboardResponse,
     DashboardTiles,
-    LoOption,
     StaleItem,
 )
 from app.features.quotes.builder.models import Quote
@@ -50,15 +58,6 @@ _ATTENTION_STATUSES = frozenset(
 )
 _AWAITING_REVIEW_STATUSES = frozenset(
     {ApplicationStatus.PRICED, ApplicationStatus.INQUIRY, ApplicationStatus.OPTION_SELECTED}
-)
-_PRE_APPROVAL_SENT_STATUSES = frozenset(
-    {
-        ApplicationStatus.SENT,
-        ApplicationStatus.VIEWED,
-        ApplicationStatus.INQUIRY,
-        ApplicationStatus.OPTION_SELECTED,
-        ApplicationStatus.STALE,
-    }
 )
 _NOT_ACTIVE_STATUSES = frozenset({ApplicationStatus.WITHDRAWN, ApplicationStatus.CLOSED})
 
@@ -91,7 +90,7 @@ async def _build_tiles(db: AsyncSession, user: User, lo_id: uuid.UUID | None) ->
         select(Application.id).where(Application.status.notin_(_NOT_ACTIVE_STATUSES)), user, lo_id
     )
     pre_approvals_sent_stmt = _scoped(
-        select(Application.id).where(Application.status.in_(_PRE_APPROVAL_SENT_STATUSES)),
+        select(Application.id).where(build_sent_or_later_filter()),
         user,
         lo_id,
     )
@@ -149,15 +148,31 @@ async def _needs_attention_reasons(
 async def _latest_sent_versions(
     db: AsyncSession, application_ids: list[uuid.UUID]
 ) -> dict[uuid.UUID, QuotePackageVersion]:
-    """Batched: the highest-versioned `QuotePackageVersion` per application,
-    for every id in `application_ids` in a single `DISTINCT ON` query."""
+    """Batched: the most-recently-*sent* `QuotePackageVersion` per
+    application, for every id in `application_ids` in a single
+    `DISTINCT ON` query.
+
+    Orders by `sent_at DESC` (version as a same-`sent_at` tiebreaker), not
+    `version` alone -- `application_id` has no unique constraint on
+    `quote_packages` (code review, cq-025-fix), so ordering by version
+    number alone would pick the wrong package's version if an application
+    ever had more than one `QuotePackage` row (today it never does -- one
+    package per application, CQ-020's resend path adds a version to the
+    *same* package, per `quote_packages`/`quote_package_versions`'
+    module docstring -- but this keeps the same "latest sent" definition
+    `_build_stale`'s `latest_sent_at` subquery already uses, rather than a
+    second, inconsistent one)."""
     if not application_ids:
         return {}
     stmt = (
         select(QuotePackage.application_id, QuotePackageVersion)
         .join(QuotePackage, QuotePackage.id == QuotePackageVersion.package_id)
         .where(QuotePackage.application_id.in_(application_ids))
-        .order_by(QuotePackage.application_id, QuotePackageVersion.version.desc())
+        .order_by(
+            QuotePackage.application_id,
+            QuotePackageVersion.sent_at.desc(),
+            QuotePackageVersion.version.desc(),
+        )
         .ext(distinct_on(QuotePackage.application_id))
     )
     rows = (await db.execute(stmt)).all()
@@ -350,7 +365,7 @@ async def _build_activity(
     ]
 
 
-async def _build_los(db: AsyncSession, user: User) -> list[LoOption] | None:
+async def _build_los(db: AsyncSession, user: User) -> list[DashboardLoOption] | None:
     if user.role not in (UserRole.MANAGER, UserRole.ADMIN):
         return None
     stmt = (
@@ -359,7 +374,7 @@ async def _build_los(db: AsyncSession, user: User) -> list[LoOption] | None:
         .order_by(User.full_name, User.id)
     )
     rows = (await db.execute(stmt)).all()
-    return [LoOption(id=lo_id, full_name=full_name) for lo_id, full_name in rows]
+    return [DashboardLoOption(id=lo_id, full_name=full_name) for lo_id, full_name in rows]
 
 
 async def build_dashboard(

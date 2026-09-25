@@ -66,8 +66,16 @@ class ActivityItem(BaseModel):
     at: datetime
 
 
-class LoOption(BaseModel):
-    """One entry in the Manager/Admin LO filter `Select`."""
+class DashboardLoOption(BaseModel):
+    """One entry in the Manager/Admin LO filter `Select`.
+
+    Named `DashboardLoOption` (not the bare `LoOption` CQ-027's
+    `applications.listing.schemas.LoOption` already uses) so the two
+    FastAPI schemas don't collide once both routers are mounted --
+    otherwise `openapi-typescript` would need to fall back to the fully
+    qualified `app__features__..._LoOption` component name, breaking the
+    `components["schemas"]["LoOption"]` re-export both features rely on
+    (CQ-025 fix, cq-025-fix branch)."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -82,7 +90,7 @@ class DashboardResponse(BaseModel):
     attention: list[AttentionItem]
     stale: list[StaleItem]
     activity: list[ActivityItem]
-    los: list[LoOption] | None
+    los: list[DashboardLoOption] | None
     """Every `lo`-role user, for the Manager/Admin filter `Select`. `null`
     for an LO caller (they have nothing to filter — it's always their own
     files)."""

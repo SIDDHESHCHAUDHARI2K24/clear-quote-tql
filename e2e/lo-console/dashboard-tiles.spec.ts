@@ -43,9 +43,7 @@ function psql(sql: string): void {
   );
 }
 
-test("tiles are links with the spec.md query parameters (AC4 -- pending, re-check once CQ-027 exists)", async ({
-  page,
-}) => {
+test("tiles are links with the spec.md query parameters", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await staffLogin(page, ADMIN, password!);
 
@@ -70,6 +68,54 @@ test("tiles are links with the spec.md query parameters (AC4 -- pending, re-chec
     await expect(link).toHaveAttribute("href", href);
   }
   await page.screenshot({ path: `${EVIDENCE}/dashboard-tiles.png` });
+});
+
+test("each Applications-linked tile opens the list with exactly the tile's count (AC4, now that CQ-027 is merged)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await staffLogin(page, ADMIN, password!);
+
+  await expect(page.getByRole("heading", { level: 1, name: "Dashboard" })).toBeVisible();
+
+  // Scoped to the tiles region, same reason as the href test above. The
+  // "Clients" tile links to `/clients` (still CQ-026's stub), not the
+  // Applications list, so it's out of scope here -- spec.md "Out of
+  // scope": "The list pages the tiles link to (CQ-026, CQ-027) beyond
+  // agreeing the query parameters."
+  const tiles = page.getByRole("region", { name: "Dashboard tiles" });
+  const applicationsLinkedTileLabels = [
+    "Applications",
+    "Pre-approvals sent",
+    "With a property",
+    "Awaiting your review",
+    "Needs attention",
+    "Stale quotes",
+  ];
+
+  for (const label of applicationsLinkedTileLabels) {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1, name: "Dashboard" })).toBeVisible();
+
+    const link = tiles.getByRole("link", { name: new RegExp(`${label}$`) });
+    const tileText = (await link.textContent()) ?? "";
+    const expectedCount = Number(tileText.trim().match(/^\d+/)?.[0]);
+    expect(Number.isFinite(expectedCount)).toBe(true);
+
+    await link.click();
+    await expect(page.getByRole("heading", { level: 1, name: "Applications" })).toBeVisible();
+
+    // `Pagination`'s summary text ("Showing 1-25 of 42" or "No results")
+    // carries the list's `total` -- the one number this AC needs, without
+    // depending on page size or the table's rendered row count.
+    const summary = page.getByText(/^(Showing .* of \d+|No results)$/);
+    await expect(summary).toBeVisible();
+    const summaryText = (await summary.textContent()) ?? "";
+    const actualTotal =
+      summaryText === "No results" ? 0 : Number(summaryText.match(/of (\d+)/)?.[1]);
+
+    expect(actualTotal).toBe(expectedCount);
+  }
 });
 
 test("Aisha, Luis and Grace show up in the right lists with their reasons (AC3)", async ({
