@@ -10,15 +10,12 @@ import { describe, expect, it } from "vitest";
 //
 // `/support` is no longer listed here: CQ-034 built the real support form
 // (no longer a stub) -- its own tests live in
-// `src/features/support/SupportForm.test.tsx`.
+// `src/features/support/SupportForm.test.tsx`. Likewise CQ-033 built
+// `/tasks/credit-check/[id]` (tests in `src/features/credit-consent/`).
 import ApplyPage from "./apply/page";
-import CreditCheckTaskPage from "./tasks/credit-check/[id]/page";
 
 describe("(portal) stub pages", () => {
-  it.each([
-    ["Apply", ApplyPage, "CQ-032"],
-    ["Credit check", CreditCheckTaskPage, "CQ-033"],
-  ])("%s says which item builds it", (title, Page, item) => {
+  it.each([["Apply", ApplyPage, "CQ-032"]])("%s says which item builds it", (title, Page, item) => {
     render(<Page />);
     expect(screen.getByRole("heading", { level: 1, name: title })).toBeInTheDocument();
     expect(screen.getByText(`Built in ${item}`)).toBeInTheDocument();

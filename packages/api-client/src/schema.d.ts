@@ -868,6 +868,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/consents/{consent_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Consent */
+        get: operations["get_consent_api_v1_portal_consents__consent_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/consents/{consent_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept Consent */
+        post: operations["accept_consent_api_v1_portal_consents__consent_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/consents/{consent_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decline Consent */
+        post: operations["decline_consent_api_v1_portal_consents__consent_id__decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/jobs/stale-check": {
         parameters: {
             query?: never;
@@ -1066,7 +1117,7 @@ export interface components {
             };
             /** Submitted Application Id */
             submitted_application_id: string | null;
-            consent: components["schemas"]["ConsentTextOut"];
+            consent: components["schemas"]["app__features__portal__apply__schemas__ConsentTextOut"];
             /**
              * Created At
              * Format: date-time
@@ -1404,6 +1455,27 @@ export interface components {
                 ][]
             ][];
         };
+        /** ConsentAcceptRequest */
+        ConsentAcceptRequest: {
+            /** Typed Name */
+            typed_name: string;
+        };
+        /** ConsentDeclineRequest */
+        ConsentDeclineRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** ConsentLoOut */
+        ConsentLoOut: {
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone: string | null;
+            /** Nmls */
+            nmls: string | null;
+        };
         /**
          * ConsentStatus
          * @enum {string}
@@ -1432,13 +1504,6 @@ export interface components {
             decline_reason: string | null;
             /** Fico After Pull */
             fico_after_pull: number | null;
-        };
-        /** ConsentTextOut */
-        ConsentTextOut: {
-            /** Version */
-            version: string;
-            /** Text */
-            text: string;
         };
         /** CostSegTable */
         CostSegTable: {
@@ -1967,6 +2032,34 @@ export interface components {
             /** Secondary Report Token */
             secondary_report_token?: string | null;
             lo?: components["schemas"]["PortalLoOut"] | null;
+        };
+        /** PortalConsentOut */
+        PortalConsentOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            status: components["schemas"]["ConsentStatus"];
+            /** Requested At */
+            requested_at: string | null;
+            /** Expires At */
+            expires_at: string | null;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decline Reason */
+            decline_reason: string | null;
+            /** Borrower Name */
+            borrower_name: string;
+            lo: components["schemas"]["ConsentLoOut"] | null;
+            text: components["schemas"]["app__features__portal__consents__schemas__ConsentTextOut"];
+            /** Fico After Pull */
+            fico_after_pull: number | null;
         };
         /** PortalHomeResponse */
         PortalHomeResponse: {
@@ -2743,6 +2836,22 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** ConsentTextOut */
+        app__features__portal__apply__schemas__ConsentTextOut: {
+            /** Version */
+            version: string;
+            /** Text */
+            text: string;
+        };
+        /** ConsentTextOut */
+        app__features__portal__consents__schemas__ConsentTextOut: {
+            /** Version */
+            version: string;
+            /** Body */
+            body: string;
+            /** Sha256 */
+            sha256: string;
         };
         /**
          * ReportViewModel
@@ -4468,6 +4577,113 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortalHomeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_consent_api_v1_portal_consents__consent_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                consent_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalConsentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_consent_api_v1_portal_consents__consent_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                consent_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentAcceptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalConsentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_consent_api_v1_portal_consents__consent_id__decline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                consent_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentDeclineRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalConsentOut"];
                 };
             };
             /** @description Validation Error */

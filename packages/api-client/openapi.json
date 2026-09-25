@@ -3215,6 +3215,203 @@
         }
       }
     },
+    "/api/v1/portal/consents/{consent_id}": {
+      "get": {
+        "tags": [
+          "portal-consents"
+        ],
+        "summary": "Get Consent",
+        "operationId": "get_consent_api_v1_portal_consents__consent_id__get",
+        "parameters": [
+          {
+            "name": "consent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Consent Id"
+            }
+          },
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalConsentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/consents/{consent_id}/accept": {
+      "post": {
+        "tags": [
+          "portal-consents"
+        ],
+        "summary": "Accept Consent",
+        "operationId": "accept_consent_api_v1_portal_consents__consent_id__accept_post",
+        "parameters": [
+          {
+            "name": "consent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Consent Id"
+            }
+          },
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentAcceptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalConsentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/consents/{consent_id}/decline": {
+      "post": {
+        "tags": [
+          "portal-consents"
+        ],
+        "summary": "Decline Consent",
+        "operationId": "decline_consent_api_v1_portal_consents__consent_id__decline_post",
+        "parameters": [
+          {
+            "name": "consent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Consent Id"
+            }
+          },
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentDeclineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalConsentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/jobs/stale-check": {
       "post": {
         "tags": [
@@ -3711,7 +3908,7 @@
             "title": "Submitted Application Id"
           },
           "consent": {
-            "$ref": "#/components/schemas/ConsentTextOut"
+            "$ref": "#/components/schemas/app__features__portal__apply__schemas__ConsentTextOut"
           },
           "created_at": {
             "type": "string",
@@ -4364,6 +4561,81 @@
         "title": "ConfigSnapshot",
         "description": "Pricing configuration, snapshotted per-quote so old quotes never change\nwhen defaults change later (`scenarios.config_snapshot` stores one of\nthese as JSON per CQ-007)."
       },
+      "ConsentAcceptRequest": {
+        "properties": {
+          "typed_name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Typed Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "typed_name"
+        ],
+        "title": "ConsentAcceptRequest"
+      },
+      "ConsentDeclineRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "title": "ConsentDeclineRequest"
+      },
+      "ConsentLoOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "nmls": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nmls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "phone",
+          "nmls"
+        ],
+        "title": "ConsentLoOut"
+      },
       "ConsentStatus": {
         "type": "string",
         "enum": [
@@ -4468,24 +4740,6 @@
         ],
         "title": "ConsentSummary",
         "description": "E11: latest hard-pull consent request (CQ-033 fills the decision)."
-      },
-      "ConsentTextOut": {
-        "properties": {
-          "version": {
-            "type": "string",
-            "title": "Version"
-          },
-          "text": {
-            "type": "string",
-            "title": "Text"
-          }
-        },
-        "type": "object",
-        "required": [
-          "version",
-          "text"
-        ],
-        "title": "ConsentTextOut"
       },
       "CostSegTable": {
         "properties": {
@@ -6144,6 +6398,113 @@
           "next_action"
         ],
         "title": "PortalApplicationOut"
+      },
+      "PortalConsentOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ConsentStatus"
+          },
+          "requested_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decline_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decline Reason"
+          },
+          "borrower_name": {
+            "type": "string",
+            "title": "Borrower Name"
+          },
+          "lo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConsentLoOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "$ref": "#/components/schemas/app__features__portal__consents__schemas__ConsentTextOut"
+          },
+          "fico_after_pull": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fico After Pull"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "application_id",
+          "status",
+          "requested_at",
+          "expires_at",
+          "decided_at",
+          "decline_reason",
+          "borrower_name",
+          "lo",
+          "text",
+          "fico_after_pull"
+        ],
+        "title": "PortalConsentOut"
       },
       "PortalHomeResponse": {
         "properties": {
@@ -8597,6 +8958,47 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "app__features__portal__apply__schemas__ConsentTextOut": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "text"
+        ],
+        "title": "ConsentTextOut"
+      },
+      "app__features__portal__consents__schemas__ConsentTextOut": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "body",
+          "sha256"
+        ],
+        "title": "ConsentTextOut"
       },
       "ReportViewModel": {
         "description": "The one contract. See module docstring.",
