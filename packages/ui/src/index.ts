@@ -25,6 +25,27 @@ export type { TableColumn, TableProps } from "./components/Table";
 export { Tabs } from "./components/Tabs";
 export type { TabItem, TabsProps } from "./components/Tabs";
 
+// P5/P6 foundation (E7) primitives.
+export { Pagination } from "./components/Pagination";
+export type { PaginationProps } from "./components/Pagination";
+
+export { Select } from "./components/Select";
+export type { SelectOption, SelectProps } from "./components/Select";
+
+export { MultiSelect } from "./components/MultiSelect";
+export type { MultiSelectProps } from "./components/MultiSelect";
+
+export { Drawer } from "./components/Drawer";
+export type { DrawerProps } from "./components/Drawer";
+
+export { EmptyState } from "./components/EmptyState";
+export type { EmptyStateProps } from "./components/EmptyState";
+
+export { DEFAULT_TOAST_DURATION_MS, ToastProvider, useToast } from "./components/Toast";
+export type { ToastApi, ToastOptions, ToastTone } from "./components/Toast";
+
+export { useFocusTrap } from "./utils/useFocusTrap";
+
 export type { ApplicationStatus, SourceBadgeSource, StatusTone } from "./types";
 export { APPLICATION_STATUSES, APPLICATION_STATUS_TONE, SOURCE_BADGE_SOURCES } from "./types";
 

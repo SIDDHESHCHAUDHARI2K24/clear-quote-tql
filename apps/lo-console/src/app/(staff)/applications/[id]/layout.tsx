@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { WorkspaceShell } from "../../../features/workspace";
+import { WorkspaceShell } from "../../../../features/workspace";
 
 // spec.md CQ-016: the shell every other LO application screen (this tab's
 // route segment, rendered as `children`) lives inside. Next 15 App Router

@@ -81,7 +81,7 @@ function valkeyDbIndex(): string {
 // A workspace spec that does several real staff logins (each one a real
 // email+password+OTP round trip) can trip the staff login endpoint's own
 // abuse-prevention rate limit (`auth/staff/service.py`, Valkey-backed)
-// within a single run -- flushing this worktree's own Valkey db between
+// within a single run -- clearing this worktree's rate-limit keys between
 // logins keeps the suite deterministic without weakening the real limit
 // (this never touches another worktree's db, see `valkeyDbIndex`).
 export function flushLoginRateLimit(): void {
@@ -97,7 +97,14 @@ export function flushLoginRateLimit(): void {
       "valkey-cli",
       "-n",
       valkeyDbIndex(),
-      "flushdb",
+      // Only the login rate-limit counters (`rl:*`, auth/otp/rate_limit.py)
+      // -- not the whole db, which would also drop the borrower sessions
+      // `e2e/global-setup.ts` saved for the report specs (P5/P6
+      // foundation: a full-suite run broke on exactly that).
+      "eval",
+      "for _, k in ipairs(redis.call('keys', ARGV[1])) do redis.call('del', k) end",
+      "0",
+      "rl:*",
     ],
     { cwd: REPO_ROOT },
   );

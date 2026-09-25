@@ -48,6 +48,7 @@ from seed.loader import (  # noqa: E402
     _staff_password,  # noqa: E402
     load_persona_fixtures,
     seed_borrower_accounts,
+    seed_no_application_borrower,
     seed_persona,
     seed_providers,
     seed_users,
@@ -93,6 +94,8 @@ async def _seed_everything() -> dict[str, Any]:
         borrower_result = await seed_borrower_accounts(
             db, client_ids=[r.client_id for r in persona_results]
         )
+        # P5/P6 foundation (E17): one borrower with no application.
+        no_application_account_id = await seed_no_application_borrower(db)
 
         seed_config = load_seed_config()
         markets = [p["market"] for p in personas]
@@ -107,6 +110,7 @@ async def _seed_everything() -> dict[str, Any]:
         "users": user_result,
         "personas": persona_results,
         "borrowers": borrower_result,
+        "no_application_account_id": no_application_account_id,
         "background": background_summary,
     }
 
@@ -141,6 +145,8 @@ def main() -> None:
         print(f"  {r.key}: {r.final_status.value}")
     borrower_result: BorrowerSeedResult = summary["borrowers"]
     print(f"borrower accounts seeded: {len(borrower_result.account_ids)}")
+    if summary["no_application_account_id"] is not None:
+        print("no-application borrower seeded: noapp.borrower@clearquote-demo.test")
     if not any_pricing_ran:
         print(
             "NOTE: pricing stage SKIPPED for every persona -- CQ-013's "

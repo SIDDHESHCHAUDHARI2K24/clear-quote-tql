@@ -23,7 +23,6 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import UserRole
 from app.core.errors import AuthenticationError, ConflictError, ValidationAppError
 from app.core.security import (
     DUMMY_PASSWORD_HASH,
@@ -31,9 +30,10 @@ from app.core.security import (
     hash_password_async,
     verify_password_async,
 )
+from app.features.applications.assignment import least_loaded_lo_id as _least_loaded_lo_id
 from app.features.applications.models import Application
 from app.features.auth.borrower.schemas import BorrowerMeOut, LatestApplicationOut
-from app.features.auth.models import BorrowerAccount, User
+from app.features.auth.models import BorrowerAccount
 from app.features.auth.otp.rate_limit import check_login, check_signup
 from app.features.auth.otp.service import issue_challenge, verify_challenge
 from app.features.auth.users.service import MIN_PASSWORD_LENGTH, normalize_email
@@ -184,25 +184,12 @@ async def login(
     return challenge_id
 
 
-async def _least_loaded_lo_id(db: AsyncSession) -> uuid.UUID | None:
-    """The active LO's id with the fewest assigned clients (ties by the
-    LO's `created_at`, per Decision #7). `None` if there is no LO."""
-    stmt = (
-        select(User.id)
-        .select_from(User)
-        .outerjoin(Client, Client.assigned_lo_id == User.id)
-        .where(User.role == UserRole.LO)
-        .group_by(User.id, User.created_at)
-        .order_by(func.count(Client.id), User.created_at)
-        .limit(1)
-    )
-    return (await db.execute(stmt)).scalar_one_or_none()
-
-
 async def _find_or_create_client(db: AsyncSession, *, full_name: str, email: str) -> Client:
     """Matches an existing client by case-insensitive email (Decision #6,
     oldest by `created_at` then `id` if more than one), otherwise creates
-    one assigned to the least-loaded LO (Decision #7).
+    one assigned to the least-loaded LO (Decision #7, superseded by P5/P6
+    E15: `applications.assignment.least_loaded_lo_id` -- fewest active
+    applications, ties alphabetical by name).
 
     Raises `ConflictError` (`code="NO_LOAN_OFFICER"`) if there is no LO to
     assign a brand-new client to.

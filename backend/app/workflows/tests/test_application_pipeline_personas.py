@@ -209,6 +209,8 @@ async def test_aisha_coleman_ltr_columbus_oh_needs_attention_missing_occupancy(
         )
     ).scalar_one()
     assert flag is not None
+    # P5/P6 foundation (E8): the flag carries its human-readable message.
+    assert flag.message == "Cannot price: missing Occupancy"
 
 
 async def test_ben_ford_primary_fort_wayne_in_needs_attention_housing_flag(
@@ -248,6 +250,8 @@ async def test_ben_ford_primary_fort_wayne_in_needs_attention_housing_flag(
         )
     ).scalar_one()
     assert flag.field_key == "current_residence_years"
+    # P5/P6 foundation (E8): the rule's own dynamic message is stored.
+    assert flag.message == "Only 14 months of housing history on file; 24 required."
 
 
 async def test_grace_kim_ltr_denver_co_prices(

@@ -61,6 +61,7 @@ from app.workflows.activities import (
     draft_quote_set,
     enrich_application,
     import_application,
+    load_application_source,
     record_pipeline_resumed,
     validate_pricing_inputs,
     verify_application,
@@ -83,7 +84,14 @@ CONTRACT_ACTIVITIES: list[Callable[..., Any]] = [
 # workflow calls when a `resume` signal is processed -- not one of the six
 # contract activities, but it still has to be registered on the same task
 # queue to run.
-ACTIVITIES: list[Callable[..., Any]] = [*CONTRACT_ACTIVITIES, record_pipeline_resumed]
+# `load_application_source` (P5/P6 foundation, E14) is another internal
+# activity: the workflow's first step, deciding whether to skip the import
+# stage for a portal application.
+ACTIVITIES: list[Callable[..., Any]] = [
+    *CONTRACT_ACTIVITIES,
+    record_pipeline_resumed,
+    load_application_source,
+]
 WORKFLOWS: list[type] = [ApplicationPipelineWorkflow]
 
 

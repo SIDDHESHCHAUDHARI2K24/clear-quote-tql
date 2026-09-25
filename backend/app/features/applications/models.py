@@ -27,7 +27,13 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base, pg_enum
 from app.core.encryption import EncryptedString
-from app.core.enums import ApplicationStatus, LoanPurpose, Occupancy, Strategy
+from app.core.enums import (
+    ApplicationSource,
+    ApplicationStatus,
+    LoanPurpose,
+    Occupancy,
+    Strategy,
+)
 
 
 class PartyRole(enum.StrEnum):
@@ -97,6 +103,13 @@ class Application(Base):
     -> `applications`) foreign-key cycle so `Base.metadata` can still be
     topologically sorted; the migration adds this constraint with a
     separate `ALTER TABLE` after both tables exist."""
+    source: Mapped[ApplicationSource] = mapped_column(
+        pg_enum(ApplicationSource, "application_source"),
+        default=ApplicationSource.LOS,
+        server_default=ApplicationSource.LOS.value,
+    )
+    """P5/P6 foundation (E14): `los` (imported) or `portal` (CQ-032 apply
+    wizard). The pipeline skips `import_application` for `portal` rows."""
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

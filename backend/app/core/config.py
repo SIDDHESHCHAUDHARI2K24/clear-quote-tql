@@ -80,6 +80,15 @@ class Settings(BaseSettings):
     # committed as a literal anywhere in the repo.
     seed_borrower_password: str | None = None
 
+    # P5/P6 foundation (docs/backlog/phase-p5-p6-foundation.md):
+    # - `support_inbox`: CQ-034's support email recipient (`SUPPORT_INBOX`).
+    # - `stale_check_interval_seconds`: CQ-030's Temporal Schedule interval.
+    # - `clock_now`: ISO-8601 override for `core/clock.now()` (`CLOCK_NOW`),
+    #   used by tests and demos to freeze "now" (E2). Unset -> real clock.
+    support_inbox: str = "support@tql.local"
+    stale_check_interval_seconds: int = 3600
+    clock_now: str | None = None
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, value: object) -> object:

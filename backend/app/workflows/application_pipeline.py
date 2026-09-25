@@ -1,6 +1,11 @@
 """`ApplicationPipelineWorkflow`: import -> verify -> enrich -> validate ->
 auto-price -> draft quote set, one Temporal workflow per application
 (spec.md CQ-011 Contracts).
+
+P5/P6 foundation (E14): the workflow first reads `applications.source`
+(`load_application_source`); a `portal` application (CQ-032 apply wizard)
+already holds its data locally, so it skips `import_application` and starts
+straight at the pricing chain (verify -> enrich -> ...).
 """
 
 from __future__ import annotations
@@ -23,12 +28,13 @@ with workflow.unsafe.imports_passed_through():
     import app.features.pricing.enrichment.service  # noqa: F401
     import app.features.pricing.scenarios.service  # noqa: F401
     import app.features.quotes.builder.service  # noqa: F401
-    from app.core.enums import ApplicationStatus
+    from app.core.enums import ApplicationSource, ApplicationStatus
     from app.workflows.activities import (
         auto_price_application,
         draft_quote_set,
         enrich_application,
         import_application,
+        load_application_source,
         record_pipeline_resumed,
         validate_pricing_inputs,
         verify_application,
@@ -38,6 +44,10 @@ with workflow.unsafe.imports_passed_through():
         DEFAULT_RETRY_POLICY,
         IMPORT_ENRICH_RETRY_POLICY,
     )
+
+
+LOAD_SOURCE_PATCH_ID = "p56-load-application-source"
+"""Temporal patch id guarding the E14 source lookup (see `run`)."""
 
 
 @workflow.defn
@@ -101,14 +111,28 @@ class ApplicationPipelineWorkflow:
 
     @workflow.run
     async def run(self, application_id: str) -> str:
-        # Not caught: a failed import (no LOS record) is a setup error, not
-        # a demo path (spec.md) -- the whole workflow run fails.
-        await workflow.execute_activity(
-            import_application,
-            application_id,
-            start_to_close_timeout=ACTIVITY_TIMEOUT,
-            retry_policy=IMPORT_ENRICH_RETRY_POLICY,
-        )
+        # Versioned (`workflow.patched`): a run started before this step
+        # existed (e.g. one parked at needs_attention, waiting for `resume`)
+        # replays its history with `patched()` False and keeps the old
+        # "always import" path, instead of failing replay with a
+        # NondeterminismError at the new first activity.
+        source = ApplicationSource.LOS.value
+        if workflow.patched(LOAD_SOURCE_PATCH_ID):
+            source = await workflow.execute_activity(
+                load_application_source,
+                application_id,
+                start_to_close_timeout=ACTIVITY_TIMEOUT,
+                retry_policy=DEFAULT_RETRY_POLICY,
+            )
+        if source != ApplicationSource.PORTAL.value:
+            # Not caught: a failed import (no LOS record) is a setup error,
+            # not a demo path (spec.md) -- the whole workflow run fails.
+            await workflow.execute_activity(
+                import_application,
+                application_id,
+                start_to_close_timeout=ACTIVITY_TIMEOUT,
+                retry_policy=IMPORT_ENRICH_RETRY_POLICY,
+            )
 
         reached_priced = await self._run_pricing_chain(application_id)
         while not reached_priced:
