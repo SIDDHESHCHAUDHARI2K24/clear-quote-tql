@@ -297,6 +297,7 @@ async def build_me(db: AsyncSession, account: BorrowerAccount) -> BorrowerMeOut:
         client_id=account.client_id,
         full_name=client.full_name,
         first_name=client.full_name.split()[0] if client.full_name.strip() else "",
+        phone=client.phone,
         latest_application=(
             LatestApplicationOut(id=latest_application.id, status=latest_application.status.value)
             if latest_application is not None

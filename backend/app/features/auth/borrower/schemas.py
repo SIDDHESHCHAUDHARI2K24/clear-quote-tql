@@ -66,4 +66,8 @@ class BorrowerMeOut(BaseModel):
     client_id: uuid.UUID
     full_name: str
     first_name: str
+    # CQ-034 (plan.md Decision #3): the `clients.phone` this borrower's
+    # profile carries, so `/support` can prefill its phone field without a
+    # second request. `None` when the client row has no phone on file.
+    phone: str | None
     latest_application: LatestApplicationOut | None

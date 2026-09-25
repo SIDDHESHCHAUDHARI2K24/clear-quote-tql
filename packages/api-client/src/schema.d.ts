@@ -438,6 +438,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/support": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Support */
+        post: operations["submit_support_api_v1_portal_support_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/me": {
         parameters: {
             query?: never;
@@ -614,6 +631,8 @@ export interface components {
             full_name: string;
             /** First Name */
             first_name: string;
+            /** Phone */
+            phone: string | null;
             latest_application: components["schemas"]["LatestApplicationOut"] | null;
         };
         /** BorrowerSignupRequest */
@@ -1170,6 +1189,11 @@ export interface components {
          * @enum {string}
          */
         PortalStage: "applied" | "in_review" | "preapproved" | "option_selected" | "closed" | "draft";
+        /**
+         * PreferredContact
+         * @enum {string}
+         */
+        PreferredContact: "email" | "phone";
         /** PricedProductRow */
         "PricedProductRow-Input": {
             /** Investor Name */
@@ -1592,6 +1616,35 @@ export interface components {
          * @enum {string}
          */
         StrategyType: "PRIMARY" | "LTR" | "STR";
+        /** SupportLoContact */
+        SupportLoContact: {
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone: string | null;
+        };
+        /** SupportRequestCreate */
+        SupportRequestCreate: {
+            topic: components["schemas"]["SupportTopic"];
+            /** Message */
+            message: string;
+            preferred_contact: components["schemas"]["PreferredContact"];
+            /** Phone */
+            phone?: string | null;
+        };
+        /** SupportRequestResponse */
+        SupportRequestResponse: {
+            /** Reference */
+            reference: string;
+            lo: components["schemas"]["SupportLoContact"];
+        };
+        /**
+         * SupportTopic
+         * @enum {string}
+         */
+        SupportTopic: "application" | "quote" | "documents" | "other";
         /** TabStateResponse */
         TabStateResponse: {
             tab: components["schemas"]["ApplicationTab"];
@@ -2459,6 +2512,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortalReportActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_support_api_v1_portal_support_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportRequestCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportRequestResponse"];
                 };
             };
             /** @description Validation Error */
