@@ -1088,6 +1088,74 @@
         }
       }
     },
+    "/api/v1/portal/reports/{token}/actions": {
+      "post": {
+        "tags": [
+          "portal-actions"
+        ],
+        "summary": "Submit Report Action",
+        "operationId": "submit_report_action_api_v1_portal_reports__token__actions_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          },
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalReportActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalReportActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -1324,6 +1392,15 @@
           "buydown"
         ],
         "title": "AutoQuoteResponse"
+      },
+      "BorrowerActionType": {
+        "type": "string",
+        "enum": [
+          "move_forward",
+          "ask_other",
+          "ask_updated"
+        ],
+        "title": "BorrowerActionType"
       },
       "BorrowerLoginRequest": {
         "properties": {
@@ -2229,6 +2306,81 @@
           "started"
         ],
         "title": "PipelineStartResponse"
+      },
+      "PortalReportActionRequest": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/BorrowerActionType"
+          },
+          "quote_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote Id"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "PortalReportActionRequest"
+      },
+      "PortalReportActionResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatus"
+          },
+          "borrower_action": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Borrower Action"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "borrower_action",
+          "at"
+        ],
+        "title": "PortalReportActionResponse"
       },
       "PortalReportResponse": {
         "properties": {
