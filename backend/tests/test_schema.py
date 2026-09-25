@@ -145,7 +145,7 @@ ENUM_VALUES = {
     PropertyAddressStatus: {"specific_address", "tbd"},
     PropertyType: {"single_family", "two_to_four_unit", "condo", "townhome"},
     BorrowerAction: {"option_selected", "inquiry"},
-    ConsentType: {"hard_pull"},
+    ConsentType: {"hard_pull", "application"},  # CQ-032: apply-wizard consent
     ConsentStatus: {"pending", "accepted", "declined", "expired"},
     ApplicationSource: {"los", "portal"},
     EmailStatus: {"queued", "sent", "failed"},

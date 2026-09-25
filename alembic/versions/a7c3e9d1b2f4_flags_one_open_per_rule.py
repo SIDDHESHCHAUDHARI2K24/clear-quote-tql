@@ -12,7 +12,7 @@ It also backfills the `auto:borrower_home_phone` markers that `phone_copy`
 now writes (see `upgrade`).
 
 Revision ID: a7c3e9d1b2f4
-Revises: c30a57a1e0d1
+Revises: 620ac6b6be31
 Create Date: 2026-09-25 19:00:00.000000
 
 """
@@ -24,7 +24,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "a7c3e9d1b2f4"
-down_revision: Union[str, None] = "c30a57a1e0d1"
+down_revision: Union[str, None] = "620ac6b6be31"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
