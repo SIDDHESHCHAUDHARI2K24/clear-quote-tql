@@ -4,8 +4,8 @@ last_name: Reed
 email: sam.reed@clearquote-demo.test
 occupancy: investment
 strategy: str
-purchase_price: '525000.00'
-down_payment_pct: '0.25'
+purchase_price: "525000.00"
+down_payment_pct: "0.25"
 ppp_years: 5
 fico: 780
 beds: 4
@@ -17,7 +17,7 @@ seed_end_status: priced
 market:
   city: Asheville
   state: NC
-  zip: '28803'
+  zip: "28803"
   county: Buncombe
 property_type: single_family
 vesting: title_lien_in_llc
@@ -32,19 +32,19 @@ los_record:
   borrower_first_name: Sam
   borrower_last_name: Reed
   borrower_full_name: Sam Reed
-  borrower_ssn: '100011005'
-  borrower_dob: '1975-06-08'
+  borrower_ssn: "100011005"
+  borrower_dob: "1975-06-08"
   marital_status: Married
   dependents_count: 2
   borrower_email: sam.reed@clearquote-demo.test
-  borrower_cell_phone: '8285555005'
+  borrower_cell_phone: "8285555005"
   borrower_home_phone: null
   business_vesting: Title + Lien in LLC
   llc_entity_name: Asheville Holdings LLC
   current_street_address: 9 Ridge Rd
   current_city: Asheville
   current_state: NC
-  current_zip: '28803'
+  current_zip: "28803"
   current_housing_status: Own
   current_residence_years: 2
   current_residence_months: 0
@@ -54,7 +54,7 @@ los_record:
   subject_street_address: 212 Merrimon Ave
   subject_city: Asheville
   subject_state: NC
-  subject_zip: '28803'
+  subject_zip: "28803"
   subject_county: Buncombe
   property_type: Single_Family
   number_of_units: 1
@@ -64,28 +64,28 @@ los_record:
   loan_program_name: DSCR 30 YR Fixed
   amortization_term_years: 30
   amortization_type: Fixed
-  purchase_price: '525000.00'
-  appraised_value: '525000.00'
-  down_payment_pct: '0.25'
+  purchase_price: "525000.00"
+  appraised_value: "525000.00"
+  down_payment_pct: "0.25"
   prepayment_penalty_term: 5 Years
   automated_uw_system: Manual_Traditional
   lead_source: Rabbu
   has_co_borrower: false
   no_co_applicant_check: false
   employment:
-  - employer_name: Reed Holdings LLC
-    monthly_income: '18000.00'
-    years_at_job: '4.0'
-    self_employed: true
+    - employer_name: Reed Holdings LLC
+      monthly_income: "18000.00"
+      years_at_job: "4.0"
+      self_employed: true
   liabilities:
-  - creditor_name: Wells Fargo
-    account_type: Auto Loan
-    monthly_payment: '600.00'
-    balance: '24000.00'
+    - creditor_name: Wells Fargo
+      account_type: Auto Loan
+      monthly_payment: "600.00"
+      balance: "24000.00"
   assets:
-  - account_type: Checking
-    institution: Chase Bank
-    verified_amount: '180000.00'
-  - account_type: Savings
-    institution: Ally Bank
-    verified_amount: '60000.00'
+    - account_type: Checking
+      institution: Chase Bank
+      verified_amount: "180000.00"
+    - account_type: Savings
+      institution: Ally Bank
+      verified_amount: "60000.00"

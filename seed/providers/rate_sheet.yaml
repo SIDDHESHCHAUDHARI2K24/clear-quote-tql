@@ -1,168 +1,168 @@
 - investor_name: Sterling Capital
   product_name: Conventional 30yr Fixed
   program: conventional
-  base_rate: '6.500'
-  base_price: '100.500'
+  base_rate: "6.500"
+  base_price: "100.500"
   min_fico: 680
-  max_ltv: '97.00'
+  max_ltv: "97.00"
   dscr_bucket: null
   ppp_years: null
   str_only: false
   lead_source: null
   lock_days: 30
-  fico_adjustment_bps: '0.00'
-  ltv_adjustment_bps: '0.00'
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
 - investor_name: Sterling Capital
   product_name: Conventional 30yr Fixed Buydown
   program: conventional
-  base_rate: '6.125'
-  base_price: '99.250'
+  base_rate: "6.125"
+  base_price: "99.250"
   min_fico: 680
-  max_ltv: '97.00'
+  max_ltv: "97.00"
   dscr_bucket: null
   ppp_years: null
   str_only: false
   lead_source: null
   lock_days: 30
-  fico_adjustment_bps: '0.00'
-  ltv_adjustment_bps: '0.00'
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
 - investor_name: Meridian Home Loans
   product_name: Conventional 30yr Fixed
   program: conventional
-  base_rate: '6.625'
-  base_price: '100.750'
+  base_rate: "6.625"
+  base_price: "100.750"
   min_fico: 700
-  max_ltv: '95.00'
+  max_ltv: "95.00"
   dscr_bucket: null
   ppp_years: null
   str_only: false
   lead_source: null
   lock_days: 45
-  fico_adjustment_bps: '-12.50'
-  ltv_adjustment_bps: '0.00'
+  fico_adjustment_bps: "-12.50"
+  ltv_adjustment_bps: "0.00"
 - investor_name: Meridian Home Loans
   product_name: Conventional 30yr Fixed HighLTV
   program: conventional
-  base_rate: '6.875'
-  base_price: '101.000'
+  base_rate: "6.875"
+  base_price: "101.000"
   min_fico: 660
-  max_ltv: '97.00'
+  max_ltv: "97.00"
   dscr_bucket: null
   ppp_years: null
   str_only: false
   lead_source: null
   lock_days: 30
-  fico_adjustment_bps: '25.00'
-  ltv_adjustment_bps: '15.00'
+  fico_adjustment_bps: "25.00"
+  ltv_adjustment_bps: "15.00"
 - investor_name: Sterling Capital
   product_name: DSCR 30yr Fixed
   program: dscr
-  base_rate: '7.250'
-  base_price: '100.250'
+  base_rate: "7.250"
+  base_price: "100.250"
   min_fico: 680
-  max_ltv: '80.00'
+  max_ltv: "80.00"
   dscr_bucket: GE_1_25
   ppp_years: 5
   str_only: false
   lead_source: null
   lock_days: 30
-  fico_adjustment_bps: '0.00'
-  ltv_adjustment_bps: '0.00'
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
 - investor_name: Sterling Capital
   product_name: DSCR 30yr Fixed Buydown
   program: dscr
-  base_rate: '6.875'
-  base_price: '99.500'
+  base_rate: "6.875"
+  base_price: "99.500"
   min_fico: 680
-  max_ltv: '80.00'
+  max_ltv: "80.00"
   dscr_bucket: GE_1_25
   ppp_years: 5
   str_only: false
   lead_source: null
   lock_days: 30
-  fico_adjustment_bps: '0.00'
-  ltv_adjustment_bps: '0.00'
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
 - investor_name: Blue Harbor Capital
   product_name: DSCR 30yr Fixed Mid
   program: dscr
-  base_rate: '7.500'
-  base_price: '100.500'
+  base_rate: "7.500"
+  base_price: "100.500"
   min_fico: 680
-  max_ltv: '80.00'
+  max_ltv: "80.00"
   dscr_bucket: ONE_TO_1_25
   ppp_years: 5
   str_only: false
   lead_source: null
   lock_days: 30
-  fico_adjustment_bps: '0.00'
-  ltv_adjustment_bps: '0.00'
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
 - investor_name: Blue Harbor Capital
   product_name: DSCR 30yr Fixed Thin
   program: dscr
-  base_rate: '7.875'
-  base_price: '100.750'
+  base_rate: "7.875"
+  base_price: "100.750"
   min_fico: 660
-  max_ltv: '80.00'
+  max_ltv: "80.00"
   dscr_bucket: BELOW_1_00
   ppp_years: 5
   str_only: false
   lead_source: null
   lock_days: 30
-  fico_adjustment_bps: '0.00'
-  ltv_adjustment_bps: '0.00'
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
 - investor_name: Blue Harbor Capital
   product_name: DSCR 30yr Fixed STR
   program: dscr
-  base_rate: '7.625'
-  base_price: '100.375'
+  base_rate: "7.625"
+  base_price: "100.375"
   min_fico: 680
-  max_ltv: '80.00'
+  max_ltv: "80.00"
   dscr_bucket: null
   ppp_years: 5
   str_only: true
   lead_source: null
   lock_days: 30
-  fico_adjustment_bps: '0.00'
-  ltv_adjustment_bps: '0.00'
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
 - investor_name: Meridian Home Loans
   product_name: DSCR 30yr Fixed No-PPP
   program: dscr
-  base_rate: '7.750'
-  base_price: '100.000'
+  base_rate: "7.750"
+  base_price: "100.000"
   min_fico: 680
-  max_ltv: '75.00'
+  max_ltv: "75.00"
   dscr_bucket: null
   ppp_years: 0
   str_only: false
   lead_source: null
   lock_days: 30
-  fico_adjustment_bps: '0.00'
-  ltv_adjustment_bps: '0.00'
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
 - investor_name: Sterling Capital
   product_name: DSCR 30yr Fixed BiggerPockets
   program: dscr
-  base_rate: '7.375'
-  base_price: '100.125'
+  base_rate: "7.375"
+  base_price: "100.125"
   min_fico: 680
-  max_ltv: '80.00'
+  max_ltv: "80.00"
   dscr_bucket: null
   ppp_years: 5
   str_only: false
   lead_source: BiggerPockets
   lock_days: 30
-  fico_adjustment_bps: '0.00'
-  ltv_adjustment_bps: '0.00'
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"
 - investor_name: Meridian Home Loans
   product_name: Conventional 30yr Fixed EmployeeLoan
   program: conventional
-  base_rate: '6.375'
-  base_price: '100.250'
+  base_rate: "6.375"
+  base_price: "100.250"
   min_fico: 680
-  max_ltv: '97.00'
+  max_ltv: "97.00"
   dscr_bucket: null
   ppp_years: null
   str_only: false
   lead_source: Employee_Loan
   lock_days: 30
-  fico_adjustment_bps: '0.00'
-  ltv_adjustment_bps: '0.00'
+  fico_adjustment_bps: "0.00"
+  ltv_adjustment_bps: "0.00"

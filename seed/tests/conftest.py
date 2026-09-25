@@ -16,13 +16,22 @@ from cryptography.fernet import Fernet
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("FIELD_ENCRYPTION_KEY", Fernet.generate_key().decode())
 os.environ.setdefault("INTEGRATION_LATENCY_ENABLED", "false")
+# CQ-013: pricing routes' stub auth 401s when unset -- this item's own tests
+# never hit those routes directly, but `seed_persona` now runs the real
+# pricing stage, and some transitive CQ-013 helper may read it too.
+os.environ.setdefault("DEV_LO_ID", "00000000-0000-0000-0000-000000000001")
 
+import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
+from fakeredis import aioredis as fakeredis_aioredis  # noqa: E402
+from sqlalchemy import delete  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine  # noqa: E402
 
 from app.core.config import get_settings  # noqa: E402
+from app.integrations.common import failure_toggle  # noqa: E402
+from app.integrations.common.models import IntegrationCall  # noqa: E402
 from seed.loader import (  # noqa: E402
     PersonaSeedResult,
     UserSeedResult,
@@ -51,6 +60,28 @@ async def test_engine() -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(test_database_url)
     yield engine
     await engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def _fake_valkey(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Mirrors `backend/conftest.py`'s own autouse fixture (CQ-009/CQ-013):
+    an isolated in-process fake instead of the real, possibly-shared local
+    Valkey -- `seed_persona`'s pricing stage exercises mock adapters through
+    `failure_toggle.is_forced_to_fail` just like the feature test suites do.
+    """
+    fake_client = fakeredis_aioredis.FakeRedis(decode_responses=True)
+    monkeypatch.setattr(failure_toggle, "_client", fake_client)
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _clean_integration_calls(test_engine: AsyncEngine) -> AsyncIterator[None]:
+    """Mirrors `backend/conftest.py`'s own autouse fixture: `record_call`
+    commits through its own short-lived session, independent of
+    `db_session`'s rollback-based isolation, so it leaves a real row behind
+    that nothing else cleans up. Truncate after every test instead."""
+    yield
+    async with test_engine.begin() as conn:
+        await conn.execute(delete(IntegrationCall))
 
 
 @pytest_asyncio.fixture

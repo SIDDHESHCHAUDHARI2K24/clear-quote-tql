@@ -98,7 +98,10 @@ def test_marcus_hale_raw_inputs_are_engine_consumable() -> None:
     tax_row = tax_rows[(marcus["market"]["county"], marcus["market"]["state"])]
 
     str_rows = {(row["zip"], row["beds"]): row for row in load_provider_fixture("str_revenue.yaml")}
-    str_row = str_rows[(marcus["market"]["zip"], marcus["beds"])]
+    # Keyed on Property.number_of_units (always 1, single_family) -- not the
+    # persona table's own "Beds" column; see CQ-013's enrichment/service.py
+    # _enrich_str_revenue, which looks these tables up by property attribute.
+    str_row = str_rows[(marcus["market"]["zip"], 1)]
 
     rate_sheet = load_provider_fixture("rate_sheet.yaml")
     dscr_str_row = next(r for r in rate_sheet if r["program"] == "dscr" and r.get("str_only"))

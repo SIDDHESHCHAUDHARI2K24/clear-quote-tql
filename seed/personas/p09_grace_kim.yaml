@@ -4,8 +4,8 @@ last_name: Kim
 email: grace.kim@clearquote-demo.test
 occupancy: investment
 strategy: ltr
-purchase_price: '330000.00'
-down_payment_pct: '0.25'
+purchase_price: "330000.00"
+down_payment_pct: "0.25"
 ppp_years: 5
 fico: 745
 beds: 2
@@ -17,7 +17,7 @@ seed_end_status: sent
 market:
   city: Denver
   state: CO
-  zip: '80202'
+  zip: "80202"
   county: Denver
 property_type: single_family
 vesting: personal_name
@@ -32,19 +32,19 @@ los_record:
   borrower_first_name: Grace
   borrower_last_name: Kim
   borrower_full_name: Grace Kim
-  borrower_ssn: '100011009'
-  borrower_dob: '1983-10-25'
+  borrower_ssn: "100011009"
+  borrower_dob: "1983-10-25"
   marital_status: Unmarried
   dependents_count: 0
   borrower_email: grace.kim@clearquote-demo.test
-  borrower_cell_phone: '3035559009'
+  borrower_cell_phone: "3035559009"
   borrower_home_phone: null
   business_vesting: Personal Name
   llc_entity_name: null
   current_street_address: 77 Colfax Ave
   current_city: Denver
   current_state: CO
-  current_zip: '80202'
+  current_zip: "80202"
   current_housing_status: Own
   current_residence_years: 5
   current_residence_months: 0
@@ -54,7 +54,7 @@ los_record:
   subject_street_address: 1500 Larimer St
   subject_city: Denver
   subject_state: CO
-  subject_zip: '80202'
+  subject_zip: "80202"
   subject_county: Denver
   property_type: Single_Family
   number_of_units: 1
@@ -64,30 +64,30 @@ los_record:
   loan_program_name: DSCR 30 YR Fixed
   amortization_term_years: 30
   amortization_type: Fixed
-  purchase_price: '330000.00'
-  appraised_value: '330000.00'
-  down_payment_pct: '0.25'
+  purchase_price: "330000.00"
+  appraised_value: "330000.00"
+  down_payment_pct: "0.25"
   prepayment_penalty_term: 5 Years
   automated_uw_system: Manual_Traditional
   lead_source: BiggerPockets
   has_co_borrower: false
   no_co_applicant_check: false
   employment:
-  - employer_name: Kim Ventures LLC
-    monthly_income: '10500.00'
-    years_at_job: '4.0'
-    self_employed: true
+    - employer_name: Kim Ventures LLC
+      monthly_income: "10500.00"
+      years_at_job: "4.0"
+      self_employed: true
   liabilities:
-  - creditor_name: Wells Fargo
-    account_type: Auto Loan
-    monthly_payment: '300.00'
-    balance: '9000.00'
+    - creditor_name: Wells Fargo
+      account_type: Auto Loan
+      monthly_payment: "300.00"
+      balance: "9000.00"
   assets:
-  - account_type: Checking
-    institution: Chase Bank
-    verified_amount: '90000.00'
-  - account_type: Savings
-    institution: Ally Bank
-    verified_amount: '30000.00'
+    - account_type: Checking
+      institution: Chase Bank
+      verified_amount: "90000.00"
+    - account_type: Savings
+      institution: Ally Bank
+      verified_amount: "30000.00"
 fixture_layer:
   sent_days_ago: 25

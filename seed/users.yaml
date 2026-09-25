@@ -2,7 +2,14 @@
 # usable in CQ-014 -- this item only inserts the rows and bcrypt hashes.
 # `password` is the plaintext demo password `seed/loader.py` bcrypt-hashes
 # at seed time -- never stored anywhere in the DB.
+#
+# Jordan Lee's `id` is pinned to match `DEV_LO_ID`'s default
+# (backend/conftest.py, .env.example) -- CQ-013's pricing routes' stub auth
+# (`pricing.scenarios.deps.get_current_lo_stub`) returns this id, so a
+# developer running the API locally against a freshly-`demo-reset` database
+# has a real `users` row behind it.
 - key: lo_jordan
+  id: "00000000-0000-0000-0000-000000000001"
   email: jordan.lee@clearquote-demo.test
   full_name: Jordan Lee
   role: lo

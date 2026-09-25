@@ -37,3 +37,13 @@ Append one entry per handoff, newest at the bottom. A new session reads spec.md,
   3. Re-run `time make demo-reset`, confirm still under 60s with pricing now running for all 10 personas, and update `post-dev.md`'s AC1/AC2/AC7/AC8 rows from Partial/Deferred to Full.
 - **Open questions / blockers:** None -- waiting on the orchestrator's signal that CQ-013 has merged, per the dispatch instructions ("If CQ-013 is not merged when Phase A is done, commit Phase A, report status, and wait for my message").
 - **Verify state:** `make up` (if the shared stack is down) `&&` `uv run pytest backend seed -q` `&&` `time make demo-reset`.
+
+## Handoff 2 — 2026-09-25 — Claude agent (Phase B, item complete)
+
+- **Branch / last commit:** `cq-010-seed-data` @ (see `git log -1` after this handoff's commit)
+- **Stage:** 8 Commit (item complete, pushed, CI pending/recorded in post-dev.md).
+- **Done:** Merged `phase-p0-p1` (CQ-013 pricing service, `a95498b`/`85e0462`). Rewrote `seed/pricing_seam.py` to call CQ-013's real functions with their actual `(db, application_id, ...)` signatures (Phase A had guessed the argument order backwards). Added `seed/loader.py::_seed_representative_fico` (credit-pull field_value CQ-013 needs but no item charters). Fixed `provider_rents`/`provider_str_revenue` to key on `beds=1` (== `Property.number_of_units`, what CQ-013's enrichment actually queries by) instead of the persona table's own "Beds" column. Fixed Marcus Hale's STR revenue fixture so his DSCR is actually < 1 (system-design's intended "negative cashflow" demo) instead of the generic proxy giving DSCR > 1. Pinned Jordan Lee's `users.id` to match `DEV_LO_ID`'s default. All 10 personas now reach their exact spec.md "Seed end status" via the real pipeline; `make lint` and `make test` both fully green; `make demo-reset` ~1.8-2.2s.
+- **In progress:** Nothing.
+- **Next 3 steps:** None for this item. If a future item touches `seed/pricing_seam.py`'s call signatures again (e.g. CQ-011's real Temporal workflow), reconcile against this file's docstring.
+- **Open questions / blockers:** None.
+- **Verify state:** `make up && uv run pytest backend seed -q && make lint && time make demo-reset`.

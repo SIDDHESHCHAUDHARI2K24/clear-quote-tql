@@ -44,7 +44,7 @@ async def test_named_provider_tables_have_a_row_per_market(seeded_base: SeededBa
     db = seeded_base.db
     for persona in seeded_base.personas:
         market = persona["market"]
-        beds = persona["beds"] or 1
+        beds = 1  # matches Property.number_of_units (loader.py) -- see enrichment note
 
         tax_count = (
             await db.execute(
@@ -124,7 +124,7 @@ async def test_rent_and_str_adapters_return_non_empty_for_every_persona(
     str_client = MockStrClient(seeded_base.db)
     for persona in seeded_base.personas:
         market = persona["market"]
-        beds = persona["beds"] or 1
+        beds = 1  # matches Property.number_of_units (loader.py) -- see enrichment note
         rent = await rent_client.get_market_rent(market["zip"], beds)
         assert rent.market_rent > 0
         str_rev = await str_client.get_str_revenue(market["zip"], beds)

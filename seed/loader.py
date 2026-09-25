@@ -3,13 +3,26 @@ and drives every persona through the same stage service functions CQ-011's
 workflow will later wrap as activities, in the same order (Decision D1,
 plan.md) -- `applications.service.import_from_los` (CQ-010, this item) then
 `applications.verification.service.run_and_persist` (CQ-012), then the
-pricing seam (`seed/pricing_seam.py`, CQ-013's pinned names, currently a
-no-op until that item merges -- see that module's docstring).
+pricing seam (`seed/pricing_seam.py`, CQ-013's real, merged functions).
 
 Every dollar/rate figure this module writes for a priced quote comes from
-`quote_engine` (via CQ-013's `auto_price`, once wired) or is a raw input the
-persona table pins (price, down %, FICO, etc.) -- nothing here hand-types a
-computed number, per spec.md scope item 8.
+`quote_engine` (via CQ-013's `auto_price`) or is a raw input the persona
+table pins (price, down %, FICO, etc.) -- nothing here hand-types a computed
+number, per spec.md scope item 8.
+
+Phase B addition: nothing in the merged codebase populates `field_values.
+representative_fico` (`enrich_pricing_fields` writes tax/insurance/hoa/rent/
+str only; a real "credit pull" activity isn't chartered by any item's spec
+yet). Since this item already seeds `provider_credit_reports`, `seed_persona`
+pulls credit and writes that one `field_values` row itself
+(`_seed_representative_fico`) -- an input, not a computed figure, exactly
+like the enrichment fields CQ-013 writes. It is skipped for personas whose
+`missing_fields` includes `occupancy_type` (Aisha Coleman): per CQ-013's own
+post-dev.md ("AC4's persona-7 test uses 'missing RepresentativeFICO' rather
+than literally 'missing Occupancy' -- Occupancy is non-nullable in this
+schema"), a missing/incomplete LOS record blocking a representative FICO
+pull is this schema's real equivalent of persona 7's original "missing
+Occupancy" story -- not a fabricated substitute.
 """
 
 from __future__ import annotations
@@ -26,16 +39,26 @@ import bcrypt
 import yaml
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import ApplicationStatus, FlagSeverity, Occupancy, Strategy, UserRole
+from app.core.enums import (
+    ApplicationStatus,
+    FieldSource,
+    FlagSeverity,
+    Occupancy,
+    Strategy,
+    UserRole,
+)
+from app.core.errors import AppError
 from app.features.applications.models import Application, BusinessVesting
 from app.features.applications.property.models import Property, PropertyAddressStatus, PropertyType
 from app.features.applications.service import import_from_los
 from app.features.applications.timeline.models import ActivityEvent
+from app.features.applications.verification.models import FieldValue
 from app.features.applications.verification.service import run_and_persist
 from app.features.auth.models import User
 from app.features.clients.models import Client
 from app.features.notifications.outbox.models import EmailStatus, OutboxEmail
 from app.features.quotes.send.models import BorrowerAction, QuotePackage
+from app.integrations.credit.mock import MockCreditClient
 from app.integrations.credit.models import CreditPullType, ProviderCreditReport
 from app.integrations.insurance.models import ProviderInsuranceFactor
 from app.integrations.los.models import ProviderLosRecord
@@ -97,6 +120,7 @@ async def seed_users(db: AsyncSession) -> UserSeedResult:
             "ascii"
         )
         user = User(
+            id=uuid.UUID(row["id"]) if row.get("id") else uuid.uuid4(),
             email=row["email"],
             password_hash=password_hash,
             role=UserRole(row["role"]),
@@ -245,6 +269,27 @@ async def _add_activity_event(
     await db.commit()
 
 
+async def _seed_representative_fico(
+    db: AsyncSession, application_id: uuid.UUID, loan_number: str
+) -> None:
+    """Writes `field_values.representative_fico` from a real hard-pull
+    credit report (already seeded in `provider_credit_reports`) -- see
+    module docstring. Not called for personas whose `missing_fields`
+    includes `occupancy_type` (Aisha Coleman)."""
+    credit_client = MockCreditClient(db)
+    report = await credit_client.pull_credit(loan_number, CreditPullType.HARD_PULL)
+    db.add(
+        FieldValue(
+            application_id=application_id,
+            field_key="representative_fico",
+            value=report.middle_score,
+            source=FieldSource.CREDIT_BUREAU,
+        )
+    )
+    await db.flush()
+    await db.commit()
+
+
 async def seed_persona(
     db: AsyncSession,
     persona: dict[str, Any],
@@ -329,8 +374,21 @@ async def seed_persona(
 
     pricing_ran = False
     if application.status is ApplicationStatus.READY_TO_PRICE:
-        pricing_stage_result = await run_pricing_stage(application.id, db)
-        if pricing_stage_result is not None:
+        if "occupancy_type" not in persona.get("missing_fields", []):
+            await _seed_representative_fico(db, application.id, persona["loan_number"])
+
+        try:
+            pricing_stage_result = await run_pricing_stage(db, application.id)
+        except AppError as exc:
+            await db.refresh(application)
+            application.status = ApplicationStatus.NEEDS_ATTENTION
+            await db.flush()
+            await db.commit()
+            await _add_activity_event(
+                db, application.id, "pipeline.pricing_blocked", {"reason": exc.message}
+            )
+            activity_types.append("pipeline.pricing_blocked")
+        else:
             pricing_ran = True
             await db.refresh(application)
             application.status = ApplicationStatus.PRICED
@@ -340,8 +398,8 @@ async def seed_persona(
             activity_types.append("pipeline.priced")
 
             fixture_layer = persona.get("fixture_layer")
-            if fixture_layer and pricing_stage_result.quote_set_result is not None:
-                quote_ids = getattr(pricing_stage_result.quote_set_result, "quote_ids", [])
+            if fixture_layer:
+                quote_ids = pricing_stage_result.quote_set_result.quote_ids
                 if quote_ids:
                     await apply_send_fixture(
                         db,

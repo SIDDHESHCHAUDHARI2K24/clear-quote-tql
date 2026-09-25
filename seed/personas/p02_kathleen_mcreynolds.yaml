@@ -4,8 +4,8 @@ last_name: McReynolds
 email: kathleen.mcreynolds@clearquote-demo.test
 occupancy: investment
 strategy: ltr
-purchase_price: '300000.00'
-down_payment_pct: '0.25'
+purchase_price: "300000.00"
+down_payment_pct: "0.25"
 ppp_years: 5
 fico: 720
 beds: 4
@@ -17,7 +17,7 @@ seed_end_status: priced
 market:
   city: Davenport
   state: FL
-  zip: '33896'
+  zip: "33896"
   county: Polk
 property_type: single_family
 vesting: personal_name
@@ -32,19 +32,19 @@ los_record:
   borrower_first_name: Kathleen
   borrower_last_name: McReynolds
   borrower_full_name: Kathleen McReynolds
-  borrower_ssn: '100011002'
-  borrower_dob: '1978-09-03'
+  borrower_ssn: "100011002"
+  borrower_dob: "1978-09-03"
   marital_status: Unmarried
   dependents_count: 0
   borrower_email: kathleen.mcreynolds@clearquote-demo.test
-  borrower_cell_phone: '8135552002'
+  borrower_cell_phone: "8135552002"
   borrower_home_phone: null
   business_vesting: Personal Name
   llc_entity_name: null
   current_street_address: 22 River Rd
   current_city: Lakeland
   current_state: FL
-  current_zip: '33801'
+  current_zip: "33801"
   current_housing_status: Rent
   current_residence_years: 4
   current_residence_months: 0
@@ -54,7 +54,7 @@ los_record:
   subject_street_address: TBD
   subject_city: Davenport
   subject_state: FL
-  subject_zip: '33896'
+  subject_zip: "33896"
   subject_county: Polk
   property_type: Single_Family
   number_of_units: 1
@@ -64,33 +64,33 @@ los_record:
   loan_program_name: DSCR 30 YR Fixed
   amortization_term_years: 30
   amortization_type: Fixed
-  purchase_price: '300000.00'
-  appraised_value: '300000.00'
-  down_payment_pct: '0.25'
+  purchase_price: "300000.00"
+  appraised_value: "300000.00"
+  down_payment_pct: "0.25"
   prepayment_penalty_term: 5 Years
   automated_uw_system: Manual_Traditional
   lead_source: Zillow
   buy_box_states:
-  - FL
+    - FL
   buy_box_market_cities:
-  - Davenport
-  - Orlando
+    - Davenport
+    - Orlando
   has_co_borrower: false
   no_co_applicant_check: false
   employment:
-  - employer_name: McReynolds Realty LLC
-    monthly_income: '9500.00'
-    years_at_job: '4.0'
-    self_employed: true
+    - employer_name: McReynolds Realty LLC
+      monthly_income: "9500.00"
+      years_at_job: "4.0"
+      self_employed: true
   liabilities:
-  - creditor_name: Wells Fargo
-    account_type: Auto Loan
-    monthly_payment: '380.00'
-    balance: '12000.00'
+    - creditor_name: Wells Fargo
+      account_type: Auto Loan
+      monthly_payment: "380.00"
+      balance: "12000.00"
   assets:
-  - account_type: Checking
-    institution: Chase Bank
-    verified_amount: '60000.00'
-  - account_type: Savings
-    institution: Ally Bank
-    verified_amount: '20000.00'
+    - account_type: Checking
+      institution: Chase Bank
+      verified_amount: "60000.00"
+    - account_type: Savings
+      institution: Ally Bank
+      verified_amount: "20000.00"
