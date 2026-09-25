@@ -610,8 +610,8 @@
     "semantic_hash": ""
   },
   "backend/app/features/pricing/scenarios/service.py": {
-    "mtime": 1790346919.7121503,
-    "ast_hash": "5d4dbe562842df90eefcaac7b6367505",
+    "mtime": 1790348595.4198549,
+    "ast_hash": "f6c4f470cd128bb0544aa090584fc72f",
     "semantic_hash": ""
   },
   "backend/app/features/pricing/scenarios/tests/__init__.py": {
@@ -645,8 +645,8 @@
     "semantic_hash": ""
   },
   "backend/app/features/pricing/scenarios/tests/test_ob_validation.py": {
-    "mtime": 1790346637.5686405,
-    "ast_hash": "49dff2fbdfe835d3d9c5830238aebd82",
+    "mtime": 1790348660.018608,
+    "ast_hash": "89511cdb36653282f4f08ccecc7956d0",
     "semantic_hash": ""
   },
   "backend/app/features/pricing/scenarios/tests/test_products_grid.py": {
@@ -1300,7 +1300,7 @@
     "semantic_hash": ""
   },
   "packages/api-client/openapi.json": {
-    "mtime": 1790348521.903692,
+    "mtime": 1790349087.0540285,
     "ast_hash": "9faf9eb23dcfb94a15d6f450404d75ea",
     "semantic_hash": ""
   },
@@ -1330,7 +1330,7 @@
     "semantic_hash": ""
   },
   "packages/api-client/src/schema.d.ts": {
-    "mtime": 1790348522.743736,
+    "mtime": 1790349087.6190884,
     "ast_hash": "7b3787079a4c10a187f4a7f17590b2b4",
     "semantic_hash": ""
   },
@@ -2010,8 +2010,8 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-017-pricing-panel/post-dev.md": {
-    "mtime": 1790347798.1321304,
-    "ast_hash": "f24cd50a3d33f9c228f07fe01b76f72e",
+    "mtime": 1790348927.183298,
+    "ast_hash": "0e33abd234d49e79472a9d51d1d8a182",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-017-pricing-panel/spec.md": {
@@ -3565,13 +3565,13 @@
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/pricing/EnrichedMoneyField.tsx": {
-    "mtime": 1790347693.2169838,
-    "ast_hash": "f2ae5a4a22e580e778861b5b11b0f8f1",
+    "mtime": 1790348765.2558506,
+    "ast_hash": "a16f8d1110ccd511ed4b1db392d5c833",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/pricing/EnrichedPercentField.tsx": {
-    "mtime": 1790347703.5712378,
-    "ast_hash": "9fbdb3552802eebc1a33d0c04503ca26",
+    "mtime": 1790348783.0897763,
+    "ast_hash": "1bf66bf72176a36790905354d1a60795",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/pricing/PricingPanel.strategy-gating.test.tsx": {
@@ -3705,7 +3705,7 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-017-pricing-panel/evidence/pricing-panel-priya.png": {
-    "mtime": 1790347995.0794773,
+    "mtime": 1790348899.3747852,
     "ast_hash": "439a6067e2c42f6b7210fa70033db433",
     "semantic_hash": ""
   },
@@ -3715,8 +3715,8 @@
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/pricing/EnrichedPercentField.test.tsx": {
-    "mtime": 1790346893.656747,
-    "ast_hash": "4749b3923eb64fc72eb661d8ee9959f0",
+    "mtime": 1790348684.4301097,
+    "ast_hash": "dda0a9ea6e81a3f6c681239ad14a6ab5",
     "semantic_hash": ""
   },
   "apps/borrower-portal/src/app/report/[token]/page.tsx": {
@@ -4117,6 +4117,11 @@
   "docs/backlog/CQ-023-property-matches/evidence/report-matches-375px.png": {
     "mtime": 1790348423.1892836,
     "ast_hash": "2298c7b61f3a65a9be876e4e0df6d2c8",
+    "semantic_hash": ""
+  },
+  "apps/lo-console/src/features/pricing/useTouchedDraft.ts": {
+    "mtime": 1790348747.7386131,
+    "ast_hash": "2413c31b7f81821d85275a6c647a58da",
     "semantic_hash": ""
   }
 }
