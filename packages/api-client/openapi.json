@@ -1,29 +1,25 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Clear Quote API (CQ-005 stub)",
-    "version": "0.1.0-stub",
-    "description": "Hand-written stub containing only GET /health, in the exact shape pinned by docs/backlog/CQ-004-backend-skeleton/spec.md. CQ-004's backend/scripts/export_openapi.py overwrites this file with the real app.openapi() export once the backend exists; no consumer code should need to change since the /health shape is pinned identically."
+    "title": "Clear Quote API",
+    "version": "0.1.0"
   },
   "paths": {
     "/health": {
       "get": {
-        "operationId": "health_check",
-        "summary": "Health check",
+        "tags": [
+          "system"
+        ],
+        "summary": "Get Health",
+        "operationId": "get_health_health_get",
         "responses": {
           "200": {
-            "description": "All checks ok",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/HealthReport" }
-              }
-            }
-          },
-          "503": {
-            "description": "One or more checks degraded",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HealthReport" }
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReport"
+                }
               }
             }
           }
@@ -33,29 +29,30 @@
   },
   "components": {
     "schemas": {
-      "CheckResult": {
-        "type": "string",
-        "description": "\"ok\" or \"error: <short reason>\""
-      },
       "HealthReport": {
-        "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["ok", "degraded"]
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
           },
           "checks": {
-            "type": "object",
-            "properties": {
-              "database": { "$ref": "#/components/schemas/CheckResult" },
-              "valkey": { "$ref": "#/components/schemas/CheckResult" },
-              "minio": { "$ref": "#/components/schemas/CheckResult" },
-              "temporal": { "$ref": "#/components/schemas/CheckResult" }
+            "additionalProperties": {
+              "type": "string"
             },
-            "required": ["database", "valkey", "minio", "temporal"]
+            "type": "object",
+            "title": "Checks"
           }
         },
-        "required": ["status", "checks"]
+        "type": "object",
+        "required": [
+          "status",
+          "checks"
+        ],
+        "title": "HealthReport"
       }
     }
   }

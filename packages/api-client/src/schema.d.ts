@@ -12,8 +12,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Health check */
-        get: operations["health_check"];
+        /** Get Health */
+        get: operations["get_health_health_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -26,16 +26,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description "ok" or "error: <short reason>" */
-        CheckResult: string;
+        /** HealthReport */
         HealthReport: {
-            /** @enum {string} */
+            /**
+             * Status
+             * @enum {string}
+             */
             status: "ok" | "degraded";
+            /** Checks */
             checks: {
-                database: components["schemas"]["CheckResult"];
-                valkey: components["schemas"]["CheckResult"];
-                minio: components["schemas"]["CheckResult"];
-                temporal: components["schemas"]["CheckResult"];
+                [key: string]: string;
             };
         };
     };
@@ -47,7 +47,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    health_check: {
+    get_health_health_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -56,17 +56,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description All checks ok */
+            /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthReport"];
-                };
-            };
-            /** @description One or more checks degraded */
-            503: {
                 headers: {
                     [name: string]: unknown;
                 };
