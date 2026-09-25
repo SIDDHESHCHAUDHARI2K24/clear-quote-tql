@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import type { ReactNode } from "react";
 
-import { StatusPill } from "@cq/ui";
+import { Button, Drawer, StatusPill } from "@cq/ui";
 
+import { ActivityTimeline } from "../activity";
 import type { ApplicationSummary } from "./api";
 import { formatMoney, formatPercent, formatPpp, formatRate } from "./format";
 import { PipelineBanner } from "./PipelineBanner";
@@ -52,6 +54,7 @@ function HeaderNumber({
 // (AC3).
 export function WorkspaceHeader() {
   const { applicationId, state } = useWorkspace();
+  const [activityOpen, setActivityOpen] = useState(false);
   if (state.kind !== "ready") return null;
   const { summary } = state;
   const isPrimary = summary.occupancy === "primary";
@@ -63,8 +66,21 @@ export function WorkspaceHeader() {
           <h1 className="text-lg font-semibold text-navy-900">{summary.client_name}</h1>
           <StatusPill status={summary.status} />
         </div>
-        <StatusActionsMenu />
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => setActivityOpen(true)}>
+            Activity
+          </Button>
+          <StatusActionsMenu />
+        </div>
       </div>
+      <Drawer
+        isOpen={activityOpen}
+        onClose={() => setActivityOpen(false)}
+        title="Activity"
+        size="md"
+      >
+        <ActivityTimeline applicationId={applicationId} />
+      </Drawer>
       <dl className="flex flex-wrap gap-x-8 gap-y-3 px-6 pb-4 text-sm">
         <HeaderNumber label="Purchasing power" value={formatMoney(summary.purchasing_power)} />
         <HeaderNumber

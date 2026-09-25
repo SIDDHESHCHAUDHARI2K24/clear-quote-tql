@@ -18,9 +18,6 @@ vi.mock("next/navigation", () => ({
 
 import DashboardRoute from "./page";
 import ClientsPage from "./clients/page";
-import OutboxPage from "./outbox/page";
-import IntegrationsPage from "./admin/integrations/page";
-import SettingsPage from "./admin/settings/page";
 
 // P5/P6 foundation: each still-reserved route renders its heading and the
 // item that builds it. `/` was CQ-025's stub -- replaced by the real
@@ -35,17 +32,19 @@ import SettingsPage from "./admin/settings/page";
 // stub -- it needs a `StaffSessionProvider` and a mocked api-client, which
 // this bare-render table doesn't set up. Its own tests are
 // `applications/page.test.tsx`.
+//
+// CQ-029 (outbox, admin/integrations, admin/settings) replaced its three
+// stub rows with real pages -- their own coverage now lives in
+// src/features/{outbox,admin}/**/*.test.tsx.
 describe("(staff) stub pages", () => {
-  it.each([
-    ["Clients", ClientsPage, "CQ-026"],
-    ["Outbox", OutboxPage, "CQ-029"],
-    ["Integrations", IntegrationsPage, "CQ-029"],
-    ["Settings", SettingsPage, "CQ-029"],
-  ])("%s says which item builds it", (title, Page, item) => {
-    render(<Page />);
-    expect(screen.getByRole("heading", { level: 1, name: title })).toBeInTheDocument();
-    expect(screen.getByText(`Built in ${item}`)).toBeInTheDocument();
-  });
+  it.each([["Clients", ClientsPage, "CQ-026"]])(
+    "%s says which item builds it",
+    (title, Page, item) => {
+      render(<Page />);
+      expect(screen.getByRole("heading", { level: 1, name: title })).toBeInTheDocument();
+      expect(screen.getByText(`Built in ${item}`)).toBeInTheDocument();
+    },
+  );
 });
 
 describe("/ (CQ-025 dashboard)", () => {

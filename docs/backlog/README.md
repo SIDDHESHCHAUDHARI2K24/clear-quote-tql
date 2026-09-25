@@ -34,7 +34,7 @@ Status here is updated by the agent at stage 8 and by the human at merge.
 | [CQ-026](CQ-026-clients/spec.md) | Clients | P5 | CQ-016 | To Do |
 | [CQ-027](CQ-027-applications-list/spec.md) | Applications list | P5 | CQ-016 | To Do |
 | [CQ-028](CQ-028-verification-tabs/spec.md) | Verification tabs | P5 | CQ-016, CQ-012 | To Do |
-| [CQ-029](CQ-029-timeline-outbox-panel/spec.md) | Timeline, Outbox, Integration panel | P5 | CQ-016, CQ-009 | To Do |
+| [CQ-029](CQ-029-timeline-outbox-panel/spec.md) | Timeline, Outbox, Integration panel | P5 | CQ-016, CQ-009 | In Review |
 | [CQ-030](CQ-030-stale-quote-job/spec.md) | Stale quote job | P5 | CQ-011 | To Do |
 | [CQ-031](CQ-031-borrower-home/spec.md) | Borrower home & status | P6 | CQ-015 | To Do |
 | [CQ-032](CQ-032-apply-wizard/spec.md) | Apply wizard | P6 | CQ-031, CQ-011 | To Do |

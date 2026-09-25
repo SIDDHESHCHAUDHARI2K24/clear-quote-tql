@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { getMock, patchMock } = vi.hoisted(() => ({ getMock: vi.fn(), patchMock: vi.fn() }));
@@ -97,5 +98,32 @@ describe("WorkspaceHeader (AC2/AC3)", () => {
       "Program",
       "Location",
     ]);
+  });
+
+  // CQ-029: an "Activity" button next to the actions menu opens the
+  // timeline drawer.
+  it("opens the activity timeline drawer from the Activity button", async () => {
+    const user = userEvent.setup();
+    getMock.mockResolvedValueOnce({ data: makeSummary({}), response: { status: 200 } });
+
+    render(
+      <WorkspaceProvider applicationId={APPLICATION_ID}>
+        <WorkspaceHeader />
+      </WorkspaceProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Activity" })).toBeInTheDocument(),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    getMock.mockResolvedValueOnce({
+      data: { items: [], total: 0, page: 1, page_size: 25 },
+      response: { status: 200 },
+    });
+    await user.click(screen.getByRole("button", { name: "Activity" }));
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Activity" })).toBeInTheDocument();
   });
 });
