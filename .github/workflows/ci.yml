@@ -35,6 +35,30 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
+      # `pytest seed` (CQ-010, below) needs a real MinIO round-trip in
+      # seed/tests/test_documents_watermarked.py. `minio/minio` (the image
+      # infra/docker-compose.yml pins) and `quay.io/minio/minio` are both
+      # gone from their registries -- MinIO went source-only distribution in
+      # Oct 2025 (see CQ-006 post-dev.md's "CI clean-up pass" for the
+      # deviation writeup). `bitnamilegacy/minio` still self-starts from env
+      # vars alone (no command needed, unlike the now-unpullable official
+      # image), so it works as an ordinary service container here, and
+      # `MINIO_DEFAULT_BUCKETS` creates both buckets at startup -- no
+      # separate init step needed.
+      minio:
+        image: bitnamilegacy/minio:latest
+        env:
+          MINIO_ROOT_USER: cq-minio
+          MINIO_ROOT_PASSWORD: cq-minio-secret
+          MINIO_DEFAULT_BUCKETS: "clear-quote,clearquote-demo-docs"
+        ports:
+          - 9010:9000
+          - 9011:9001
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       APP_ENV: test
       # CQ-007's FIELD_ENCRYPTION_KEY startup check is skipped under
@@ -47,7 +71,7 @@ jobs:
       # in tests, and seed/tests/conftest.py fakes Valkey via fakeredis --
       # neither ever needs to resolve in CI (see CQ-006 spec Notes).
       VALKEY_URL: redis://localhost:6379/0
-      # S3_* point at the real MinIO container started below (same
+      # S3_* point at the real `minio` service container above (same
       # credentials/port as infra/docker-compose.yml's `minio` service) --
       # CQ-010's seed/tests/test_documents_watermarked.py does a real
       # upload/download round-trip against it (G3 CI clean-up pass).
@@ -81,57 +105,6 @@ jobs:
 
       - run: uv sync --frozen
 
-      # `pytest seed` (CQ-010, added below) needs a real MinIO round-trip in
-      # seed/tests/test_documents_watermarked.py. GitHub Actions service
-      # containers can't be given a run command, and minio/minio's default
-      # CMD doesn't start the server on its own (infra/docker-compose.yml
-      # sets `command: server /data ...` explicitly) -- so it's started as a
-      # plain `docker run` step instead of a `services:` entry, using the
-      # same image/credentials as the local compose stack.
-      - name: Start MinIO
-        run: |
-          docker run -d --name ci-minio \
-            -p 9010:9000 -p 9011:9001 \
-            -e MINIO_ROOT_USER=cq-minio -e MINIO_ROOT_PASSWORD=cq-minio-secret \
-            minio/minio:latest server /data --console-address ":9001"
-          ready=""
-          for _ in $(seq 1 30); do
-            if curl -sf http://localhost:9010/minio/health/live >/dev/null; then
-              ready=1
-              break
-            fi
-            sleep 1
-          done
-          if [ -z "$ready" ]; then
-            echo "MinIO did not become healthy in time" >&2
-            docker logs ci-minio
-            exit 1
-          fi
-
-      # `clear-quote` is the app's own bucket (CQ-004); `clearquote-demo-docs`
-      # is CQ-010's sample-document bucket (seed/generators/documents.py).
-      # Local infra creates the former via `minio-init` and the latter
-      # on-demand via `ensure_demo_docs_bucket` -- created explicitly here
-      # since there's no `minio-init`-equivalent step in this job.
-      - name: Create MinIO buckets
-        run: |
-          uv run python - <<'PY'
-          import boto3
-
-          client = boto3.client(
-              "s3",
-              endpoint_url="http://localhost:9010",
-              aws_access_key_id="cq-minio",
-              aws_secret_access_key="cq-minio-secret",
-              region_name="us-east-1",
-          )
-          for bucket in ("clear-quote", "clearquote-demo-docs"):
-              try:
-                  client.head_bucket(Bucket=bucket)
-              except Exception:
-                  client.create_bucket(Bucket=bucket)
-          PY
-
       - run: uv run ruff check backend
 
       - run: uv run ruff format --check backend
@@ -145,6 +118,61 @@ jobs:
       # CQ-010 (G3): same command as `make test`'s second line -- kept
       # identical so the two can't drift.
       - run: uv run pytest seed
+
+  # `packages/api-client` is generated from the FastAPI OpenAPI schema
+  # (`make api-client`) and must never drift from it -- caught late once
+  # already (CQ-011 added the pipeline start/resume endpoints without
+  # regenerating; whole-phase review, phase-p0-p1-merge-plan.md G4/G3). This
+  # job re-runs the exact generator and fails if it produces any diff.
+  api-client-drift:
+    runs-on: ubuntu-latest
+    env:
+      # Just enough for `app.main.app` to import (export_openapi.py reads
+      # `app.openapi()`) -- this job never runs the app or touches real
+      # infra, so these mirror the `backend` job's original dummy values,
+      # not its real MinIO ones.
+      APP_ENV: test
+      SECRET_KEY: ci-dummy-secret
+      DATABASE_URL: postgresql+asyncpg://cq:cq@localhost:5432/cq_dev
+      TEST_DATABASE_URL: postgresql+asyncpg://cq:cq@localhost:5432/cq_test
+      VALKEY_URL: redis://localhost:6379/0
+      S3_ENDPOINT: http://localhost:9010
+      S3_BUCKET: clear-quote
+      S3_ACCESS_KEY: cq-dummy
+      S3_SECRET_KEY: cq-dummy
+      S3_REGION: us-east-1
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      SMTP_FROM: noreply@clearquote.local
+      TEMPORAL_ADDRESS: localhost:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: clear-quote-pipeline
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - run: uv sync --frozen
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - run: corepack enable
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: make api-client
+
+      # The whole point of this job: fail if `make api-client` (never
+      # hand-edited, per AGENTS.md) produced any diff against what's
+      # committed.
+      - name: Fail on api-client drift
+        run: git diff --exit-code -- packages/api-client
 
   frontend:
     runs-on: ubuntu-latest
