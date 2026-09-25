@@ -3,11 +3,13 @@ fixtures from spec.md's condensed persona table ends at the listed
 "Expected workflow-terminal status", including the exact flag message for
 Aisha and a housing-history flag for Ben.
 
-Plan.md #11: literal Python fixtures per persona (not `seed/`), independent
-of CQ-010 per spec.md. Plan.md #4: Aisha's "occupancy_type null in LOS"
-defect is reproduced by monkeypatching `build_ob_search_request` for her
-one `application_id` only — `applications.occupancy` is NOT NULL and the
-real function never derives a `None` `Occupancy` otherwise.
+Plan.md #13 (supersedes #11/#4): literal Python fixtures per persona (not
+`seed/`), independent of CQ-010 per spec.md — but now that CQ-010 has
+merged, `make_persona_application(occupancy=None)` reproduces Aisha
+Coleman's "occupancy_type null in LOS" defect for real (a LOS payload with
+no `occupancy_type`, leaving `applications.occupancy` `NULL` via the real
+`import_from_los`), instead of the pre-merge `build_ob_search_request`
+monkeypatch.
 """
 
 from __future__ import annotations
@@ -25,12 +27,6 @@ from app.core.enums import ApplicationStatus, Occupancy, Strategy
 from app.features.applications.models import Application
 from app.features.applications.property.models import PropertyAddressStatus
 from app.features.applications.verification.models import Flag
-from app.features.pricing.enrichment import service as enrichment_service
-from app.features.pricing.scenarios.ob_request import ObRequestOverrides
-from app.features.pricing.scenarios.ob_request import (
-    build_ob_search_request as real_build_ob_search_request,
-)
-from app.integrations.pricing.schemas import PricingRequestDTO
 from app.workflows.application_pipeline import ApplicationPipelineWorkflow
 from app.workflows.constants import APPLICATION_PIPELINE_TASK_QUEUE, application_workflow_id
 
@@ -174,7 +170,6 @@ async def test_tom_and_lisa_brandt_ltr_cleveland_oh_prices(
 
 
 async def test_aisha_coleman_ltr_columbus_oh_needs_attention_missing_occupancy(
-    monkeypatch: pytest.MonkeyPatch,
     db_session: AsyncSession,
     make_persona_application: Callable[..., Awaitable[Application]],
     seed_tax_rate: Callable[..., Awaitable[None]],
@@ -183,7 +178,7 @@ async def test_aisha_coleman_ltr_columbus_oh_needs_attention_missing_occupancy(
     wait_for_status: Callable[..., Awaitable[ApplicationStatus]],
 ) -> None:
     application = await make_persona_application(
-        occupancy=Occupancy.INVESTMENT,
+        occupancy=None,  # LOS record's occupancy_type is missing (persona 7's defect).
         strategy=Strategy.LTR,
         requested_price=Decimal("250000.00"),
         state="OH",
@@ -192,18 +187,6 @@ async def test_aisha_coleman_ltr_columbus_oh_needs_attention_missing_occupancy(
     )
     await seed_tax_rate(state="OH", county="Franklin")
     await seed_market_rent(zip_code="43215", beds=1)
-
-    async def _patched_build_request(
-        db: AsyncSession,
-        application_id: uuid.UUID,
-        overrides: ObRequestOverrides | None = None,
-    ) -> PricingRequestDTO:
-        request = await real_build_ob_search_request(db, application_id, overrides)
-        if application_id == application.id:
-            request = request.model_copy(update={"Occupancy": None})
-        return request
-
-    monkeypatch.setattr(enrichment_service, "build_ob_search_request", _patched_build_request)
 
     await temporal_client.start_workflow(
         ApplicationPipelineWorkflow.run,
@@ -219,7 +202,7 @@ async def test_aisha_coleman_ltr_columbus_oh_needs_attention_missing_occupancy(
         await db_session.execute(
             select(Flag).where(
                 Flag.application_id == application.id,
-                Flag.field_key == "Occupancy",
+                Flag.field_key == "occupancy_type",
                 Flag.rule == "ob_required_field",
                 Flag.resolved_at.is_(None),
             )

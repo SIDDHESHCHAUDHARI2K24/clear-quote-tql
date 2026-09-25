@@ -19,6 +19,7 @@ with workflow.unsafe.imports_passed_through():
     # `app.workflows.activities`'s own internal imports -- so without an
     # explicit import here the lookup misses and raises `NameError: uuid`.
     # Importing them here (even unused) is what fixes it.
+    import app.features.applications.service  # noqa: F401
     import app.features.pricing.enrichment.service  # noqa: F401
     import app.features.pricing.scenarios.service  # noqa: F401
     import app.features.quotes.builder.service  # noqa: F401

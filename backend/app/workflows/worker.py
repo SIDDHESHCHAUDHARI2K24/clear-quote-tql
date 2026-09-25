@@ -16,6 +16,43 @@ from typing import Any
 from temporalio.client import Client
 from temporalio.worker import Worker
 
+# Every feature/integration `models.py`, same list `alembic/env.py` keeps
+# (its own comment explains why): a bare `python -m app.workflows.worker`
+# process only ever imports the handful of modules `app.workflows.
+# activities`'s own imports pull in transitively (e.g. never `app.features.
+# clients.models`) -- but an activity like `import_application` writes an
+# `Application` row with a `client_id` FK, and SQLAlchemy can't resolve a FK
+# to a table whose mapped class was never imported into this process, no
+# matter that the table exists in the real database. Without this, a real
+# worker (this bug can't reproduce under pytest -- the test session's own
+# `alembic upgrade head` already imports every model module first) fails
+# every activity that touches a table outside that transitive set with
+# `NoReferencedTableError`.
+import app.features.applications.assets.models  # noqa: E402,F401
+import app.features.applications.credit.models  # noqa: E402,F401
+import app.features.applications.housing.models  # noqa: E402,F401
+import app.features.applications.models  # noqa: E402,F401
+import app.features.applications.property.models  # noqa: E402,F401
+import app.features.applications.timeline.models  # noqa: E402,F401
+import app.features.applications.verification.models  # noqa: E402,F401
+import app.features.auth.models  # noqa: E402,F401
+import app.features.borrower.consent.models  # noqa: E402,F401
+import app.features.clients.models  # noqa: E402,F401
+import app.features.notifications.outbox.models  # noqa: E402,F401
+import app.features.pricing.scenarios.models  # noqa: E402,F401
+import app.features.quotes.builder.models  # noqa: E402,F401
+import app.features.quotes.send.models  # noqa: E402,F401
+import app.features.settings.models  # noqa: E402,F401
+import app.integrations.common.models  # noqa: E402,F401
+import app.integrations.credit.models  # noqa: E402,F401
+import app.integrations.crm.models  # noqa: E402,F401
+import app.integrations.insurance.models  # noqa: E402,F401
+import app.integrations.los.models  # noqa: E402,F401
+import app.integrations.pricing.models  # noqa: E402,F401
+import app.integrations.property_search.models  # noqa: E402,F401
+import app.integrations.rent.models  # noqa: E402,F401
+import app.integrations.str.models  # noqa: E402,F401
+import app.integrations.tax.models  # noqa: E402,F401
 from app.core.config import get_settings
 from app.workflows.activities import (
     auto_price_application,

@@ -32,6 +32,7 @@ from temporalio import activity
 
 from app.core.enums import ApplicationStatus, FlagSeverity
 from app.features.applications.models import Application
+from app.features.applications.service import ImportResult, import_from_los
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.schemas import RuleResult
 from app.features.applications.verification.service import run_and_persist
@@ -127,22 +128,15 @@ async def _fail_pricing_stage(db: AsyncSession, application_id: uuid.UUID, exc: 
 
 
 @activity.defn(name="import_application")
-async def import_application(application_id: str) -> Any:
+async def import_application(application_id: str) -> ImportResult:
     """Wraps CQ-010's `applications.service.import_from_los` (`application_
-    id -> ImportResult`). Imported lazily by name (plan.md #3): CQ-010 was
-    not yet merged when this activity was authored, so importing it at
-    module scope would break `app.workflows.activities` entirely. Return
-    type is `Any` (plan.md #10) for the same reason — `ImportResult` isn't
-    importable yet even under `TYPE_CHECKING`.
+    id -> ImportResult`). plan.md #3/#10 (superseded): CQ-010 has since
+    merged, so this imports the real function/type at module scope instead
+    of the lazy-import + `Any` workaround used before the merge.
 
     Does not catch anything: a failed import (no LOS record) is a setup
     error, not a demo path (spec.md) — the workflow lets it fail the run.
     """
-    # plan.md #3/#10: CQ-010 not merged when this was authored -- lazy
-    # import so this module still imports cleanly; mypy can't resolve the
-    # module yet either (not even under TYPE_CHECKING), hence the ignore.
-    from app.features.applications.service import import_from_los  # type: ignore[import-untyped]
-
     app_uuid = uuid.UUID(application_id)
     async with workflow_db.session_factory() as db:
         result = await import_from_los(app_uuid, db)

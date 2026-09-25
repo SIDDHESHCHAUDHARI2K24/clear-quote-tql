@@ -23,12 +23,6 @@ from temporalio.client import Client
 from app.core.enums import ApplicationStatus, Occupancy, Strategy
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
-from app.features.pricing.enrichment import service as enrichment_service
-from app.features.pricing.scenarios.ob_request import ObRequestOverrides
-from app.features.pricing.scenarios.ob_request import (
-    build_ob_search_request as real_build_ob_search_request,
-)
-from app.integrations.pricing.schemas import PricingRequestDTO
 from app.workflows.application_pipeline import ApplicationPipelineWorkflow
 from app.workflows.constants import APPLICATION_PIPELINE_TASK_QUEUE
 
@@ -41,7 +35,13 @@ async def _event_types(db_session: AsyncSession, application_id: uuid.UUID) -> l
             await db_session.execute(
                 select(ActivityEvent.type)
                 .where(ActivityEvent.application_id == application_id)
-                .order_by(ActivityEvent.created_at)
+                # `created_at` is `server_default=func.now()`, which Postgres
+                # resolves once per transaction -- every event this test's
+                # single-transaction, savepoint-bound activity sessions write
+                # shares the same value, so ties break on `at`, the
+                # Python-side `datetime.now(UTC)` each `_write_event` call
+                # actually advances (flaked under full-suite load otherwise).
+                .order_by(ActivityEvent.at)
             )
         )
         .scalars()
@@ -89,7 +89,6 @@ async def test_marcus_hale_happy_path_writes_6_events(
 
 
 async def test_aisha_coleman_flagged_path_writes_4_events(
-    monkeypatch: pytest.MonkeyPatch,
     db_session: AsyncSession,
     make_persona_application: Callable[..., Awaitable[Application]],
     seed_tax_rate: Callable[..., Awaitable[None]],
@@ -97,8 +96,12 @@ async def test_aisha_coleman_flagged_path_writes_4_events(
     temporal_client: Client,
     wait_for_status: Callable[..., Awaitable[ApplicationStatus]],
 ) -> None:
+    # plan.md #13 (supersedes #4): CQ-010 has merged, so persona 7's
+    # "occupancy_type null in LOS" defect is reproduced for real via a LOS
+    # payload with no `occupancy_type`, not a `build_ob_search_request`
+    # monkeypatch.
     application = await make_persona_application(
-        occupancy=Occupancy.INVESTMENT,
+        occupancy=None,
         strategy=Strategy.LTR,
         requested_price=Decimal("250000.00"),
         state="OH",
@@ -107,24 +110,6 @@ async def test_aisha_coleman_flagged_path_writes_4_events(
     )
     await seed_tax_rate(state="OH", county="Franklin")
     await seed_market_rent(zip_code="43215", beds=1)
-
-    # plan.md #4: `applications.occupancy` is NOT NULL and CQ-013's
-    # `build_ob_search_request` always derives OB's `Occupancy` as a
-    # literal string, never `None` -- so Aisha's "occupancy_type null in
-    # LOS" defect is reproduced by nulling *only her* request's `Occupancy`
-    # after the real function builds it, leaving every other application id
-    # untouched.
-    async def _patched_build_request(
-        db: AsyncSession,
-        application_id: uuid.UUID,
-        overrides: ObRequestOverrides | None = None,
-    ) -> PricingRequestDTO:
-        request = await real_build_ob_search_request(db, application_id, overrides)
-        if application_id == application.id:
-            request = request.model_copy(update={"Occupancy": None})
-        return request
-
-    monkeypatch.setattr(enrichment_service, "build_ob_search_request", _patched_build_request)
 
     await temporal_client.start_workflow(
         ApplicationPipelineWorkflow.run,
