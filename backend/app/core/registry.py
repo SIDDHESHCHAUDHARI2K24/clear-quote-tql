@@ -27,6 +27,7 @@ FEATURE_ROUTERS: list[str] = [
     "app.features.portal.actions.router",
     "app.features.portal.support.router",
     "app.features.portal.home.router",
+    "app.features.admin.jobs.router",
 ]
 
 

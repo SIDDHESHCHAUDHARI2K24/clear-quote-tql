@@ -472,6 +472,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/jobs/stale-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Stale Check */
+        post: operations["run_stale_check_api_v1_admin_jobs_stale_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1587,6 +1604,26 @@ export interface components {
             phone: string | null;
         };
         /**
+         * StaleCheckResponse
+         * @description The counts one `mark_stale` run changed. Every count is zero on a
+         *     repeat run.
+         */
+        StaleCheckResponse: {
+            /**
+             * Ran At
+             * Format: date-time
+             */
+            ran_at: string;
+            /** Quotes Marked Stale */
+            quotes_marked_stale: number;
+            /** Versions Expired */
+            versions_expired: number;
+            /** Applications Marked Stale */
+            applications_marked_stale: number;
+            /** Application Ids */
+            application_ids: string[];
+        };
+        /**
          * StatusPatchRequest
          * @description spec.md: "accepts only Withdrawn or Closed ... any other value
          *     returns 422" -- the `Literal` does that natively via Pydantic/FastAPI
@@ -2578,6 +2615,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortalHomeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_stale_check_api_v1_admin_jobs_stale_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaleCheckResponse"];
                 };
             };
             /** @description Validation Error */
