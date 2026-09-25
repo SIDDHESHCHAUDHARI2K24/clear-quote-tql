@@ -308,6 +308,32 @@ def monthly_cashflow_incl_tax(monthly_cashflow: Decimal, year_one_tax_savings: D
     return monthly_cashflow + year_one_tax_savings / Decimal("12")
 
 
+# --- Property matches (CQ-023) --------------------------------------------------
+# Kept in its own block, at the end of the file, on purpose: CQ-017 (pricing
+# panel) also adds a public quote_engine function in this same PR window and
+# both items were told to expect an easy merge conflict here -- a dedicated
+# section, appended rather than interleaved among the existing ones, keeps
+# each item's diff a clean append instead of touching shared lines.
+
+_MATCH_FLOOR_MULTIPLIER = Decimal("0.70")
+_MATCH_CEILING_MULTIPLIER = Decimal("1.00")
+
+
+def match_floor_price(approved_purchase_price: Decimal) -> Decimal:
+    """data-field-catalog.md §11 `match_floor_price`: `approved_purchase_price
+    x 0.70`, rounded to cents like every other money value this module
+    produces. **Hard floor** -- a listing priced below this is never a
+    match, whatever else about it fits (buy-box, strategy)."""
+    return _round_currency(approved_purchase_price * _MATCH_FLOOR_MULTIPLIER)
+
+
+def match_ceiling_price(approved_purchase_price: Decimal) -> Decimal:
+    """data-field-catalog.md §11 `match_ceiling_price`: `approved_purchase_price
+    x 1.00`. **Hard ceiling** -- never show the borrower a home priced above
+    what they're approved for."""
+    return _round_currency(approved_purchase_price * _MATCH_CEILING_MULTIPLIER)
+
+
 # --- Orchestration -------------------------------------------------------------
 
 

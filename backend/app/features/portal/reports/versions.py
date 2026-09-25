@@ -30,6 +30,7 @@ from app.features.applications.models import Application
 from app.features.applications.property.models import Property, PropertyAddressStatus
 from app.features.auth.models import User
 from app.features.clients.models import Client
+from app.features.matches.service import compute_matches_for_package
 from app.features.pricing.engine.types import QuoteComputation, ScenarioInputs, StrategyType
 from app.features.pricing.scenarios.models import Scenario
 from app.features.quotes.builder.models import Quote
@@ -177,6 +178,20 @@ async def freeze_package_version(
     resolved_sent_at = sent_at or datetime.now(UTC)
     expires_at = resolved_sent_at + timedelta(days=REPORT_EXPIRY_DAYS)
 
+    # CQ-023 (plan.md Decision 6 / phase-p3-p4-plan.md D4): matches are
+    # computed from the same recommended quote being frozen into this
+    # version, so they're frozen with it too (spec.md AC7) -- a later
+    # `make demo-reset` or listing change never changes an already-sent
+    # report.
+    recommended_quote = (
+        quotes_by_id.get(package.recommended_quote_id)
+        if package.recommended_quote_id is not None
+        else None
+    )
+    matches = await compute_matches_for_package(
+        db, application=application, recommended_quote=recommended_quote
+    )
+
     inputs = ReportInputs(
         first_name=client_row.full_name.split()[0],
         property_label=_property_label(prop),
@@ -195,6 +210,7 @@ async def freeze_package_version(
         lo_nmls=lo.nmls or "",
         lo_phone=lo.phone or "",
         lo_email=lo.email,
+        matches=matches,
     )
 
     view_model = build_report_view_model(inputs)

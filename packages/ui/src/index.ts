@@ -90,6 +90,12 @@ export type { ExpiredBannerProps } from "./report/ExpiredBanner";
 export { SupersededBanner } from "./report/SupersededBanner";
 export type { SupersededBannerProps } from "./report/SupersededBanner";
 
+export { MatchCard } from "./report/MatchCard";
+export type { MatchCardProps } from "./report/MatchCard";
+
+export { MatchList } from "./report/MatchList";
+export type { MatchListProps } from "./report/MatchList";
+
 export { ReportPage } from "./report/ReportPage";
 export type { ReportPageProps } from "./report/ReportPage";
 
