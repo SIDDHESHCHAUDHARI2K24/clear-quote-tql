@@ -136,13 +136,17 @@ class ActivitySessionGate:
       queries `db_session` while a workflow may still be running should do
       the same.
     - `wait_idle()` is the teardown guard in `bind_activities_to_test_
-      session`.
+      session`. `close()` runs right after it drains, so an activity that
+      somehow starts after teardown (instead of merely still running at
+      teardown) fails loudly instead of touching a connection `db_session`
+      has already rolled back.
     """
 
     def __init__(self) -> None:
         self._cond = asyncio.Condition()
         self._in_flight = 0
         self._test_turn = False
+        self._closed = False
 
     @property
     def in_flight(self) -> int:
@@ -150,19 +154,43 @@ class ActivitySessionGate:
 
     async def enter_activity(self) -> None:
         async with self._cond:
+            if self._closed:
+                raise RuntimeError(
+                    "activity started after test teardown -- a workflow from this "
+                    "test is still running"
+                )
             await self._cond.wait_for(lambda: not self._test_turn)
             self._in_flight += 1
 
     async def exit_activity(self) -> None:
+        # Decrements synchronously (no `await` in between) so a cancellation
+        # of the caller -- e.g. `_GatedActivitySession.__aexit__` racing a
+        # workflow-level timeout -- can never leave `_in_flight` stuck above
+        # its true value. Only the wake-up notification is awaited, and it
+        # is shielded so a cancellation there still lets waiters (`wait_
+        # idle`, `test_turn`) see the updated count instead of blocking
+        # until their own timeout.
+        self._in_flight -= 1
+        await asyncio.shield(self._notify_in_flight_change())
+
+    async def _notify_in_flight_change(self) -> None:
         async with self._cond:
-            self._in_flight -= 1
             self._cond.notify_all()
 
     @contextlib.asynccontextmanager
-    async def test_turn(self) -> AsyncIterator[None]:
-        async with self._cond:
-            await self._cond.wait_for(lambda: self._in_flight == 0 and not self._test_turn)
-            self._test_turn = True
+    async def test_turn(self, timeout: float = 10.0) -> AsyncIterator[None]:
+        async def _acquire() -> None:
+            async with self._cond:
+                await self._cond.wait_for(lambda: self._in_flight == 0 and not self._test_turn)
+                self._test_turn = True
+
+        try:
+            await asyncio.wait_for(_acquire(), timeout=timeout)
+        except TimeoutError:
+            raise AssertionError(
+                f"test_turn() timed out after {timeout}s waiting for "
+                f"{self._in_flight} in-flight activity session(s) to close"
+            ) from None
         try:
             yield
         finally:
@@ -176,6 +204,14 @@ class ActivitySessionGate:
                 await self._cond.wait_for(lambda: self._in_flight == 0)
 
         await asyncio.wait_for(_wait(), timeout=timeout)
+
+    async def close(self) -> None:
+        """Closes the gate for good: any later `enter_activity()` raises
+        instead of silently touching a connection `db_session` has already
+        rolled back. Call only after `wait_idle()` has drained in-flight
+        sessions."""
+        async with self._cond:
+            self._closed = True
 
 
 class _GatedActivitySession(AsyncSession):
@@ -241,6 +277,13 @@ async def bind_activities_to_test_session(
             f"test's connection after {_ACTIVITY_DRAIN_TIMEOUT_S}s: wait for the workflow "
             "to reach a terminal state before the test ends"
         )
+    finally:
+        # Closes the gate even if `wait_idle` timed out and failed the test
+        # above: any activity that starts *after* this point (rather than
+        # merely still running at teardown, which `wait_idle` already
+        # guards) must never touch a connection `db_session` is about to
+        # roll back.
+        await activity_session_gate.close()
 
 
 @pytest_asyncio.fixture(scope="session")

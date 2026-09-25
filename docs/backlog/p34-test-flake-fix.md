@@ -39,6 +39,12 @@ What stays the same: `backend/conftest.py`, production code, and the signatures 
 
 Regression guard: `backend/app/workflows/tests/test_activity_session_gate.py`.
 
+## Rules for new workflow tests
+
+- **Terminate or await every workflow you start.** A workflow left running past the end of a test keeps its activities' sessions bound to that test's connection; the next test's `db_session` rollback can then race them. Either await the workflow's `run()` to a terminal state, or explicitly cancel/terminate the handle before the test returns.
+- **Query `db_session` mid-workflow only inside `async with activity_session_gate.test_turn():`.** Reading or writing through the test's own session while a workflow may still have an activity in flight is exactly the race this fix closes elsewhere; `wait_for_status` already wraps its polling this way — do the same for any other assertion or seed data you touch while a workflow is running.
+- A workflow that never reaches a terminal `run()` return (e.g. one that parks at `needs_attention`) still counts as "running" for the purposes of both rules above until its last activity's session has closed.
+
 ## Verification
 
 - `uv run pytest backend/app/workflows/tests backend/tests`, fixed collection order (no random seeds, `pytest-randomly` is not installed): **0/20** failed after the fix, against **4/10** before.
