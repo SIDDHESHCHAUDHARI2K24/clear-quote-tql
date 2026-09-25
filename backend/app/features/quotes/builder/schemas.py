@@ -98,7 +98,7 @@ class ScenarioUpdateRequest(BaseModel):
     purchase_price: Decimal = Field(gt=0)
     down_payment_pct: Decimal = Field(gt=0, lt=1)
     prepayment_penalty_years: int | None = Field(default=None, ge=0, le=5)
-    """Investment only; ignored (stored as-is) for primary."""
+    """Investment only; a primary scenario 422s with `details.field`."""
     lock_days: int = Field(default=30, ge=15, le=90)
     dscr_bucket: DSCRBucket | None = None
     """Investment only: the assumed DSCR bucket to price at. `None` keeps

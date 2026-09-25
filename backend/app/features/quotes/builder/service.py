@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import scope_applications
 from app.core.enums import Occupancy, Strategy
 from app.core.errors import ConflictError, NotFoundError, ValidationAppError
+from app.features.applications.locks import lock_application
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.auth.models import User
@@ -39,6 +40,7 @@ from app.features.pricing.engine.types import DSCRBucket
 from app.features.pricing.scenarios.models import Scenario
 from app.features.pricing.scenarios.ob_request import ObRequestOverrides, build_ob_search_request
 from app.features.pricing.scenarios.service import (
+    NoEligibleProductsError,
     PricingResult,
     computation_json,
     compute_for_product,
@@ -297,20 +299,31 @@ def _group_label(scenario: Scenario, quotes: list[Quote], is_primary: bool) -> s
     return "At DSCR below 1.00"
 
 
-def _same_bucket_note(groups: list[tuple[Scenario, list[Quote]]], is_primary: bool) -> str | None:
-    """Investment only: one group priced at the assumed 1.00 bucket whose
-    actual DSCR lands in the same bucket (`_create_default_scenarios_
-    investment`'s collapsed case)."""
-    if is_primary or len(groups) != 1:
+def _collapsed_group_id(
+    groups: list[tuple[Scenario, list[Quote]]], is_primary: bool
+) -> uuid.UUID | None:
+    """Investment only: the pipeline's collapsed group -- its default set
+    had a single scenario, priced at the assumed 1.00 bucket, whose actual
+    DSCR lands in the same bucket (`_create_default_scenarios_investment`).
+
+    The pipeline creates its default set in one transaction, so the set is
+    the scenarios sharing the earliest `created_at`. Tying the note to that
+    group (not to "the app has one group") keeps it when the LO adds a
+    scenario (CQ-018 PR review, minor 7)."""
+    if is_primary or not groups:
         return None
-    scenario, quotes = groups[0]
+    first_batch_at = min(scenario.created_at for scenario, _ in groups)
+    batch = [(s, qs) for s, qs in groups if s.created_at == first_batch_at]
+    if len(batch) != 1:
+        return None
+    scenario, quotes = batch[0]
     if scenario.dscr_bucket != DSCRBucket.ONE_TO_1_25.value:
         return None
     anchor = _par_or_first(quotes)
     if anchor is None or not isinstance(anchor.computed, dict):
         return None
     if anchor.computed.get("dscr_bucket") == DSCRBucket.ONE_TO_1_25.value:
-        return SAME_BUCKET_NOTE
+        return scenario.id
     return None
 
 
@@ -399,13 +412,20 @@ async def list_application_scenarios(
     strategy = application_strategy(application)
     is_primary = strategy == "PRIMARY"
     groups = await _scenarios_with_quotes(db, application.id)
-    note = _same_bucket_note(groups, is_primary)
+    collapsed_id = _collapsed_group_id(groups, is_primary)
     return ApplicationScenariosRead(
         application_id=application.id,
         strategy=strategy,
         recommended_quote_id=application.recommended_quote_id,
         groups=[
-            _group_read(s, qs, is_primary, strategy, application.recommended_quote_id, note)
+            _group_read(
+                s,
+                qs,
+                is_primary,
+                strategy,
+                application.recommended_quote_id,
+                SAME_BUCKET_NOTE if s.id == collapsed_id else None,
+            )
             for s, qs in groups
         ],
     )
@@ -416,15 +436,16 @@ async def get_scenario_group(db: AsyncSession, scenario_id: uuid.UUID) -> Scenar
     application = await db.get(Application, scenario.application_id)
     assert application is not None
     strategy = application_strategy(application)
-    groups = [g for g in await _scenarios_with_quotes(db, application.id) if g[0].id == scenario_id]
-    _s, quotes = groups[0]
+    is_primary = strategy == "PRIMARY"
+    all_groups = await _scenarios_with_quotes(db, application.id)
+    quotes = next(qs for s, qs in all_groups if s.id == scenario_id)
     return _group_read(
         scenario,
         quotes,
-        strategy == "PRIMARY",
+        is_primary,
         strategy,
         application.recommended_quote_id,
-        None,
+        SAME_BUCKET_NOTE if _collapsed_group_id(all_groups, is_primary) == scenario_id else None,
     )
 
 
@@ -446,15 +467,30 @@ async def update_scenario(
 ) -> ScenarioGroupRead:
     """`PUT /scenarios/{id}`: persists the overlay's LO-owned inputs and
     re-reads enrichment-owned ones. Existing quotes stay (marked stale)
-    until Save & AutoQuote replaces them."""
+    until Save & AutoQuote replaces them -- but only when the stored inputs
+    actually changed (PR review, minor 2).
+
+    Validates before anything is committed: missing OB fields (422
+    `missing_field`), investment-only fields on a primary scenario (422
+    naming the field), and an empty grid at the new inputs (422
+    `no_eligible_products`, M2) all leave the scenario and its quotes as
+    they were."""
     scenario = await get_scenario(db, scenario_id)
-    application = await db.get(Application, scenario.application_id)
-    assert application is not None
+    application = await lock_application(db, scenario.application_id)
     await ensure_priceable(db, application.id, request.down_payment_pct)
     is_primary = application_strategy(application) == "PRIMARY"
     if is_primary and request.dscr_bucket is not None:
-        raise ValidationAppError("dscr_bucket applies to investment scenarios only.")
+        raise ValidationAppError(
+            "The assumed DSCR bucket applies to investment scenarios only.",
+            details={"field": "dscr_bucket"},
+        )
+    if is_primary and request.prepayment_penalty_years is not None:
+        raise ValidationAppError(
+            "A prepayment penalty applies to investment scenarios only.",
+            details={"field": "prepayment_penalty_years"},
+        )
 
+    before = _stored_inputs(scenario, is_primary)
     extras: dict[str, object] = {"lock_days": request.lock_days}
     if not is_primary and request.prepayment_penalty_years is not None:
         extras["prepayment_penalty_years"] = request.prepayment_penalty_years
@@ -467,17 +503,52 @@ async def update_scenario(
     )
     if request.dscr_bucket is not None:
         scenario.dscr_bucket = request.dscr_bucket.value
-    await db.execute(update(Quote).where(Quote.scenario_id == scenario.id).values(stale=True))
-    db.add(
-        _event(
-            application.id,
-            user,
-            "scenario.updated",
-            {"scenario_id": str(scenario.id), "inputs": request.model_dump(mode="json")},
+    await _price_or_rollback(db, scenario)
+
+    if _stored_inputs(scenario, is_primary) != before:
+        await db.execute(update(Quote).where(Quote.scenario_id == scenario.id).values(stale=True))
+        db.add(
+            _event(
+                application.id,
+                user,
+                "scenario.updated",
+                {"scenario_id": str(scenario.id), "inputs": request.model_dump(mode="json")},
+            )
         )
-    )
     await db.commit()
     return await get_scenario_group(db, scenario.id)
+
+
+def _stored_inputs(scenario: Scenario, is_primary: bool) -> tuple[object, ...]:
+    """What a PUT can change, normalized: the engine inputs (Decimals, so
+    `0.2 == 0.20`), lock days (unset == the 30-day default), PPP (unset ==
+    OB's 5-year investment default) and the assumed DSCR bucket."""
+    extras = _inputs_json(scenario)
+    lock_days = int(extras.get("lock_days") or _DEFAULT_LOCK_DAYS)
+    ppp = extras.get("prepayment_penalty_years")
+    if not is_primary and ppp is None:
+        ppp = _DEFAULT_INVESTMENT_PPP_YEARS
+    return (scenario_inputs(scenario), lock_days, ppp, scenario.dscr_bucket)
+
+
+async def _price_or_rollback(
+    db: AsyncSession, scenario: Scenario
+) -> tuple[list[PricedProductDTO], PricedProductDTO, PricedProductDTO | None]:
+    """Prices the scenario at its (flushed) inputs. On a missing field or an
+    empty grid, rolls back everything this request flushed and raises the
+    422, so a failing write changes nothing (PR review M2)."""
+    try:
+        products = await get_priced_products_for_scenario(db, scenario.id)
+        par, buydown = select_par_and_buydown(
+            products, down_payment_pct=scenario_inputs(scenario).down_payment_pct
+        )
+    except PricingValidationError as exc:
+        await db.rollback()
+        raise missing_field_error(exc) from exc
+    except NoEligibleProductsError:
+        await db.rollback()
+        raise
+    return products, par, buydown
 
 
 def _same_product(quote: Quote, row: PricedProductDTO) -> bool:
@@ -533,24 +604,32 @@ async def _quote_in_package(db: AsyncSession, quote_id: uuid.UUID) -> bool:
     return (await db.execute(stmt.limit(1))).scalar_one_or_none() is not None
 
 
-async def _reprice_scenario(
-    db: AsyncSession, scenario: Scenario
-) -> tuple[Quote, Quote | None, list[Quote]]:
+@dataclass
+class _RepriceOutcome:
+    par: Quote
+    buydown: Quote | None
+    others: list[Quote]
+    deleted_ids: list[uuid.UUID]
+    recommendation_cleared: bool
+
+
+async def _reprice_scenario(db: AsyncSession, scenario: Scenario) -> _RepriceOutcome:
     """Refresh inputs, price, then replace the Par/Buydown picks and
     re-price every other quote in the scenario. Pricing runs before any
-    write to a quote, so a failure leaves them untouched (plan.md
-    Decision 4).
+    write to a quote, and a pricing failure (missing field, empty grid)
+    rolls back everything the request flushed, so a failure leaves them
+    untouched (plan.md Decision 4, PR review M2).
 
     The Par/Buydown rows are updated in place, not deleted and re-inserted,
     so their ids stay stable: the application's recommended quote and any
-    quote package that names one keep pointing at the repriced row.
+    quote package that names one keep pointing at the repriced row. A
+    leftover auto quote is deleted; its id (and whether it was the
+    recommendation) is reported so the caller can log it (minor 3).
     Flushes only; the caller commits."""
     await rebuild_scenario_inputs(db, scenario)
-    try:
-        products = await get_priced_products_for_scenario(db, scenario.id)
-    except PricingValidationError as exc:
-        raise missing_field_error(exc) from exc
-    par, buydown = select_par_and_buydown(products)
+    products, par, buydown = await _price_or_rollback(db, scenario)
+    deleted_ids: list[uuid.UUID] = []
+    recommendation_cleared = False
 
     existing = list(
         (
@@ -587,7 +666,8 @@ async def _reprice_scenario(
         if quote.label in AUTO_LABELS and not await _quote_in_package(db, quote.id):
             # A duplicate or no-longer-offered Par/Buydown: Save & AutoQuote
             # keeps exactly one of each (spec AC3).
-            await _delete_quote_row(db, quote)
+            deleted_ids.append(quote.id)
+            recommendation_cleared |= await _delete_quote_row(db, quote)
             continue
         fresh = next((row for row in products if _same_product(quote, row)), None)
         if fresh is None:
@@ -603,10 +683,18 @@ async def _reprice_scenario(
         _apply_product(quote, scenario, fresh, now)
         others.append(quote)
     await db.flush()
-    return par_quote, buydown_quote, others
+    return _RepriceOutcome(
+        par=par_quote,
+        buydown=buydown_quote,
+        others=others,
+        deleted_ids=deleted_ids,
+        recommendation_cleared=recommendation_cleared,
+    )
 
 
-async def _delete_quote_row(db: AsyncSession, quote: Quote) -> None:
+async def _delete_quote_row(db: AsyncSession, quote: Quote) -> bool:
+    """Deletes the quote; returns whether it was the recommendation (which
+    is cleared)."""
     application = (
         await db.execute(
             select(Application)
@@ -614,11 +702,13 @@ async def _delete_quote_row(db: AsyncSession, quote: Quote) -> None:
             .where(Scenario.id == quote.scenario_id)
         )
     ).scalar_one()
-    if application.recommended_quote_id == quote.id:
+    cleared = application.recommended_quote_id == quote.id
+    if cleared:
         application.recommended_quote_id = None
         await db.flush()
     await db.delete(quote)
     await db.flush()
+    return cleared
 
 
 async def autoquote_replacing(
@@ -627,10 +717,10 @@ async def autoquote_replacing(
     """`POST /scenarios/{id}/autoquote` (Save & AutoQuote): replaces the
     scenario's Par/Buydown with a fresh pick (spec AC3)."""
     scenario = await get_scenario(db, scenario_id)
-    application = await db.get(Application, scenario.application_id)
-    assert application is not None
+    application = await lock_application(db, scenario.application_id)
     await ensure_priceable(db, application.id, scenario_inputs(scenario).down_payment_pct)
-    par_quote, buydown_quote, _manual = await _reprice_scenario(db, scenario)
+    outcome = await _reprice_scenario(db, scenario)
+    par_quote, buydown_quote = outcome.par, outcome.buydown
     db.add(
         _event(
             application.id,
@@ -639,6 +729,8 @@ async def autoquote_replacing(
             {
                 "scenario_id": str(scenario.id),
                 "quote_ids": [str(q.id) for q in (par_quote, buydown_quote) if q is not None],
+                "deleted_quote_ids": [str(i) for i in outcome.deleted_ids],
+                "recommendation_cleared": outcome.recommendation_cleared,
             },
         )
     )
@@ -655,12 +747,19 @@ async def reprice_application(
     """`POST /applications/{id}/reprice`: re-runs AutoQuote for every
     scenario (the stale banner's "Re-price"), clearing `stale` and bumping
     `priced_at` on every quote (AC8)."""
+    await lock_application(db, application.id)
     await ensure_priceable(db, application.id)
     groups = await _scenarios_with_quotes(db, application.id)
     quote_ids: list[uuid.UUID] = []
+    deleted_ids: list[uuid.UUID] = []
+    recommendation_cleared = False
     for scenario, _quotes in groups:
-        par_quote, buydown_quote, manual = await _reprice_scenario(db, scenario)
-        quote_ids.extend(q.id for q in (par_quote, buydown_quote, *manual) if q is not None)
+        outcome = await _reprice_scenario(db, scenario)
+        quote_ids.extend(
+            q.id for q in (outcome.par, outcome.buydown, *outcome.others) if q is not None
+        )
+        deleted_ids.extend(outcome.deleted_ids)
+        recommendation_cleared |= outcome.recommendation_cleared
     priced_at = datetime.now(UTC)
     db.add(
         _event(
@@ -670,6 +769,8 @@ async def reprice_application(
             {
                 "scenario_ids": [str(s.id) for s, _ in groups],
                 "quote_ids": [str(i) for i in quote_ids],
+                "deleted_quote_ids": [str(i) for i in deleted_ids],
+                "recommendation_cleared": recommendation_cleared,
             },
         )
     )
@@ -681,8 +782,7 @@ async def recommend_quote(db: AsyncSession, quote: Quote, user: User) -> Applica
     """`POST /quotes/{id}/recommend`: one recommended quote per application
     (a single column, so setting it un-stars any other)."""
     scenario = await get_scenario(db, quote.scenario_id)
-    application = await db.get(Application, scenario.application_id)
-    assert application is not None
+    application = await lock_application(db, scenario.application_id)
     previous = application.recommended_quote_id
     application.recommended_quote_id = quote.id
     db.add(
@@ -706,11 +806,10 @@ async def delete_quote(db: AsyncSession, quote: Quote, user: User) -> None:
     """`DELETE /quotes/{id}`: clears the recommendation when it pointed here.
     409 when a quote package (draft or sent) names the quote -- deleting it
     would break that package's snapshot and its `quotes.id` FK."""
+    scenario = await get_scenario(db, quote.scenario_id)
+    application = await lock_application(db, scenario.application_id)
     if await _quote_in_package(db, quote.id):
         raise ConflictError("This quote is part of a quote package and can't be deleted.")
-    scenario = await get_scenario(db, quote.scenario_id)
-    application = await db.get(Application, scenario.application_id)
-    assert application is not None
     was_recommended = application.recommended_quote_id == quote.id
     db.add(
         _event(

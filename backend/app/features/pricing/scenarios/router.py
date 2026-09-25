@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import CurrentStaff, get_scoped_application
 from app.core.db import get_db
+from app.core.errors import ValidationAppError
+from app.features.applications.locks import lock_application
 from app.features.applications.models import Application
 from app.features.pricing.engine.quote_engine import compute_quote
 from app.features.pricing.engine.types import ConfigSnapshot
@@ -26,8 +28,10 @@ from app.features.pricing.scenarios.service import (
     compute_for_product,
     create_manual_quote,
     create_scenario,
+    find_offered_product,
     get_priced_products_for_scenario,
     get_scenario,
+    tag_par_and_buydown,
 )
 from app.features.quotes.builder.service import (
     autoquote_replacing,
@@ -35,7 +39,6 @@ from app.features.quotes.builder.service import (
     missing_field_error,
 )
 from app.integrations.common.errors import PricingValidationError
-from app.integrations.pricing.schemas import PricedProductDTO
 
 router = APIRouter(tags=["pricing"])
 
@@ -95,6 +98,9 @@ async def get_products(
     except PricingValidationError as exc:
         raise missing_field_error(exc) from exc
     scenario = await get_scenario(db, scenario_id)
+    # CQ-018 PR review M3: tag Par/Buydown with AutoQuote's own rule, not
+    # the mock's `is_buydown_rate`, so the grid's Buydown is the card's.
+    products = tag_par_and_buydown(products)
     return [
         PricedProductRow.model_validate(
             {
@@ -132,6 +138,23 @@ async def post_manual_quote(
     db: AsyncSession = Depends(get_db),
     _scope: None = Depends(ensure_scenario_in_scope),
 ) -> QuoteRead:
-    product = PricedProductDTO(**request.product.model_dump())
+    # CQ-018 PR review (minor 5): the client's row only names the product
+    # (investor, product, lock); rate and points come from a fresh grid.
+    scenario = await get_scenario(db, scenario_id)
+    await lock_application(db, scenario.application_id)
+    try:
+        products = await get_priced_products_for_scenario(db, scenario_id)
+    except PricingValidationError as exc:
+        raise missing_field_error(exc) from exc
+    picked = request.product
+    product = find_offered_product(
+        products, picked.investor_name, picked.product_name, picked.lock_period_days
+    )
+    if product is None:
+        raise ValidationAppError(
+            f"{picked.investor_name} {picked.product_name} is no longer offered at these inputs.",
+            code="product_not_offered",
+            details={"field": "product"},
+        )
     quote = await create_manual_quote(db, scenario_id, product, request.label)
     return QuoteRead.model_validate(quote)

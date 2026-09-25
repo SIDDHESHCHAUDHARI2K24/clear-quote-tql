@@ -75,6 +75,8 @@ SEED_ROOT = Path(__file__).resolve().parent
 PERSONAS_DIR = SEED_ROOT / "personas"
 PROVIDERS_DIR = SEED_ROOT / "providers"
 USERS_FIXTURE = SEED_ROOT / "users.yaml"
+SEEDED_PACKAGE_MAX = 3
+"""A seeded (fixture-layer) package: the recommended quote + 2 alternatives."""
 
 _PROPERTY_TYPE_MAP: dict[str, PropertyType] = {
     "single_family": PropertyType.SINGLE_FAMILY,
@@ -470,7 +472,12 @@ async def seed_persona(
 
             fixture_layer = persona.get("fixture_layer")
             if fixture_layer:
-                quote_ids = pricing_stage_result.quote_set_result.quote_ids
+                # CQ-018 PR review M1 (plan.md Decision 14): the recommended
+                # (first) quote plus up to 2 alternatives, in group order --
+                # CQ-019's default-draft rule. Without the cap, the DSCR
+                # ladder's Buydown in the assumed-1.00 group gave Luis Romero
+                # 4 options with two "Buydown"s.
+                quote_ids = pricing_stage_result.quote_set_result.quote_ids[:SEEDED_PACKAGE_MAX]
                 if quote_ids:
                     await apply_send_fixture(
                         db,
