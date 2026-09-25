@@ -24,8 +24,9 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import ApplicationTab, FlagSeverity
+from app.core.enums import ApplicationStatus, ApplicationTab, FlagSeverity
 from app.core.errors import ValidationAppError
+from app.features.applications.models import Application
 from app.features.applications.verification.models import Flag
 from app.features.quotes.builder.models import Quote
 from app.features.quotes.send.models import QuotePackage
@@ -153,5 +154,28 @@ async def package_blockers(
                 "Borrower email is missing",
                 ApplicationTab.BORROWERS.value,
             )
+        )
+    return blockers
+
+
+_CLOSED_STATUSES = frozenset({ApplicationStatus.WITHDRAWN, ApplicationStatus.CLOSED})
+
+
+async def send_blockers(db: AsyncSession, package: QuotePackage) -> list[Blocker]:
+    """CQ-020: what stops a send -- `application_closed` (plan.md Decision
+    13) first, then every readiness blocker. `POST /send` and the
+    workflow's Freeze step both call this, so Freeze re-checks exactly what
+    the POST checked (PR #30 review minor e)."""
+    blockers = await package_blockers(db, package)
+    application = await db.get(Application, package.application_id)
+    assert application is not None
+    if application.status in _CLOSED_STATUSES:
+        blockers.insert(
+            0,
+            Blocker(
+                "application_closed",
+                f"The application is {application.status.value}",
+                ApplicationTab.SEND.value,
+            ),
         )
     return blockers

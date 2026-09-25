@@ -105,6 +105,8 @@ set_kv "TEST_DATABASE_URL" "postgresql+asyncpg://cq:cq@localhost:5432/${TEST_DB}
 set_kv "VALKEY_URL" "redis://localhost:6379/${VALKEY_DB}"
 set_kv "TEMPORAL_TASK_QUEUE" "$TASK_QUEUE"
 set_kv "CORS_ORIGINS" "http://localhost:${LO_PORT},http://localhost:${PORTAL_PORT}"
+# CQ-020: the emailed report link points at this slot's borrower portal.
+set_kv "PORTAL_BASE_URL" "http://localhost:${PORTAL_PORT}"
 
 if [[ -z "$(get_kv SECRET_KEY)" || "$(get_kv SECRET_KEY)" == "change-me" ]]; then
   set_kv "SECRET_KEY" "$(random_hex)"

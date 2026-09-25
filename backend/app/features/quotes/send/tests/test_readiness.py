@@ -74,7 +74,10 @@ async def test_readiness_stale_flag_missing_recommendation_and_email(
         json={"quote_ids": package["quote_ids"], "recommended_quote_id": None},
     )
     await db_session.execute(
-        update(Quote).where(Quote.id == package["quote_ids"][1]).values(stale=True)
+        # A UUID, not the JSON string: the session syncs its cached Quote by
+        # evaluating this criterion in Python, where UUID != str -- the
+        # cached copy then stayed un-stale whenever it was still alive.
+        update(Quote).where(Quote.id == uuid.UUID(package["quote_ids"][1])).values(stale=True)
     )
     application = await db_session.get(Application, application_id)
     assert application is not None

@@ -696,8 +696,11 @@ async def _reprice_scenario(db: AsyncSession, scenario: Scenario) -> _RepriceOut
 
 
 async def _delete_quote_row(db: AsyncSession, quote: Quote) -> bool:
-    """Deletes the quote; returns whether it was the recommendation (which
-    is cleared).
+    """Deletes the quote; returns whether the application's recommendation
+    was *cleared* by it -- `True` only when the deleted quote was the
+    recommendation and nothing took its place. When the draft handed the
+    recommendation to another quote (`drop_quote_from_drafts`), it moved,
+    not cleared, and this returns `False` (CQ-020, PR #22 minor).
 
     Code review M4: `drop_quote_from_drafts` used to move the draft's
     recommendation to the quote left in its place while this function
@@ -714,11 +717,12 @@ async def _delete_quote_row(db: AsyncSession, quote: Quote) -> bool:
     from app.features.quotes.send.service import drop_quote_from_drafts
 
     followed = await drop_quote_from_drafts(db, quote.id)
-    cleared = application.recommended_quote_id == quote.id
-    if cleared:
+    cleared = False
+    if application.recommended_quote_id == quote.id:
         application.recommended_quote_id = (
             followed[1] if followed is not None and followed[0] == application.id else None
         )
+        cleared = application.recommended_quote_id is None
         await db.flush()
     await db.delete(quote)
     await db.flush()

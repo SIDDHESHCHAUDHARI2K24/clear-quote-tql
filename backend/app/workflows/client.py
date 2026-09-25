@@ -10,6 +10,9 @@ to a real Temporal server.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+
+from fastapi import Request
 from temporalio.client import Client
 
 from app.core.config import get_settings
@@ -25,3 +28,18 @@ async def get_temporal_client() -> Client:
             settings.temporal_address, namespace=settings.temporal_namespace
         )
     return _client
+
+
+TemporalProvider = Callable[[], Awaitable[Client]]
+
+
+def get_temporal_provider(request: Request) -> TemporalProvider:
+    """CQ-020 (plan.md Decision 23): a *lazy* `get_temporal_client`, for
+    routes that only need Temporal now and then (`PUT /package` and `GET
+    /send-status` ask it only while a send looks in flight), so they never
+    connect to Temporal otherwise. Honours a test's
+    `dependency_overrides[get_temporal_client]`."""
+    provider: TemporalProvider = request.app.dependency_overrides.get(
+        get_temporal_client, get_temporal_client
+    )
+    return provider

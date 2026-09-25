@@ -21,7 +21,31 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+# CQ-020: `quote_package_versions.outbox_email_id` is a foreign key to
+# `outbox_emails`. Importing that model here registers its table wherever
+# this module is loaded on its own (e.g. `backend/scripts/
+# freeze_sent_version.py`), otherwise the first flush raises
+# NoReferencedTableError.
+import app.features.notifications.outbox.models  # noqa: F401
 from app.core.db import Base, pg_enum
+
+
+class SendStatus(enum.StrEnum):
+    """CQ-020 (plan.md Decision 7): `quote_packages.send_status`, written by
+    the `SendQuotePackage` activities and read by `GET /send-status`.
+    Stored as a plain string column (no Postgres enum) -- `None` means the
+    package was never sent through the workflow ("idle" in the API)."""
+
+    QUEUED = "queued"
+    RENDERING = "rendering"
+    EMAILING = "emailing"
+    DONE = "done"
+    FAILED = "failed"
+
+
+IN_FLIGHT_SEND_STATUSES = frozenset(
+    {SendStatus.QUEUED.value, SendStatus.RENDERING.value, SendStatus.EMAILING.value}
+)
 
 
 class BorrowerAction(enum.StrEnum):
@@ -67,6 +91,14 @@ class QuotePackage(Base):
     borrower_action: Mapped[BorrowerAction | None] = mapped_column(
         pg_enum(BorrowerAction, "borrower_action"), nullable=True
     )
+    send_workflow_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    """CQ-020: the newest `SendQuotePackage` workflow started for this
+    package. Activities only write `send_status` while this is their own id,
+    so a stale run can't overwrite a newer one's progress."""
+    send_status: Mapped[str | None] = mapped_column(String, nullable=True)
+    """CQ-020: a `SendStatus` value, `None` until the first send."""
+    send_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """CQ-020: why the last send failed (`send_status == "failed"`)."""
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -112,4 +144,13 @@ class QuotePackageVersion(Base):
         JSONB, nullable=True
     )
     """CQ-024: move_forward / ask_other / ask_updated, null until acted on."""
+    send_workflow_id: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
+    """CQ-020 (plan.md Decision 8): the `SendQuotePackage` workflow that
+    froze this version -- the Freeze activity's idempotency key. `None` for
+    versions frozen outside the workflow (seed, test factories)."""
+    outbox_email_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("outbox_emails.id"), nullable=True, index=True
+    )
+    """CQ-020: the borrower email sent for this version (the Email
+    activity's idempotency key; the LO's "Open in Outbox" link)."""
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

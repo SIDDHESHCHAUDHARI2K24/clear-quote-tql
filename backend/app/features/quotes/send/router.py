@@ -22,6 +22,7 @@ from app.features.quotes.send.service import (
     package_report,
     update_package,
 )
+from app.workflows.client import TemporalProvider, get_temporal_provider
 
 router = APIRouter(tags=["send"])
 
@@ -45,8 +46,9 @@ async def put_package(
     user: CurrentStaff,
     db: AsyncSession = Depends(get_db),
     application: Application = Depends(get_scoped_application),
+    temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> PackageRead:
-    package = await update_package(db, application, body, user)
+    package = await update_package(db, application, body, user, temporal)
     return await package_read(db, package)
 
 

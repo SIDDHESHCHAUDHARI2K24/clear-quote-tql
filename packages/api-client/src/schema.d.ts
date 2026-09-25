@@ -356,6 +356,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/packages/{package_id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Send */
+        post: operations["post_send_api_v1_packages__package_id__send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/send-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Send Status */
+        get: operations["get_send_status_api_v1_packages__package_id__send_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Versions */
+        get: operations["get_versions_api_v1_packages__package_id__versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packages/{package_id}/letter.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Letter Pdf */
+        get: operations["get_letter_pdf_api_v1_packages__package_id__letter_pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/applications/{application_id}/matches": {
         parameters: {
             query?: never;
@@ -1915,6 +1983,88 @@ export interface components {
             lock_days: number;
             dscr_bucket?: components["schemas"]["DSCRBucket"] | null;
         };
+        /**
+         * SendStarted
+         * @description `POST /packages/{id}/send` 202. A double click while a send is in
+         *     flight returns the running send's `workflow_id` (nothing new starts).
+         */
+        SendStarted: {
+            /**
+             * Package Id
+             * Format: uuid
+             */
+            package_id: string;
+            /** Workflow Id */
+            workflow_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "idle" | "queued" | "rendering" | "emailing" | "done" | "failed";
+        };
+        /**
+         * SendStatus
+         * @description `GET /packages/{id}/send-status`, poll until `done` or `failed`.
+         */
+        SendStatus: {
+            /**
+             * Package Id
+             * Format: uuid
+             */
+            package_id: string;
+            /** Workflow Id */
+            workflow_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "idle" | "queued" | "rendering" | "emailing" | "done" | "failed";
+            /** Error */
+            error: string | null;
+            /** Version */
+            version: number | null;
+            /** Recipient Email */
+            recipient_email: string | null;
+            /** Sent At */
+            sent_at: string | null;
+        };
+        /**
+         * SentVersion
+         * @description One row of the Send tab's "Sent versions" list (newest first).
+         */
+        SentVersion: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Version */
+            version: number;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Superseded */
+            superseded: boolean;
+            /** Viewed At */
+            viewed_at: string | null;
+            /** Report Url */
+            report_url: string;
+            /** Letter Url */
+            letter_url: string | null;
+            /** Outbox Email Id */
+            outbox_email_id: string | null;
+            /** Email Status */
+            email_status: ("queued" | "sent" | "failed") | null;
+            /** Recipient Email */
+            recipient_email: string | null;
+        };
         /** StaffLoginRequest */
         StaffLoginRequest: {
             /** Email */
@@ -2748,6 +2898,147 @@ export interface operations {
                 };
                 content: {
                     "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_send_api_v1_packages__package_id__send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendStarted"];
+                };
+            };
+            /** @description PACKAGE_NOT_READY; `details.blockers` lists why */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_send_status_api_v1_packages__package_id__send_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_versions_api_v1_packages__package_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentVersion"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_letter_pdf_api_v1_packages__package_id__letter_pdf_get: {
+        parameters: {
+            query?: {
+                version?: number | null;
+            };
+            header?: never;
+            path: {
+                package_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
                 };
             };
             /** @description Validation Error */

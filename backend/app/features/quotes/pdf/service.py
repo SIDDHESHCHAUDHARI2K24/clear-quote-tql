@@ -299,3 +299,17 @@ async def render_package_letter(
         db, package, portal_url=portal_url, letter_date=letter_date
     )
     return render_letter_html(context)
+
+
+def render_letter_pdf(html: str) -> bytes:
+    """CQ-020: WeasyPrint renders the letter HTML to a US Letter PDF (the
+    template's own `@page { size: letter }`). Imported lazily: WeasyPrint
+    loads Pango/cairo through cffi at import time, and only the send worker
+    and the letter tests need it (macOS: `brew install pango` and
+    `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`, which the Makefile
+    exports on Darwin). CPU-bound and synchronous -- async callers run it
+    in `asyncio.to_thread`."""
+    from weasyprint import HTML
+
+    pdf: bytes = HTML(string=html, base_url=str(TEMPLATES_DIR)).write_pdf()
+    return pdf

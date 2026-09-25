@@ -41,6 +41,20 @@ function serve(readiness: Readiness = READY, current: SendPackage = pkg) {
     if (path.endsWith("/readiness")) return Promise.resolve(ok(readiness));
     if (path.endsWith("/report")) return Promise.resolve(ok(report));
     if (path.endsWith("/letter.html")) return Promise.resolve(ok(LETTER));
+    if (path.endsWith("/send-status")) {
+      return Promise.resolve(
+        ok({
+          package_id: current.id,
+          workflow_id: null,
+          status: "idle",
+          error: null,
+          version: null,
+          recipient_email: null,
+          sent_at: null,
+        }),
+      );
+    }
+    if (path.endsWith("/versions")) return Promise.resolve(ok([]));
     return Promise.reject(new Error(`unexpected GET ${path}`));
   });
 }
@@ -104,7 +118,7 @@ describe("SendTab", () => {
     );
   });
 
-  it("when ready, Send opens a confirm dialog whose action is the CQ-020 stub", async () => {
+  it("when ready, Send opens a confirm dialog with the recipient and attachments", async () => {
     serve();
     render(<SendTab />);
     const button = await screen.findByRole("button", { name: "Send to borrower" });
@@ -116,10 +130,9 @@ describe("SendTab", () => {
       "marcus.hale@clearquote-demo.test",
     );
     expect(dialog).toHaveTextContent("Pre-approval letter (PDF)");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Send" }));
-    expect(await within(dialog).findByRole("status")).toHaveTextContent(
-      "Sending arrives in CQ-020",
-    );
+    // Cancel sends nothing (the send itself: SendFlow.test.tsx).
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("AC6: removing a quote, changing the recommendation and editing the note are saved", async () => {
