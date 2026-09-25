@@ -133,12 +133,10 @@ async def test_mark_stale_clock_boundaries(
     """AC3: Marcus Hale sent at T. At T+20d nothing changes; at T+22d he is
     Stale, the version is expired, and his report shows `expired`."""
     marcus = (await _seed(db_session, "marcus_hale"))["marcus_hale"]
-    quote_ids = [q.id for q in await _quotes(db_session, marcus.id)]
+    assert await _quotes(db_session, marcus.id)
     await apply_send_fixture(
         db_session,
         application_id=marcus.id,
-        quote_ids=quote_ids,
-        recommended_quote_id=quote_ids[0],
         sent_days_ago=0,
         viewed_days_ago=None,
         borrower_action=None,
@@ -346,8 +344,6 @@ async def _send_marcus(db: AsyncSession, marcus: Application, quote_ids: list[uu
     await apply_send_fixture(
         db,
         application_id=marcus.id,
-        quote_ids=quote_ids,
-        recommended_quote_id=quote_ids[0],
         sent_days_ago=0,
         viewed_days_ago=None,
         borrower_action=None,
@@ -364,6 +360,14 @@ async def test_version_expired_flags_only_sent_or_old_quotes(db_session: AsyncSe
     assert len(quotes) >= 2
     sent_id = quotes[0].id
     await _send_marcus(db_session, marcus, [sent_id])
+    # P56-merge: main's CQ-019 `apply_send_fixture` now picks the package's
+    # quotes itself (`new_default_package`), so narrow the sent package and
+    # its version to the one quote this test sends.
+    await db_session.execute(
+        update(QuotePackage)
+        .where(QuotePackage.application_id == marcus.id)
+        .values(quote_ids=[sent_id])
+    )
     now = datetime.now(UTC)
     await db_session.execute(
         update(QuotePackageVersion)
@@ -372,7 +376,10 @@ async def test_version_expired_flags_only_sent_or_old_quotes(db_session: AsyncSe
                 select(QuotePackage.id).where(QuotePackage.application_id == marcus.id)
             )
         )
-        .values(expires_at=now - timedelta(minutes=1))
+        .values(
+            expires_at=now - timedelta(minutes=1),
+            snapshot={"options": [{"quote_id": str(sent_id)}]},
+        )
     )
 
     result = await mark_stale(db_session, now)
