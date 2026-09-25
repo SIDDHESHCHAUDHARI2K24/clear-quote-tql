@@ -143,7 +143,7 @@ async def seed_users(db: AsyncSession) -> UserSeedResult:
     for row in load_users_fixture():
         user = User(
             id=uuid.UUID(row["id"]) if row.get("id") else uuid.uuid4(),
-            email=row["email"],
+            email=normalize_email(row["email"]),
             password_hash=password_hash,
             role=UserRole(row["role"]),
             full_name=row["full_name"],
