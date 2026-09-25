@@ -89,10 +89,13 @@ async def download_attachment(
     # RFC 5987 `filename*` (nit, review round 1): a non-ASCII attachment
     # filename (e.g. a borrower's accented name) survives instead of being
     # mangled by the plain `filename="..."` fallback most browsers still
-    # need too.
+    # need too. The ASCII fallback also escapes `\` and `"` (code review
+    # round 2 -- an unescaped embedded `"` truncated the quoted-string
+    # early, e.g. `filename="a"b.pdf"`).
     ascii_filename = filename.encode("ascii", "replace").decode("ascii")
+    escaped_ascii_filename = ascii_filename.replace("\\", "\\\\").replace('"', '\\"')
     content_disposition = (
-        f"attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{quote(filename)}"
+        f"attachment; filename=\"{escaped_ascii_filename}\"; filename*=UTF-8''{quote(filename)}"
     )
 
     return StreamingResponse(

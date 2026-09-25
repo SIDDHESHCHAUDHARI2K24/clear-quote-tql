@@ -7,6 +7,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
+from urllib.parse import quote
 
 import pytest
 from botocore.exceptions import ClientError, EndpointConnectionError
@@ -290,6 +291,45 @@ async def test_outbox_attachment_content_disposition(
     filename = key.rsplit("/", 1)[-1]
     assert f'filename="{filename}"' in disposition
     assert f"filename*=UTF-8''{filename}" in disposition
+
+    await storage.delete_object(key, client=live_client)
+
+
+async def test_outbox_attachment_content_disposition_escapes_embedded_quotes(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    make_outbox_email: Callable[..., Awaitable[OutboxEmail]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+) -> None:
+    """Code review round 2: the ASCII `filename="..."` fallback didn't
+    escape an embedded `"`, so a filename like `a"b.pdf` produced
+    `filename="a"b.pdf"` -- a quoted-string that ends early."""
+    live_client = _live_client_or_skip()
+    bucket = storage.get_settings().s3_bucket
+    key = f'outbox/tests/{uuid.uuid4()}-a"b.pdf'
+    await storage.ensure_bucket(bucket, client=live_client)
+    await storage.put_object(key, b"%PDF-1.4 fixture", "application/pdf", client=live_client)
+
+    owner = await make_staff_session(role=UserRole.LO)
+    application = await make_application(lo=owner.user)
+    email = await make_outbox_email(application=application, attachment_keys=[key])
+    await db_session.commit()
+
+    encoded_key = "/".join(quote(segment, safe="") for segment in key.split("/"))
+    response = await client.get(f"/api/v1/outbox/{email.id}/attachments/{encoded_key}")
+    assert response.status_code == 200
+    disposition = response.headers["content-disposition"]
+    filename = key.rsplit("/", 1)[-1]  # 'a"b.pdf'
+    backslash = "\\"
+    dquote = '"'
+    escaped_filename = filename.replace(backslash, backslash * 2).replace(
+        dquote, backslash + dquote
+    )
+    # The quoted-string's own embedded quote must be backslash-escaped, not
+    # left to close the quoted-string early.
+    expected_ascii_part = "attachment; filename=" + dquote + escaped_filename + dquote
+    assert disposition.split("; filename*=")[0] == expected_ascii_part
 
     await storage.delete_object(key, client=live_client)
 

@@ -168,8 +168,12 @@ def _resolve_actor(
 ) -> ActivityActor:
     if event.type in _BORROWER_EVENT_TYPES or event.actor == _ACTOR_BORROWER:
         return ActivityActor(kind="borrower", name=borrower_name)
-    if event.actor == _ACTOR_SYSTEM:
-        return ActivityActor(kind="system", name="System")
+    # No separate `actor == _ACTOR_SYSTEM` branch (code review round 2):
+    # `_staff_actor_id` already returns `None` for the system actor (and
+    # for anything else that isn't a real user id), and `None` already
+    # means "system" below -- a second, differently-worded check for the
+    # same sentinel was dead weight two ways to say the same thing could
+    # drift apart.
     user_id = _staff_actor_id(event)
     if user_id is None:
         return ActivityActor(kind="system", name="System")

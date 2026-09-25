@@ -47,4 +47,23 @@ describe("categoryForEventType (M2)", () => {
       expect(iconForEventType(type)).not.toBe("\u{2022}");
     }
   });
+
+  // Code review round 2: a plain "first entry in the array wins" match
+  // made a type's category depend on its position relative to any of its
+  // own prefixes already in the array -- a future specific entry appended
+  // after a broader one (e.g. "application.") would be silently shadowed.
+  // The three already-listed exact types under the generic "application."
+  // prefix above are the existing proof this matters; these two assert
+  // the general rule (longest prefix, not array order) holds for a type
+  // that isn't specially listed at all.
+  it("prefers the longest matching prefix over array order", () => {
+    // "application." (a broad, early prefix) is a prefix of every one of
+    // these, but the specific "application.submitted" entry -- listed
+    // after several other prefixes in the array -- still wins because it
+    // is the longer match.
+    expect(categoryForEventType("application.submitted")).toBe("borrower_action");
+    expect(categoryForEventType("application.submitted")).not.toBe(
+      categoryForEventType("application.something_else_unlisted"),
+    );
+  });
 });

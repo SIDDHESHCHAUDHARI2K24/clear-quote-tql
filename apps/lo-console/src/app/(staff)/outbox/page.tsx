@@ -18,15 +18,21 @@ function OutboxPageContent() {
   const selectedId = searchParams.get("email_id");
   const applicationId = searchParams.get("application_id") ?? undefined;
 
+  // Seeded from the current URL, like DashboardPage.tsx's `handleLoChange`
+  // (code review round 2) -- rebuilding from scratch and keeping only
+  // `application_id` dropped any other query param (e.g. a future
+  // `?type=`) whenever the drawer opened or closed.
   function open(row: OutboxEmailRow) {
-    const params = new URLSearchParams(applicationId ? { application_id: applicationId } : {});
+    const params = new URLSearchParams(searchParams.toString());
     params.set("email_id", row.id);
     router.replace(`/outbox?${params.toString()}`);
   }
 
   function close() {
-    const params = new URLSearchParams(applicationId ? { application_id: applicationId } : {});
-    router.replace(params.toString() ? `/outbox?${params.toString()}` : "/outbox");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("email_id");
+    const query = params.toString();
+    router.replace(query ? `/outbox?${query}` : "/outbox");
   }
 
   return (

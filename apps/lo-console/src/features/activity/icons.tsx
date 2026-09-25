@@ -59,8 +59,22 @@ const TYPE_PREFIX_CATEGORY: Array<[string, string]> = [
 ];
 
 export function categoryForEventType(type: string): string {
-  const match = TYPE_PREFIX_CATEGORY.find(([prefix]) => type.startsWith(prefix));
-  return match ? match[1] : "other";
+  // Longest matching prefix wins, not "first in the array" (code review
+  // round 2): a plain first-match `.find()` made every entry's category
+  // depend on its position relative to any prefix of it already in the
+  // array (e.g. a future `application.reopened` entry appended at the end,
+  // after the generic `application.` catch-all above, would silently be
+  // shadowed by it). Longest-prefix matching is correct regardless of
+  // where a new specific entry is added.
+  let bestCategory = "other";
+  let bestLength = -1;
+  for (const [prefix, category] of TYPE_PREFIX_CATEGORY) {
+    if (type.startsWith(prefix) && prefix.length > bestLength) {
+      bestCategory = category;
+      bestLength = prefix.length;
+    }
+  }
+  return bestCategory;
 }
 
 export function iconForEventType(type: string): string {
