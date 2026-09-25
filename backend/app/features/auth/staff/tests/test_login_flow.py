@@ -139,6 +139,14 @@ async def test_login_rejects_oversized_password(client: AsyncClient) -> None:
     assert response.status_code == 422
 
 
+async def test_verify_rejects_oversized_fields(client: AsyncClient) -> None:
+    response = await client.post(
+        "/api/v1/auth/staff/otp/verify",
+        json={"challenge_id": "c" * 65, "code": "1234567"},
+    )
+    assert response.status_code == 422
+
+
 async def test_cookie_flags_me_logout(
     client: AsyncClient, db_session: AsyncSession, capture_smtp: list[dict[str, str]]
 ) -> None:

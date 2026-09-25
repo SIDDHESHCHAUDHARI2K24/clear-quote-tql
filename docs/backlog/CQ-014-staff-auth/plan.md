@@ -20,7 +20,9 @@ Gap check against `system-design.md` ("LO Console → Auth", Decisions #7, #9). 
 | 10 | Decision | Email delivery | `notifications/email/service.py::send_email(db, *, to, subject, html, application_id=None)`: insert `outbox_emails` (queued) → send via `aiosmtplib` to `SMTP_HOST:SMTP_PORT` → mark `sent` / `failed` (failure logged, not raised, so OTP issue still returns; the outbox shows it). A module-level `smtp_send` function is the seam tests monkeypatch. |
 | 11 | Decision | Manager filter | `scope_applications(stmt, user, lo_id: UUID | None = None)`: LO → `lo_id == user.id` (ignores `lo_id` arg); Manager/Admin → all, or filtered when `lo_id` given. |
 | 12 | Decision | Frontend → API cookies | Browser calls the API with `credentials: "include"`; locally console (3010) and API share host `localhost`, so the cookie is visible to Next middleware. Cross-domain on Railway is a CQ-035 follow-up (proxy/rewrites). |
-| 13 | Decision | Valkey in tests | Real Valkey (db 2 locally; CI service). A `valkey` fixture in `backend/conftest.py` yields a client and `FLUSHDB`s after each test; the app's Valkey dependency is overridden to it in the `client` fixture. |
+| 14 | Decision (stage 6) | No request-rate limit on `/otp/verify` | Accepted: challenge ids are 24-byte random tokens and each challenge dies after 5 wrong codes, so volume on verify cannot brute-force a code. Inputs are length-capped. Revisit if the demo is exposed publicly beyond Railway (CQ-035). |
+| 15 | Decision (stage 6) | Committed demo passwords in `.env.example` | Kept: local/CI-only demo credentials, documented as such; Railway sets its own values (CQ-035). |
+| 13 | Decision | Valkey in tests | Real Valkey. The `valkey` fixture in `backend/conftest.py` uses `TEST_VALKEY_URL` (default: `VALKEY_URL` with db 15), `FLUSHDB`s before and after each test; the app's Valkey dependency is overridden to it in the `client` fixture. |
 
 ## Why
 

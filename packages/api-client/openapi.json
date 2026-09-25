@@ -229,10 +229,12 @@
         "properties": {
           "challenge_id": {
             "type": "string",
+            "maxLength": 64,
             "title": "Challenge Id"
           },
           "code": {
             "type": "string",
+            "maxLength": 6,
             "title": "Code"
           }
         },

@@ -38,15 +38,15 @@ Loan officers, managers and admins log in to the LO Console with email + passwor
 
 ## Acceptance criteria
 
-- [ ] AC1 — Auth tests pass; the OTP email arrives in Mailpit (visible via the Mailpit API) and an `outbox_emails` row is written with status `sent`.
-- [ ] AC2 — A wrong password and an unknown email return the same 401 body; the OTP step is never reached.
-- [ ] AC3 — An OTP older than 5 minutes is rejected; after 5 wrong attempts the challenge is dead even for the right code.
-- [ ] AC4 — Login is rate-limited: the 6th attempt for one email inside 15 minutes returns 429 `RATE_LIMITED`.
-- [ ] AC5 — A successful verify sets an httpOnly, SameSite=Lax `cq_staff_session` cookie; `/me` returns the user; after logout `/me` returns 401.
-- [ ] AC6 — `require_roles(ADMIN)` returns 403 `FORBIDDEN` for an LO and 200 for an Admin.
-- [ ] AC7 — `scope_applications`: an LO sees only applications where `lo_id` is theirs; a Manager sees all and can filter by LO.
-- [ ] AC8 — `seed_dev_users.py` creates the three dev users; running it twice leaves three users.
-- [ ] AC9 — LO Console login → OTP → home → logout works in the browser against the local API; vitest and react-doctor pass.
+- [x] AC1 — Auth tests pass; the OTP email arrives in Mailpit (visible via the Mailpit API) and an `outbox_emails` row is written with status `sent`.
+- [x] AC2 — A wrong password and an unknown email return the same 401 body; the OTP step is never reached.
+- [x] AC3 — An OTP older than 5 minutes is rejected; after 5 wrong attempts the challenge is dead even for the right code.
+- [x] AC4 — Login is rate-limited: the 6th attempt for one email inside 15 minutes returns 429 `RATE_LIMITED`.
+- [x] AC5 — A successful verify sets an httpOnly, SameSite=Lax `cq_staff_session` cookie; `/me` returns the user; after logout `/me` returns 401.
+- [x] AC6 — `require_roles(ADMIN)` returns 403 `FORBIDDEN` for an LO and 200 for an Admin.
+- [x] AC7 — `scope_applications`: an LO sees only applications where `lo_id` is theirs; a Manager sees all and can filter by LO.
+- [x] AC8 — `seed_dev_users.py` creates the three dev users; running it twice leaves three users.
+- [x] AC9 — LO Console login → OTP → home → logout works in the browser against the local API; vitest and react-doctor pass.
 
 ## Test plan
 

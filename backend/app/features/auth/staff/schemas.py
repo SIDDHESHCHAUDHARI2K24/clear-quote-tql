@@ -17,6 +17,9 @@ from app.core.enums import UserRole
 # cost scales with input length) before the login rate limit even applies.
 _MAX_EMAIL_LENGTH = 254
 _MAX_PASSWORD_LENGTH = 256
+# `generate_token(24)` yields 32 url-safe chars; the cap keeps arbitrary
+# strings out of the Valkey key built from `challenge_id`.
+_MAX_CHALLENGE_ID_LENGTH = 64
 
 
 class StaffLoginRequest(BaseModel):
@@ -29,8 +32,8 @@ class ChallengeResponse(BaseModel):
 
 
 class OtpVerifyRequest(BaseModel):
-    challenge_id: str
-    code: str
+    challenge_id: str = Field(max_length=_MAX_CHALLENGE_ID_LENGTH)
+    code: str = Field(max_length=6)
 
 
 class StaffUserOut(BaseModel):

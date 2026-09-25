@@ -19,7 +19,7 @@ Status here is updated by the agent at stage 8 and by the human at merge.
 | [CQ-011](CQ-011-temporal-pipeline/spec.md) | Temporal pipeline | P1 | CQ-009, CQ-012, CQ-013 | To Do |
 | [CQ-012](CQ-012-verification-rules/spec.md) | Verification rules | P1 | CQ-007 | In Progress |
 | [CQ-013](CQ-013-pricing-service/spec.md) | Pricing service & API | P1 | CQ-008, CQ-009 | To Do |
-| [CQ-014](CQ-014-staff-auth/spec.md) | Staff auth | P2 | CQ-004, CQ-007 | To Do |
+| [CQ-014](CQ-014-staff-auth/spec.md) | Staff auth | P2 | CQ-004, CQ-007 | In Review |
 | [CQ-015](CQ-015-borrower-auth/spec.md) | Borrower auth | P2 | CQ-014 | To Do |
 | [CQ-016](CQ-016-application-workspace/spec.md) | Application workspace shell | P3 | CQ-014, CQ-011 | To Do |
 | [CQ-017](CQ-017-pricing-panel/spec.md) | Pricing panel | P3 | CQ-016, CQ-013 | To Do |
