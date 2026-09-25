@@ -9,7 +9,7 @@ open row (the extra rows are deleted, not resolved, so the timeline does
 not gain resolutions that never happened).
 
 Revision ID: a7c3e9d1b2f4
-Revises: f1a2b3c4d5e6
+Revises: c30a57a1e0d1
 Create Date: 2026-09-25 19:00:00.000000
 
 """
@@ -21,7 +21,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "a7c3e9d1b2f4"
-down_revision: Union[str, None] = "f1a2b3c4d5e6"
+down_revision: Union[str, None] = "c30a57a1e0d1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

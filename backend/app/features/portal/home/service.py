@@ -80,7 +80,10 @@ def stage_and_label(
     raise AssertionError(f"Unmapped ApplicationStatus: {status!r}")  # pragma: no cover
 
 
-async def _has_ever_sent(db: AsyncSession, *, application_id: uuid.UUID) -> bool:
+async def has_ever_sent(db: AsyncSession, *, application_id: uuid.UUID) -> bool:
+    """Public (CQ-034 fix, post-dev.md review round 1): `portal/support/
+    service.py` needs this to reuse `stage_and_label` instead of keeping
+    its own status->stage table, so this is no longer module-private."""
     stmt = (
         select(QuotePackageVersion.id)
         .join(QuotePackage, QuotePackage.id == QuotePackageVersion.package_id)
@@ -133,9 +136,9 @@ async def _build_application_out(
 ) -> PortalApplicationOut:
     lo = await db.get(User, application.lo_id)
     lo_first_name = lo.full_name.split()[0] if lo else ""
-    has_ever_sent = await _has_ever_sent(db, application_id=application.id)
+    ever_sent = await has_ever_sent(db, application_id=application.id)
     stage, label = stage_and_label(
-        application.status, has_ever_sent=has_ever_sent, lo_first_name=lo_first_name
+        application.status, has_ever_sent=ever_sent, lo_first_name=lo_first_name
     )
 
     latest_token = await _latest_report_token(db, application_id=application.id)

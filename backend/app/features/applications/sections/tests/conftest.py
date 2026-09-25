@@ -39,7 +39,12 @@ from app.features.auth.models import User
 from app.features.clients.models import Client as ClientModel
 from app.integrations.credit.models import CreditPullType, ProviderCreditReport
 from app.integrations.los.models import ProviderLosRecord
+from app.workflows.tests import conftest as workflow_fixtures
 from conftest import StaffSession
+
+# CQ-030's per-test lock on the shared test connection (activity sessions
+# and test-side polling take it); re-exported for `test_resume_pipeline.py`.
+db_lock = workflow_fixtures.db_lock
 
 _OCCUPANCY_LOS = {
     Occupancy.PRIMARY: "Primary_Residence",

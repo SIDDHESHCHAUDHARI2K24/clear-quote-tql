@@ -11,6 +11,7 @@ production registration path.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from decimal import Decimal
 from typing import Any
@@ -24,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client
 from temporalio.testing import WorkflowEnvironment
 
+from app.core.db import get_db
 from app.core.enums import ApplicationStatus, FlagSeverity, Strategy, UserRole
 from app.core.errors import AppError
 from app.features.applications.models import Application, ApplicationParty
@@ -50,13 +52,27 @@ wait_for_status = workflow_fixtures.wait_for_status
 
 
 @pytest_asyncio.fixture
-async def real_temporal(app: FastAPI, fake_temporal: Any) -> AsyncIterator[Client]:
+async def real_temporal(
+    app: FastAPI,
+    fake_temporal: Any,
+    db_session: AsyncSession,
+    bind_activities_to_test_session: None,
+    db_lock: asyncio.Lock,
+) -> AsyncIterator[Client]:
     """A per-test time-skipping environment running the *real* worker
     (`worker.build_worker`), replacing the sections conftest's fake
     (depends on `fake_temporal` so this override is applied after it).
-    Function-scoped on purpose: a second session-scoped worker would outlive
-    this module and interfere with CQ-011's own workflow tests, which share
-    the monkeypatched activity session factory."""
+
+    The activities share `db_session`'s connection (CQ-011's fixtures), so
+    every API request here also holds `db_lock` while it uses the session,
+    and the worker shuts down while holding it: it drains before
+    `db_session` rolls back, never mid-way through a database operation."""
+
+    async def _locked_db() -> AsyncIterator[AsyncSession]:
+        async with db_lock:
+            yield db_session
+
+    app.dependency_overrides[get_db] = _locked_db
     env = await WorkflowEnvironment.start_time_skipping()
     try:
         async with worker_module.build_worker(env.client):
@@ -69,6 +85,8 @@ async def real_temporal(app: FastAPI, fake_temporal: Any) -> AsyncIterator[Clien
 
             app.dependency_overrides[get_temporal_provider] = _provider
             yield env.client
+            await db_lock.acquire()
+        db_lock.release()
     finally:
         await env.shutdown()
 

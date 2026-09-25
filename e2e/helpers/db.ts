@@ -78,6 +78,47 @@ function valkeyDbIndex(): string {
   return match[1];
 }
 
+// CQ-034 spec.md AC4: the borrower_accounts.id the support rate limit key
+// (`rl:support:borrower:{id}`) is keyed on -- distinct from `clients.id`
+// (applicationIdByClientEmail's join target).
+export function borrowerAccountIdByEmail(email: string): string {
+  const id = psql(
+    `select id from borrower_accounts where lower(email) = lower('${email}') limit 1;`,
+  );
+  if (!id) {
+    throw new Error(
+      `No borrower_accounts row found for ${email} -- run make demo-reset (with SEED_BORROWER_PASSWORD set) first`,
+    );
+  }
+  return id;
+}
+
+// CQ-034 spec.md AC4 ("the rate-limit test may flush only this borrower's
+// rl:* key"): deletes exactly one Valkey key, `rl:support:borrower:
+// {borrowerAccountId}` (service.py's `_RATE_LIMIT_KEY_PREFIX`) -- not a
+// `rl:*` wildcard sweep like `flushLoginRateLimit`, so a run of this test
+// never clears another persona's or another rate-limited action's
+// counters mid-suite.
+export function flushSupportRateLimit(borrowerAccountId: string): void {
+  execFileSync(
+    "docker",
+    [
+      "compose",
+      "-f",
+      "infra/docker-compose.yml",
+      "exec",
+      "-T",
+      "valkey",
+      "valkey-cli",
+      "-n",
+      valkeyDbIndex(),
+      "del",
+      `rl:support:borrower:${borrowerAccountId}`,
+    ],
+    { cwd: REPO_ROOT },
+  );
+}
+
 // A workspace spec that does several real staff logins (each one a real
 // email+password+OTP round trip) can trip the staff login endpoint's own
 // abuse-prevention rate limit (`auth/staff/service.py`, Valkey-backed)
