@@ -54,7 +54,24 @@ SEND_RETRY_POLICY = RetryPolicy(
     non_retryable_error_types=["PackageNotReadyError", "SendSupersededError"],
 )
 
+# CQ-020 (PR #30 re-review minor 3): a per-attempt ceiling for freeze/
+# render/email/record, tighter than the shared `ACTIVITY_TIMEOUT` (60s). At
+# `SEND_RETRY_POLICY`'s 5 attempts, the old 60s ceiling let one activity's
+# worst-case retry budget alone run 5*60 + (1+2+4+8) = 315s; four activities
+# in the same run could add up to ~1260s (21 min) -- longer than
+# `SEND_EXECUTION_TIMEOUT` (10 min), so a persistently failing SMTP/MinIO
+# step could be timed out by Temporal *before* the workflow's except block
+# ever runs `mark_send_failed`, leaving the package stuck "in flight"
+# instead of `failed`. At 20s, the same worst case is 5*20 + 15 = 115s per
+# activity, 460s (~7.7 min) for all four -- comfortably under the execution
+# timeout. `test_send_execution_timeout_exceeds_the_worst_case_retry_budget`
+# guards the invariant.
+SEND_ACTIVITY_TIMEOUT = timedelta(seconds=20)
+
 # CQ-020 (plan.md Decision 23): a send that hasn't finished in 10 minutes
 # (no worker running, a worker stuck) is ended by Temporal, so the package
-# can't stay "sending" forever; the API then reports it `failed`.
+# can't stay "sending" forever; the API then reports it `failed`. Must stay
+# above the worst-case retry budget of the send activities above (see
+# `SEND_ACTIVITY_TIMEOUT`), or Temporal can time the whole workflow out
+# before `mark_send_failed` gets to run.
 SEND_EXECUTION_TIMEOUT = timedelta(minutes=10)

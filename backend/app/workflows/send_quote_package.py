@@ -22,6 +22,7 @@ with workflow.unsafe.imports_passed_through():
     from app.workflows.retry_policies import (
         ACTIVITY_TIMEOUT,
         DEFAULT_RETRY_POLICY,
+        SEND_ACTIVITY_TIMEOUT,
         SEND_RETRY_POLICY,
     )
     from app.workflows.send_activities import (
@@ -63,25 +64,25 @@ class SendQuotePackageWorkflow:
             version_id = await workflow.execute_activity(
                 freeze_package,
                 args=[package_id, workflow_id],
-                start_to_close_timeout=ACTIVITY_TIMEOUT,
+                start_to_close_timeout=SEND_ACTIVITY_TIMEOUT,
                 retry_policy=SEND_RETRY_POLICY,
             )
             await workflow.execute_activity(
                 render_letter_pdf,
                 args=[version_id, workflow_id],
-                start_to_close_timeout=ACTIVITY_TIMEOUT,
+                start_to_close_timeout=SEND_ACTIVITY_TIMEOUT,
                 retry_policy=SEND_RETRY_POLICY,
             )
             await workflow.execute_activity(
                 email_borrower,
                 args=[version_id, workflow_id],
-                start_to_close_timeout=ACTIVITY_TIMEOUT,
+                start_to_close_timeout=SEND_ACTIVITY_TIMEOUT,
                 retry_policy=SEND_RETRY_POLICY,
             )
             await workflow.execute_activity(
                 record_send,
                 args=[version_id, workflow_id],
-                start_to_close_timeout=ACTIVITY_TIMEOUT,
+                start_to_close_timeout=SEND_ACTIVITY_TIMEOUT,
                 retry_policy=SEND_RETRY_POLICY,
             )
         except (ActivityError, asyncio.CancelledError) as exc:

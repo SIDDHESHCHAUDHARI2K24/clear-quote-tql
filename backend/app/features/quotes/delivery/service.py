@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,6 +41,12 @@ from app.workflows.send_quote_package import STOPPED_FAILURE, SendQuotePackageWo
 
 logger = logging.getLogger(__name__)
 
+# PR #30 re-review minor 4: both `start_workflow` (POST /send) and the
+# describe call `reconcile_send` makes (GET /send-status, PUT /package) run
+# while the caller holds the package row lock, so neither should be able to
+# hang the transaction open indefinitely if Temporal is slow to answer.
+TEMPORAL_RPC_TIMEOUT = timedelta(seconds=5)
+
 
 class PackageNotReadyConflict(ConflictError):
     code = "PACKAGE_NOT_READY"
@@ -63,7 +70,9 @@ async def _lock_package(db: AsyncSession, package_id: uuid.UUID) -> QuotePackage
 
 async def _workflow_running(temporal: TemporalClient, workflow_id: str) -> bool:
     try:
-        description = await temporal.get_workflow_handle(workflow_id).describe()
+        description = await temporal.get_workflow_handle(workflow_id).describe(
+            rpc_timeout=TEMPORAL_RPC_TIMEOUT
+        )
     except RPCError as exc:
         if exc.status == RPCStatusCode.NOT_FOUND:
             return False
@@ -71,12 +80,17 @@ async def _workflow_running(temporal: TemporalClient, workflow_id: str) -> bool:
     return description.status == WorkflowExecutionStatus.RUNNING
 
 
-async def _send_is_alive(temporal: TemporalClient, workflow_id: str) -> bool:
+async def _send_is_alive(temporal: TemporalProvider, workflow_id: str) -> bool:
     """False only when Temporal says the workflow is gone (finished without
     writing `done`/`failed`: terminated, timed out, never started). When
-    Temporal can't be reached, the send is given the benefit of the doubt."""
+    Temporal can't be reached -- including the lazy `temporal()` provider
+    itself failing to connect -- the send is given the benefit of the
+    doubt (PR #30 re-review minor 2: this used to be resolved by the
+    caller, outside this function's `try`, so an unreachable Temporal on a
+    fresh process raised straight through `reconcile_send` into a 500)."""
     try:
-        return await _workflow_running(temporal, workflow_id)
+        client = await temporal()
+        return await _workflow_running(client, workflow_id)
     except Exception:
         logger.warning("Could not check send workflow %s", workflow_id, exc_info=True)
         return True
@@ -101,7 +115,7 @@ async def reconcile_send(
     workflow_id = package.send_workflow_id
     if package.send_status not in IN_FLIGHT_SEND_STATUSES or workflow_id is None:
         return package
-    if await _send_is_alive(await temporal(), workflow_id):
+    if await _send_is_alive(temporal, workflow_id):
         return package
     package = await _lock_package(db, package.id)
     if package.send_workflow_id == workflow_id and package.send_status in IN_FLIGHT_SEND_STATUSES:
@@ -160,10 +174,20 @@ async def start_send(
             task_queue=APPLICATION_PIPELINE_TASK_QUEUE,
             id_reuse_policy=WorkflowIDReusePolicy.REJECT_DUPLICATE,
             execution_timeout=SEND_EXECUTION_TIMEOUT,
+            rpc_timeout=TEMPORAL_RPC_TIMEOUT,
         )
     except Exception as exc:
-        # Still under the lock: nothing else wrote the package meanwhile.
-        package.send_workflow_id = workflow_id
+        # PR #30 re-review minor 1: `start_workflow` can raise on the
+        # client side (e.g. an RPC deadline) even after Temporal has
+        # already accepted and started the run -- that run keeps executing
+        # under `workflow_id`, an orphan nothing here would otherwise track.
+        # Still under the lock: leave `send_workflow_id` at whatever it was
+        # before this attempt (never this attempt's id), and record only the
+        # failure. Freeze's `SendSupersededError` guard (Decision 22) then
+        # sees that orphan's id doesn't match the package's `send_workflow_id`
+        # and stops it before it freezes or emails anything; a retry starts
+        # a fresh, tracked send instead of racing the orphan and double
+        # emailing.
         package.send_status = SendStep.FAILED.value
         package.send_error = "The send could not be started."
         await db.commit()

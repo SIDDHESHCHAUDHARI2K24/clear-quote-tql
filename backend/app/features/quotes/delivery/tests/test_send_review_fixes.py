@@ -16,11 +16,13 @@ from contextlib import asynccontextmanager
 from typing import Any, cast
 
 import pytest
+from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from temporalio import activity
 from temporalio.client import Client, WorkflowFailureError, WorkflowHandle
+from temporalio.service import RPCError, RPCStatusCode
 
 from app.core.enums import ApplicationStatus
 from app.features.applications.models import Application
@@ -29,12 +31,18 @@ from app.features.notifications.outbox.models import EmailStatus, OutboxEmail
 from app.features.quotes.builder.tests.test_router import _seed
 from app.features.quotes.delivery import service as delivery_service
 from app.features.quotes.delivery import steps
-from app.features.quotes.delivery.tests.test_send import MakeStaff, _ready_package, _versions
+from app.features.quotes.delivery.tests.test_send import (
+    MakeStaff,
+    _ready_package,
+    _send,
+    _versions,
+)
 from app.features.quotes.send.models import QuotePackage, QuotePackageVersion
 from app.features.quotes.send.service import get_or_create_package
 from app.integrations.crm.models import CrmEvent
 from app.workflows import db as workflow_db
 from app.workflows import send_activities
+from app.workflows.client import get_temporal_client
 from app.workflows.constants import send_workflow_id
 from app.workflows.send_quote_package import SendQuotePackageWorkflow
 
@@ -309,6 +317,158 @@ async def test_cancelled_send_is_marked_failed(
     assert row is not None
     assert (row.send_status, row.send_error) == ("failed", STOPPED)
     assert smtp_outbox == []
+
+
+# --- RE-REVIEW 1: start_workflow raising after Temporal accepted the run ----
+
+
+class _AcceptThenFailClient:
+    """The real test-env client, but `start_workflow` raises *after* the run
+    has actually started against Temporal -- the client-side failure (e.g.
+    an RPC deadline) that PR #30 re-review minor 1 is about: Temporal
+    already has the run, but the caller never gets the happy return."""
+
+    def __init__(self, inner: Client) -> None:
+        self.inner = inner
+        self.started: list[str] = []
+
+    def get_workflow_handle(self, *args: Any, **kwargs: Any) -> Any:
+        return self.inner.get_workflow_handle(*args, **kwargs)
+
+    async def start_workflow(self, *args: Any, **kwargs: Any) -> Any:
+        await self.inner.start_workflow(*args, **kwargs)
+        self.started.append(kwargs["id"])
+        raise RPCError("deadline exceeded", RPCStatusCode.DEADLINE_EXCEEDED, b"")
+
+
+async def test_start_send_orphan_is_superseded_not_double_sent(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_staff_session: MakeStaff,
+    temporal_client_override: Client,
+    run_send_worker: Any,
+    smtp_outbox: list[SentMail],
+) -> None:
+    """PR #30 re-review minor 1: `start_send` must not point the package at
+    the orphan run's id -- only ever record the failure against whatever
+    `send_workflow_id` it had before -- or Freeze's `SendSupersededError`
+    guard (Decision 22) can't tell the orphan apart from a real send, and a
+    retry races it into double-emailing."""
+    _, package = await _ready_package(client, db_session, make_staff_session)
+    package_id = uuid.UUID(package["id"])
+    row = await db_session.get(QuotePackage, package_id)
+    assert row is not None
+    assert row.send_workflow_id is None
+    temporal = _AcceptThenFailClient(temporal_client_override)
+
+    with pytest.raises(delivery_service.SendUnavailableError):
+        await delivery_service.start_send(db_session, row, cast(Client, temporal))
+    await db_session.commit()
+
+    [orphan_id] = temporal.started
+    row = await db_session.get(QuotePackage, package_id, populate_existing=True)
+    assert row is not None
+    assert row.send_workflow_id is None  # unchanged: never the orphan's id
+    assert (row.send_status, row.send_error) == ("failed", "The send could not be started.")
+
+    try:
+        async with run_send_worker():
+            result = await temporal_client_override.get_workflow_handle(orphan_id).result()
+        assert result == ""  # Freeze found itself superseded and stopped: no version, no email
+    finally:
+        await _terminate(temporal_client_override.get_workflow_handle(orphan_id))
+    assert await _versions(db_session, package["id"]) == []
+    assert smtp_outbox == []
+
+    # A retry starts a fresh, tracked send and completes normally -- once.
+    async with run_send_worker():
+        retried = await _send(client, temporal_client_override, package["id"])
+    assert retried["workflow_id"] != orphan_id
+    assert len(await _versions(db_session, package["id"])) == 1
+    assert len(smtp_outbox) == 1
+
+
+# --- RE-REVIEW 2: reconcile must survive an unreachable Temporal -----------
+
+
+async def test_reconcile_survives_an_unreachable_temporal_provider(
+    app: FastAPI,
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_staff_session: MakeStaff,
+    temporal_client_override: Client,
+) -> None:
+    """PR #30 re-review minor 2: `await temporal()` -- the lazy provider
+    itself -- used to run outside `_send_is_alive`'s `try`. On a fresh
+    process with Temporal unreachable, that raised straight out of
+    `reconcile_send` and 500'd `GET /send-status` and `PUT /package` instead
+    of treating an unreachable Temporal as "still in flight"."""
+    application_id, package = await _ready_package(client, db_session, make_staff_session)
+    workflow_id = send_workflow_id(package["id"], "unreachable")
+    await db_session.execute(
+        update(QuotePackage)
+        .where(QuotePackage.id == uuid.UUID(package["id"]))
+        .values(send_workflow_id=workflow_id, send_status="rendering")
+    )
+    await db_session.commit()
+
+    async def _unreachable() -> Client:
+        raise ConnectionError("temporal down")
+
+    app.dependency_overrides[get_temporal_client] = _unreachable
+    status_response = await client.get(f"/api/v1/packages/{package['id']}/send-status")
+    assert status_response.status_code == 200, status_response.text
+    assert status_response.json()["status"] == "rendering"
+
+    put_response = await client.put(
+        f"/api/v1/applications/{application_id}/package", json=_put_body(package)
+    )
+    assert put_response.status_code == 409, put_response.text
+    assert put_response.json()["error"]["code"] == "SEND_IN_PROGRESS"
+
+
+# --- RE-REVIEW 4: rpc_timeout on calls made while the row lock is held -----
+
+
+async def test_start_send_and_workflow_running_pass_an_rpc_timeout(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_staff_session: MakeStaff,
+    temporal_client_override: Client,
+) -> None:
+    """PR #30 re-review minor 4: `start_workflow` and the describe call
+    `reconcile`/the double-click check make both run while the package row
+    lock is held, so neither should be able to hang on Temporal."""
+    _, package = await _ready_package(client, db_session, make_staff_session)
+    row = await db_session.get(QuotePackage, uuid.UUID(package["id"]))
+    assert row is not None
+    captured_start: dict[str, Any] = {}
+    captured_describe: dict[str, Any] = {}
+
+    class _Spy:
+        def get_workflow_handle(self, *args: Any, **kwargs: Any) -> Any:
+            handle = temporal_client_override.get_workflow_handle(*args, **kwargs)
+
+            class _HandleSpy:
+                async def describe(self, **kw: Any) -> Any:
+                    captured_describe.update(kw)
+                    return await handle.describe(**kw)
+
+            return _HandleSpy()
+
+        async def start_workflow(self, *args: Any, **kwargs: Any) -> Any:
+            captured_start.update(kwargs)
+            return await temporal_client_override.start_workflow(*args, **kwargs)
+
+    try:
+        started = await delivery_service.start_send(db_session, row, cast(Client, _Spy()))
+        await db_session.commit()
+        assert captured_start.get("rpc_timeout") == delivery_service.TEMPORAL_RPC_TIMEOUT
+
+        await delivery_service._workflow_running(cast(Client, _Spy()), started.workflow_id)
+        assert captured_describe.get("rpc_timeout") == delivery_service.TEMPORAL_RPC_TIMEOUT
+    finally:
+        await _terminate(temporal_client_override.get_workflow_handle(started.workflow_id))
 
 
 # --- MINOR a: the PUT/POST race ----------------------------------------------
