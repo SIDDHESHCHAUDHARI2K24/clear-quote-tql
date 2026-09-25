@@ -1,0 +1,296 @@
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib uv run python -m pytest backend
+============================= test session starts ==============================
+platform darwin -- Python 3.12.12, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787
+configfile: pyproject.toml
+plugins: asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=session, asyncio_default_test_loop_scope=session
+collected 572 items
+
+backend/app/core/tests/test_auth_deps.py ..                              [  0%]
+backend/app/core/tests/test_borrower_deps.py ..                          [  0%]
+backend/app/core/tests/test_encryption.py ...                            [  1%]
+backend/app/core/tests/test_security.py ..................               [  4%]
+backend/app/features/applications/summary/tests/test_router.py ....      [  5%]
+backend/app/features/applications/summary/tests/test_service.py ........ [  6%]
+..................                                                       [  9%]
+backend/app/features/applications/tests/test_models.py .....             [ 10%]
+backend/app/features/applications/tests/test_pipeline_endpoints.py ..... [ 11%]
+.....                                                                    [ 12%]
+backend/app/features/applications/tests/test_service.py .......          [ 13%]
+backend/app/features/applications/verification/tests/test_personas.py .. [ 13%]
+                                                                         [ 13%]
+backend/app/features/applications/verification/tests/test_rules.py ..... [ 14%]
+..............                                                           [ 17%]
+backend/app/features/applications/verification/tests/test_service.py ... [ 17%]
+.......                                                                  [ 18%]
+backend/app/features/auth/borrower/tests/test_login.py ........          [ 20%]
+backend/app/features/auth/borrower/tests/test_signup.py ..........       [ 22%]
+backend/app/features/auth/otp/tests/test_otp.py ..........               [ 23%]
+backend/app/features/auth/otp/tests/test_rate_limit.py ........          [ 25%]
+backend/app/features/auth/staff/tests/test_login_flow.py ..........      [ 26%]
+backend/app/features/auth/users/tests/test_users.py ......               [ 27%]
+backend/app/features/matches/tests/test_resolver.py ..                   [ 28%]
+backend/app/features/matches/tests/test_router.py .....                  [ 29%]
+backend/app/features/matches/tests/test_service.py .........             [ 30%]
+backend/app/features/notifications/email/tests/test_service.py ....      [ 31%]
+backend/app/features/portal/actions/tests/test_router.py ...........     [ 33%]
+backend/app/features/portal/actions/tests/test_templates.py .            [ 33%]
+backend/app/features/portal/reports/tests/test_router.py ......          [ 34%]
+backend/app/features/portal/reports/tests/test_versions.py .....         [ 35%]
+backend/app/features/pricing/engine/tests/test_cash_to_close.py ..       [ 35%]
+backend/app/features/pricing/engine/tests/test_config_snapshot.py ..     [ 36%]
+backend/app/features/pricing/engine/tests/test_cost_segregation.py ..    [ 36%]
+backend/app/features/pricing/engine/tests/test_down_payment_conversion.py . [ 36%]
+.......                                                                  [ 37%]
+backend/app/features/pricing/engine/tests/test_dscr_bucket.py .....      [ 38%]
+backend/app/features/pricing/engine/tests/test_golden.py ..............  [ 41%]
+backend/app/features/pricing/engine/tests/test_insurance_annual_rate_from_amount.py . [ 41%]
+....                                                                     [ 42%]
+backend/app/features/pricing/engine/tests/test_match_price_band.py ..    [ 42%]
+backend/app/features/pricing/engine/tests/test_mi_matrix.py .......      [ 43%]
+backend/app/features/pricing/engine/tests/test_pi.py ...                 [ 44%]
+backend/app/features/pricing/engine/tests/test_scenario_inputs_validation.py . [ 44%]
+........                                                                 [ 45%]
+backend/app/features/pricing/engine/tests/test_verified_assets_floor.py . [ 45%]
+                                                                         [ 45%]
+backend/app/features/pricing/enrichment/tests/test_auth_scope.py ....... [ 47%]
+.                                                                        [ 47%]
+backend/app/features/pricing/enrichment/tests/test_enrichment.py ......  [ 48%]
+backend/app/features/pricing/enrichment/tests/test_field_value_override.py . [ 48%]
+..                                                                       [ 48%]
+backend/app/features/pricing/enrichment/tests/test_occupancy_validation.py . [ 49%]
+.                                                                        [ 49%]
+backend/app/features/pricing/enrichment/tests/test_stale_marking.py ...  [ 49%]
+backend/app/features/pricing/panel/tests/test_router.py .....            [ 50%]
+backend/app/features/pricing/panel/tests/test_service.py ......          [ 51%]
+backend/app/features/pricing/scenarios/tests/test_auth_scope.py .......  [ 52%]
+backend/app/features/pricing/scenarios/tests/test_autoquote_selection.py . [ 53%]
+.....                                                                    [ 54%]
+backend/app/features/pricing/scenarios/tests/test_default_scenarios_investment.py . [ 54%]
+.                                                                        [ 54%]
+backend/app/features/pricing/scenarios/tests/test_default_scenarios_primary.py . [ 54%]
+..                                                                       [ 54%]
+backend/app/features/pricing/scenarios/tests/test_dscr_two_pass_loop.py . [ 55%]
+...                                                                      [ 55%]
+backend/app/features/pricing/scenarios/tests/test_manual_quote.py .      [ 55%]
+backend/app/features/pricing/scenarios/tests/test_ob_validation.py ..... [ 56%]
+                                                                         [ 56%]
+backend/app/features/pricing/scenarios/tests/test_products_grid.py .     [ 56%]
+backend/app/features/pricing/scenarios/tests/test_quotes_preview_perf.py . [ 56%]
+.......                                                                  [ 58%]
+backend/app/features/quotes/builder/tests/test_cq020_minors.py ..        [ 58%]
+backend/app/features/quotes/builder/tests/test_draft_quote_set.py ..     [ 58%]
+backend/app/features/quotes/builder/tests/test_models.py ..              [ 59%]
+backend/app/features/quotes/builder/tests/test_review_round1.py ........ [ 60%]
+.......                                                                  [ 61%]
+backend/app/features/quotes/builder/tests/test_router.py .............   [ 64%]
+backend/app/features/quotes/delivery/tests/test_email_template.py ..     [ 64%]
+backend/app/features/quotes/delivery/tests/test_send.py ..............   [ 66%]
+backend/app/features/quotes/delivery/tests/test_send_review_fixes.py ... [ 67%]
+............                                                             [ 69%]
+backend/app/features/quotes/pdf/tests/test_letter.py ........            [ 70%]
+backend/app/features/quotes/report/tests/test_builder.py .....           [ 71%]
+backend/app/features/quotes/send/tests/test_models.py .....              [ 72%]
+backend/app/features/quotes/send/tests/test_package.py ...............   [ 75%]
+backend/app/features/quotes/send/tests/test_readiness.py ......          [ 76%]
+backend/app/features/quotes/send/tests/test_report.py ...                [ 76%]
+backend/app/features/settings/tests/test_defaults.py .                   [ 77%]
+backend/app/features/system/tests/test_health.py ..                      [ 77%]
+backend/app/integrations/common/tests/test_contract.py .........         [ 79%]
+backend/app/integrations/common/tests/test_failure_toggle.py ...         [ 79%]
+backend/app/integrations/common/tests/test_latency.py ..                 [ 79%]
+backend/app/integrations/common/tests/test_logging.py ....               [ 80%]
+backend/app/integrations/credit/tests/test_mock.py ....                  [ 81%]
+backend/app/integrations/crm/tests/test_mock.py ..                       [ 81%]
+backend/app/integrations/insurance/tests/test_mock.py ...                [ 82%]
+backend/app/integrations/los/tests/test_mock.py ...                      [ 82%]
+backend/app/integrations/pricing/tests/test_mock.py .                    [ 82%]
+backend/app/integrations/pricing/tests/test_rate_sheet.py ..             [ 83%]
+backend/app/integrations/pricing/tests/test_validation.py ....           [ 83%]
+backend/app/integrations/property_search/tests/test_mock.py ...          [ 84%]
+backend/app/integrations/rent/tests/test_mock.py ...                     [ 84%]
+backend/app/integrations/str/tests/test_mock.py ...                      [ 85%]
+backend/app/integrations/tax/tests/test_mock.py ...                      [ 86%]
+backend/app/workflows/tests/test_activities_are_thin_wrappers.py ....... [ 87%]
+....                                                                     [ 87%]
+backend/app/workflows/tests/test_activity_events_sequence.py ..          [ 88%]
+backend/app/workflows/tests/test_activity_session_gate.py .....          [ 89%]
+backend/app/workflows/tests/test_application_pipeline_personas.py ...... [ 90%]
+....                                                                     [ 90%]
+backend/app/workflows/tests/test_pipeline_stage_writes.py ..[2m2026-09-25T22:33:45.897854Z[0m [33m WARN[0m [2mtemporalio_sdk_core::worker[0m[2m:[0m Temporal Server 1.16.0 or newer is required to guarantee that the latest heartbeat details are preserved when an activity fails; the server did not advertise the activity_failure_include_heartbeat capability, so heartbeat details may be lost on failure
+..           [ 91%]
+backend/app/workflows/tests/test_resume_signal.py ..                     [ 91%]
+backend/app/workflows/tests/test_retry_policy.py [2m2026-09-25T22:33:46.124178Z[0m [33m WARN[0m [2mtemporalio_sdk_core::worker[0m[2m:[0m Temporal Server 1.16.0 or newer is required to guarantee that the latest heartbeat details are preserved when an activity fails; the server did not advertise the activity_failure_include_heartbeat capability, so heartbeat details may be lost on failure
+.[2m2026-09-25T22:33:46.144083Z[0m [33m WARN[0m [2mtemporalio_sdk_core::worker[0m[2m:[0m Temporal Server 1.16.0 or newer is required to guarantee that the latest heartbeat details are preserved when an activity fails; the server did not advertise the activity_failure_include_heartbeat capability, so heartbeat details may be lost on failure
+.[2m2026-09-25T22:33:46.158024Z[0m [33m WARN[0m [2mtemporalio_sdk_core::worker[0m[2m:[0m Temporal Server 1.16.0 or newer is required to guarantee that the latest heartbeat details are preserved when an activity fails; the server did not advertise the activity_failure_include_heartbeat capability, so heartbeat details may be lost on failure
+.[2m2026-09-25T22:33:46.173526Z[0m [33m WARN[0m [2mtemporalio_sdk_core::worker[0m[2m:[0m Temporal Server 1.16.0 or newer is required to guarantee that the latest heartbeat details are preserved when an activity fails; the server did not advertise the activity_failure_include_heartbeat capability, so heartbeat details may be lost on failure
+..                   [ 92%]
+backend/app/workflows/tests/test_worker_registration.py .                [ 93%]
+backend/tests/test_db_isolation.py ...                                   [ 93%]
+backend/tests/test_errors.py .........                                   [ 95%]
+backend/tests/test_openapi_export.py ..                                  [ 95%]
+backend/tests/test_registry.py ..                                        [ 95%]
+backend/tests/test_schema.py ........................                    [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+backend/app/workflows/tests/test_activity_events_sequence.py: 10 warnings
+backend/app/workflows/tests/test_application_pipeline_personas.py: 50 warnings
+backend/app/workflows/tests/test_pipeline_stage_writes.py: 10 warnings
+backend/app/workflows/tests/test_resume_signal.py: 20 warnings
+  /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/.venv/lib/python3.12/site-packages/temporalio/converter/_payload_converter.py:686: PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    return dict_fn()
+
+backend/app/workflows/tests/test_activity_events_sequence.py: 10 warnings
+backend/app/workflows/tests/test_application_pipeline_personas.py: 50 warnings
+backend/app/workflows/tests/test_pipeline_stage_writes.py: 10 warnings
+backend/app/workflows/tests/test_resume_signal.py: 20 warnings
+  /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/.venv/lib/python3.12/site-packages/temporalio/converter/_payload_converter.py:1028: PydanticDeprecatedSince20: The `parse_obj` method is deprecated; use `model_validate` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    return getattr(hint, "parse_obj")(value)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+====================== 572 passed, 181 warnings in 53.96s ======================
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib uv run python -m pytest seed
+============================= test session starts ==============================
+platform darwin -- Python 3.12.12, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787
+configfile: pyproject.toml
+plugins: asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=session, asyncio_default_test_loop_scope=session
+collected 31 items
+
+seed/tests/test_background_generator_determinism.py ...                  [  9%]
+seed/tests/test_borrower_accounts_seeded.py ...                          [ 19%]
+seed/tests/test_documents_watermarked.py ....                            [ 32%]
+seed/tests/test_persona_statuses.py ....                                 [ 45%]
+seed/tests/test_personas_match_engine.py ...                             [ 54%]
+seed/tests/test_provider_rows_seeded.py ........                         [ 80%]
+seed/tests/test_tax_rate_units.py ..                                     [ 87%]
+seed/tests/test_users_seeded.py ....                                     [100%]
+
+============================== 31 passed in 9.12s ==============================
+pnpm -r run test
+Scope: 4 of 5 workspace projects
+packages/api-client test$ vitest run
+packages/api-client test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+packages/api-client test:  RUN  v2.1.9 /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/packages/api-client
+packages/api-client test:  ✓ src/index.test.ts (2 tests) 3ms
+packages/api-client test:  Test Files  1 passed (1)
+packages/api-client test:       Tests  2 passed (2)
+packages/api-client test:    Start at  18:33:58
+packages/api-client test:    Duration  181ms (transform 14ms, setup 0ms, collect 13ms, tests 3ms, environment 0ms, prepare 32ms)
+packages/api-client test: Done
+packages/ui test$ vitest run
+packages/ui test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+packages/ui test:  RUN  v2.1.9 /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/packages/ui
+packages/ui test:  ✓ src/report/report-no-money-math.test.ts (29 tests) 11ms
+packages/ui test:  ✓ src/report/__fixtures__/view-model.types.test.ts (2 tests) 2ms
+packages/ui test:  ✓ src/report/MatchCard.test.tsx (5 tests) 33ms
+packages/ui test:  ✓ src/auth/useAsyncSubmit.test.ts (5 tests) 73ms
+packages/ui test:  ✓ src/components/Overlay/Overlay.test.tsx (8 tests) 200ms
+packages/ui test:  ✓ src/auth/OtpForm.test.tsx (5 tests) 247ms
+packages/ui test:  ✓ src/report/ReportGallery.primary-gating.test.tsx (7 tests) 202ms
+packages/ui test:  ✓ src/report/ReportPage.test.tsx (8 tests) 244ms
+packages/ui test:  ✓ src/auth/errors.test.ts (10 tests) 8ms
+packages/ui test:  ✓ src/report/MatchList.test.tsx (4 tests) 54ms
+packages/ui test:  ✓ src/report/HeroNumbers.test.tsx (2 tests) 33ms
+packages/ui test:  ✓ src/report/Collapsible.test.tsx (3 tests) 76ms
+packages/ui test:  ✓ src/auth/CredentialsForm.test.tsx (5 tests) 650ms
+packages/ui test:  ✓ src/auth/paths.test.ts (8 tests) 3ms
+packages/ui test:  ✓ src/components/MoneyInput/MoneyInput.test.tsx (4 tests) 129ms
+packages/ui test:  ✓ src/auth/TextField.test.tsx (4 tests) 116ms
+packages/ui test:  ✓ src/components/Tabs/Tabs.test.tsx (4 tests) 144ms
+packages/ui test:  ✓ src/report/RecommendationCard.test.tsx (4 tests) 23ms
+packages/ui test:  ✓ src/components/PercentInput/PercentInput.test.tsx (3 tests) 86ms
+packages/ui test:  ✓ src/report/OptionSwitcher.test.tsx (2 tests) 92ms
+packages/ui test:  ✓ src/components/SourceBadge/SourceBadge.test.tsx (3 tests) 112ms
+packages/ui test:  ✓ src/components/Table/Table.test.tsx (3 tests) 105ms
+packages/ui test:  ✓ src/index.test.ts (1 test) 2ms
+packages/ui test:  ✓ src/auth/AuthCard.test.tsx (2 tests) 46ms
+packages/ui test:  ✓ src/report/SupersededBanner.test.tsx (3 tests) 52ms
+packages/ui test:  ✓ src/components/Button/Button.test.tsx (3 tests) 60ms
+packages/ui test:  ✓ src/components/StatusPill/StatusPill.test.tsx (2 tests) 16ms
+packages/ui test:  ✓ src/components/Card/Card.test.tsx (2 tests) 32ms
+packages/ui test:  Test Files  28 passed (28)
+packages/ui test:       Tests  141 passed (141)
+packages/ui test:    Start at  18:33:58
+packages/ui test:    Duration  2.41s (transform 435ms, setup 3.12s, collect 1.44s, tests 2.85s, environment 7.46s, prepare 1.23s)
+packages/ui test: Done
+apps/lo-console test$ vitest run
+apps/borrower-portal test$ vitest run
+apps/lo-console test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+apps/lo-console test:  RUN  v2.1.9 /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/apps/lo-console
+apps/borrower-portal test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+apps/borrower-portal test:  RUN  v2.1.9 /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/apps/borrower-portal
+apps/lo-console test:  ✓ src/features/pricing/pricing-no-money-math.test.ts (11 tests) 7ms
+apps/borrower-portal test:  ✓ src/middleware.test.ts (10 tests) 13ms
+apps/borrower-portal test:  ✓ src/features/actions/MoveForwardDialog.test.tsx (4 tests) 138ms
+apps/borrower-portal test:  ✓ src/features/report/ReportView.test.tsx (8 tests) 237ms
+apps/borrower-portal test:  ✓ src/app/page.test.tsx (7 tests) 492ms
+apps/borrower-portal test:    ✓ Home page > shows the signed-in borrower's first name once /me resolves 316ms
+apps/lo-console test:  ✓ src/app/page.test.tsx (6 tests) 592ms
+apps/lo-console test:    ✓ Home page > shows the signed-in user's name and role label once /me resolves 396ms
+apps/lo-console test:  ✓ src/features/pricing/EnrichedPercentField.test.tsx (8 tests) 476ms
+apps/lo-console test:  ✓ src/features/pricing/PricingPanel.strategy-gating.test.tsx (7 tests) 284ms
+apps/borrower-portal test:  ✓ src/features/actions/AskOtherDialog.test.tsx (4 tests) 556ms
+apps/lo-console test:  ✓ src/features/workspace/StatusActionsMenu.test.tsx (6 tests) 518ms
+apps/borrower-portal test:  ✓ src/features/report/ReportActionsSlot.test.tsx (11 tests) 642ms
+apps/borrower-portal test:    ✓ ReportActionsSlot > ask about another option: requires a message before Send is enabled, then submits it 375ms
+apps/lo-console test: stderr | src/features/pricing/PricingPanel.test.tsx > PricingPanel > AC7: shows a 'Recalculating…' indicator when a preview call takes over 300ms
+apps/lo-console test: The current testing environment is not configured to support act(...)
+apps/borrower-portal test:  ✓ src/features/auth/LoginForm.test.tsx (3 tests) 727ms
+apps/borrower-portal test:    ✓ LoginForm (Borrower Portal wiring) > surfaces the backend's message on a 401 and does not advance 303ms
+apps/lo-console test:  ✓ src/features/pricing/PricingPanel.test.tsx (4 tests) 712ms
+apps/lo-console test:    ✓ PricingPanel > AC7: shows a 'Recalculating…' indicator when a preview call takes over 300ms 361ms
+apps/lo-console test:  ✓ src/features/pricing/DownPaymentLinkedInput.test.tsx (4 tests) 267ms
+apps/borrower-portal test:  ✓ src/lib/nextParam.test.ts (11 tests) 9ms
+apps/lo-console test:  ✓ src/features/quote-builder/QuoteBuilder.test.tsx (8 tests) 1017ms
+apps/lo-console test:  ✓ src/features/send/send-no-money-math.test.ts (27 tests) 10ms
+apps/lo-console test:  ✓ src/features/send/SendTab.test.tsx (8 tests) 1155ms
+apps/lo-console test:  ✓ src/features/quote-builder/quote-builder-no-money-math.test.ts (22 tests) 10ms
+apps/borrower-portal test:  ✓ src/features/auth/AuthFlow.test.tsx (10 tests) 1477ms
+apps/borrower-portal test:    ✓ AuthFlow > mode='login' > moves from the login step to the OTP step on a successful login, then to / on a successful verify 478ms
+apps/borrower-portal test:    ✓ AuthFlow > mode='login' > returns to a safe `next` path on successful verify (CQ-022, H2) 346ms
+apps/borrower-portal test:  ✓ src/app/gallery/page.test.tsx (1 test) 228ms
+apps/borrower-portal test:  ✓ src/features/auth/OtpForm.test.tsx (3 tests) 298ms
+apps/borrower-portal test:  ✓ src/features/report/ReportMatchesSlot.test.tsx (2 tests) 126ms
+apps/lo-console test:  ✓ src/features/workspace/WorkspaceProvider.test.tsx (3 tests) 90ms
+apps/borrower-portal test:  ✓ src/app/gallery/report/page.test.tsx (1 test) 314ms
+apps/borrower-portal test:    ✓ Report gallery page (Borrower Portal) > renders every fixture with no console errors or warnings 314ms
+apps/lo-console test:  ✓ src/features/workspace/ApplicationHeader.test.tsx (3 tests) 242ms
+apps/lo-console test:  ✓ src/features/workspace/PipelineBanner.test.tsx (4 tests) 74ms
+apps/lo-console test:  ✓ src/features/quote-builder/QuoteGroups.test.tsx (5 tests) 89ms
+apps/lo-console test:  ✓ src/features/auth/OtpForm.test.tsx (3 tests) 122ms
+apps/lo-console test:  ✓ src/app/gallery/page.test.tsx (1 test) 82ms
+apps/lo-console test:  ✓ src/features/pricing/EnrichedMoneyField.test.tsx (2 tests) 127ms
+apps/borrower-portal test:  ✓ src/features/auth/SignupForm.test.tsx (9 tests) 2401ms
+apps/borrower-portal test:    ✓ SignupForm > submits full name, email and password and calls onChallenge with the challenge id and email 522ms
+apps/borrower-portal test:    ✓ SignupForm > blocks the submit and shows an error when the passwords do not match 325ms
+apps/borrower-portal test:    ✓ SignupForm > shows the backend's 409 message when there is no loan officer to assign 316ms
+apps/borrower-portal test:  Test Files  14 passed (14)
+apps/borrower-portal test:       Tests  84 passed (84)
+apps/borrower-portal test:    Start at  18:34:01
+apps/borrower-portal test:    Duration  3.84s (transform 450ms, setup 2.72s, collect 3.14s, tests 7.66s, environment 8.51s, prepare 1.50s)
+apps/borrower-portal test: Done
+apps/lo-console test:  ✓ src/middleware.test.ts (6 tests) 6ms
+apps/lo-console test:  ✓ src/features/auth/LoginForm.test.tsx (2 tests) 271ms
+apps/lo-console test:  ✓ src/features/workspace/TabRail.test.tsx (2 tests) 90ms
+apps/lo-console test:  ✓ src/features/auth/AuthFlow.test.tsx (2 tests) 334ms
+apps/lo-console test:  ✓ src/app/gallery/report/page.test.tsx (1 test) 83ms
+apps/lo-console test:  ✓ src/features/send/SendFlow.test.tsx (11 tests) 13616ms
+apps/lo-console test:    ✓ Send flow (CQ-020) > T10/T11/T12: Send starts the workflow, shows Rendering letter → Emailing → Done, toasts and lists the sent version 2495ms
+apps/lo-console test:    ✓ Send flow (CQ-020) > AC4 in the UI: a 409 PACKAGE_NOT_READY shows the blockers and polls nothing 758ms
+apps/lo-console test:    ✓ Send flow (CQ-020) > a failed send shows its error and offers Try again 582ms
+apps/lo-console test:    ✓ Send flow (CQ-020) > a send already running when the tab opens is followed, and editing is locked 1062ms
+apps/lo-console test:    ✓ Send flow (CQ-020) > PUT 409 SEND_IN_PROGRESS: the edit is dropped, the server package shown again and the send followed 545ms
+apps/lo-console test:    ✓ Send flow (CQ-020) > a status poll that keeps failing gives up with an error instead of locking the tab 5172ms
+apps/lo-console test:    ✓ Send flow (CQ-020) > a send that stays in flight too long stops polling with a clear message 2801ms
+apps/lo-console test:  Test Files  24 passed (24)
+apps/lo-console test:       Tests  156 passed (156)
+apps/lo-console test:    Start at  18:34:01
+apps/lo-console test:    Duration  15.53s (transform 1.12s, setup 4.05s, collect 5.55s, tests 20.28s, environment 10.31s, prepare 4.03s)
+apps/lo-console test: Done

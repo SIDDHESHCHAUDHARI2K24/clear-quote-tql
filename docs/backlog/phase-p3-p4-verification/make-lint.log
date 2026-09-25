@@ -1,0 +1,32 @@
+uv run ruff check backend
+All checks passed!
+uv run ruff format --check backend
+360 files already formatted
+uv run mypy backend/app backend/conftest.py backend/tests backend/scripts
+Success: no issues found in 360 source files
+pnpm -r run lint
+Scope: 4 of 5 workspace projects
+packages/api-client lint$ eslint .
+packages/api-client lint: Warning: React version was set to "detect" in eslint-plugin-react settings, but the "react" package is not installed. Assuming latest React version for linting.
+packages/api-client lint: Pages directory cannot be found at /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/packages/api-client/pages or /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/packages/api-client/src/pages. If using a custom path, please configure with the `no-html-link-for-pages` rule in your eslint config file.
+packages/api-client lint: Done
+packages/ui lint$ eslint .
+packages/ui lint: Pages directory cannot be found at /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/packages/ui/pages or /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/packages/ui/src/pages. If using a custom path, please configure with the `no-html-link-for-pages` rule in your eslint config file.
+packages/ui lint: Done
+apps/lo-console lint$ eslint .
+apps/borrower-portal lint$ eslint .
+apps/borrower-portal lint: Done
+apps/lo-console lint: Done
+pnpm -r run typecheck
+Scope: 4 of 5 workspace projects
+packages/api-client typecheck$ tsc --noEmit
+packages/api-client typecheck: Done
+packages/ui typecheck$ tsc --noEmit
+packages/ui typecheck: Done
+apps/lo-console typecheck$ tsc --noEmit
+apps/borrower-portal typecheck$ tsc --noEmit
+apps/borrower-portal typecheck: Done
+apps/lo-console typecheck: Done
+pnpm exec prettier --check .
+Checking formatting...
+All matched files use Prettier code style!

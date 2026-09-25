@@ -1,47 +1,24 @@
 # Phase P3 + P4: orchestrator handoff
 
-Written 2026-09-25 at the end of the first orchestrator session. A new session reads this, then `docs/backlog/phase-p3-p4-plan.md`, then the item folders it touches.
+First written 2026-09-25 at the end of the first orchestrator session. Updated 2026-09-25 by the final-verification run (`docs/backlog/phase-p3-p4-verification.md`).
 
 ## State
 
-- The integration branch `phase-p3-p4` (origin) is at aefa278. Merged: PRs #3–#10, #12, #13, and #22 (CQ-019 post-merge minors).
-- The alembic head is `c8869567cd57` (`quote_packages.lo_edited`).
-- The P4 lane is complete: CQ-021–024.
-- In P3, CQ-016–019 are done. Only CQ-020 remains.
-- Kaneo: CQ-016–019 and CQ-021–024 are In Review with merge comments. CQ-020 is To Do.
+- **All P3 and P4 items (CQ-016 to CQ-024) are merged into `phase-p3-p4`.** The last merge was PR #30, CQ-020 (a39ab90). The backend test-flake fix is PR #28 (`docs/backlog/p34-test-flake-fix.md`). CQ-019's post-merge minors are PR #22.
+- The alembic head is `d4a1c0f2e920` (CQ-020 send tracking). There is exactly one head.
+- Final verification ran on slot 0 and is recorded in `docs/backlog/phase-p3-p4-verification.md` (PR "P3/P4 final verification" → `phase-p3-p4`).
+  - `make lint` and `make test` are green, and `make demo-reset` takes about 2 s.
+  - `make e2e` passes 51/51 with `--workers 1`. Parallel runs flake on shared seed data.
+  - The real-send re-checks pass: CQ-022 AC1, CQ-024 AC1 and AC6, CQ-019 AC2, and the P4 milestone.
+- Kaneo: CQ-016 to CQ-019 and CQ-021 to CQ-024 are In Review. CQ-020 is moved to In Review by the orchestrator at its merge; the verification run did not change Kaneo.
 
 ## Open work, in order
 
-1. **CQ-020 Letter PDF & send (wave 6).** Use Opus on slot 10. Inputs:
-   - `render_package_letter(db, package, *, portal_url=None, letter_date=None) -> str` in `app.features.quotes.pdf.service`.
-   - WeasyPrint. Pango is installed; on macOS set `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`.
-   - `freeze_package_version` in `portal/reports/versions.py`.
-   - `build_package_view_model` in `app.features.quotes.send.view_model`.
-   - `compute_matches_for_package`.
-   - H2: the email links to `/report/{token}`. The borrower must sign in; no account is created.
+1. Merge the "P3/P4 final verification" PR into `phase-p3-p4`.
+2. **The human** opens and merges the PR `phase-p3-p4` → `main`, after confirming CI is green on it.
+3. Remind the human about the P2 S1.6 local git cleanup (memory `p2-merge-to-main`). Run it only when no worker is active.
 
-   Decisions it must take:
-   - M3: a PUT on a sent package should copy it into a new draft, so sent packages stay frozen.
-   - Deferred from CQ-024: "ask_other is the only type allowed after an Inquiry is answered by a new version".
-
-   Carry these PR #22 review minors:
-   - A failed Send-tab save can be silently dropped by a later successful save.
-   - `_delete_quote_row` reports `recommendation_cleared=True` when the recommendation actually moved.
-   - Log the "refill after the Builder deletes all quotes" Decision.
-2. **Fix the backend test flake before the main PR (required, because CI must be green).**
-   - `asyncpg InterfaceError: cannot perform operation: another operation is in progress` also happens in CI: the push run 36183565823 failed and the PR run 36183570634 passed, on the same commit eeb259a.
-   - It also appears locally, as errors in the workflow and schema tests.
-   - So it is a test-isolation bug, probably in `backend/conftest.py`'s session and savepoint fixture or in the Temporal test env sharing a connection. It is not just load.
-   - Use Opus and systematic-debugging. Reproduce it with `pytest -p randomly` or repeated runs.
-3. **Cross-item re-checks after CQ-020.**
-   - CQ-022 AC1 end to end: the email link, then sign-in, then the report.
-   - CQ-024 AC1 and AC6 on a truly sent package.
-   - CQ-019 AC2 against a real send.
-4. **Open the PR `phase-p3-p4` → `main` for the human to merge.**
-   - Before that, run the full `make e2e` on slot 0.
-   - Update the backlog README statuses.
-   - Confirm CI is green.
-5. **Remind the human about the P2 S1.6 local git cleanup** (memory `p2-merge-to-main`). Run it only when no worker is active.
+The non-blocking follow-ups are listed in `phase-p3-p4-verification.md` (Follow-ups) and below.
 
 ## Follow-ups logged (not blocking)
 

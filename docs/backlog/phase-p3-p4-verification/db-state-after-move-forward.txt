@@ -1,0 +1,13 @@
+status|option_selected
+activity|pipeline.imported|system|2026-09-25 22:40:14.585024+00|{}
+activity|pipeline.verified|system|2026-09-25 22:40:14.608255+00|{}
+activity|pipeline.priced|system|2026-09-25 22:40:14.655712+00|{}
+activity|quote.recommended|system|2026-09-25 22:41:01.683838+00|{"source": "default_draft", "quote_id": "1ae303ca-7483-44d4-a754-7bf099b46387", "previous_quote_id": null}
+activity|quote.sent|system|2026-09-25 22:41:02.192028+00|{"sent_at": "2026-09-25T22:41:01.786233+00:00", "version": 1, "expires_at": "2026-10-16T22:41:01.786233+00:00", "letter_key": "packages/21e0f9e4-b682-48d7-b868-ebb541ec93b7/v1/preapproval-letter.pdf", "package_id": "21e0f9e4-b682-48d7-b868-ebb541ec93b7", "version_id": "fc54a268-83c6-4599-bd98-47b1cedef3c7", "outbox_email_id": "9fdb74d5-30f7-485f-a9f3-8b8e95c68981", "previous_status": "priced", "in_reply_to_inquiry": false}
+activity|quote.viewed|system|2026-09-25 22:41:03.185841+00|{"version": 1, "report_token": "xggm7yqgax-16A9ZhkQ27S7Ga8sz0zYp_66lfcD1VSo"}
+activity|quote.move_forward|system|2026-09-25 22:42:48.510211+00|{"message": null, "quote_id": "9dbd8d53-2ee1-4c8b-95d6-bb69ab566255"}
+crm|quote.sent|2026-09-25 22:41:02.685073+00|{"version": 1, "package_id": "21e0f9e4-b682-48d7-b868-ebb541ec93b7", "version_id": "fc54a268-83c6-4599-bd98-47b1cedef3c7", "application_id": "f59c4370-0317-430b-b4bf-e0dc004af259", "in_reply_to_inquiry": false}
+crm|borrower.move_forward|2026-09-25 22:42:49.128273+00|{"message": null, "quote_id": "9dbd8d53-2ee1-4c8b-95d6-bb69ab566255", "application_id": "f59c4370-0317-430b-b4bf-e0dc004af259"}
+outbox|marcus.hale@clearquote-demo.test|Your pre-approval and numbers from Total Quality Lending|sent|2026-09-25 22:41:02.142878+00
+outbox|jordan.lee@clearquote-demo.test|Marcus Hale would like to move forward with Buydown|sent|2026-09-25 22:42:48.504439+00
+version|1|2026-09-25 22:41:01.786233+00|2026-09-25 22:41:03.185841+00|f|{"at": "2026-09-25T22:42:48.510211+00:00", "type": "move_forward", "message": null, "quote_id": "9dbd8d53-2ee1-4c8b-95d6-bb69ab566255"}
