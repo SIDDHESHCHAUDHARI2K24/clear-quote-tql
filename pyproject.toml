@@ -76,6 +76,12 @@ ignore_missing_imports = true
 module = ["reportlab.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# CQ-024: backend/scripts/freeze_sent_version.py reads seed/personas/*.yaml
+# directly (no third-party type stubs published for pyyaml).
+module = ["yaml.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["backend"]
 # `.` (repo root) so `seed/tests/*` (CQ-010) can `import seed...` /

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { ReportPage } from "@cq/ui";
 import type { components } from "@cq/api-client";
 
+import { parseBorrowerAction } from "../actions/api";
 import { api } from "../../lib/api-client";
 
 import { ReportActionsSlot } from "./ReportActionsSlot";
@@ -40,51 +41,58 @@ export function ReportView({ token }: ReportViewProps) {
   const searchParams = useSearchParams();
   const [state, setState] = useState<ViewState>({ kind: "loading" });
 
-  useEffect(() => {
-    let cancelled = false;
-    setState({ kind: "loading" });
+  // CQ-024: extracted from the effect below into its own callback so
+  // `ReportActionsSlot` can re-run it after a borrower action (success or
+  // 409) through the existing `renderActions` render-prop closure, without
+  // adding a new prop to `ReportView`'s or `ReportPage`'s own interface
+  // (plan.md Decision 8). `showLoadingState` is false for that re-fetch --
+  // a successful action already knows the new state is coming and
+  // shouldn't flash the whole page back to a loading skeleton.
+  const loadReport = useCallback(
+    (opts: { showLoadingState: boolean } = { showLoadingState: true }) => {
+      if (opts.showLoadingState) setState({ kind: "loading" });
 
-    api
-      .GET("/api/v1/portal/reports/{token}", { params: { path: { token } } })
-      .then(({ data, response }) => {
-        if (cancelled) return;
-        if (data) {
-          setState({ kind: "loaded", report: data });
-          return;
-        }
-        if (response.status === 401) {
-          api
-            .POST("/api/v1/auth/borrower/logout")
-            .catch(() => {})
-            .finally(() => {
-              if (!cancelled) {
+      return api
+        .GET("/api/v1/portal/reports/{token}", { params: { path: { token } } })
+        .then(({ data, response }) => {
+          if (data) {
+            setState({ kind: "loaded", report: data });
+            return;
+          }
+          if (response.status === 401) {
+            api
+              .POST("/api/v1/auth/borrower/logout")
+              .catch(() => {})
+              .finally(() => {
                 router.replace(`/login?next=${encodeURIComponent(`/report/${token}`)}`);
-              }
-            });
-          return;
-        }
-        // Only a real 404 (foreign token, random token, or
-        // ensure_borrower_owns_client's 404 -- spec.md AC5) is a "not
-        // found" report. Fresh-subagent review finding (fixed): a
-        // transient 5xx/502 was previously shown as "not found" too,
-        // hiding real backend errors behind a wrong "check your email"
-        // message instead of "something went wrong, try reloading".
-        if (response.status === 404) {
-          setState({ kind: "not-found" });
-          return;
-        }
-        setState({ kind: "error" });
-      })
-      .catch(() => {
-        if (!cancelled) setState({ kind: "error" });
-      });
+              });
+            return;
+          }
+          // Only a real 404 (foreign token, random token, or
+          // ensure_borrower_owns_client's 404 -- spec.md AC5) is a "not
+          // found" report. Fresh-subagent review finding (fixed): a
+          // transient 5xx/502 was previously shown as "not found" too,
+          // hiding real backend errors behind a wrong "check your email"
+          // message instead of "something went wrong, try reloading".
+          if (response.status === 404) {
+            setState({ kind: "not-found" });
+            return;
+          }
+          setState({ kind: "error" });
+        })
+        .catch(() => {
+          setState({ kind: "error" });
+        });
+    },
+    [token, router],
+  );
 
-    return () => {
-      cancelled = true;
-    };
-    // Re-fetch only when `token` itself changes (e.g. following a
-    // superseded report's link to the newest version). `router` is only
-    // called from the effect's own callbacks, and `searchParams` is read
+  useEffect(() => {
+    // React discards a `setState` from an unmounted component's own
+    // closures, so no extra "cancelled" bookkeeping is needed here beyond
+    // what `loadReport` already does.
+    void loadReport();
+    // Re-fetch only when `token` itself changes. `searchParams` is read
     // fresh below at render time for the initial `?option=`, not something
     // that should retrigger a fetch when the user switches options.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,7 +152,13 @@ export function ReportView({ token }: ReportViewProps) {
         }
         renderMatches={(vm) => <ReportMatchesSlot viewModel={vm} />}
         renderActions={(vm, selected) => (
-          <ReportActionsSlot viewModel={vm} selectedOption={selected} />
+          <ReportActionsSlot
+            viewModel={vm}
+            selectedOption={selected}
+            token={token}
+            borrowerAction={parseBorrowerAction(report.borrower_action)}
+            onActionTaken={() => void loadReport({ showLoadingState: false })}
+          />
         )}
       />
     </main>

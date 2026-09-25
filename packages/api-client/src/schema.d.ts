@@ -383,6 +383,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/reports/{token}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Report Action */
+        post: operations["submit_report_action_api_v1_portal_reports__token__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -458,6 +475,11 @@ export interface components {
             par: components["schemas"]["QuoteRead"];
             buydown: components["schemas"]["QuoteRead"] | null;
         };
+        /**
+         * BorrowerActionType
+         * @enum {string}
+         */
+        BorrowerActionType: "move_forward" | "ask_other" | "ask_updated";
         /** BorrowerLoginRequest */
         BorrowerLoginRequest: {
             /** Email */
@@ -921,6 +943,27 @@ export interface components {
             workflow_id: string;
             /** Started */
             started: boolean;
+        };
+        /** PortalReportActionRequest */
+        PortalReportActionRequest: {
+            type: components["schemas"]["BorrowerActionType"];
+            /** Quote Id */
+            quote_id?: string | null;
+            /** Message */
+            message?: string | null;
+        };
+        /** PortalReportActionResponse */
+        PortalReportActionResponse: {
+            status: components["schemas"]["ApplicationStatus"];
+            /** Borrower Action */
+            borrower_action: {
+                [key: string]: string | null;
+            } | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
         };
         /**
          * PortalReportResponse
@@ -2119,6 +2162,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortalReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_report_action_api_v1_portal_reports__token__actions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalReportActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalReportActionResponse"];
                 };
             };
             /** @description Validation Error */

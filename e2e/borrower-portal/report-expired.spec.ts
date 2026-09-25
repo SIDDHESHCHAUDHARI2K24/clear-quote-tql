@@ -27,7 +27,11 @@ test("Grace Kim's report shows the expired banner and hides the action buttons",
   await expect(page.getByRole("heading", { name: /here are your numbers/i })).toBeVisible();
 
   await expect(page.getByText("These numbers have expired.")).toBeVisible();
-  await expect(page.getByTestId("actions-slot")).toHaveCount(0);
+  // CQ-024: the expired state now shows exactly one action -- "Ask for
+  // updated numbers" (spec.md: "the report shows a ... banner, hides the
+  // actions and offers 'Ask for updated numbers'"). The full ask_updated
+  // flow is covered by e2e/borrower-portal/report-expired-actions.spec.ts.
+  await expect(page.getByRole("button", { name: /ask for updated numbers/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /move forward with this option/i })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /ask about another option/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^ask about another option/i })).toHaveCount(0);
 });
