@@ -25,6 +25,8 @@ import app.features.applications.verification.models  # noqa: E402,F401
 import app.features.borrower.consent.models  # noqa: E402,F401
 import app.features.clients.models  # noqa: E402,F401
 import app.features.notifications.outbox.models  # noqa: E402,F401
+import app.features.portal.apply.models  # noqa: E402,F401
+import app.features.portal.support.models  # noqa: E402,F401
 import app.features.pricing.scenarios.models  # noqa: E402,F401
 import app.features.quotes.builder.models  # noqa: E402,F401
 import app.features.quotes.send.models  # noqa: E402,F401

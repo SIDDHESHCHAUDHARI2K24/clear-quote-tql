@@ -17,6 +17,7 @@ success/failure outcomes):
 | auto_price_application           | pipeline.enriched (reused) | pipeline.pricing_blocked |
 | draft_quote_set                    | pipeline.priced        | pipeline.pricing_blocked |
 | (resume signal -> record_pipeline_resumed) | pipeline.resumed | n/a |
+| load_application_source (P5/P6 E14)        | (no event)       | n/a |
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio import activity
 
-from app.core.enums import ApplicationStatus, FlagSeverity
+from app.core.enums import ApplicationSource, ApplicationStatus, FlagSeverity
 from app.features.applications.models import Application
 from app.features.applications.service import ImportResult, import_from_los
 from app.features.applications.timeline.models import ActivityEvent
@@ -143,6 +144,22 @@ async def _fail_pricing_stage(db: AsyncSession, application_id: uuid.UUID, exc: 
     await _transition_status(db, application_id, ApplicationStatus.NEEDS_ATTENTION)
     await _set_stage(db, application_id, ApplicationStatus.NEEDS_ATTENTION)
     await _write_event(db, application_id, _TYPE_PRICING_BLOCKED, {"message": message})
+
+
+@activity.defn(name="load_application_source")
+async def load_application_source(application_id: str) -> str:
+    """P5/P6 foundation (E14): returns `applications.source` (`"los"` or
+    `"portal"`) so the workflow can skip `import_application` for a portal
+    application (CQ-032), whose parties/property/employment/assets were
+    written locally at submit and have no LOS record to import. Read-only:
+    writes no status, stage or event. A missing row reads as `los`, so the
+    import stage reports the setup error exactly as before."""
+    app_uuid = uuid.UUID(application_id)
+    async with workflow_db.session_factory() as db:
+        application = await db.get(Application, app_uuid)
+        if application is None:
+            return ApplicationSource.LOS.value
+        return ApplicationSource(application.source).value
 
 
 @activity.defn(name="import_application")

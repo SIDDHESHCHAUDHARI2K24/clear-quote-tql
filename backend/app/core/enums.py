@@ -40,6 +40,16 @@ class ApplicationStatus(enum.StrEnum):
     CLOSED = "closed"
 
 
+class ApplicationSource(enum.StrEnum):
+    """P5/P6 foundation (E14): where an application came from. `los` rows are
+    imported by the pipeline's `import_application`; `portal` rows (CQ-032's
+    apply wizard) already hold their data locally, so the pipeline skips the
+    import stage for them."""
+
+    LOS = "los"
+    PORTAL = "portal"
+
+
 class Occupancy(enum.StrEnum):
     """Per override O2: Primary, LTR or STR only — no `second_home`."""
 

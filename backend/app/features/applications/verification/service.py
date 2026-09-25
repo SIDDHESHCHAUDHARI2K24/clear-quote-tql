@@ -30,7 +30,7 @@ from app.features.applications.credit.models import Liability
 from app.features.applications.housing.models import HousingHistory
 from app.features.applications.models import Application, ApplicationParty, PartyRole
 from app.features.applications.verification.models import Flag
-from app.features.applications.verification.rules import evaluate_rules
+from app.features.applications.verification.rules import evaluate_rules, flag_message
 from app.features.applications.verification.schemas import (
     HousingSnapshot,
     PartySnapshot,
@@ -196,13 +196,17 @@ async def write_flag(
     field_key: str,
     rule: str,
     severity: FlagSeverity,
+    message: str | None = None,
 ) -> Flag:
     """Upserts a `flags` row: reuses the existing *unresolved* row for
     `(application_id, field_key, rule)` if one exists (refreshing its
-    `tab`/`severity`), else creates one. Shared by this item's own rules and
-    CQ-013's OB-required-field validation stage (persona 7, Aisha Coleman).
+    `tab`/`severity`/`message`), else creates one. Shared by this item's own
+    rules and CQ-013's OB-required-field validation stage (persona 7, Aisha
+    Coleman). `message` (P5/P6 foundation, E8) is the human-readable text;
+    `None` falls back to `rules.flag_message(rule, field_key)`.
     Does not commit — the caller controls the transaction boundary.
     """
+    text = message or flag_message(rule, field_key)
     existing = (
         await db.execute(
             select(Flag).where(
@@ -216,11 +220,17 @@ async def write_flag(
     if existing is not None:
         existing.tab = tab
         existing.severity = severity
+        existing.message = text
         await db.flush()
         return existing
 
     flag = Flag(
-        application_id=application_id, tab=tab, field_key=field_key, rule=rule, severity=severity
+        application_id=application_id,
+        tab=tab,
+        field_key=field_key,
+        rule=rule,
+        severity=severity,
+        message=text,
     )
     db.add(flag)
     await db.flush()
@@ -291,6 +301,7 @@ async def run_and_persist(application_id: uuid.UUID, db: AsyncSession) -> Verifi
                     result.field_key,
                     result.rule_id,
                     result.severity,
+                    message=result.message,
                 )
                 run_result.flags_raised.append(flag)
             else:
