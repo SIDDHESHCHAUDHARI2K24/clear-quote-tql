@@ -17,6 +17,24 @@ Prototype of a mortgage quote and pre-approval experience for loan officers and 
 - **Claude Code** (agent tooling; Codex CLI and OpenCode optional)
 - **Kaneo** running locally at `http://localhost:5183` (backlog tracking; no API key needed)
 
+### First run
+
+1. `cp .env.example .env`, then fill in:
+   - `FIELD_ENCRYPTION_KEY` — generate with:
+     `uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+   - `SEED_STAFF_PASSWORD` — any local password; `make demo-reset` bcrypt-hashes it for the 4 seeded staff users and refuses to run if it's unset.
+   - The other variables have working local defaults already filled in.
+2. `uv sync` — installs the backend (Python 3.12).
+3. `pnpm install` — installs the frontends and shared packages.
+4. `make up` — starts Postgres, Valkey, MinIO, Mailpit and Temporal (Docker).
+5. `make demo-reset` — migrates the dev database and seeds personas + background data.
+6. `make api` — runs the FastAPI backend on `:8000`.
+7. `make worker` — runs the Temporal worker (needs `make up`'s Temporal at `localhost:7233`).
+8. Frontends (each in its own terminal):
+   - `pnpm --filter @cq/lo-console dev` — LO Console on `http://localhost:3010`
+   - `pnpm --filter @cq/borrower-portal dev` — Borrower Portal on `http://localhost:3020`
+9. `make lint` and `make test` before committing.
+
 ### Getting started
 
 1. Start Kaneo locally at `http://localhost:5183`. The Kaneo MCP is preconfigured for all agents.
