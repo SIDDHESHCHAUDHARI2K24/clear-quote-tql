@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import "./globals.css";
+
 export const metadata: Metadata = {
   title: "Clear Quote — LO Console",
-  description: "Clear Quote internal LO console (scaffold — CQ-005 fills this in).",
+  description: "Clear Quote internal LO console.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

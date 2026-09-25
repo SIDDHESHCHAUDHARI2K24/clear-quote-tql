@@ -1,0 +1,106 @@
+/*
+ * Design tokens for Clear Quote -- single source, imported by both apps
+ * globals.css via an at-import of the @cq/ui tokens.css file before the
+ * at-import of tailwindcss itself. See
+ * docs/backlog/CQ-005-frontend-skeleton/spec.md, Design tokens section,
+ * for the pinned scale values -- do not rename variables without updating
+ * that spec and every consumer.
+ *
+ * Note: a Tailwind v4 theme block may contain only custom-property
+ * declarations (no comments), so all explanatory notes live here instead.
+ *
+ * - Navy, sage and neutral scales use the color-star namespace so Tailwind
+ *   generates bg-, text- and border- utilities directly.
+ * - Status colors are pinned as status-star (without the color- namespace,
+ *   per spec) and re-declared under color-status-star so Tailwind also
+ *   generates bg-status-star, text-status-star and border-status-star
+ *   utilities from the same values.
+ * - The type scale is pinned as font-size-star (per spec) and re-declared
+ *   under the Tailwind text-star namespace (paired with the matching
+ *   line-height variable) so text-xs through text-3xl utilities pick up
+ *   this scale.
+ */
+
+@theme {
+  --color-navy-50: #eef2f8;
+  --color-navy-100: #d9e2ef;
+  --color-navy-300: #90a8c7;
+  --color-navy-500: #3d5a80;
+  --color-navy-700: #24405c;
+  --color-navy-900: #142033;
+
+  --color-sage-50: #f1f5ee;
+  --color-sage-100: #dfe9d6;
+  --color-sage-300: #aec79a;
+  --color-sage-500: #7c9a6b;
+  --color-sage-700: #5a7550;
+  --color-sage-900: #34452e;
+
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f7f8fa;
+  --color-neutral-100: #eef0f3;
+  --color-neutral-200: #dee1e6;
+  --color-neutral-400: #9aa1ac;
+  --color-neutral-600: #5c636f;
+  --color-neutral-800: #2b2f36;
+  --color-neutral-950: #14161a;
+
+  --status-success: #2e7d46;
+  --status-warning: #b8860b;
+  --status-danger: #c1392b;
+  --status-info: #2a6f97;
+  --status-neutral: var(--color-neutral-400);
+
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-danger: var(--status-danger);
+  --color-status-info: var(--status-info);
+  --color-status-neutral: var(--status-neutral);
+
+  --font-size-xs: 0.75rem;
+  --font-line-height-xs: 1rem;
+  --font-size-sm: 0.875rem;
+  --font-line-height-sm: 1.25rem;
+  --font-size-base: 1rem;
+  --font-line-height-base: 1.5rem;
+  --font-size-md: 1.125rem;
+  --font-line-height-md: 1.75rem;
+  --font-size-lg: 1.25rem;
+  --font-line-height-lg: 1.75rem;
+  --font-size-xl: 1.5rem;
+  --font-line-height-xl: 2rem;
+  --font-size-2xl: 1.875rem;
+  --font-line-height-2xl: 2.25rem;
+  --font-size-3xl: 2.25rem;
+  --font-line-height-3xl: 2.5rem;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --text-xs: var(--font-size-xs);
+  --text-xs--line-height: var(--font-line-height-xs);
+  --text-sm: var(--font-size-sm);
+  --text-sm--line-height: var(--font-line-height-sm);
+  --text-base: var(--font-size-base);
+  --text-base--line-height: var(--font-line-height-base);
+  --text-md: var(--font-size-md);
+  --text-md--line-height: var(--font-line-height-md);
+  --text-lg: var(--font-size-lg);
+  --text-lg--line-height: var(--font-line-height-lg);
+  --text-xl: var(--font-size-xl);
+  --text-xl--line-height: var(--font-line-height-xl);
+  --text-2xl: var(--font-size-2xl);
+  --text-2xl--line-height: var(--font-line-height-2xl);
+  --text-3xl: var(--font-size-3xl);
+  --text-3xl--line-height: var(--font-line-height-3xl);
+}
+
+/*
+ * Tabular numerals utility for money, percent and rate values. The Tailwind
+ * v4 built-in tabular-nums utility class covers ordinary JIT usage; the num
+ * class here exists for the eventual print stylesheet (CQ-021), which does
+ * not go through Tailwind JIT.
+ */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
