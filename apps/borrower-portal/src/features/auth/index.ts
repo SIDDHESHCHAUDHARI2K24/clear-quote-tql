@@ -10,5 +10,4 @@ export type { SignupFormProps } from "./SignupForm";
 export { OtpForm } from "./OtpForm";
 export type { OtpFormProps } from "./OtpForm";
 
-export { extractErrorMessage } from "./errors";
 export { applicationStatusLabel } from "./applicationStatus";

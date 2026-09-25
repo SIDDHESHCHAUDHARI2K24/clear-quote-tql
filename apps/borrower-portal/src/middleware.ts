@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { isPublicPath } from "@cq/ui";
+
 // Cookie name mirrors backend/app/features/auth/sessions/service.py's
 // COOKIE_NAMES["borrower"] (plan.md Decision #9). This is a fast,
 // unauthenticated pre-check only — presence doesn't mean the session is
@@ -10,14 +12,6 @@ import type { NextRequest } from "next/server";
 const SESSION_COOKIE = "cq_borrower_session";
 
 const PUBLIC_PATHS = new Set(["/login", "/signup", "/gallery"]);
-const STATIC_ASSET_PATTERN = /\.[a-zA-Z0-9]+$/;
-
-function isPublicPath(pathname: string): boolean {
-  if (PUBLIC_PATHS.has(pathname)) return true;
-  if (pathname.startsWith("/_next/")) return true;
-  if (STATIC_ASSET_PATTERN.test(pathname)) return true;
-  return false;
-}
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -27,7 +21,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  if (!hasSession && !isPublicPath(pathname)) {
+  if (!hasSession && !isPublicPath(pathname, PUBLIC_PATHS)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

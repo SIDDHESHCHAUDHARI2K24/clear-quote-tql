@@ -5,8 +5,8 @@ import { middleware } from "./middleware";
 
 function requestFor(path: string, cookie?: string): NextRequest {
   const headers = new Headers();
-  if (cookie) headers.set("cookie", `cq_borrower_session=${cookie}`);
-  return new NextRequest(new URL(path, "http://localhost:3020"), { headers });
+  if (cookie) headers.set("cookie", `cq_staff_session=${cookie}`);
+  return new NextRequest(new URL(path, "http://localhost:3010"), { headers });
 }
 
 describe("middleware", () => {
@@ -14,17 +14,11 @@ describe("middleware", () => {
     const response = middleware(requestFor("/"));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("http://localhost:3020/login");
+    expect(response.headers.get("location")).toBe("http://localhost:3010/login");
   });
 
   it("lets an unauthenticated visitor reach /login", () => {
     const response = middleware(requestFor("/login"));
-
-    expect(response.headers.get("location")).toBeNull();
-  });
-
-  it("lets an unauthenticated visitor reach /signup", () => {
-    const response = middleware(requestFor("/signup"));
 
     expect(response.headers.get("location")).toBeNull();
   });
@@ -39,14 +33,7 @@ describe("middleware", () => {
     const response = middleware(requestFor("/login", "sess_123"));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("http://localhost:3020/");
-  });
-
-  it("redirects a signed-in visitor away from /signup to /", () => {
-    const response = middleware(requestFor("/signup", "sess_123"));
-
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("http://localhost:3020/");
+    expect(response.headers.get("location")).toBe("http://localhost:3010/");
   });
 
   it("lets a signed-in visitor through to /", () => {

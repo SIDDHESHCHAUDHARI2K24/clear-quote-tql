@@ -10,12 +10,15 @@ vi.mock("@cq/api-client", () => ({
 
 import { LoginForm } from "./LoginForm";
 
-describe("LoginForm", () => {
+// The generic form behaviour (validation errors, pending state, the
+// FastAPI-vs-app error shapes) is covered by @cq/ui's CredentialsForm
+// tests. This app only wires it to the borrower login endpoint.
+describe("LoginForm (Borrower Portal wiring)", () => {
   afterEach(() => {
     postMock.mockReset();
   });
 
-  it("submits email and password and calls onChallenge with the challenge id and email", async () => {
+  it("posts to the borrower login endpoint and calls onChallenge with the challenge id and email", async () => {
     postMock.mockResolvedValueOnce({
       data: { challenge_id: "chal_123" },
       error: undefined,
@@ -36,7 +39,7 @@ describe("LoginForm", () => {
     expect(onChallenge).toHaveBeenCalledWith("chal_123", "borrower@clearquote.test");
   });
 
-  it("shows the backend's generic message on a 401 and does not advance", async () => {
+  it("surfaces the backend's message on a 401 and does not advance", async () => {
     postMock.mockResolvedValueOnce({
       data: undefined,
       error: { error: { code: "AUTHENTICATION_ERROR", message: "Invalid email or password" } },
@@ -53,54 +56,28 @@ describe("LoginForm", () => {
     expect(onChallenge).not.toHaveBeenCalled();
   });
 
-  it("shows the backend's message on a 429", async () => {
+  it("surfaces a FastAPI 422 validation message (not the generic fallback)", async () => {
     postMock.mockResolvedValueOnce({
       data: undefined,
-      error: { error: { code: "RATE_LIMITED", message: "Too many attempts. Try again later." } },
+      error: {
+        detail: [
+          {
+            loc: ["body", "email"],
+            msg: "value is not a valid email address",
+            type: "value_error",
+          },
+        ],
+      },
     });
     const user = userEvent.setup();
 
     render(<LoginForm onChallenge={vi.fn()} />);
-    await user.type(screen.getByLabelText("Email"), "borrower@clearquote.test");
+    await user.type(screen.getByLabelText("Email"), "not-an-email");
     await user.type(screen.getByLabelText("Password"), "hunter22");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Too many attempts. Try again later.",
+      "value is not a valid email address",
     );
-  });
-
-  it("shows a 422 validation message from the backend", async () => {
-    postMock.mockResolvedValueOnce({
-      data: undefined,
-      error: { error: { code: "VALIDATION_ERROR", message: "Invalid request." } },
-    });
-    const user = userEvent.setup();
-
-    render(<LoginForm onChallenge={vi.fn()} />);
-    await user.type(screen.getByLabelText("Email"), "borrower@clearquote.test");
-    await user.type(screen.getByLabelText("Password"), "hunter22");
-    await user.click(screen.getByRole("button", { name: "Sign in" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent("Invalid request.");
-  });
-
-  it("disables the submit button while the request is pending", async () => {
-    let resolveRequest: (value: unknown) => void = () => {};
-    postMock.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveRequest = resolve;
-      }),
-    );
-    const user = userEvent.setup();
-
-    render(<LoginForm onChallenge={vi.fn()} />);
-    await user.type(screen.getByLabelText("Email"), "borrower@clearquote.test");
-    await user.type(screen.getByLabelText("Password"), "hunter22");
-    await user.click(screen.getByRole("button", { name: "Sign in" }));
-
-    await waitFor(() => expect(screen.getByRole("button", { name: "Sign in" })).toBeDisabled());
-
-    resolveRequest({ data: { challenge_id: "chal_1" }, error: undefined });
   });
 });
