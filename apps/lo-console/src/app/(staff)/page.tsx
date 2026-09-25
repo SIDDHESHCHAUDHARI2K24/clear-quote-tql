@@ -1,8 +1,21 @@
-import { StubPage } from "../../features/shell";
+import { Suspense } from "react";
 
-// `/` -- the LO dashboard. P5/P6 foundation stub; CQ-025 replaces it. The
-// signed-in name/role (the old placeholder home's content) now lives in
-// the shell's user menu.
-export default function DashboardPage() {
-  return <StubPage title="Dashboard" item="CQ-025" />;
+import { DashboardPage } from "../../features/dashboard";
+
+// `/` -- the LO console landing page (CQ-025 spec.md). Wrapped in
+// `Suspense` because `DashboardPage` calls `useSearchParams()` (for
+// `?lo_id=`), which Next.js requires a Suspense boundary for (same
+// precedent as the borrower portal's `/report/[token]` route).
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <div role="status" aria-label="Loading dashboard" className="p-6 text-sm text-neutral-600">
+          Loading dashboard…
+        </div>
+      }
+    >
+      <DashboardPage />
+    </Suspense>
+  );
 }

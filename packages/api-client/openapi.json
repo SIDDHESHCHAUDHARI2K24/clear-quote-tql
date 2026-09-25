@@ -568,6 +568,73 @@
         }
       }
     },
+    "/api/v1/dashboard": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Get Dashboard",
+        "description": "An LO always sees their own files (`lo_id` is ignored for them); a\nManager/Admin sees every file, or just one LO's when `lo_id` is set\n(`core.auth.scope_applications`).",
+        "operationId": "get_dashboard_api_v1_dashboard_get",
+        "parameters": [
+          {
+            "name": "lo_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lo Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/applications/{application_id}/field-values/{field_key}": {
       "patch": {
         "tags": [
@@ -2155,6 +2222,48 @@
   },
   "components": {
     "schemas": {
+      "ActivityItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "client_name": {
+            "type": "string",
+            "title": "Client Name"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "actor",
+          "type",
+          "application_id",
+          "client_name",
+          "at"
+        ],
+        "title": "ActivityItem",
+        "description": "One row of the \"Recent activity\" feed."
+      },
       "ApplicationListResponse": {
         "properties": {
           "items": {
@@ -2519,6 +2628,40 @@
           "updated_at"
         ],
         "title": "ApplyDraftOut"
+      },
+      "AttentionItem": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "client_name": {
+            "type": "string",
+            "title": "Client Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatus"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "age_days": {
+            "type": "integer",
+            "title": "Age Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "client_name",
+          "status",
+          "reason",
+          "age_days"
+        ],
+        "title": "AttentionItem",
+        "description": "One row of the \"Needs your attention\" list: NeedsAttention, Inquiry\nor OptionSelected, oldest status change first."
       },
       "AutoQuoteResponse": {
         "properties": {
@@ -3103,6 +3246,121 @@
         ],
         "title": "DSCRBucket",
         "description": "DSCR classification bucket. Boundaries are inclusive on the lower edge."
+      },
+      "DashboardLoOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name"
+        ],
+        "title": "DashboardLoOption",
+        "description": "One entry in the Manager/Admin LO filter `Select`.\n\nNamed `DashboardLoOption` (not the bare `LoOption` CQ-027's\n`applications.listing.schemas.LoOption` already uses) so the two\nFastAPI schemas don't collide once both routers are mounted --\notherwise `openapi-typescript` would need to fall back to the fully\nqualified `app__features__..._LoOption` component name, breaking the\n`components[\"schemas\"][\"LoOption\"]` re-export both features rely on\n(CQ-025 fix, cq-025-fix branch)."
+      },
+      "DashboardResponse": {
+        "properties": {
+          "tiles": {
+            "$ref": "#/components/schemas/DashboardTiles"
+          },
+          "attention": {
+            "items": {
+              "$ref": "#/components/schemas/AttentionItem"
+            },
+            "type": "array",
+            "title": "Attention"
+          },
+          "stale": {
+            "items": {
+              "$ref": "#/components/schemas/StaleItem"
+            },
+            "type": "array",
+            "title": "Stale"
+          },
+          "activity": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityItem"
+            },
+            "type": "array",
+            "title": "Activity"
+          },
+          "los": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DashboardLoOption"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Los"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tiles",
+          "attention",
+          "stale",
+          "activity",
+          "los"
+        ],
+        "title": "DashboardResponse"
+      },
+      "DashboardTiles": {
+        "properties": {
+          "clients": {
+            "type": "integer",
+            "title": "Clients"
+          },
+          "applications": {
+            "type": "integer",
+            "title": "Applications"
+          },
+          "pre_approvals_sent": {
+            "type": "integer",
+            "title": "Pre Approvals Sent"
+          },
+          "with_property": {
+            "type": "integer",
+            "title": "With Property"
+          },
+          "awaiting_review": {
+            "type": "integer",
+            "title": "Awaiting Review"
+          },
+          "needs_attention": {
+            "type": "integer",
+            "title": "Needs Attention"
+          },
+          "stale_quotes": {
+            "type": "integer",
+            "title": "Stale Quotes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clients",
+          "applications",
+          "pre_approvals_sent",
+          "with_property",
+          "awaiting_review",
+          "needs_attention",
+          "stale_quotes"
+        ],
+        "title": "DashboardTiles",
+        "description": "One count per spec.md's tile table, all scoped by role/`lo_id`."
       },
       "DraftDocumentOut": {
         "properties": {
@@ -5484,6 +5742,31 @@
         ],
         "title": "StaleCheckResponse",
         "description": "The counts one `mark_stale` run changed. Every count is zero on a\nrepeat run."
+      },
+      "StaleItem": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "client_name": {
+            "type": "string",
+            "title": "Client Name"
+          },
+          "days_old": {
+            "type": "integer",
+            "title": "Days Old"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "client_name",
+          "days_old"
+        ],
+        "title": "StaleItem",
+        "description": "One row of the \"Going stale\" list: the recommended quote or latest\nsent version is older than 21 days."
       },
       "StateMetros": {
         "properties": {

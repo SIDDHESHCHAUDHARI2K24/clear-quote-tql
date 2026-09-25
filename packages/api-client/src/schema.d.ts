@@ -111,6 +111,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Dashboard
+         * @description An LO always sees their own files (`lo_id` is ignored for them); a
+         *     Manager/Admin sees every file, or just one LO's when `lo_id` is set
+         *     (`core.auth.scope_applications`).
+         */
+        get: operations["get_dashboard_api_v1_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/applications/{application_id}/field-values/{field_key}": {
         parameters: {
             query?: never;
@@ -646,6 +668,33 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * ActivityItem
+         * @description One row of the "Recent activity" feed.
+         */
+        ActivityItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Actor */
+            actor: string;
+            /** Type */
+            type: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Client Name */
+            client_name: string;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+        };
+        /**
          * ApplicationListResponse
          * @description `GET /applications` response: `core/pagination.Page[ApplicationRow]`
          *     (`items`, `total`, `page`, `page_size`).
@@ -776,6 +825,25 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * AttentionItem
+         * @description One row of the "Needs your attention" list: NeedsAttention, Inquiry
+         *     or OptionSelected, oldest status change first.
+         */
+        AttentionItem: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Client Name */
+            client_name: string;
+            status: components["schemas"]["ApplicationStatus"];
+            /** Reason */
+            reason: string;
+            /** Age Days */
+            age_days: number;
         };
         /** AutoQuoteResponse */
         AutoQuoteResponse: {
@@ -1096,6 +1164,59 @@ export interface components {
          * @enum {string}
          */
         DSCRBucket: "BELOW_1_00" | "ONE_TO_1_25" | "GE_1_25";
+        /**
+         * DashboardLoOption
+         * @description One entry in the Manager/Admin LO filter `Select`.
+         *
+         *     Named `DashboardLoOption` (not the bare `LoOption` CQ-027's
+         *     `applications.listing.schemas.LoOption` already uses) so the two
+         *     FastAPI schemas don't collide once both routers are mounted --
+         *     otherwise `openapi-typescript` would need to fall back to the fully
+         *     qualified `app__features__..._LoOption` component name, breaking the
+         *     `components["schemas"]["LoOption"]` re-export both features rely on
+         *     (CQ-025 fix, cq-025-fix branch).
+         */
+        DashboardLoOption: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Full Name */
+            full_name: string;
+        };
+        /** DashboardResponse */
+        DashboardResponse: {
+            tiles: components["schemas"]["DashboardTiles"];
+            /** Attention */
+            attention: components["schemas"]["AttentionItem"][];
+            /** Stale */
+            stale: components["schemas"]["StaleItem"][];
+            /** Activity */
+            activity: components["schemas"]["ActivityItem"][];
+            /** Los */
+            los: components["schemas"]["DashboardLoOption"][] | null;
+        };
+        /**
+         * DashboardTiles
+         * @description One count per spec.md's tile table, all scoped by role/`lo_id`.
+         */
+        DashboardTiles: {
+            /** Clients */
+            clients: number;
+            /** Applications */
+            applications: number;
+            /** Pre Approvals Sent */
+            pre_approvals_sent: number;
+            /** With Property */
+            with_property: number;
+            /** Awaiting Review */
+            awaiting_review: number;
+            /** Needs Attention */
+            needs_attention: number;
+            /** Stale Quotes */
+            stale_quotes: number;
+        };
         /** DraftDocumentOut */
         DraftDocumentOut: {
             /**
@@ -1853,6 +1974,22 @@ export interface components {
             /** Application Ids */
             application_ids: string[];
         };
+        /**
+         * StaleItem
+         * @description One row of the "Going stale" list: the recommended quote or latest
+         *     sent version is older than 21 days.
+         */
+        StaleItem: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Days Old */
+            days_old: number;
+        };
         /** StateMetros */
         StateMetros: {
             /** State */
@@ -2207,6 +2344,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LoOption"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dashboard_api_v1_dashboard_get: {
+        parameters: {
+            query?: {
+                lo_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardResponse"];
                 };
             };
             /** @description Validation Error */
