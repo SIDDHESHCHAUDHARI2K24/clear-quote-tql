@@ -22,7 +22,9 @@ from app.features.clients.models import Client
 async def make_application(
     db_session: AsyncSession,
 ) -> Callable[..., Awaitable[Application]]:
-    async def _make(lo: User | None = None, **overrides: object) -> Application:
+    async def _make(
+        lo: User | None = None, client: Client | None = None, **overrides: object
+    ) -> Application:
         if lo is None:
             lo = User(
                 email=f"lo-{uuid.uuid4()}@clearquote-demo.test",
@@ -33,13 +35,18 @@ async def make_application(
             db_session.add(lo)
             await db_session.flush()
 
-        client = Client(
-            full_name="Test Client",
-            email=f"client-{uuid.uuid4()}@clearquote-demo.test",
-            assigned_lo_id=lo.id,
-        )
-        db_session.add(client)
-        await db_session.flush()
+        if client is None:
+            # `client` lets two calls share one `Client` (review round 2,
+            # applications/timeline/tests/test_service.py's
+            # `list_activity_for_applications` tests) -- defaults to a
+            # fresh client per call, same as before.
+            client = Client(
+                full_name="Test Client",
+                email=f"client-{uuid.uuid4()}@clearquote-demo.test",
+                assigned_lo_id=lo.id,
+            )
+            db_session.add(client)
+            await db_session.flush()
 
         defaults: dict[str, object] = {"occupancy": Occupancy.PRIMARY, "program": "Conventional"}
         defaults.update(overrides)
@@ -47,6 +54,39 @@ async def make_application(
         db_session.add(application)
         await db_session.flush()
         return application
+
+    return _make
+
+
+@pytest_asyncio.fixture
+async def make_client(
+    db_session: AsyncSession,
+) -> Callable[..., Awaitable[Client]]:
+    async def _make(lo: User) -> Client:
+        client = Client(
+            full_name="Test Client",
+            email=f"client-{uuid.uuid4()}@clearquote-demo.test",
+            assigned_lo_id=lo.id,
+        )
+        db_session.add(client)
+        await db_session.flush()
+        return client
+
+    return _make
+
+
+@pytest_asyncio.fixture
+async def make_lo(db_session: AsyncSession) -> Callable[..., Awaitable[User]]:
+    async def _make() -> User:
+        lo = User(
+            email=f"lo-{uuid.uuid4()}@clearquote-demo.test",
+            password_hash="not-a-real-hash",
+            role=UserRole.LO,
+            full_name="Test LO",
+        )
+        db_session.add(lo)
+        await db_session.flush()
+        return lo
 
     return _make
 

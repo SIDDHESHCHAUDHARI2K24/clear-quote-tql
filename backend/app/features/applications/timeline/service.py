@@ -10,7 +10,9 @@ stable order when two events share a timestamp), then maps each row to an
 (clients wave) uses for its client-detail page's merged "Activity" section
 (review round 1: batched into one query + one staff-name lookup across every
 application, rather than the caller running `list_activity` once per
-application).
+application; review round 2: takes the shared `client` explicitly instead of
+inferring it from the first application, and asserts every application
+actually belongs to it).
 """
 
 from __future__ import annotations
@@ -236,22 +238,30 @@ async def list_activity(
 
 
 async def list_activity_for_applications(
-    db: AsyncSession, applications: list[Application], *, limit: int = 50
+    db: AsyncSession, client: Client, applications: list[Application], *, limit: int = 50
 ) -> list[ActivityEventOut]:
     """Merged, newest-first activity across several applications that all
-    belong to the same client -- CQ-026's client-detail "Activity" section
-    (module docstring). One query for the events (capped at `limit`,
-    ordered the same as `list_activity`'s own `ORDER BY`) and one batched
-    staff-name lookup, instead of the caller running `list_activity` once
-    per application -- each of which re-fetched the client row and only
+    belong to `client` -- CQ-026's client-detail "Activity" section (module
+    docstring). One query for the events (capped at `limit`, ordered the
+    same as `list_activity`'s own `ORDER BY`) and one batched staff-name
+    lookup, instead of the caller running `list_activity` once per
+    application -- each of which re-fetched the client row and only
     trimmed to `limit` locally after over-fetching per application (review
     round 1, minor: batched).
 
-    All `applications` are assumed to share one client (CQ-026 is the only
-    caller today); `applications[0]`'s client supplies the borrower name.
+    `client` is taken explicitly, not guessed from `applications[0]`
+    (review round 2): the caller already has it (CQ-026's
+    `get_client_detail` looked it up to 404 on an unknown id), and every
+    `application` is asserted to actually belong to it -- catching a
+    caller bug (e.g. an unscoped/unfiltered application list slipping in)
+    immediately instead of silently mislabeling the borrower name or
+    merging in events that were never in scope.
     """
     if not applications:
         return []
+    assert all(a.client_id == client.id for a in applications), (
+        "list_activity_for_applications: every application must belong to `client`"
+    )
     application_ids = [a.id for a in applications]
     stmt = (
         select(ActivityEvent)
@@ -263,7 +273,4 @@ async def list_activity_for_applications(
     if not events:
         return []
 
-    client = await db.get(Client, applications[0].client_id)
-    borrower_name = client.full_name if client is not None else "Borrower"
-
-    return await _events_to_out(db, events, borrower_name=borrower_name)
+    return await _events_to_out(db, events, borrower_name=client.full_name)

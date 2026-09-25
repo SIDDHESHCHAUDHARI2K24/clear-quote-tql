@@ -200,9 +200,9 @@ async def list_clients(
             < datetime.combine(created_to + timedelta(days=1), time.min, tzinfo=UTC)
         )
     if has_active is True:
-        stmt = stmt.where(_client_active_exists())
+        stmt = stmt.where(_client_active_exists(lo_scope))
     elif has_active is False:
-        stmt = stmt.where(~_client_active_exists())
+        stmt = stmt.where(~_client_active_exists(lo_scope))
 
     stmt = stmt.order_by(*_order_by(sort, last_activity_expr))
 
@@ -215,10 +215,18 @@ async def list_clients(
     )
 
 
-def _client_active_exists() -> ColumnElement[bool]:
+def _client_active_exists(lo_scope: uuid.UUID | None = None) -> ColumnElement[bool]:
+    """Review round 2: scoped by `lo_scope` the same way
+    `_application_scope_clauses` scopes the other list-level aggregates --
+    otherwise an LO's `has_active` filter answers "does *anyone's*
+    application count as active" instead of their own, leaking whether
+    another LO has active work on a shared client (both directions:
+    `true` would surface a client whose only active application is the
+    other LO's, and `false` would hide a client whose *own* application
+    isn't active just because the other LO's is)."""
     return (
         select(Application.id)
-        .where(Application.client_id == Client.id, Application.status.notin_(_TERMINAL_STATUSES))
+        .where(*_application_scope_clauses(lo_scope), Application.status.notin_(_TERMINAL_STATUSES))
         .correlate(Client)
         .exists()
     )
@@ -416,7 +424,7 @@ async def get_client_detail(db: AsyncSession, user: User, client_id: uuid.UUID) 
     # every in-scope application plus one staff-name lookup, instead of
     # `list_activity` once per application (each of which re-fetched the
     # client row too).
-    activity = await list_activity_for_applications(db, applications, limit=50)
+    activity = await list_activity_for_applications(db, client, applications, limit=50)
 
     return ClientDetail(
         id=client.id,
