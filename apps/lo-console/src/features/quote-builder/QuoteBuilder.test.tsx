@@ -179,6 +179,29 @@ describe("QuoteBuilder", () => {
         body: expect.objectContaining({ label: "Manual" }),
       }),
     );
+    // Untouched inputs: no PUT, so the quotes don't go stale (PR review).
+    expect(putMock).not.toHaveBeenCalled();
+  });
+
+  it("Choose manually after an input change saves the inputs first", async () => {
+    getMock
+      .mockResolvedValueOnce(ok(marcus))
+      .mockResolvedValueOnce(ok(productsFixture))
+      .mockResolvedValue(ok(marcus));
+    putMock.mockResolvedValueOnce(ok(marcus.groups[0]));
+
+    render(<QuoteBuilder hasStaleQuotes={false} />);
+    const group = (await screen.findAllByTestId("quote-group"))[0];
+    await userEvent.click(within(group).getByRole("button", { name: "Edit scenario" }));
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Lock days" }), "45");
+    await userEvent.click(screen.getByRole("button", { name: "Choose manually" }));
+
+    await screen.findAllByTestId("product-row");
+    expect(putMock).toHaveBeenCalledTimes(1);
+    expect(putMock).toHaveBeenCalledWith("/api/v1/scenarios/{scenario_id}", {
+      params: { path: { scenario_id: marcus.groups[0].id } },
+      body: expect.objectContaining({ lock_days: 45 }),
+    });
   });
 
   it("Compare shows 2 selected quotes side by side with the report's rows", async () => {

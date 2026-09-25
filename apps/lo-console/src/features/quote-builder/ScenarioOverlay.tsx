@@ -54,6 +54,29 @@ function isDecimalText(value: string): boolean {
   return /^\d+(\.\d+)?$/.test(value) && Number(value) > 0;
 }
 
+type Decimalish = string | number | null | undefined;
+
+/** Decimal strings compared by value ("0.2" === "0.20"); equality only. */
+function sameDecimal(a: Decimalish, b: Decimalish): boolean {
+  if (a == null || b == null) return a == b;
+  return Number(a) === Number(b);
+}
+
+/** Whether the overlay's inputs equal the saved scenario's (the server
+ * applies the same defaults: lock 30 days, investment PPP 5 years). */
+function sameAsSaved(group: ScenarioGroup, next: ScenarioUpdate): boolean {
+  const saved = group.inputs;
+  const savedPpp =
+    next.prepayment_penalty_years == null ? null : (saved.prepayment_penalty_years ?? 5);
+  return (
+    sameDecimal(saved.purchase_price, next.purchase_price) &&
+    sameDecimal(saved.down_payment_pct, next.down_payment_pct) &&
+    saved.lock_days === next.lock_days &&
+    savedPpp === (next.prepayment_penalty_years ?? null) &&
+    (next.dscr_bucket == null || next.dscr_bucket === group.dscr_bucket)
+  );
+}
+
 /**
  * Add/Edit scenario overlay (spec: every pricing input, a live preview of
  * payment and cash to close, and Save & AutoQuote / Choose manually).
@@ -109,10 +132,13 @@ export function ScenarioOverlay({
     dscr_bucket: isInvestment && bucket !== "" ? (bucket as DscrBucket) : null,
   });
 
-  const persist = async (): Promise<Result<string>> => {
+  const persist = async ({ skipIfUnchanged = false } = {}): Promise<Result<string>> => {
     let scenarioId: string;
     if (mode.kind === "edit") {
       scenarioId = mode.group.id;
+      // PR review (minor 2): opening the grid with untouched inputs must
+      // not PUT (a PUT that changes inputs marks every quote stale).
+      if (skipIfUnchanged && sameAsSaved(mode.group, body())) return { ok: true, data: scenarioId };
     } else if (createdId.current !== null) {
       // Add mode, retrying after a later step failed: reuse the scenario
       // the first attempt created instead of creating another one.
@@ -132,7 +158,10 @@ export function ScenarioOverlay({
     return updated.ok ? { ok: true, data: scenarioId } : updated;
   };
 
-  const submit = async (next: (scenarioId: string) => Promise<Result<unknown>>) => {
+  const submit = async (
+    next: (scenarioId: string) => Promise<Result<unknown>>,
+    options: { skipIfUnchanged?: boolean } = {},
+  ) => {
     if (!valid) {
       setProblem({ message: "Enter a purchase price and down payment.", field: null, tab: null });
       return;
@@ -140,7 +169,7 @@ export function ScenarioOverlay({
     setBusy(true);
     setProblem(null);
     try {
-      const saved = await persist();
+      const saved = await persist(options);
       if (!saved.ok) {
         setProblem(saved.problem);
         return;
@@ -166,10 +195,13 @@ export function ScenarioOverlay({
     });
 
   const chooseManually = () =>
-    submit(async (scenarioId) => {
-      await onChooseManually(scenarioId);
-      return { ok: true, data: null };
-    });
+    submit(
+      async (scenarioId) => {
+        await onChooseManually(scenarioId);
+        return { ok: true, data: null };
+      },
+      { skipIfUnchanged: true },
+    );
 
   return (
     <Overlay

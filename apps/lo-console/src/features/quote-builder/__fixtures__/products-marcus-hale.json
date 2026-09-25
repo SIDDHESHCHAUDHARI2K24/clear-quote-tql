@@ -34,7 +34,7 @@
     "discount_points_pct": "0.01000",
     "discount_points_amount": "2736.000000000",
     "is_par_rate": false,
-    "is_buydown_rate": false,
+    "is_buydown_rate": true,
     "monthly_pi": "1889.69",
     "points_pct": "1.000"
   },
@@ -56,26 +56,26 @@
     "product_name": "DSCR 30yr Fixed Low-Points",
     "lock_period_days": 30,
     "note_rate": "7.500",
-    "price_pct": "99.375",
-    "discount_points_pct": "0.00625",
-    "discount_points_amount": "1710.000000000",
+    "price_pct": "99.125",
+    "discount_points_pct": "0.00875",
+    "discount_points_amount": "2394.000000000",
     "is_par_rate": false,
     "is_buydown_rate": false,
     "monthly_pi": "1913.05",
-    "points_pct": "0.625"
+    "points_pct": "0.875"
   },
   {
     "investor_name": "Keystone Investor Lending",
     "product_name": "DSCR 30yr Fixed 45-Day Buydown",
     "lock_period_days": 45,
     "note_rate": "7.500",
-    "price_pct": "99.250",
-    "discount_points_pct": "0.00750",
-    "discount_points_amount": "2052.000000000",
+    "price_pct": "99.000",
+    "discount_points_pct": "0.01000",
+    "discount_points_amount": "2736.000000000",
     "is_par_rate": false,
-    "is_buydown_rate": true,
+    "is_buydown_rate": false,
     "monthly_pi": "1913.05",
-    "points_pct": "0.750"
+    "points_pct": "1.000"
   },
   {
     "investor_name": "Blue Harbor Capital",

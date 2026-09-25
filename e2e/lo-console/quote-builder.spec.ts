@@ -77,7 +77,7 @@ test("AC3: editing to 25% down and Save & AutoQuote replaces that scenario's par
   const group = builder.getByTestId("quote-group").nth(1);
   const oldPar = group.getByRole("article", { name: "Par quote" });
   const oldParRate = rateOf(await oldPar.innerText());
-  const oldIds = await group
+  const oldPricedAt = await group
     .getByRole("article")
     .evaluateAll((els) => els.map((el) => el.getAttribute("data-priced-at")));
 
@@ -95,9 +95,16 @@ test("AC3: editing to 25% down and Save & AutoQuote replaces that scenario's par
   const newPricedAt = await group
     .getByRole("article")
     .evaluateAll((els) => els.map((el) => el.getAttribute("data-priced-at")));
-  expect(newPricedAt).not.toEqual(oldIds);
+  expect(newPricedAt).not.toEqual(oldPricedAt);
   expect(rateOf(await newPar.innerText())).toBeLessThanOrEqual(oldParRate);
   await builder.screenshot({ path: path.join(EVIDENCE_DIR, "ac3-marcus-25-down.png") });
+
+  // The scenario was saved at 25% down (the overlay reopens from it).
+  await group.getByRole("button", { name: "Edit scenario" }).click();
+  await expect(page.getByRole("dialog").getByLabel("Down payment percent")).toHaveValue(
+    /^25(\.0+)?$/,
+  );
+  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
 });
 
 test("AC4: Choose manually lists >= 8 products; a pick becomes a card; delete removes it", async ({
