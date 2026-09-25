@@ -318,7 +318,7 @@ async def test_tab_states_flags(
     `ok`."""
     application = await make_application(status=ApplicationStatus.NEEDS_ATTENTION)
     await make_flag(application, ApplicationTab.HOUSING)
-    await make_flag(application, ApplicationTab.HOUSING)
+    await make_flag(application, ApplicationTab.HOUSING, field_key="other_field")
     await make_flag(application, ApplicationTab.BORROWERS, resolved=True)  # resolved -> not counted
 
     summary = await build_application_summary(db_session, application)

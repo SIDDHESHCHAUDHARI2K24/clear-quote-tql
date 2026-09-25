@@ -49,6 +49,13 @@ with workflow.unsafe.imports_passed_through():
 LOAD_SOURCE_PATCH_ID = "p56-load-application-source"
 """Temporal patch id guarding the E14 source lookup (see `run`)."""
 
+RESUME_RESET_PATCH_ID = "p56-resume-reset"
+"""Temporal patch id guarding when `_resume_requested` is cleared (CQ-028a
+review minor 4). The old code cleared it *after* a failed chain, so a
+`resume` signal that arrived while the chain was running was lost and the
+run stayed parked. Patched runs clear it *before* each chain run instead: a
+signal received during the chain resumes straight away."""
+
 
 @workflow.defn
 class ApplicationPipelineWorkflow:
@@ -134,10 +141,18 @@ class ApplicationPipelineWorkflow:
                 retry_policy=IMPORT_ENRICH_RETRY_POLICY,
             )
 
+        # Versioned for the same reason as the source lookup above: an old
+        # run replays with the old reset point.
+        reset_before_chain = workflow.patched(RESUME_RESET_PATCH_ID)
+        if reset_before_chain:
+            self._resume_requested = False
         reached_priced = await self._run_pricing_chain(application_id)
         while not reached_priced:
-            self._resume_requested = False
+            if not reset_before_chain:
+                self._resume_requested = False
             await workflow.wait_condition(lambda: self._resume_requested)
+            if reset_before_chain:
+                self._resume_requested = False
             await workflow.execute_activity(
                 record_pipeline_resumed,
                 application_id,
