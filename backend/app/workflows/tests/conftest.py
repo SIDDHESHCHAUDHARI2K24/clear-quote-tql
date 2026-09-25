@@ -4,7 +4,13 @@
   db.session_factory` so every activity opens sessions bound to *this
   test's* already-open `db_session` connection (via savepoints), so
   activity writes are visible to test assertions and roll back with the
-  rest of `db_session`'s isolation (plan.md #12).
+  rest of `db_session`'s isolation (plan.md #12). Its teardown waits for
+  every activity session to close before `db_session` rolls back.
+- `activity_session_gate`: an `ActivitySessionGate` that keeps the test's
+  own queries and in-flight activity sessions from overlapping on that one
+  shared connection (docs/backlog/p34-test-flake-fix.md). `wait_for_status`
+  already uses it; query `db_session` inside `gate.test_turn()` if a
+  workflow may still be running.
 - `install_import_from_los`: CQ-010 has merged (plan.md #13) — by default
   every workflow test now exercises the *real* `app.features.applications.
   service.import_from_los` via `make_persona_application`'s seeded
@@ -37,12 +43,15 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import functools
 import sys
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -105,26 +114,176 @@ def install_import_from_los(
         monkeypatch.setattr(module, "import_from_los", fn, raising=False)
 
 
+class ActivitySessionGate:
+    """Serializes the test's own queries against in-flight activity
+    sessions on the one shared `db_session` connection
+    (docs/backlog/p34-test-flake-fix.md).
+
+    Activities run in the worker on the test's event loop, bound to the
+    test's connection. Without this, a test could (a) see a status an
+    activity had only *flushed* and assert/tear down while that activity
+    was still writing -- asyncpg "another operation is in progress" on the
+    teardown rollback, then a poisoned pooled connection for every later
+    test -- or (b) open its own savepoint inside an activity's savepoint,
+    which the activity's RELEASE then destroys ("savepoint ... does not
+    exist").
+
+    - Activity sessions (see `activities_session_factory`) count as in
+      flight from `__aenter__` to `__aexit__`, and wait while a test turn
+      is running.
+    - `test_turn()` waits until no activity session is open, and blocks new
+      ones until it exits. `wait_for_status` polls inside it; a test that
+      queries `db_session` while a workflow may still be running should do
+      the same.
+    - `wait_idle()` is the teardown guard in `bind_activities_to_test_
+      session`. `close()` runs right after it drains, so an activity that
+      somehow starts after teardown (instead of merely still running at
+      teardown) fails loudly instead of touching a connection `db_session`
+      has already rolled back.
+    """
+
+    def __init__(self) -> None:
+        self._cond = asyncio.Condition()
+        self._in_flight = 0
+        self._test_turn = False
+        self._closed = False
+
+    @property
+    def in_flight(self) -> int:
+        return self._in_flight
+
+    async def enter_activity(self) -> None:
+        async with self._cond:
+            if self._closed:
+                raise RuntimeError(
+                    "activity started after test teardown -- a workflow from this "
+                    "test is still running"
+                )
+            await self._cond.wait_for(lambda: not self._test_turn)
+            self._in_flight += 1
+
+    async def exit_activity(self) -> None:
+        # Decrements synchronously (no `await` in between) so a cancellation
+        # of the caller -- e.g. `_GatedActivitySession.__aexit__` racing a
+        # workflow-level timeout -- can never leave `_in_flight` stuck above
+        # its true value. Only the wake-up notification is awaited, and it
+        # is shielded so a cancellation there still lets waiters (`wait_
+        # idle`, `test_turn`) see the updated count instead of blocking
+        # until their own timeout.
+        self._in_flight -= 1
+        await asyncio.shield(self._notify_in_flight_change())
+
+    async def _notify_in_flight_change(self) -> None:
+        async with self._cond:
+            self._cond.notify_all()
+
+    @contextlib.asynccontextmanager
+    async def test_turn(self, timeout: float = 10.0) -> AsyncIterator[None]:
+        async def _acquire() -> None:
+            async with self._cond:
+                await self._cond.wait_for(lambda: self._in_flight == 0 and not self._test_turn)
+                self._test_turn = True
+
+        try:
+            await asyncio.wait_for(_acquire(), timeout=timeout)
+        except TimeoutError:
+            raise AssertionError(
+                f"test_turn() timed out after {timeout}s waiting for "
+                f"{self._in_flight} in-flight activity session(s) to close"
+            ) from None
+        try:
+            yield
+        finally:
+            async with self._cond:
+                self._test_turn = False
+                self._cond.notify_all()
+
+    async def wait_idle(self, timeout: float) -> None:
+        async def _wait() -> None:
+            async with self._cond:
+                await self._cond.wait_for(lambda: self._in_flight == 0)
+
+        await asyncio.wait_for(_wait(), timeout=timeout)
+
+    async def close(self) -> None:
+        """Closes the gate for good: any later `enter_activity()` raises
+        instead of silently touching a connection `db_session` has already
+        rolled back. Call only after `wait_idle()` has drained in-flight
+        sessions."""
+        async with self._cond:
+            self._closed = True
+
+
+class _GatedActivitySession(AsyncSession):
+    """An `AsyncSession` that registers with an `ActivitySessionGate` for
+    the span of its `async with` block (how every activity opens it)."""
+
+    _gate: ActivitySessionGate
+
+    async def __aenter__(self) -> _GatedActivitySession:
+        await self._gate.enter_activity()
+        return self
+
+    async def __aexit__(self, type_: Any, value: Any, traceback: Any) -> None:
+        try:
+            await super().__aexit__(type_, value, traceback)
+        finally:
+            await self._gate.exit_activity()
+
+
+@pytest_asyncio.fixture
+async def activity_session_gate() -> ActivitySessionGate:
+    return ActivitySessionGate()
+
+
 @pytest_asyncio.fixture
 async def activities_session_factory(
     db_session: AsyncSession,
+    activity_session_gate: ActivitySessionGate,
 ) -> Callable[[], AsyncSession]:
     conn = db_session.bind
 
     def _factory() -> AsyncSession:
-        return AsyncSession(
+        session = _GatedActivitySession(
             bind=conn, join_transaction_mode="create_savepoint", expire_on_commit=False
         )
+        session._gate = activity_session_gate
+        return session
 
     return _factory
+
+
+# How long teardown waits for a still-running activity before failing the
+# test that leaked it (instead of rolling back under it).
+_ACTIVITY_DRAIN_TIMEOUT_S = 10.0
 
 
 @pytest_asyncio.fixture(autouse=True)
 async def bind_activities_to_test_session(
     monkeypatch: pytest.MonkeyPatch,
     activities_session_factory: Callable[[], AsyncSession],
-) -> None:
+    activity_session_gate: ActivitySessionGate,
+) -> AsyncIterator[None]:
     monkeypatch.setattr(workflow_db, "session_factory", activities_session_factory)
+    yield
+    # Runs before `db_session`'s teardown (it depends on `db_session`), so
+    # the outer rollback never races an activity still using the
+    # connection.
+    try:
+        await activity_session_gate.wait_idle(_ACTIVITY_DRAIN_TIMEOUT_S)
+    except TimeoutError:
+        pytest.fail(
+            f"{activity_session_gate.in_flight} activity session(s) still open on this "
+            f"test's connection after {_ACTIVITY_DRAIN_TIMEOUT_S}s: wait for the workflow "
+            "to reach a terminal state before the test ends"
+        )
+    finally:
+        # Closes the gate even if `wait_idle` timed out and failed the test
+        # above: any activity that starts *after* this point (rather than
+        # merely still running at teardown, which `wait_idle` already
+        # guards) must never touch a connection `db_session` is about to
+        # roll back.
+        await activity_session_gate.close()
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -155,21 +314,33 @@ async def _wait_for_status(
     application_id: uuid.UUID,
     expected: set[ApplicationStatus],
     timeout: float = 10.0,
+    gate: ActivitySessionGate | None = None,
 ) -> ApplicationStatus:
     """Polls `applications.status` via a Core column select (bypasses the
     ORM identity map, so it always sees the latest committed value from
     sibling activity sessions on the same connection) until it lands in
     `expected`. Needed for personas that park at `needs_attention` — the
     workflow's `run()` never returns for those (spec.md "Resume
-    mechanics")."""
+    mechanics").
+
+    With `gate` (the `wait_for_status` fixture always passes it), each poll
+    runs only while no activity session is open, so a matching status means
+    the activity that wrote it has finished all its writes, not just
+    flushed the status (docs/backlog/p34-test-flake-fix.md)."""
+
+    async def _read_status() -> ApplicationStatus:
+        result = await db_session.execute(
+            select(Application.status).where(Application.id == application_id)
+        )
+        return result.scalar_one()
 
     async def _poll() -> ApplicationStatus:
         while True:
-            status = (
-                await db_session.execute(
-                    select(Application.status).where(Application.id == application_id)
-                )
-            ).scalar_one()
+            if gate is None:
+                status = await _read_status()
+            else:
+                async with gate.test_turn():
+                    status = await _read_status()
             if status in expected:
                 return status
             await asyncio.sleep(0.02)
@@ -178,11 +349,13 @@ async def _wait_for_status(
 
 
 @pytest.fixture
-def wait_for_status() -> Callable[..., Awaitable[ApplicationStatus]]:
+def wait_for_status(
+    activity_session_gate: ActivitySessionGate,
+) -> Callable[..., Awaitable[ApplicationStatus]]:
     """Injectable fixture wrapper around `_wait_for_status` — tests take
     this as a fixture parameter and call it with `(db_session,
     application_id, expected_statuses)`."""
-    return _wait_for_status
+    return functools.partial(_wait_for_status, gate=activity_session_gate)
 
 
 @pytest_asyncio.fixture
