@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { borrowerLogin } from "../helpers/borrowerLogin";
+import { applicationIdByClientEmail, execSql } from "../helpers/db";
 
 const EVIDENCE_DIR = path.resolve(__dirname, "../../docs/backlog/CQ-024-borrower-actions/evidence");
 
@@ -29,6 +30,22 @@ const email = "priya.nair@clearquote-demo.test";
 const password = process.env.SEED_BORROWER_PASSWORD;
 
 test.skip(!password, "SEED_BORROWER_PASSWORD not set -- run make demo-reset and export it first");
+
+// Both tests below permanently move Priya Nair's application off `priced`
+// (`option_selected`, then `inquiry` -- real CQ-024 `move_forward`/`ask
+// about another option` flows, the whole point of this file), through
+// `freeze_sent_version.py`'s own real `application.status =
+// ApplicationStatus.SENT` plus whichever action each test then takes.
+// `portal-home.spec.ts`'s later "AC6" tests need her back at `priced`
+// ("Your loan officer is reviewing your numbers" -- `stage_and_label`,
+// portal/home/service.py) -- restore it once both tests are done, same
+// pattern as `aisha-occupancy-resume.spec.ts`'s own `afterAll`. Leftover
+// `quote_packages`/`quote_package_versions` rows from the two freezes stay
+// in place -- nothing downstream asserts their absence for her.
+test.afterAll(() => {
+  const applicationId = applicationIdByClientEmail(email);
+  execSql(`update applications set status = 'priced' where id = '${applicationId}';`);
+});
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
 

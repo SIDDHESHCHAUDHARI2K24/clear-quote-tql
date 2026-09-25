@@ -5,7 +5,13 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { Pool } from "pg";
 
-import { applicationIdByClientEmail, closeDbPool, flushLoginRateLimit } from "../helpers/db";
+import {
+  applicationIdByClientEmail,
+  borrowerAccountIdByEmail,
+  closeDbPool,
+  execSql,
+  flushLoginRateLimit,
+} from "../helpers/db";
 import { borrowerLogin } from "../helpers/borrowerLogin";
 
 // CQ-031 spec.md AC1-AC4/AC6: the real seeded personas, driven through the
@@ -26,6 +32,26 @@ test.beforeEach(() => {
 
 test.afterAll(async () => {
   await closeDbPool();
+});
+
+// Loading `/apply` (AC4's own test, below) opens and autosaves a real,
+// open `application_drafts` row for this same seeded "no application"
+// borrower -- `apply-wizard-resume.spec.ts` (CQ-032) already has to clean
+// up its own, larger draft for the same reason (its own comment there);
+// this one is CQ-031's own leak, into `shell.spec.ts`'s later "No
+// application yet" assertion for the same persona. Delete it, not just
+// the one from that other spec, so this file leaves her exactly as seeded
+// no matter which of the two runs last in a full-suite pass. In
+// `afterAll`, not inline at the end of the AC4 test body (review finding):
+// the draft is created as soon as `/apply` loads, before that test's own
+// "Apply" heading assertion -- if that assertion is ever slow/flaky and
+// times out, an inline delete after it would never run.
+test.afterAll(() => {
+  const borrowerAccountId = borrowerAccountIdByEmail("noapp.borrower@clearquote-demo.test");
+  execSql(
+    `delete from application_drafts where borrower_account_id = '${borrowerAccountId}' ` +
+      `and submitted_application_id is null;`,
+  );
 });
 
 async function expectNoHorizontalScroll(page: Page) {

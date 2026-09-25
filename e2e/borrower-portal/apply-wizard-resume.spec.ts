@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { borrowerAccountIdByEmail, execSql, flushLoginRateLimit } from "../helpers/db";
 import { borrowerLogin } from "../helpers/borrowerLogin";
-import { flushLoginRateLimit } from "../helpers/db";
 
 // CQ-032 spec.md AC3: "Refreshing mid-tab 3 restores all entered values
 // and returns to tab 3." Uses the P5/P6 foundation's seeded borrower with
@@ -11,6 +11,25 @@ const email = "noapp.borrower@clearquote-demo.test";
 const password = process.env.SEED_BORROWER_PASSWORD;
 
 test.skip(!password, "SEED_BORROWER_PASSWORD not set -- run make demo-reset and export it first");
+
+// This test leaves a real, open `application_drafts` row for Nadia behind
+// -- the whole point of AC3 is that the draft autosaves and survives a
+// refresh. But `shell.spec.ts` (`e2e/borrower-portal`) signs in as this
+// same seeded "no application" borrower later in a full-suite run and
+// asserts "No application yet" / an empty home state, specifically
+// *because* she's meant to be the one persona no other spec touches (its
+// own comment: "so no persona the report specs rely on is touched") --
+// this file predates that assumption. Deleting the open draft (never
+// submitted -- `submitted_application_id` stays `null`, so this never
+// touches a real `applications` row) restores her to the seeded
+// no-application state for every spec that runs after this one.
+test.afterAll(() => {
+  const borrowerAccountId = borrowerAccountIdByEmail(email);
+  execSql(
+    `delete from application_drafts where borrower_account_id = '${borrowerAccountId}' ` +
+      `and submitted_application_id is null;`,
+  );
+});
 
 test("refreshing mid-tab-3 resumes at tab 3 with the entered values restored", async ({ page }) => {
   flushLoginRateLimit();
