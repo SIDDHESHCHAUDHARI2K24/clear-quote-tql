@@ -1,0 +1,94 @@
+key: luis_romero
+first_name: Luis
+last_name: Romero
+email: luis.romero@clearquote-demo.test
+occupancy: investment
+strategy: str
+purchase_price: '410000.00'
+down_payment_pct: '0.25'
+ppp_years: 5
+fico: 765
+beds: 3
+loan_number: LOS-1000010
+current_residence_months: 48
+missing_fields: []
+pipeline_end_status: priced
+seed_end_status: option_selected
+market:
+  city: Scottsdale
+  state: AZ
+  zip: '85251'
+  county: Maricopa
+property_type: single_family
+vesting: personal_name
+llc_entity_name: null
+co_borrower: null
+fico_bureau_scores:
+  experian: 767
+  equifax: 763
+  transunion: 765
+  middle: 765
+los_record:
+  borrower_first_name: Luis
+  borrower_last_name: Romero
+  borrower_full_name: Luis Romero
+  borrower_ssn: '100011010'
+  borrower_dob: '1987-12-02'
+  marital_status: Married
+  dependents_count: 1
+  borrower_email: luis.romero@clearquote-demo.test
+  borrower_cell_phone: '4805550010'
+  borrower_home_phone: null
+  business_vesting: Personal Name
+  llc_entity_name: null
+  current_street_address: 30 Camelback Rd
+  current_city: Scottsdale
+  current_state: AZ
+  current_zip: '85251'
+  current_housing_status: Rent
+  current_residence_years: 4
+  current_residence_months: 0
+  vom_completed: true
+  has_subject_property: true
+  property_address_status: Specific_Address
+  subject_street_address: 7301 E Indian School Rd
+  subject_city: Scottsdale
+  subject_state: AZ
+  subject_zip: '85251'
+  subject_county: Maricopa
+  property_type: Single_Family
+  number_of_units: 1
+  loan_purpose: Purchase
+  occupancy_type: Investment_Property
+  investment_strategy: Short_Term_Rental
+  loan_program_name: DSCR 30 YR Fixed
+  amortization_term_years: 30
+  amortization_type: Fixed
+  purchase_price: '410000.00'
+  appraised_value: '410000.00'
+  down_payment_pct: '0.25'
+  prepayment_penalty_term: 5 Years
+  automated_uw_system: Manual_Traditional
+  lead_source: Rabbu
+  has_co_borrower: false
+  no_co_applicant_check: false
+  employment:
+  - employer_name: Romero Investments LLC
+    monthly_income: '15000.00'
+    years_at_job: '4.0'
+    self_employed: true
+  liabilities:
+  - creditor_name: Wells Fargo
+    account_type: Auto Loan
+    monthly_payment: '500.00'
+    balance: '20000.00'
+  assets:
+  - account_type: Checking
+    institution: Chase Bank
+    verified_amount: '140000.00'
+  - account_type: Savings
+    institution: Ally Bank
+    verified_amount: '45000.00'
+fixture_layer:
+  sent_days_ago: 3
+  viewed_days_ago: 2

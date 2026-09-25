@@ -1,0 +1,93 @@
+key: tom_lisa_brandt
+first_name: Tom
+last_name: Brandt
+email: tom.brandt@clearquote-demo.test
+occupancy: investment
+strategy: ltr
+purchase_price: '250000.00'
+down_payment_pct: '0.25'
+ppp_years: 5
+fico: 690
+beds: 3
+loan_number: LOS-1000006
+current_residence_months: 30
+missing_fields: []
+pipeline_end_status: priced
+seed_end_status: priced
+market:
+  city: Cleveland
+  state: OH
+  zip: '44102'
+  county: Cuyahoga
+property_type: single_family
+vesting: personal_name
+llc_entity_name: null
+co_borrower:
+  first_name: Lisa
+  last_name: Brandt
+fico_bureau_scores:
+  experian: 692
+  equifax: 688
+  transunion: 690
+  middle: 690
+los_record:
+  borrower_first_name: Tom
+  borrower_last_name: Brandt
+  borrower_full_name: Tom Brandt
+  borrower_ssn: '100011006'
+  borrower_dob: '1982-03-21'
+  marital_status: Married
+  dependents_count: 0
+  borrower_email: tom.brandt@clearquote-demo.test
+  borrower_cell_phone: '2165556006'
+  borrower_home_phone: null
+  business_vesting: Personal Name
+  llc_entity_name: null
+  current_street_address: 14 Lakeview Dr
+  current_city: Cleveland
+  current_state: OH
+  current_zip: '44102'
+  current_housing_status: Own
+  current_residence_years: 2
+  current_residence_months: 6
+  vom_completed: true
+  has_subject_property: true
+  property_address_status: Specific_Address
+  subject_street_address: 3310 Bridge Ave
+  subject_city: Cleveland
+  subject_state: OH
+  subject_zip: '44102'
+  subject_county: Cuyahoga
+  property_type: Single_Family
+  number_of_units: 1
+  loan_purpose: Purchase
+  occupancy_type: Investment_Property
+  investment_strategy: Long_Term_Rental
+  loan_program_name: DSCR 30 YR Fixed
+  amortization_term_years: 30
+  amortization_type: Fixed
+  purchase_price: '250000.00'
+  appraised_value: '250000.00'
+  down_payment_pct: '0.25'
+  prepayment_penalty_term: 5 Years
+  automated_uw_system: Manual_Traditional
+  lead_source: OfferCloud
+  has_co_borrower: true
+  no_co_applicant_check: false
+  co_borrower_full_name: Lisa Brandt
+  co_borrower_ssn: '100011106'
+  co_borrower_dob: '1984-05-19'
+  employment:
+  - employer_name: Progressive Insurance
+    monthly_income: '9800.00'
+    years_at_job: '4.0'
+    self_employed: false
+  liabilities:
+  - creditor_name: Wells Fargo
+    account_type: Auto Loan
+    monthly_payment: '410.00'
+    balance: '15000.00'
+  assets:
+  - account_type: Checking
+    institution: Chase Bank
+    verified_amount: '70000.00'

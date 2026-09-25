@@ -1,0 +1,130 @@
+- address: 101 Sample St
+  city: Tampa
+  state: FL
+  zip: '33602'
+  metro: Tampa
+  list_price: '290700'
+  beds: 3
+  baths: '2.0'
+  sqft: 1650
+  property_type: single_family
+  image_url: https://picsum.photos/seed/marcus_hale/640/480
+  deal_grade: great_buy
+  tagline: Turnkey Tampa investment opportunity
+- address: 102 Sample St
+  city: Davenport
+  state: FL
+  zip: '33896'
+  metro: Davenport
+  list_price: '255000'
+  beds: 4
+  baths: '2.0'
+  sqft: 1650
+  property_type: single_family
+  image_url: https://picsum.photos/seed/kathleen_mcreynolds/640/480
+  deal_grade: good_buy
+  tagline: Turnkey Davenport investment opportunity
+- address: 103 Sample St
+  city: Carmel
+  state: IN
+  zip: '46032'
+  metro: Carmel
+  list_price: '357000'
+  beds: 3
+  baths: '2.0'
+  sqft: 1650
+  property_type: single_family
+  image_url: https://picsum.photos/seed/priya_nair/640/480
+  deal_grade: great_buy
+  tagline: Turnkey Carmel investment opportunity
+- address: 104 Sample St
+  city: Indianapolis
+  state: IN
+  zip: '46201'
+  metro: Indianapolis
+  list_price: '242250'
+  beds: 3
+  baths: '2.0'
+  sqft: 1650
+  property_type: single_family
+  image_url: https://picsum.photos/seed/daniel_ortiz/640/480
+  deal_grade: good_buy
+  tagline: Turnkey Indianapolis investment opportunity
+- address: 105 Sample St
+  city: Asheville
+  state: NC
+  zip: '28803'
+  metro: Asheville
+  list_price: '446250'
+  beds: 4
+  baths: '2.0'
+  sqft: 1650
+  property_type: single_family
+  image_url: https://picsum.photos/seed/sam_reed/640/480
+  deal_grade: great_buy
+  tagline: Turnkey Asheville investment opportunity
+- address: 106 Sample St
+  city: Cleveland
+  state: OH
+  zip: '44102'
+  metro: Cleveland
+  list_price: '212500'
+  beds: 3
+  baths: '2.0'
+  sqft: 1650
+  property_type: single_family
+  image_url: https://picsum.photos/seed/tom_lisa_brandt/640/480
+  deal_grade: good_buy
+  tagline: Turnkey Cleveland investment opportunity
+- address: 107 Sample St
+  city: Columbus
+  state: OH
+  zip: '43215'
+  metro: Columbus
+  list_price: '263500'
+  beds: 3
+  baths: '2.0'
+  sqft: 1650
+  property_type: single_family
+  image_url: https://picsum.photos/seed/aisha_coleman/640/480
+  deal_grade: great_buy
+  tagline: Turnkey Columbus investment opportunity
+- address: 108 Sample St
+  city: Fort Wayne
+  state: IN
+  zip: '46802'
+  metro: Fort Wayne
+  list_price: '221000'
+  beds: 3
+  baths: '2.0'
+  sqft: 1650
+  property_type: single_family
+  image_url: https://picsum.photos/seed/ben_ford/640/480
+  deal_grade: good_buy
+  tagline: Turnkey Fort Wayne investment opportunity
+- address: 109 Sample St
+  city: Denver
+  state: CO
+  zip: '80202'
+  metro: Denver
+  list_price: '280500'
+  beds: 2
+  baths: '2.0'
+  sqft: 1650
+  property_type: single_family
+  image_url: https://picsum.photos/seed/grace_kim/640/480
+  deal_grade: great_buy
+  tagline: Turnkey Denver investment opportunity
+- address: 110 Sample St
+  city: Scottsdale
+  state: AZ
+  zip: '85251'
+  metro: Scottsdale
+  list_price: '348500'
+  beds: 3
+  baths: '2.0'
+  sqft: 1650
+  property_type: single_family
+  image_url: https://picsum.photos/seed/luis_romero/640/480
+  deal_grade: good_buy
+  tagline: Turnkey Scottsdale investment opportunity

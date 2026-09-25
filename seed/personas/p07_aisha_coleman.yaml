@@ -1,0 +1,89 @@
+key: aisha_coleman
+first_name: Aisha
+last_name: Coleman
+email: aisha.coleman@clearquote-demo.test
+occupancy: investment
+strategy: ltr
+purchase_price: '310000.00'
+down_payment_pct: '0.25'
+ppp_years: 5
+fico: 715
+beds: 3
+loan_number: LOS-1000007
+current_residence_months: 40
+missing_fields:
+- occupancy_type
+pipeline_end_status: needs_attention
+seed_end_status: needs_attention
+market:
+  city: Columbus
+  state: OH
+  zip: '43215'
+  county: Franklin
+property_type: single_family
+vesting: personal_name
+llc_entity_name: null
+co_borrower: null
+fico_bureau_scores:
+  experian: 717
+  equifax: 713
+  transunion: 715
+  middle: 715
+los_record:
+  borrower_first_name: Aisha
+  borrower_last_name: Coleman
+  borrower_full_name: Aisha Coleman
+  borrower_ssn: '100011007'
+  borrower_dob: '1990-07-14'
+  marital_status: Unmarried
+  dependents_count: 0
+  borrower_email: aisha.coleman@clearquote-demo.test
+  borrower_cell_phone: '6145557007'
+  borrower_home_phone: null
+  business_vesting: Personal Name
+  llc_entity_name: null
+  current_street_address: 81 High St
+  current_city: Columbus
+  current_state: OH
+  current_zip: '43215'
+  current_housing_status: Rent
+  current_residence_years: 3
+  current_residence_months: 4
+  vom_completed: true
+  has_subject_property: true
+  property_address_status: Specific_Address
+  subject_street_address: 450 W Broad St
+  subject_city: Columbus
+  subject_state: OH
+  subject_zip: '43215'
+  subject_county: Franklin
+  property_type: Single_Family
+  number_of_units: 1
+  loan_purpose: Purchase
+  occupancy_type: null
+  investment_strategy: Long_Term_Rental
+  loan_program_name: DSCR 30 YR Fixed
+  amortization_term_years: 30
+  amortization_type: Fixed
+  purchase_price: '310000.00'
+  appraised_value: '310000.00'
+  down_payment_pct: '0.25'
+  prepayment_penalty_term: 5 Years
+  automated_uw_system: Manual_Traditional
+  lead_source: BiggerPockets
+  has_co_borrower: false
+  no_co_applicant_check: false
+  employment:
+  - employer_name: Nationwide Insurance
+    monthly_income: '8600.00'
+    years_at_job: '4.0'
+    self_employed: false
+  liabilities:
+  - creditor_name: Wells Fargo
+    account_type: Auto Loan
+    monthly_payment: '260.00'
+    balance: '8000.00'
+  assets:
+  - account_type: Checking
+    institution: Chase Bank
+    verified_amount: '55000.00'

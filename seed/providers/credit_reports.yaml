@@ -1,0 +1,200 @@
+- loan_number: LOS-1000001
+  pull_type: soft_pull
+  experian_score: 762
+  equifax_score: null
+  transunion_score: null
+  middle_score: 762
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000001
+  pull_type: hard_pull
+  experian_score: 762
+  equifax_score: 758
+  transunion_score: 760
+  middle_score: 760
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000002
+  pull_type: soft_pull
+  experian_score: 722
+  equifax_score: null
+  transunion_score: null
+  middle_score: 722
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000002
+  pull_type: hard_pull
+  experian_score: 722
+  equifax_score: 718
+  transunion_score: 720
+  middle_score: 720
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000003
+  pull_type: soft_pull
+  experian_score: 762
+  equifax_score: null
+  transunion_score: null
+  middle_score: 762
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000003
+  pull_type: hard_pull
+  experian_score: 762
+  equifax_score: 759
+  transunion_score: 760
+  middle_score: 760
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000004
+  pull_type: soft_pull
+  experian_score: 702
+  equifax_score: null
+  transunion_score: null
+  middle_score: 702
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000004
+  pull_type: hard_pull
+  experian_score: 702
+  equifax_score: 699
+  transunion_score: 700
+  middle_score: 700
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000005
+  pull_type: soft_pull
+  experian_score: 782
+  equifax_score: null
+  transunion_score: null
+  middle_score: 782
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000005
+  pull_type: hard_pull
+  experian_score: 782
+  equifax_score: 778
+  transunion_score: 780
+  middle_score: 780
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000006
+  pull_type: soft_pull
+  experian_score: 692
+  equifax_score: null
+  transunion_score: null
+  middle_score: 692
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000006
+  pull_type: hard_pull
+  experian_score: 692
+  equifax_score: 688
+  transunion_score: 690
+  middle_score: 690
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000007
+  pull_type: soft_pull
+  experian_score: 717
+  equifax_score: null
+  transunion_score: null
+  middle_score: 717
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000007
+  pull_type: hard_pull
+  experian_score: 717
+  equifax_score: 713
+  transunion_score: 715
+  middle_score: 715
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000008
+  pull_type: soft_pull
+  experian_score: 732
+  equifax_score: null
+  transunion_score: null
+  middle_score: 732
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000008
+  pull_type: hard_pull
+  experian_score: 732
+  equifax_score: 728
+  transunion_score: 730
+  middle_score: 730
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000009
+  pull_type: soft_pull
+  experian_score: 747
+  equifax_score: null
+  transunion_score: null
+  middle_score: 747
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000009
+  pull_type: hard_pull
+  experian_score: 747
+  equifax_score: 743
+  transunion_score: 745
+  middle_score: 745
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000010
+  pull_type: soft_pull
+  experian_score: 767
+  equifax_score: null
+  transunion_score: null
+  middle_score: 767
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current
+- loan_number: LOS-1000010
+  pull_type: hard_pull
+  experian_score: 767
+  equifax_score: 763
+  transunion_score: 765
+  middle_score: 765
+  tradelines:
+  - creditor: Wells Fargo
+    type: Auto Loan
+    status: current

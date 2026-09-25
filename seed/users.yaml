@@ -1,0 +1,36 @@
+# CQ-010 spec scope item 6: 2 LO, 1 Manager, 1 Admin. Login only becomes
+# usable in CQ-014 -- this item only inserts the rows and bcrypt hashes.
+# `password` is the plaintext demo password `seed/loader.py` bcrypt-hashes
+# at seed time -- never stored anywhere in the DB.
+- key: lo_jordan
+  email: jordan.lee@clearquote-demo.test
+  full_name: Jordan Lee
+  role: lo
+  nmls: "1234567"
+  title: Loan Officer
+  phone: "8135550101"
+  password: ClearQuoteDemo!2026
+- key: lo_morgan
+  email: morgan.reyes@clearquote-demo.test
+  full_name: Morgan Reyes
+  role: lo
+  nmls: "1234568"
+  title: Loan Officer
+  phone: "8135550102"
+  password: ClearQuoteDemo!2026
+- key: manager_casey
+  email: casey.nguyen@clearquote-demo.test
+  full_name: Casey Nguyen
+  role: manager
+  nmls: "1234569"
+  title: Branch Manager
+  phone: "8135550103"
+  password: ClearQuoteDemo!2026
+- key: admin_riley
+  email: riley.admin@clearquote-demo.test
+  full_name: Riley Admin
+  role: admin
+  nmls: null
+  title: System Administrator
+  phone: "8135550104"
+  password: ClearQuoteDemo!2026

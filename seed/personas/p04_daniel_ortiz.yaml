@@ -1,0 +1,88 @@
+key: daniel_ortiz
+first_name: Daniel
+last_name: Ortiz
+email: daniel.ortiz@clearquote-demo.test
+occupancy: primary
+strategy: null
+purchase_price: '285000.00'
+down_payment_pct: '0.05'
+ppp_years: 0
+fico: 700
+beds: null
+loan_number: LOS-1000004
+current_residence_months: 36
+missing_fields: []
+pipeline_end_status: priced
+seed_end_status: priced
+market:
+  city: Indianapolis
+  state: IN
+  zip: '46201'
+  county: Marion
+property_type: single_family
+vesting: personal_name
+llc_entity_name: null
+co_borrower: null
+fico_bureau_scores:
+  experian: 702
+  equifax: 699
+  transunion: 700
+  middle: 700
+los_record:
+  borrower_first_name: Daniel
+  borrower_last_name: Ortiz
+  borrower_full_name: Daniel Ortiz
+  borrower_ssn: '100011004'
+  borrower_dob: '1992-11-30'
+  marital_status: Unmarried
+  dependents_count: 0
+  borrower_email: daniel.ortiz@clearquote-demo.test
+  borrower_cell_phone: '3175554004'
+  borrower_home_phone: null
+  business_vesting: Personal Name
+  llc_entity_name: null
+  current_street_address: 77 Oak St
+  current_city: Indianapolis
+  current_state: IN
+  current_zip: '46201'
+  current_housing_status: Rent
+  current_residence_years: 3
+  current_residence_months: 0
+  vom_completed: true
+  has_subject_property: true
+  property_address_status: Specific_Address
+  subject_street_address: 902 E Washington St
+  subject_city: Indianapolis
+  subject_state: IN
+  subject_zip: '46201'
+  subject_county: Marion
+  property_type: Single_Family
+  number_of_units: 1
+  loan_purpose: Purchase
+  occupancy_type: Primary_Residence
+  investment_strategy: null
+  loan_program_name: Conventional 30 YR Fixed
+  amortization_term_years: 30
+  amortization_type: Fixed
+  purchase_price: '285000.00'
+  appraised_value: '285000.00'
+  down_payment_pct: '0.05'
+  prepayment_penalty_term: None
+  automated_uw_system: DU
+  lead_source: Zillow
+  has_co_borrower: false
+  no_co_applicant_check: false
+  employment:
+  - employer_name: Eli Lilly and Company
+    monthly_income: '6200.00'
+    years_at_job: '4.0'
+    self_employed: false
+  liabilities:
+  - creditor_name: Wells Fargo
+    account_type: Auto Loan
+    monthly_payment: '220.00'
+    balance: '6000.00'
+  assets:
+  - account_type: Checking
+    institution: Chase Bank
+    verified_amount: '22000.00'

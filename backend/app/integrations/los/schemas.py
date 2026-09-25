@@ -9,6 +9,15 @@ Every field besides `loan_number` is optional: `provider_los_records.payload`
 is a free-form JSONB blob (CQ-007), and CQ-010's seed personas aren't landed
 yet, so this item's own tests build partial fixture payloads directly
 (including persona 7's exact failure mode -- an empty `occupancy_type`).
+
+CQ-010 addition (plan.md decision #4): `employment`, `liabilities` and
+`assets` cover catalog §3 ("Credit, assets & liabilities fields" -- sourced
+from Encompass's "Import Liabilities" action and bank-statement verification)
+and override O12 (employment fields added for primary loans). Nothing else
+reads `LoanFileDTO` yet, so these are a pure, additive extension of CQ-009's
+DTO rather than a behavior change -- `applications.service.import_from_los`
+(CQ-010) is the only reader, and it owns writing `employment`, `liabilities`
+and `assets` rows per the item's spec.
 """
 
 from __future__ import annotations
@@ -17,6 +26,32 @@ from datetime import date
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
+
+
+class LosEmploymentDTO(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    employer_name: str | None = None
+    monthly_income: Decimal | None = None
+    years_at_job: Decimal | None = None
+    self_employed: bool = False
+
+
+class LosLiabilityDTO(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    creditor_name: str
+    account_type: str
+    monthly_payment: Decimal
+    balance: Decimal
+
+
+class LosAssetDTO(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    account_type: str | None = None
+    institution: str | None = None
+    verified_amount: Decimal
 
 
 class LoanFileDTO(BaseModel):
@@ -40,6 +75,11 @@ class LoanFileDTO(BaseModel):
     no_co_applicant_check: bool | None = None
     co_borrower_full_name: str | None = None
     co_borrower_ssn: str | None = None
+    co_borrower_dob: date | None = None
+    """Not in the catalog's own §1 table, but `application_parties.dob` /
+    CQ-012's `dob_format` rule apply to both roles (see that rule's own
+    `_DOB_FIELD_KEY` map) -- added so a co-borrower can actually be imported
+    with one (CQ-010 addition, plan.md decision #4)."""
     business_vesting: str | None = None
     llc_entity_name: str | None = None
 
@@ -88,3 +128,8 @@ class LoanFileDTO(BaseModel):
     prepayment_penalty_term: str | None = None
     automated_uw_system: str | None = None
     lead_source: str | None = None
+
+    # CQ-010 addition -- catalog §3 / override O12 (see module docstring).
+    employment: list[LosEmploymentDTO] = []
+    liabilities: list[LosLiabilityDTO] = []
+    assets: list[LosAssetDTO] = []
