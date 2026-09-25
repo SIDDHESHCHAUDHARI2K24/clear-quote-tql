@@ -21,7 +21,7 @@ Status here is updated by the agent at stage 8 and by the human at merge.
 | [CQ-013](CQ-013-pricing-service/spec.md) | Pricing service & API | P1 | CQ-008, CQ-009 | In Review |
 | [CQ-014](CQ-014-staff-auth/spec.md) | Staff auth | P2 | CQ-004, CQ-007 | In Review |
 | [CQ-015](CQ-015-borrower-auth/spec.md) | Borrower auth | P2 | CQ-014 | In Review |
-| [CQ-016](CQ-016-application-workspace/spec.md) | Application workspace shell | P3 | CQ-014, CQ-011 | To Do |
+| [CQ-016](CQ-016-application-workspace/spec.md) | Application workspace shell | P3 | CQ-014, CQ-011 | In Review |
 | [CQ-017](CQ-017-pricing-panel/spec.md) | Pricing panel | P3 | CQ-016, CQ-013 | To Do |
 | [CQ-018](CQ-018-quote-builder/spec.md) | Quote builder | P3 | CQ-017 | To Do |
 | [CQ-019](CQ-019-send-tab/spec.md) | Send tab & preview | P3 | CQ-018, CQ-021 | To Do |
