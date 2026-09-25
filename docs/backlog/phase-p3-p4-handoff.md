@@ -45,7 +45,6 @@ Written 2026-09-25 at the end of the first orchestrator session. A new session r
 
 ## Follow-ups logged (not blocking)
 
-- The backend tests flake under shared-Postgres load: asyncpg "another operation is in progress", plus workflow and schema test errors. The P5/P6 session uses the same Postgres. Rerunning passes.
 - A `make worker` running on the same task queue during `make test` hangs `test_resume_signal`. Stop workers before running tests.
 - A TBD persona's report preview takes about 6 s, because the CQ-023 matches call the mock providers with latency on every load.
 - `backend/scripts/freeze_version.py` and `freeze_sent_version.py` duplicate each other. `freeze_version.py` should use `new_default_package`.
