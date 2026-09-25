@@ -53,13 +53,13 @@ The LO's landing page after login answers "what needs me today?" in one glance: 
 
 ## Acceptance criteria
 
-- [ ] AC1 — After `make demo-reset`, every tile count for a Manager equals a direct SQL count of the definition above (test computes both).
-- [ ] AC2 — An LO sees only counts for their own files; a Manager filtering by that LO sees the same numbers.
-- [ ] AC3 — Aisha Coleman appears in "Needs your attention" with her missing-field reason; Luis Romero appears with his selected option; Grace Kim appears in "Going stale" with her age in days.
-- [ ] AC4 — Each tile's link opens the Applications list with the matching filter and the list shows exactly the tile's count (Playwright, once CQ-027 is merged; before that, assert the URL).
-- [ ] AC5 — Resolving Aisha's flag (CQ-028, or directly via API) removes her from the attention list within one refresh.
-- [ ] AC6 — `GET /api/dashboard` responds in under 300 ms with the ~200 seeded applications.
-- [ ] AC7 — react-doctor passes; tiles and lists are keyboard navigable.
+- [x] AC1 — After `make demo-reset`, every tile count for a Manager equals a direct SQL count of the definition above (test computes both).
+- [x] AC2 — An LO sees only counts for their own files; a Manager filtering by that LO sees the same numbers.
+- [x] AC3 — Aisha Coleman appears in "Needs your attention" with her missing-field reason; Luis Romero appears with his selected option; Grace Kim appears in "Going stale" with her age in days.
+- [ ] AC4 — Each tile's link opens the Applications list with the matching filter and the list shows exactly the tile's count (Playwright, once CQ-027 is merged; before that, assert the URL). **pending — re-check after CQ-027** (today: hrefs asserted, unit + live e2e)
+- [ ] AC5 — Resolving Aisha's flag (CQ-028, or directly via API) removes her from the attention list within one refresh. **pending — re-check after CQ-028** (today: resolved directly in the DB per the coordinator's E2E note)
+- [x] AC6 — `GET /api/dashboard` responds in under 300 ms with the ~200 seeded applications.
+- [x] AC7 — react-doctor passes; tiles and lists are keyboard navigable.
 
 ## Test plan
 
