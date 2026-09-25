@@ -6,7 +6,7 @@ Status here is updated by the agent at stage 8 and by the human at merge.
 
 | ID | Item | Phase | Depends on | Status |
 | --- | --- | --- | --- | --- |
-| [CQ-001](CQ-001-agent-tooling/spec.md) | Agent tooling & process | P0 | — | To Do |
+| [CQ-001](CQ-001-agent-tooling/spec.md) | Agent tooling & process | P0 | — | In Review |
 | [CQ-002](CQ-002-monorepo-scaffold/spec.md) | Monorepo scaffold | P0 | CQ-001 | In Review |
 | [CQ-003](CQ-003-local-infra/spec.md) | Local infrastructure | P0 | CQ-002 | To Do |
 | [CQ-004](CQ-004-backend-skeleton/spec.md) | Backend skeleton | P0 | CQ-003 | To Do |
