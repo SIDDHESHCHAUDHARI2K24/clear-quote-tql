@@ -160,7 +160,6 @@ async def request_hard_pull(
         type=events.HARD_PULL_REQUESTED,
         payload={
             "consent_id": str(consent.id),
-            "to": client.email,
             "message": "Requested borrower consent for a hard credit pull",
         },
     )

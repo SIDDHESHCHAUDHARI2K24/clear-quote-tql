@@ -12,7 +12,14 @@ blocking flag clears (spec "After any edit"; plan.md Decisions #8, #9).
 4. If the application is `needs_attention` and no open `blocking` flag
    remains, signals the CQ-011 workflow's `resume`. A seeded application
    has no Temporal run (demo-reset drives the service functions directly),
-   so NOT_FOUND starts the pipeline instead (same workflow id).
+   so NOT_FOUND starts the pipeline instead (same workflow id). A run
+   that failed (or was terminated, cancelled or timed out) is started
+   again under the same id (`ALLOW_DUPLICATE_FAILED_ONLY`).
+
+Steps 2-4 run under the application row lock (review M1), and step 4 is
+skipped while an earlier resume is still pending (the last `pipeline.*`
+event is our own `pipeline.resume_requested`), so two quick edits send one
+signal and write one event.
 """
 
 from __future__ import annotations
@@ -32,8 +39,10 @@ from temporalio.service import RPCError, RPCStatusCode
 
 from app.core.enums import ApplicationStatus, FlagSeverity
 from app.core.errors import AppError
+from app.features.applications.locking import lock_application
 from app.features.applications.models import Application
 from app.features.applications.sections import events
+from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.models import Flag
 from app.features.applications.verification.rules import OB_REQUIRED_FIELD_RULE
 from app.features.applications.verification.service import run_and_persist
@@ -47,6 +56,7 @@ logger = logging.getLogger(__name__)
 ResumeReason = Literal[
     "resumed",
     "started",
+    "already_requested",
     "not_needs_attention",
     "blocking_flags_remain",
     "workflow_closed",
@@ -110,6 +120,37 @@ def _flag_payload(flag: Flag) -> dict[str, object]:
     }
 
 
+_RESTARTABLE = frozenset(
+    {
+        WorkflowExecutionStatus.FAILED,
+        WorkflowExecutionStatus.TERMINATED,
+        WorkflowExecutionStatus.CANCELED,
+        WorkflowExecutionStatus.TIMED_OUT,
+    }
+)
+"""Closed states `ALLOW_DUPLICATE_FAILED_ONLY` lets us start a new run over."""
+
+
+async def _resume_pending(db: AsyncSession, application_id: uuid.UUID) -> bool:
+    """True when the latest `pipeline.*` event is a resume we requested and
+    the pipeline has not written anything since (review minor 8)."""
+    latest = (
+        await db.execute(
+            select(ActivityEvent.type, ActivityEvent.payload)
+            .where(
+                ActivityEvent.application_id == application_id,
+                ActivityEvent.type.startswith("pipeline."),
+            )
+            .order_by(ActivityEvent.at.desc(), ActivityEvent.created_at.desc())
+            .limit(1)
+        )
+    ).first()
+    if latest is None or latest.type != events.RESUME_REQUESTED:
+        return False
+    payload = latest.payload if isinstance(latest.payload, dict) else {}
+    return payload.get("reason") in ("resumed", "started")
+
+
 async def _plan_resume(
     client: Client, application_id: uuid.UUID
 ) -> tuple[ResumeReason, Callable[[], Awaitable[None]] | None]:
@@ -126,7 +167,7 @@ async def _plan_resume(
             raise
         description = None
 
-    if description is None:
+    if description is None or description.status in _RESTARTABLE:
 
         async def _start() -> None:
             try:
@@ -135,7 +176,9 @@ async def _plan_resume(
                     str(application_id),
                     id=workflow_id,
                     task_queue=APPLICATION_PIPELINE_TASK_QUEUE,
-                    id_reuse_policy=WorkflowIDReusePolicy.REJECT_DUPLICATE,
+                    # No run, or the last one failed: start one. A completed
+                    # (priced) run is never repeated (review minor 6).
+                    id_reuse_policy=WorkflowIDReusePolicy.ALLOW_DUPLICATE_FAILED_ONLY,
                 )
             except WorkflowAlreadyStartedError:
                 logger.info("Pipeline for %s was started concurrently", application_id)
@@ -162,6 +205,9 @@ async def reverify_and_maybe_resume(
 
     await run_and_persist(application_id, db)
 
+    # Everything below runs under the application lock (review M1). The
+    # OB validator commits (releasing it), so it is taken again after.
+    await lock_application(db, application_id)
     if any(f.rule == OB_REQUIRED_FIELD_RULE for f in await _open_flags(db, application_id)):
         try:
             await validate_ob_required_fields(db, application_id)
@@ -169,6 +215,7 @@ async def reverify_and_maybe_resume(
             # Still missing (flags kept and committed by the validator) or
             # the request cannot be built yet; either way flags stay open.
             await db.rollback()
+        await lock_application(db, application_id)
 
     after_flags = await _open_flags(db, application_id)
     after = {flag.id: _flag_payload(flag) for flag in after_flags}
@@ -191,21 +238,26 @@ async def reverify_and_maybe_resume(
                 type=events.FLAG_RESOLVED,
                 payload=payload,
             )
-    await db.commit()
 
     status = (
         await db.execute(select(Application.status).where(Application.id == application_id))
     ).scalar_one()
     if status is not ApplicationStatus.NEEDS_ATTENTION:
+        await db.commit()
         return ResumeOutcome(requested=False, reason="not_needs_attention")
     if blocking_open:
+        await db.commit()
         return ResumeOutcome(requested=False, reason="blocking_flags_remain")
+    if await _resume_pending(db, application_id):
+        await db.commit()
+        return ResumeOutcome(requested=True, reason="already_requested")
 
     try:
         client = await temporal()
         reason, dispatch = await _plan_resume(client, application_id)
     except Exception:
         logger.exception("Could not resume the pipeline for %s", application_id)
+        await db.commit()
         return ResumeOutcome(requested=False, reason="temporal_unavailable")
 
     requested = reason in ("resumed", "started")

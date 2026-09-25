@@ -8,6 +8,8 @@ from collections.abc import Awaitable, Callable
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from temporalio.client import WorkflowExecutionStatus
+from temporalio.common import WorkflowIDReusePolicy
 
 from app.core.enums import ApplicationStatus
 from app.features.applications.models import Application
@@ -183,3 +185,57 @@ async def test_patch_liability(client: AsyncClient, make_app: MakeApp) -> None:
         json={"monthly_payment": "1"},
     )
     assert other.status_code == 404
+
+
+async def test_resume_is_not_repeated_while_pending(
+    client: AsyncClient, make_app: MakeApp, db_session: AsyncSession, fake_temporal: FakeTemporal
+) -> None:
+    """Review minor 8: a second edit before the pipeline picks the resume up
+    neither signals again nor logs a second `pipeline.resume_requested`."""
+    app = await make_app(housing=[(1, 2)], status=ApplicationStatus.NEEDS_ATTENTION)
+    base = f"/api/v1/applications/{app.id}"
+
+    first = (
+        await client.post(f"{base}/housing_history", json={**_PRIOR, "residence_years": 1})
+    ).json()
+    second = (await client.put(f"{base}/fields/borrower_email", json={"value": "n@e.w"})).json()
+
+    assert first["resume"] == {"requested": True, "reason": "started"}
+    assert second["resume"] == {"requested": True, "reason": "already_requested"}
+    assert fake_temporal.starts == [application_workflow_id(str(app.id))]
+    assert fake_temporal.signals == []
+    types = await _event_types(db_session, app.id)
+    assert types.count("pipeline.resume_requested") == 1
+
+
+async def test_resume_restarts_failed_run(
+    client: AsyncClient, make_app: MakeApp, fake_temporal: FakeTemporal
+) -> None:
+    """Review minor 6: a failed run is not a dead end; a completed one is."""
+    failed = await make_app(housing=[(1, 2)], status=ApplicationStatus.NEEDS_ATTENTION)
+    failed_id = application_workflow_id(str(failed.id))
+    fake_temporal.closed[failed_id] = WorkflowExecutionStatus.FAILED
+
+    body = (
+        await client.post(
+            f"/api/v1/applications/{failed.id}/housing_history",
+            json={**_PRIOR, "residence_years": 1},
+        )
+    ).json()
+
+    assert body["resume"] == {"requested": True, "reason": "started"}
+    assert fake_temporal.starts == [failed_id]
+    policy = fake_temporal.start_kwargs[0]["id_reuse_policy"]
+    assert policy is WorkflowIDReusePolicy.ALLOW_DUPLICATE_FAILED_ONLY
+
+    done = await make_app(housing=[(1, 2)], status=ApplicationStatus.NEEDS_ATTENTION)
+    fake_temporal.closed[application_workflow_id(str(done.id))] = WorkflowExecutionStatus.COMPLETED
+    body = (
+        await client.post(
+            f"/api/v1/applications/{done.id}/housing_history",
+            json={**_PRIOR, "residence_years": 1},
+        )
+    ).json()
+
+    assert body["resume"] == {"requested": False, "reason": "workflow_closed"}
+    assert fake_temporal.starts == [failed_id]

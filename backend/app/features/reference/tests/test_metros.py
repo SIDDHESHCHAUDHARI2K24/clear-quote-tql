@@ -70,6 +70,20 @@ async def test_metros_requires_session(client: AsyncClient) -> None:
     assert response.status_code == 401
 
 
+async def test_metros_rejects_session_of_deleted_user(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+) -> None:
+    staff = await make_staff_session(role=UserRole.LO)
+    await db_session.delete(staff.user)
+    await db_session.flush()
+
+    response = await client.get("/api/v1/reference/metros", params={"states": "FL"})
+
+    assert response.status_code == 401
+
+
 async def test_metros_rejects_bad_state(
     client: AsyncClient, make_staff_session: Callable[..., Awaitable[StaffSession]]
 ) -> None:

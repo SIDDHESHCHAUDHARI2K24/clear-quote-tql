@@ -12,6 +12,10 @@ prefixes (both contain `:`, which no catalog key does):
 - `row:{collection}:{row_id}` -- marks a row the LO added by hand
   (`source = lo_entry`), e.g. a manual liability that "Import liabilities"
   must keep.
+- `auto:{field_key}` -- written by CQ-012's `phone_copy` auto-fix
+  (`verification.service.mark_auto_copied`) when it fills the primary home
+  phone from the cell phone; read here to keep that phone following the
+  cell phone (AC3).
 
 None of these helpers commit.
 """
@@ -23,12 +27,14 @@ import uuid
 from typing import Any
 
 from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.clock import now
 from app.core.encryption import _fernet
 from app.core.enums import FieldSource
 from app.features.applications.verification.models import FieldValue
+from app.features.applications.verification.service import AUTO_PREFIX, auto_marker_key
 
 ORIG_PREFIX = "orig:"
 ROW_PREFIX = "row:"
@@ -87,6 +93,37 @@ async def load_manual_rows(db: AsyncSession, application_id: uuid.UUID) -> set[s
     return set(keys)
 
 
+async def has_auto_marker(db: AsyncSession, application_id: uuid.UUID, field_key: str) -> bool:
+    """True when a rule auto-copied this field (`auto:` marker, see
+    `verification.service.mark_auto_copied`)."""
+    marker = (
+        await db.execute(
+            select(FieldValue.id).where(
+                FieldValue.application_id == application_id,
+                FieldValue.field_key == auto_marker_key(field_key),
+            )
+        )
+    ).scalar_one_or_none()
+    return marker is not None
+
+
+async def load_auto_markers(db: AsyncSession, application_id: uuid.UUID) -> set[str]:
+    """Field keys (prefix stripped) a rule auto-copied."""
+    keys = (
+        (
+            await db.execute(
+                select(FieldValue.field_key).where(
+                    FieldValue.application_id == application_id,
+                    FieldValue.field_key.startswith(AUTO_PREFIX),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return {key[len(AUTO_PREFIX) :] for key in keys}
+
+
 async def get_override(
     db: AsyncSession, application_id: uuid.UUID, field_key: str
 ) -> FieldValue | None:
@@ -112,23 +149,28 @@ async def record_override(
     """Creates the `orig:` row on the first edit; later edits only refresh
     who/when, so the original value is kept."""
     existing = await get_override(db, application_id, field_key)
-    if existing is not None:
-        existing.overridden_by = user_id
-        existing.overridden_at = now()
-        await db.flush()
-        return existing
-    row = FieldValue(
-        application_id=application_id,
-        field_key=f"{ORIG_PREFIX}{field_key}",
-        value=original_value,
-        source=FieldSource.LO_OVERRIDE,
-        source_ref=original_source.value,
-        overridden_by=user_id,
-        overridden_at=now(),
-    )
-    db.add(row)
+    if existing is None:
+        # Idempotent insert (review M1): the router's application lock already
+        # serialises edits; ON CONFLICT is the backstop, so a concurrent first
+        # edit keeps the row the other request wrote instead of failing.
+        await db.execute(
+            insert(FieldValue)
+            .values(
+                id=uuid.uuid4(),
+                application_id=application_id,
+                field_key=f"{ORIG_PREFIX}{field_key}",
+                value=original_value,
+                source=FieldSource.LO_OVERRIDE,
+                source_ref=original_source.value,
+            )
+            .on_conflict_do_nothing(index_elements=["application_id", "field_key"])
+        )
+        existing = await get_override(db, application_id, field_key)
+        assert existing is not None
+    existing.overridden_by = user_id
+    existing.overridden_at = now()
     await db.flush()
-    return row
+    return existing
 
 
 async def mark_manual_row(

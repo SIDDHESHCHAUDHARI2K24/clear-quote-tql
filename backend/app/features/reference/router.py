@@ -10,10 +10,11 @@ from fastapi import APIRouter, Cookie, Depends, Query
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_current_borrower, get_current_staff
 from app.core.db import get_db
 from app.core.errors import AuthenticationError
 from app.core.valkey import get_valkey
-from app.features.auth.sessions.service import COOKIE_NAMES, get_session_subject
+from app.features.auth.sessions.service import COOKIE_NAMES
 from app.features.reference.schemas import MetrosResponse, StateMetros
 from app.features.reference.service import metros_for_states, normalize_states
 
@@ -21,19 +22,19 @@ router = APIRouter(tags=["reference"])
 
 
 async def require_any_session(
+    db: AsyncSession = Depends(get_db),
     valkey: Redis = Depends(get_valkey),
     staff_token: str | None = Cookie(default=None, alias=COOKIE_NAMES["staff"]),
     borrower_token: str | None = Cookie(default=None, alias=COOKIE_NAMES["borrower"]),
 ) -> None:
-    if staff_token is not None and await get_session_subject(
-        valkey, principal="staff", token=staff_token
-    ):
+    """Either session works. Reuses the auth dependencies' own checks, so a
+    session whose user or borrower account was deleted is rejected too."""
+    try:
+        await get_current_staff(db, valkey, staff_token)
         return
-    if borrower_token is not None and await get_session_subject(
-        valkey, principal="borrower", token=borrower_token
-    ):
-        return
-    raise AuthenticationError("Not signed in")
+    except AuthenticationError:
+        pass
+    await get_current_borrower(db, valkey, borrower_token)
 
 
 @router.get(

@@ -49,8 +49,8 @@ from app.features.applications.sections.schemas import (
 )
 from app.features.applications.verification.models import FieldValue, Flag
 from app.features.applications.verification.service import (
-    _latest_scenario_snapshot,
-    _setting_int,
+    latest_scenario_snapshot,
+    setting_int,
 )
 from app.features.borrower.consent.models import Consent, ConsentStatus, ConsentType
 from app.features.pricing.engine.borrower_ratios import (
@@ -94,11 +94,13 @@ class _Ctx:
         application: Application,
         overrides: dict[str, FieldValue],
         manual_rows: set[str],
+        auto_copied: set[str],
     ) -> None:
         self.application = application
         self.base = base_source(application)
         self.overrides = overrides
         self.manual_rows = manual_rows
+        self.auto_copied = auto_copied
 
     def is_manual(self, collection: str, row_id: uuid.UUID) -> bool:
         return provenance.row_marker_key(collection, row_id) in self.manual_rows
@@ -175,8 +177,8 @@ async def _borrowers(db: AsyncSession, ctx: _Ctx) -> list[SectionRecord]:
             if (
                 column_name == "home_phone"
                 and key not in ctx.overrides
+                and key in ctx.auto_copied
                 and value is not None
-                and value == party.cell_phone
             ):
                 base = FieldSource.FORMULA  # auto-copied from the cell phone (AC3)
             fields.append(ctx.field(key, column.label, value, base=base, mask=column_name == "ssn"))
@@ -339,7 +341,7 @@ async def _credit(db: AsyncSession, ctx: _Ctx) -> tuple[list[SectionRecord], Cre
     dti_status: Any = "not_applicable"
     if dti_applicable:
         income = await _sum(db, Employment.monthly_income, Employment.application_id == app.id)
-        scenario = await _latest_scenario_snapshot(db, app.id)
+        scenario = await latest_scenario_snapshot(db, app.id)
         if income <= 0:
             dti_status = "no_income"
         elif scenario is None:
@@ -405,8 +407,8 @@ async def _assets(db: AsyncSession, ctx: _Ctx) -> tuple[list[SectionRecord], Ass
         if app.occupancy is Occupancy.PRIMARY
         else "reserves_months_investment"
     )
-    reserves_months = await _setting_int(db, reserves_key)
-    scenario = await _latest_scenario_snapshot(db, app.id)
+    reserves_months = await setting_int(db, reserves_key)
+    scenario = await latest_scenario_snapshot(db, app.id)
     reserves_required = cash_to_close = required = None
     status: Any = "awaiting_pricing"
     if scenario is not None:
@@ -499,6 +501,7 @@ async def build_section(
         application,
         await provenance.load_overrides(db, application_id),
         await provenance.load_manual_rows(db, application_id),
+        await provenance.load_auto_markers(db, application_id),
     )
 
     response = SectionResponse(

@@ -35,7 +35,7 @@ def _priced(monkeypatch: pytest.MonkeyPatch, payment: str, ctc: str) -> None:
             total_cash_to_close=Decimal(ctc), total_monthly_payment=Decimal(payment)
         )
 
-    monkeypatch.setattr(section_service, "_latest_scenario_snapshot", _snapshot)
+    monkeypatch.setattr(section_service, "latest_scenario_snapshot", _snapshot)
 
 
 async def test_borrowers_section_masks_ssn(client: AsyncClient, make_app: MakeApp) -> None:

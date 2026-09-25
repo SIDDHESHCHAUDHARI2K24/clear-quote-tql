@@ -60,7 +60,7 @@ async def test_import_liabilities_keeps_manual(
             total_cash_to_close=Decimal("60000"), total_monthly_payment=Decimal("1500.00")
         )
 
-    monkeypatch.setattr(section_service, "_latest_scenario_snapshot", _snapshot)
+    monkeypatch.setattr(section_service, "latest_scenario_snapshot", _snapshot)
     app = await make_app(
         occupancy=Occupancy.PRIMARY,
         monthly_income="10000.00",
@@ -152,6 +152,15 @@ async def test_hard_pull_request_once(
         .all()
     )
     assert len(outbox) == 1
+    event_payload: Any = (
+        await db_session.execute(
+            select(ActivityEvent.payload).where(
+                ActivityEvent.application_id == app.id,
+                ActivityEvent.type == "credit.hard_pull_requested",
+            )
+        )
+    ).scalar_one()
+    assert "@" not in str(event_payload)  # no borrower email in the timeline
 
     second = await client.post(url)
 

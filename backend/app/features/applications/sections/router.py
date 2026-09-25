@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import CurrentStaff, get_scoped_application
 from app.core.db import get_db
 from app.core.errors import NotFoundError
+from app.features.applications.locking import lock_application
 from app.features.applications.models import Application, ApplicationParty
 from app.features.applications.sections import collections, credit, events, fields, property
 from app.features.applications.sections.reverify import (
@@ -49,6 +50,13 @@ from app.features.applications.sections.service import (
 router = APIRouter(tags=["verification"])
 
 _BASE = "/applications/{application_id}"
+
+
+async def _lock(db: AsyncSession, application: Application) -> None:
+    """Serialises writes for one application (review M1): takes the row lock,
+    then reloads the application, which was read before the lock."""
+    await lock_application(db, application.id)
+    await db.refresh(application)
 
 
 async def _after_edit(
@@ -99,6 +107,7 @@ async def put_field(
     application: Application = Depends(get_scoped_application),
     temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SectionResponse:
+    await _lock(db, application)
     resolved = await fields.apply_field_edit(db, application, field_key, body.value, user.id)
     return await _after_edit(db, application.id, SectionTab(resolved.tab.value), temporal)
 
@@ -111,6 +120,7 @@ async def revert_field(
     application: Application = Depends(get_scoped_application),
     temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SectionResponse:
+    await _lock(db, application)
     resolved = await fields.revert_field(db, application, field_key, user.id)
     return await _after_edit(db, application.id, SectionTab(resolved.tab.value), temporal)
 
@@ -126,6 +136,7 @@ async def reveal_ssn(
     db: AsyncSession = Depends(get_db),
     application: Application = Depends(get_scoped_application),
 ) -> SsnRevealResponse:
+    await _lock(db, application)
     party = await db.get(ApplicationParty, party_id)
     if party is None or party.application_id != application.id:
         raise NotFoundError(f"No party {party_id} on this application.")
@@ -157,6 +168,7 @@ async def add_housing(
     application: Application = Depends(get_scoped_application),
     temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SectionResponse:
+    await _lock(db, application)
     await collections.add_housing(db, application, body, user.id)
     return await _after_edit(db, application.id, SectionTab.HOUSING, temporal)
 
@@ -170,6 +182,7 @@ async def patch_housing(
     application: Application = Depends(get_scoped_application),
     temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SectionResponse:
+    await _lock(db, application)
     await collections.patch_row(
         db, application, "housing_history", row_id, body.model_dump(exclude_unset=True), user.id
     )
@@ -184,6 +197,7 @@ async def add_party(
     application: Application = Depends(get_scoped_application),
     temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SectionResponse:
+    await _lock(db, application)
     await collections.add_co_borrower(db, application, body, user.id)
     return await _after_edit(db, application.id, SectionTab.BORROWERS, temporal)
 
@@ -197,6 +211,7 @@ async def patch_party(
     application: Application = Depends(get_scoped_application),
     temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SectionResponse:
+    await _lock(db, application)
     await collections.patch_party(
         db, application, party_id, body.model_dump(exclude_unset=True), user.id
     )
@@ -211,6 +226,7 @@ async def add_liability(
     application: Application = Depends(get_scoped_application),
     temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SectionResponse:
+    await _lock(db, application)
     await collections.add_liability(db, application, body, user.id)
     return await _after_edit(db, application.id, SectionTab.CREDIT, temporal)
 
@@ -224,6 +240,7 @@ async def patch_liability(
     application: Application = Depends(get_scoped_application),
     temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SectionResponse:
+    await _lock(db, application)
     await collections.patch_row(
         db, application, "liabilities", row_id, body.model_dump(exclude_unset=True), user.id
     )
@@ -240,6 +257,7 @@ async def import_liabilities(
     application: Application = Depends(get_scoped_application),
     temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SectionResponse:
+    await _lock(db, application)
     await credit.import_liabilities(db, application, user.id)
     return await _after_edit(db, application.id, SectionTab.CREDIT, temporal)
 
@@ -254,6 +272,7 @@ async def request_hard_pull(
     db: AsyncSession = Depends(get_db),
     application: Application = Depends(get_scoped_application),
 ) -> HardPullRequestResponse:
+    await _lock(db, application)
     consent = await credit.request_hard_pull(db, application, user.id)
     await db.commit()
     section = await build_section(db, application.id, SectionTab.CREDIT)
@@ -274,6 +293,7 @@ async def patch_property(
     application: Application = Depends(get_scoped_application),
     temporal: TemporalProvider = Depends(get_temporal_provider),
 ) -> SectionResponse:
+    await _lock(db, application)
     await property.update_property(db, application, body, user.id)
     return await _after_edit(db, application.id, SectionTab.PROPERTY, temporal)
 
@@ -286,6 +306,7 @@ async def patch_document(
     db: AsyncSession = Depends(get_db),
     application: Application = Depends(get_scoped_application),
 ) -> SectionResponse:
+    await _lock(db, application)
     await property.mark_document(db, application, document_id, body.received, user.id)
     await db.commit()
     return await build_section(db, application.id, SectionTab.ASSETS)

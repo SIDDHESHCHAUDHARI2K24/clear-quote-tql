@@ -108,6 +108,10 @@ class ImportResult:
     itself returned no Experian score (still written as `None` here, not
     silently dropped, so a caller can tell the difference from "never
     pulled")."""
+    skipped: bool = False
+    """CQ-028a: `True` when the application was already imported and nothing
+    was written (the import-once guard); the `pipeline.imported` event then
+    carries `skipped: true`."""
 
 
 def _build_borrower_party(loan_file: LoanFileDTO) -> ApplicationParty:
@@ -222,6 +226,7 @@ async def import_from_los(application_id: uuid.UUID, db: AsyncSession) -> Import
             assets_created=0,
             occupancy=application.occupancy,
             representative_fico=None,
+            skipped=True,
         )
 
     los_client = MockLosClient(db)

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Awaitable, Callable
+from datetime import date
 from typing import Any
 
 import pytest
@@ -14,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import ApplicationStatus, Occupancy, Strategy
-from app.features.applications.models import Application
+from app.features.applications.models import Application, ApplicationParty, PartyRole
 from app.features.applications.sections.tests.conftest import FakeHandle, FakeTemporal
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.models import FieldValue
@@ -128,3 +129,119 @@ async def test_resume_failure_is_logged(
     )
     assert "pipeline.resume_failed" in types
     assert uuid.UUID(body["application_id"]) == app.id
+
+
+async def _primary(db: AsyncSession, application_id: uuid.UUID) -> ApplicationParty:
+    return (
+        await db.execute(
+            select(ApplicationParty).where(
+                ApplicationParty.application_id == application_id,
+                ApplicationParty.role == PartyRole.BORROWER,
+            )
+        )
+    ).scalar_one()
+
+
+async def test_revert_restores_the_exact_original(
+    client: AsyncClient, make_app: MakeApp, db_session: AsyncSession
+) -> None:
+    """Review minor 1: revert converts types only; it does not re-run the
+    edit parser (which strips SSN dashes and trims names)."""
+    app = await make_app()
+    party = await _primary(db_session, app.id)
+    party.ssn_encrypted = "123-45-6789"
+    party.last_name = "  Coleman "
+    await db_session.commit()
+    base = f"/api/v1/applications/{app.id}/fields"
+
+    await client.put(f"{base}/borrower_ssn", json={"value": "111223333"})
+    await client.put(f"{base}/borrower_last_name", json={"value": "Smith"})
+    await client.put(f"{base}/borrower_dob", json={"value": "1990-03-04"})
+    assert (await client.delete(f"{base}/borrower_ssn")).status_code == 200
+    assert (await client.delete(f"{base}/borrower_last_name")).status_code == 200
+    body = (await client.delete(f"{base}/borrower_dob")).json()
+
+    assert _field(body, "borrower_last_name")["value"] == "  Coleman "
+    assert _field(body, "borrower_dob")["value"] == "1985-01-01"
+    await db_session.refresh(party)
+    assert party.ssn_encrypted == "123-45-6789"
+    assert party.last_name == "  Coleman "
+    assert party.dob == date(1985, 1, 1)
+
+
+async def test_revert_restores_typed_values(client: AsyncClient, make_app: MakeApp) -> None:
+    app = await make_app(liabilities=[("Chase", "250.00")])
+    section = (await client.get(f"/api/v1/applications/{app.id}/sections/credit")).json()
+    row_id = next(r["id"] for r in section["records"] if r["kind"] == "liability")
+    key = f"liabilities.{row_id}.monthly_payment"
+    base = f"/api/v1/applications/{app.id}/fields"
+
+    await client.put(f"{base}/{key}", json={"value": "300"})
+    body = (await client.delete(f"{base}/{key}")).json()
+
+    assert body["credit"]["liabilities_monthly_total"] == "250.00"
+
+    await client.put(f"{base}/borrower_marital_status", json={"value": "married"})
+    body = (await client.delete(f"{base}/borrower_marital_status")).json()
+    assert _field(body, "borrower_marital_status")["overridden"] is False
+
+
+async def test_clearing_primary_home_phone_is_rejected(
+    client: AsyncClient, make_app: MakeApp
+) -> None:
+    """Review minor 2 (plan.md Decision #24): `phone_copy` would refill an
+    empty primary home phone from the cell phone, so clearing it is a 422."""
+    app = await make_app(cell_phone="2605551111", home_phone=None)
+    url = f"/api/v1/applications/{app.id}/fields/borrower_home_phone"
+
+    response = await client.put(url, json={"value": ""})
+
+    assert response.status_code == 422
+    assert "Home phone" in response.json()["error"]["message"]
+    assert (await client.put(url, json={"value": "2605559999"})).status_code == 200
+
+
+async def test_clearing_home_phone_allowed_without_cell(
+    client: AsyncClient, make_app: MakeApp
+) -> None:
+    app = await make_app(cell_phone=None, home_phone="2605550000")
+
+    response = await client.put(
+        f"/api/v1/applications/{app.id}/fields/borrower_home_phone", json={"value": None}
+    )
+
+    assert response.status_code == 200
+    assert _field(response.json(), "borrower_home_phone")["value"] is None
+
+
+async def test_los_home_phone_equal_to_cell_does_not_follow(
+    client: AsyncClient, make_app: MakeApp
+) -> None:
+    """Review minor 3: an LOS home phone that happens to equal the cell phone
+    was not auto-copied, so a cell edit leaves it alone."""
+    app = await make_app(cell_phone="2605551111", home_phone="2605551111")
+    base = f"/api/v1/applications/{app.id}"
+    section = (await client.get(f"{base}/sections/borrowers")).json()
+    assert _field(section, "borrower_home_phone")["source"] == "encompass"
+
+    body = (
+        await client.put(f"{base}/fields/borrower_cell_phone", json={"value": "2605552222"})
+    ).json()
+
+    assert _field(body, "borrower_home_phone")["value"] == "2605551111"
+    assert _field(body, "borrower_home_phone")["source"] == "encompass"
+
+
+async def test_reverted_home_phone_follows_the_cell_again(
+    client: AsyncClient, make_app: MakeApp
+) -> None:
+    app = await make_app(cell_phone="2605551111", home_phone=None)
+    base = f"/api/v1/applications/{app.id}/fields"
+
+    await client.put(f"{base}/borrower_home_phone", json={"value": "2605553333"})
+    body = (await client.delete(f"{base}/borrower_home_phone")).json()
+    assert _field(body, "borrower_home_phone")["value"] == "2605551111"
+    assert _field(body, "borrower_home_phone")["source"] == "formula"
+
+    body = (await client.put(f"{base}/borrower_cell_phone", json={"value": "2605554444"})).json()
+    assert _field(body, "borrower_home_phone")["value"] == "2605554444"

@@ -53,14 +53,18 @@ class FakeHandle:
     workflow_id: str
 
     async def describe(self) -> Any:
-        if self.workflow_id not in self.temporal.running:
+        closed = self.temporal.closed.get(self.workflow_id)
+        if self.workflow_id not in self.temporal.running and closed is None:
             raise RPCError("workflow not found", RPCStatusCode.NOT_FOUND, b"")
 
         @dataclass
         class _Description:
-            status: WorkflowExecutionStatus = WorkflowExecutionStatus.RUNNING
+            status: WorkflowExecutionStatus
 
-        return _Description()
+        if self.workflow_id in self.temporal.running:
+            return _Description(WorkflowExecutionStatus.RUNNING)
+        assert closed is not None
+        return _Description(closed)
 
     async def signal(self, _signal: Any) -> None:
         self.temporal.signals.append(self.workflow_id)
@@ -71,12 +75,17 @@ class FakeTemporal:
     running: set[str] = field(default_factory=set)
     signals: list[str] = field(default_factory=list)
     starts: list[str] = field(default_factory=list)
+    start_kwargs: list[dict[str, Any]] = field(default_factory=list)
+    closed: dict[str, WorkflowExecutionStatus] = field(default_factory=dict)
+    """Workflow id -> the status of its closed last run (not running)."""
 
     def get_workflow_handle(self, workflow_id: str) -> FakeHandle:
         return FakeHandle(self, workflow_id)
 
-    async def start_workflow(self, *_args: Any, id: str, **_kwargs: Any) -> None:  # noqa: A002
+    async def start_workflow(self, *_args: Any, id: str, **kwargs: Any) -> None:  # noqa: A002
         self.starts.append(id)
+        self.start_kwargs.append(kwargs)
+        self.closed.pop(id, None)
         self.running.add(id)
 
 

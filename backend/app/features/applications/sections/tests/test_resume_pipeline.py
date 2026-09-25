@@ -211,6 +211,15 @@ async def test_resume_starts_pipeline_when_no_run(
         )
     ).scalar_one()
     assert parties == 1
+    imported: Any = (
+        await db_session.execute(
+            select(ActivityEvent.payload).where(
+                ActivityEvent.application_id == application.id,
+                ActivityEvent.type == "pipeline.imported",
+            )
+        )
+    ).scalar_one()
+    assert isinstance(imported, dict) and imported["skipped"] is True
     await db_session.refresh(application)
     assert application.occupancy is not None
     assert application.occupancy.value == "investment"
