@@ -67,3 +67,15 @@ Single agent, sequential — every task depends on the previous one (compose fil
 - [x] T4
 - [x] T5
 - [x] T6
+
+## CI clean-up pass (deferred, 2026-09-25) — decisions
+
+Scope: `docs/backlog/CQ-006-ci/spec.md`'s G3 gate (`docs/backlog/phase-p0-p1-merge-plan.md`) asked for CQ-003 review finding #2 to be fixed once Phase 1 was otherwise complete: the artificial `temporal-ui` → `minio-init` `depends_on` edge added as a `--wait` workaround (plan.md Decision #9 above).
+
+| # | Type | Item | Resolution |
+| --- | --- | --- | --- |
+| 12 | Decision | Remove the artificial `depends_on` edge | Deleted `temporal-ui`'s `depends_on: minio-init: condition: service_completed_successfully` (and its explanatory comment) from `infra/docker-compose.yml`. `temporal-ui` now only depends on `temporal: condition: service_started`, its real dependency. |
+| 13 | Decision | Keep `make up` reliable without that edge | `minio-init` is no longer part of any `--wait` polling: `make up` now runs `docker compose up -d --wait postgres valkey minio mailpit temporal temporal-ui` (the six long-running services, named explicitly) and then `docker compose run --rm minio-init` as a separate, synchronous step once those six are confirmed healthy. `run --rm` still honors `minio-init`'s own `depends_on: minio: condition: service_healthy`, and `mc mb --ignore-existing` keeps the bucket step idempotent across repeated `make up` calls. |
+| 14 | Decision | Verification without a cold start | Per the orchestrator's brief, the shared `clear-quote` stack was never stopped (no `make down`, no volume removal) to test this. Verified instead against the already-running stack: `make up` twice in a row (first call recreated only `postgres`, unrelated to this change — see post-dev.md; second call was a true no-op, ~2s, nothing recreated), confirmed all 6 services healthy, `clear-quote`/`clearquote-demo-docs` buckets both present via `mc ls`, and `cq_dev`/`cq_test`/`temporal` databases intact throughout. |
+
+See `post-dev.md`'s "CI clean-up pass" section for the exact commands and output.

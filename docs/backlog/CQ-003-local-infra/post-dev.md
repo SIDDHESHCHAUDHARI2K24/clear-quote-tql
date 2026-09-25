@@ -90,4 +90,33 @@ Fresh-subagent review (did not write this code). All acceptance criteria re-veri
 ## Follow-ups
 
 - CQ-004's backend config/env loading should be checked against `.env.example` once written — no changes were needed to `.env.example` in this item, ports/vars already matched.
-- If a future Docker Compose upgrade changes `--wait`'s handling of one-shot containers, the `temporal-ui → minio-init` `depends_on` workaround (plan.md Decision #9) can likely be removed; re-test before removing.
+- If a future Docker Compose upgrade changes `--wait`'s handling of one-shot containers, the `temporal-ui → minio-init` `depends_on` workaround (plan.md Decision #9) can likely be removed; re-test before removing. **Done below — see "CI clean-up pass".**
+
+## CI clean-up pass (deferred, 2026-09-25)
+
+Review finding #2 (below) fixed per `docs/backlog/phase-p0-p1-merge-plan.md` gate G3, once Phase 1 was otherwise complete. Plan.md Decisions #12–14 above.
+
+### What changed
+
+- `infra/docker-compose.yml`: removed `temporal-ui`'s artificial `depends_on: minio-init: condition: service_completed_successfully` edge (and its comment). `temporal-ui` now only declares its real dependency, `temporal: condition: service_started`.
+- `Makefile`'s `up` target: `docker compose up -d --wait postgres valkey minio mailpit temporal temporal-ui` (the six long-running services named explicitly, `minio-init` excluded) followed by `docker compose run --rm minio-init`. `down`/`logs` untouched.
+
+### Evidence — `make up` against the already-running shared stack
+
+Per the orchestrator's brief, the stack was never stopped/torn down to test this (no `make down`, no cold start). Verified twice against the live shared stack instead, from the `cq-006-ci-cleanup` worktree:
+
+| Run | Command | Result |
+| --- | --- | --- |
+| 1st `make up` | `make up` (stack already running from earlier work) | Exit 0, ~7.5s. `postgres` showed `Recreate`/`Recreated` — **not caused by this diff**: `postgres`'s service definition is byte-identical to before this change (only `temporal-ui`'s `depends_on` was touched); the recreate reflects the `clear-quote` Compose project being shared, by fixed project name, across several parallel worktrees that each hold their own (occasionally slightly different) copy of `infra/docker-compose.yml` — whichever worktree's `up` runs last reconciles the container to its own file. The other 5 services stayed `Running`. `minio-init` ran via `docker compose run --rm`, printed `Added local successfully` / `Bucket created successfully local/clear-quote` / `bucket clear-quote ready`, and exited 0. |
+| 2nd `make up` (immediately after) | `make up` | Exit 0, ~2.1s, **no recreation** — all 6 services stayed `Running`/`Healthy` throughout, confirming the new `up` target is idempotent once every worktree's compose file agrees. `minio-init` ran again via `run --rm`, same success output (bucket already existed, `mc mb --ignore-existing` is a no-op). |
+| Health check | `docker compose -f infra/docker-compose.yml ps` | All 6 long-running services `Up`/`healthy`. |
+| UI reachability | `curl -sf -o /dev/null -w '%{http_code}' http://localhost:8025` / `:8080` | `200` / `200` |
+| Data survived the `postgres` recreate | `docker compose exec postgres psql -U cq -d cq_dev -c '\l'` | Lists `cq_dev`, `cq_test`, `temporal`, `temporal_visibility` (+ two extra DBs from other worktrees' work, `cq_dev_p2`/`cq_test_cq011`/`cq_test_p2` — all on the same named `postgres_data` volume, none touched) |
+| Bucket check (independent of `minio-init`'s own logs, since `run --rm` removes its container) | `docker run --rm --network clear-quote_default --entrypoint sh minio/mc:latest -c "mc alias set local http://minio:9000 cq-minio cq-minio-secret >/dev/null && mc ls local/"` | Lists both `clear-quote/` and `clearquote-demo-docs/` (the latter from CQ-010's seed docs) |
+| Volumes untouched | `docker volume ls \| grep clear-quote` | `clear-quote_postgres_data`, `clear-quote_minio_data` — both present throughout, never removed |
+
+No `make down` was run at any point in this pass; the shared stack was left running, healthy, for other parallel agents.
+
+### Note for future cross-worktree work
+
+The `postgres` recreate observed above (and already present before this pass started — the container was already at "41 minutes" old on first inspection, versus "3 hours" for its siblings) is a pre-existing consequence of multiple worktrees sharing one fixed Compose project name (`clear-quote`) with independently-edited copies of `infra/docker-compose.yml`. It does not lose data (named volumes persist across container recreation) but is worth knowing about if a shared service unexpectedly restarts during parallel Phase 1/2 work — not a regression introduced by this clean-up pass, and out of scope to "fix" here (it would require every worktree's compose file to be byte-identical, which isn't this item's concern).

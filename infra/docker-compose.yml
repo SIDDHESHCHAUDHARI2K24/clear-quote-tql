@@ -100,15 +100,6 @@ services:
     depends_on:
       temporal:
         condition: service_started
-      # `docker compose up --wait` only recognizes a one-shot, exit(0)
-      # container (minio-init) as reaching its expected terminal state when
-      # some other service declares this exact depends_on condition on it;
-      # otherwise --wait treats any non-running container as a failure
-      # regardless of exit code (verified empirically against this Docker
-      # Compose version). temporal-ui has no functional need for the
-      # bucket; this edge exists purely so `make up` succeeds.
-      minio-init:
-        condition: service_completed_successfully
 
 volumes:
   postgres_data:
