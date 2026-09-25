@@ -7,7 +7,29 @@ from app.features.system import service
 from app.features.system.schemas import CheckResult
 
 
-async def test_health_ok(client: AsyncClient) -> None:
+def _passing_check(name: str) -> object:
+    """Builds a fake `check_*` replacement that always reports "ok".
+
+    Per CQ-004's spec.md: in CI only Postgres runs as a real service
+    container, so Valkey/MinIO/Temporal are exercised by monkeypatching
+    their clients rather than requiring three more service containers.
+    """
+
+    async def _check(*_args: object, **_kwargs: object) -> CheckResult:
+        return CheckResult(name=name, status="ok")
+
+    return _check
+
+
+def _patch_non_db_checks_ok(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(service, "check_valkey", _passing_check("valkey"))
+    monkeypatch.setattr(service, "check_minio", _passing_check("minio"))
+    monkeypatch.setattr(service, "check_temporal", _passing_check("temporal"))
+
+
+async def test_health_ok(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_non_db_checks_ok(monkeypatch)
+
     response = await client.get("/health")
 
     assert response.status_code == 200
@@ -24,6 +46,8 @@ async def test_health_ok(client: AsyncClient) -> None:
 
 
 async def test_health_degraded(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_non_db_checks_ok(monkeypatch)
+
     async def _failing_valkey_check(valkey_url: str) -> CheckResult:
         return CheckResult(name="valkey", status="error: connection refused")
 
