@@ -50,13 +50,10 @@ async def test_client_detail_marcus_hale(
         .all()
     )
     assert quotes, "Marcus Hale's persona must price cleanly for this fixture to be meaningful"
-    quote_ids = [q.id for q in quotes]
 
     await apply_send_fixture(
         db_session,
         application_id=application.id,
-        quote_ids=quote_ids,
-        recommended_quote_id=quote_ids[0],
         sent_days_ago=2,
         viewed_days_ago=1,
         borrower_action=None,

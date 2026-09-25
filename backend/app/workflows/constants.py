@@ -24,6 +24,13 @@ def application_workflow_id(application_id: str) -> str:
     return f"application-{application_id}"
 
 
+def send_workflow_id(package_id: str, attempt: str) -> str:
+    """CQ-020 (plan.md Decision 9): one `SendQuotePackageWorkflow` run per
+    `POST /packages/{id}/send`; `attempt` is a fresh uuid minted under the
+    package lock. The id is every send activity's idempotency key."""
+    return f"send-package-{package_id}-{attempt}"
+
+
 class PipelineStage(enum.StrEnum):
     """CQ-016 (phase-p3-p4-plan.md D7): the six running-stage names an
     `ApplicationPipelineWorkflow` activity writes to `applications.

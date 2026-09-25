@@ -65,7 +65,7 @@ test("AC2: Priya Nair (primary) opens on Pricing with no PPP field", async ({ pa
   await page.goto(`/applications/${applicationId}`);
   await page.waitForURL(`**/applications/${applicationId}/pricing`);
 
-  await expect(page.getByText("Priya Nair")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Priya Nair" })).toBeVisible();
   await expect(page.getByRole("tab", { name: /pricing/i })).toHaveAttribute(
     "aria-selected",
     "true",
@@ -82,9 +82,9 @@ test("AC8: the header stays visible while scrolling, at 1280px and 1440px", asyn
 
   for (const width of [1280, 1440]) {
     await page.setViewportSize({ width, height: 800 });
-    await expect(page.getByText("Priya Nair")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Priya Nair" })).toBeVisible();
     await page.mouse.wheel(0, 600);
-    await expect(page.getByText("Priya Nair")).toBeInViewport();
+    await expect(page.getByRole("heading", { name: "Priya Nair" })).toBeInViewport();
     await page.screenshot({ path: path.join(EVIDENCE_DIR, `header-${width}.png`) });
   }
 });
@@ -140,7 +140,7 @@ test("AC5: an LO requesting another LO's application gets the not-found page; a 
   await staffLogin(page, MANAGER_EMAIL, staffPassword!);
   await page.goto(`/applications/${applicationId}`);
   await page.waitForURL(`**/applications/${applicationId}/housing`);
-  await expect(page.getByText("Ben Ford")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ben Ford" })).toBeVisible();
 });
 
 test("AC7: the pipeline banner shows the running stage while the workflow is active", async ({

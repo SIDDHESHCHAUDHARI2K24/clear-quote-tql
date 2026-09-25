@@ -1,0 +1,71 @@
+{
+  "application_id": "f59c4370-0317-430b-b4bf-e0dc004af259",
+  "package_id": "21e0f9e4-b682-48d7-b868-ebb541ec93b7",
+  "readiness": {
+    "ready": true,
+    "blockers": []
+  },
+  "summary_before": "priced",
+  "send_response": {
+    "code": 202,
+    "body": {
+      "package_id": "21e0f9e4-b682-48d7-b868-ebb541ec93b7",
+      "workflow_id": "send-package-21e0f9e4-b682-48d7-b868-ebb541ec93b7-bcae9bb27e6748e49ef89000464cc05f",
+      "status": "queued"
+    }
+  },
+  "send_status_sequence": [
+    "queued",
+    "rendering",
+    "emailing",
+    "done"
+  ],
+  "send_status_final": {
+    "package_id": "21e0f9e4-b682-48d7-b868-ebb541ec93b7",
+    "workflow_id": "send-package-21e0f9e4-b682-48d7-b868-ebb541ec93b7-bcae9bb27e6748e49ef89000464cc05f",
+    "status": "done",
+    "error": null,
+    "version": 1,
+    "recipient_email": "marcus.hale@clearquote-demo.test",
+    "sent_at": "2026-09-25T22:41:01.786233Z"
+  },
+  "versions": [
+    {
+      "id": "fc54a268-83c6-4599-bd98-47b1cedef3c7",
+      "version": 1,
+      "sent_at": "2026-09-25T22:41:01.786233Z",
+      "expires_at": "2026-10-16T22:41:01.786233Z",
+      "superseded": false,
+      "viewed_at": null,
+      "report_url": "http://localhost:3200/report/xggm7yqgax-16A9ZhkQ27S7Ga8sz0zYp_66lfcD1VSo",
+      "letter_url": "/api/v1/packages/21e0f9e4-b682-48d7-b868-ebb541ec93b7/letter.pdf?version=1",
+      "outbox_email_id": "9fdb74d5-30f7-485f-a9f3-8b8e95c68981",
+      "email_status": "sent",
+      "recipient_email": "marcus.hale@clearquote-demo.test"
+    }
+  ],
+  "summary_after": "sent",
+  "email": {
+    "subject": "Your pre-approval and numbers from Total Quality Lending",
+    "to": [
+      "marcus.hale@clearquote-demo.test"
+    ],
+    "attachments": [
+      [
+        "preapproval-letter.pdf",
+        "application/pdf",
+        37181
+      ]
+    ],
+    "report_link": "http://localhost:3200/report/xggm7yqgax-16A9ZhkQ27S7Ga8sz0zYp_66lfcD1VSo",
+    "mailpit_id": "4gu9zVTDRCKaKZZO9Cb8C7"
+  },
+  "report_token": "xggm7yqgax-16A9ZhkQ27S7Ga8sz0zYp_66lfcD1VSo",
+  "cq019_ac2": {
+    "preview_status": 200,
+    "portal_status": 200,
+    "byte_identical": false,
+    "json_equal": false,
+    "differing_top_keys": []
+  }
+}

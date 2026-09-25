@@ -15,6 +15,10 @@ export interface PercentInputProps {
   invalid?: boolean;
   sourceBadge?: SourceBadgeProps;
   "aria-label": string;
+  // Optional passthrough to the native input's blur event (CQ-017: commits
+  // an inline-edited enriched field's override on blur, rather than on
+  // every keystroke).
+  onBlur?: () => void;
 }
 
 const DECIMAL_INPUT_PATTERN = /^\d*\.?\d*$/;
@@ -27,6 +31,7 @@ export function PercentInput({
   invalid = false,
   sourceBadge,
   "aria-label": ariaLabel,
+  onBlur,
 }: PercentInputProps) {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
@@ -51,6 +56,7 @@ export function PercentInput({
         className="num flex-1 bg-transparent py-2 text-navy-900 outline-none"
         value={value}
         onChange={handleChange}
+        onBlur={onBlur}
         disabled={disabled}
         aria-invalid={invalid || undefined}
         aria-label={ariaLabel}

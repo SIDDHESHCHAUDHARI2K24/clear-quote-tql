@@ -69,6 +69,8 @@ from app.workflows.activities import (
 )
 from app.workflows.application_pipeline import ApplicationPipelineWorkflow
 from app.workflows.constants import APPLICATION_PIPELINE_TASK_QUEUE
+from app.workflows.send_activities import SEND_ACTIVITIES
+from app.workflows.send_quote_package import SendQuotePackageWorkflow
 from app.workflows.stale_quote_check import (
     StaleQuoteCheckWorkflow,
     mark_stale_activity,
@@ -102,8 +104,15 @@ ACTIVITIES: list[Callable[..., Any]] = [
     load_application_source,
     resolve_clock_now,
     mark_stale_activity,
+    # CQ-020: SendQuotePackageWorkflow shares the same task queue (one
+    # worker process per slot, `make worker`).
+    *SEND_ACTIVITIES,
 ]
-WORKFLOWS: list[type] = [ApplicationPipelineWorkflow, StaleQuoteCheckWorkflow]
+WORKFLOWS: list[type] = [
+    ApplicationPipelineWorkflow,
+    StaleQuoteCheckWorkflow,
+    SendQuotePackageWorkflow,
+]
 
 
 def build_worker(client: Client) -> Worker:
@@ -122,6 +131,11 @@ def build_worker(client: Client) -> Worker:
         len(CONTRACT_ACTIVITIES),
         ", ".join(fn.__name__ for fn in CONTRACT_ACTIVITIES),
         APPLICATION_PIPELINE_TASK_QUEUE,
+    )
+    logger.info(
+        "Registered SendQuotePackageWorkflow and %d activities (%s)",
+        len(SEND_ACTIVITIES),
+        ", ".join(fn.__name__ for fn in SEND_ACTIVITIES),
     )
     return worker
 

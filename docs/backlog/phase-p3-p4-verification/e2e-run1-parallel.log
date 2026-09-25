@@ -1,0 +1,137 @@
+Froze quote_package_versions.id=6fee2611-79a0-4cad-ab58-fa57cf2f7595 for kathleen.mcreynolds@clearquote-demo.test
+report_token=dRVgsccvhoz6SJDxhvKwNjpS-3vP2NrepltPDYfEvp8
+/report/dRVgsccvhoz6SJDxhvKwNjpS-3vP2NrepltPDYfEvp8
+
+Running 51 tests using 5 workers
+
+
+  ✓   3 [lo-console] › e2e/lo-console/report-gallery.spec.ts:11:5 › gallery renders with no console errors or page errors (1.1s)
+
+  ✓   2 [lo-console] › e2e/lo-console/report-gallery.spec.ts:26:5 › no critical or serious accessibility violations on the gallery page (1.7s)
+
+  ✓   5 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:24:5 › AC4: Priya Nair (primary) shows no investment block and no PPP (3.5s)
+
+  ✓   4 [lo-console] › e2e/lo-console/quote-builder.spec.ts:38:5 › AC1: Marcus Hale shows 4 quotes in 2 groups with no user action (3.8s)
+
+  ✓   7 [lo-console] › e2e/lo-console/send-tab-draft.spec.ts:97:5 › AC1 + AC7: Marcus Hale's default draft, report preview and sandboxed letter (3.0s)
+
+  ✓   8 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:35:5 › AC4: Daniel Ortiz (primary) at 5% down shows an MI line (1.7s)
+
+  ✓   9 [lo-console] › e2e/lo-console/quote-builder.spec.ts:50:5 › AC5: starring a quote recommends it and the header note rate follows (1.6s)
+
+  ✓   6 [lo-console] › e2e/lo-console/reprice-after-override.spec.ts:20:5 › AC8: Re-price after an override clears the banner and updates priced_at on every quote (4.7s)
+  ✓  13 [lo-console] › e2e/lo-console/smoke.spec.ts:3:5 › login page renders (380ms)
+  ✓  11 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:54:5 › AC4/AC5: Marcus Hale shows the STR block only, DSCR amber (1.5s)
+
+  ✓  10 [lo-console] › e2e/lo-console/send-tab-draft.spec.ts:127:5 › AC5: Grace Kim and Aisha Coleman are blocked; Send is disabled (2.2s)
+  ✓  14 [lo-console] › e2e/lo-console/staff-login.spec.ts:20:5 › staff can sign in with email + password + emailed OTP (676ms)
+
+  ✓  15 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:65:5 › AC4: Kathleen McReynolds shows the LTR block only (1.2s)
+
+  ✓  17 [lo-console] › e2e/lo-console/workspace.spec.ts:33:5 › AC4: Aisha Coleman (missing occupancy) opens on her first flagged tab with a red badge (1.8s)
+
+  ✓  12 [lo-console] › e2e/lo-console/quote-builder.spec.ts:73:5 › AC3: editing to 25% down and Save & AutoQuote replaces that scenario's par and buydown (4.2s)
+
+  ✓  19 [lo-console] › e2e/lo-console/workspace.spec.ts:49:5 › AC4: Ben Ford's Housing tab shows a red badge and is the default tab (1.7s)
+
+  ✓  18 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:74:5 › AC3: overriding property tax shows LO override, recomputes the total and marks quotes stale (3.4s)
+
+  ✓  21 [lo-console] › e2e/lo-console/workspace.spec.ts:61:5 › AC2: Priya Nair (primary) opens on Pricing with no PPP field (1.1s)
+
+  ✓  20 [lo-console] › e2e/lo-console/quote-builder.spec.ts:110:5 › AC4: Choose manually lists >= 8 products; a pick becomes a card; delete removes it (2.7s)
+
+  ✓  22 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:98:5 › PR review round (fresh stage-6): tabbing through every field with no edits leaves badges and staleness unchanged (1.4s)
+
+  ✓  23 [lo-console] › e2e/lo-console/workspace.spec.ts:77:5 › AC8: the header stays visible while scrolling, at 1280px and 1440px (1.3s)
+
+  ✓  24 [lo-console] › e2e/lo-console/quote-builder.spec.ts:138:5 › AC6: Aisha Coleman's Save & AutoQuote shows 'Cannot price: missing Occupancy' and creates nothing (1.4s)
+
+  ✓  25 [lo-console] › e2e/lo-console/pricing-panel.spec.ts:148:5 › AC8: react-doctor accessibility -- axe finds no violations on the pricing panel (1.5s)
+  ✓  26 [lo-console] › e2e/lo-console/workspace.spec.ts:92:5 › AC6: withdrawing an application sets status Withdrawn and hides the actions menu (1.4s)
+
+  ✓  27 [lo-console] › e2e/lo-console/quote-builder.spec.ts:163:5 › AC7: Priya Nair's primary cards carry no DSCR text; Daniel Ortiz's second group removes MI (1.7s)
+
+  ✓  16 [lo-console] › e2e/lo-console/send-tab-draft.spec.ts:148:5 › AC3 + AC4: letter previews for Kathleen (TBD) and Sam Reed (LLC) (9.1s)
+
+  ✘  28 [lo-console] › e2e/lo-console/workspace.spec.ts:109:5 › AC5: an LO requesting another LO's application gets the not-found page; a Manager can open it (2.3s)
+  -  32 [lo-console] › e2e/lo-console/workspace.spec.ts:127:5 › AC7: the pipeline banner shows the running stage while the workflow is active
+  ✓  30 [lo-console] › e2e/lo-console/quote-builder.spec.ts:179:5 › Compare: two cards side by side with the borrower table's rows (1.5s)
+  ✓  31 [lo-console] › e2e/lo-console/send-tab-draft.spec.ts:176:5 › AC6: removing a quote, changing the recommendation and the note persist after reload (2.0s)
+  ✓  29 [borrower-portal] › e2e/borrower-portal/move-forward.spec.ts:64:5 › move forward on the Buydown option sets the confirmed state; a second attempt is a no-op (4.7s)
+  ✓  34 [borrower-portal] › e2e/borrower-portal/report-expired-actions.spec.ts:26:5 › expired report: only 'Ask for updated numbers' is shown, and it works (1.9s)
+  ✓  35 [borrower-portal] › e2e/borrower-portal/report-expired.spec.ts:21:5 › Grace Kim's report shows the expired banner and hides the action buttons (552ms)
+  ✓  36 [borrower-portal] › e2e/borrower-portal/report-gallery.spec.ts:11:5 › gallery renders with no console errors or page errors (820ms)
+  ✓  38 [borrower-portal] › e2e/borrower-portal/report-gallery.spec.ts:57:5 › AC3: Kathleen McReynolds shows the TBD label and LTR, never STR (494ms)
+  ✓  37 [borrower-portal] › e2e/borrower-portal/report-gallery.spec.ts:26:5 › AC2: Priya Nair (primary) renders exactly 3 hero tiles and no investment content (710ms)
+  ✓  39 [borrower-portal] › e2e/borrower-portal/report-gallery.spec.ts:70:5 › AC4: switching options updates the hero numbers to the selected option's own values (555ms)
+  ✓  33 [borrower-portal] › e2e/borrower-portal/move-forward.spec.ts:98:5 › ask about another option requires a message, then sets Inquiry and is still visible afterward (3.9s)
+  ✓  42 [borrower-portal] › e2e/borrower-portal/report-matches.spec.ts:31:5 › shows exactly 3 property matches with the section title and subtitle (AC1) (444ms)
+  ✓  40 [borrower-portal] › e2e/borrower-portal/report-gallery.spec.ts:85:5 › no critical or serious accessibility violations on the gallery page (1.1s)
+  ✓  44 [borrower-portal] › e2e/borrower-portal/report-mobile.spec.ts:22:5 › no horizontal scroll and the 4 investment hero tiles stack 2x2 at 375px (429ms)
+  ✓  41 [borrower-portal] › e2e/borrower-portal/report-login-redirect.spec.ts:25:5 › a signed-out visit redirects to /login?next=..., and OTP success returns to the report (1.4s)
+  ✓  43 [borrower-portal] › e2e/borrower-portal/report-matches.spec.ts:46:5 › one column at 375px, three columns at 1120px (AC8) (827ms)
+  ✓  48 [borrower-portal] › e2e/borrower-portal/smoke.spec.ts:3:5 › login page renders (387ms)
+  ✓  45 [borrower-portal] › e2e/borrower-portal/report-option-switch.spec.ts:23:5 › selecting Buydown updates hero numbers, sets ?option=, persists on reload, and shows the alternative-view note (942ms)
+  ✓  46 [borrower-portal] › e2e/borrower-portal/report-print.spec.ts:25:5 › print preview contains the hero numbers and both expanded sections, with no switcher or action buttons (655ms)
+  ✓  47 [borrower-portal] › e2e/borrower-portal/report-login-redirect.spec.ts:50:5 › an unsafe next value never navigates off-site (open-redirect guard) (800ms)
+
+  ✓  49 [cross-app] › e2e/borrower-action-reflects-in-console.spec.ts:70:5 › borrower moves forward; the LO console header shows Option selected after its next load (3.6s)
+  ✓  50 [cross-app] › e2e/p3-milestone-send-to-report.spec.ts:47:5 › P3: send Marcus Hale's package, open the emailed link, sign in, land on his report (6.4s)
+
+  ✘   1 [lo-console] › e2e/lo-console/pricing-latency.spec.ts:20:5 › AC7: p95 keystroke-to-updated-breakdown latency is under 600ms (30.0s)
+  ✓  51 [cross-app] › e2e/p3-milestone-send-to-report.spec.ts:117:5 › LO send flow: progress, toast, Sent pill, Sent versions with a PDF; a re-send supersedes (4.8s)
+
+
+  1) [lo-console] › e2e/lo-console/pricing-latency.spec.ts:20:5 › AC7: p95 keystroke-to-updated-breakdown latency is under 600ms 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: page.waitForURL: Test timeout of 30000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation to "/" until "load"
+    ============================================================
+
+       at helpers/staffLogin.ts:29
+
+      27 |
+      28 |   // `AuthFlow.onSuccess` does `router.replace("/")` on a verified OTP.
+    > 29 |   await page.waitForURL("/");
+         |              ^
+      30 | }
+      31 |
+        at staffLogin (/Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/e2e/helpers/staffLogin.ts:29:14)
+        at /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/e2e/lo-console/pricing-latency.spec.ts:22:3
+
+    Error Context: test-results/pricing-latency-AC7-p95-ke-48ea0-down-latency-is-under-600ms-lo-console/error-context.md
+
+  2) [lo-console] › e2e/lo-console/workspace.spec.ts:109:5 › AC5: an LO requesting another LO's application gets the not-found page; a Manager can open it 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Ben Ford')
+    Expected: visible
+    Error: strict mode violation: getByText('Ben Ford') resolved to 2 elements:
+        1) <h1 class="text-lg font-semibold text-navy-900">Ben Ford</h1> aka getByRole('heading', { name: 'Ben Ford' })
+        2) <div role="alert" aria-live="assertive" id="__next-route-announcer__">Ben Ford</div> aka locator('[id="__next-route-announcer__"]')
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText('Ben Ford')
+
+
+      122 |   await page.goto(`/applications/${applicationId}`);
+      123 |   await page.waitForURL(`**/applications/${applicationId}/housing`);
+    > 124 |   await expect(page.getByText("Ben Ford")).toBeVisible();
+          |                                            ^
+      125 | });
+      126 |
+      127 | test("AC7: the pipeline banner shows the running stage while the workflow is active", async ({
+        at /Users/siddheshc2001gmail.com/Coding Projects/Total Quality Lending/.claude/worktrees/agent-a13174f62a83ca787/e2e/lo-console/workspace.spec.ts:124:44
+
+    Error Context: test-results/workspace-AC5-an-LO-reques-8b676--page-a-Manager-can-open-it-lo-console/error-context.md
+
+  2 failed
+    [lo-console] › e2e/lo-console/pricing-latency.spec.ts:20:5 › AC7: p95 keystroke-to-updated-breakdown latency is under 600ms 
+    [lo-console] › e2e/lo-console/workspace.spec.ts:109:5 › AC5: an LO requesting another LO's application gets the not-found page; a Manager can open it 
+  1 did not run
+  48 passed (45.7s)

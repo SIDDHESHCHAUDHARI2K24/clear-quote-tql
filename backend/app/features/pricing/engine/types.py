@@ -131,6 +131,12 @@ class QuoteComputation(BaseModel):
     consumers building a cash-to-close breakdown (e.g. CQ-021's report
     builder) never have to reconstruct it via `purchase_price - loan_amount`
     themselves."""
+    down_payment_pct: Decimal
+    """The `ScenarioInputs.down_payment_pct` this computation used, echoed
+    back as engine output (CQ-017) so a consumer that resolved this value
+    from a `down_payment_amount` (`down_payment_pct_from_amount`, e.g. the
+    pricing panel's linked %/$ input) reads both sides of the link from one
+    response, never re-deriving either from the other itself."""
     # 0-1 fraction (e.g. 0.95 for 95% LTV), like every other *_pct field on
     # ScenarioInputs/ConfigSnapshot -- not a 0-100 percentage number.
     ltv_pct: Decimal
