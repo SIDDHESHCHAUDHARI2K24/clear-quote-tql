@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { REPORT_FIXTURES } from "@cq/ui";
@@ -6,30 +6,20 @@ import { REPORT_FIXTURES } from "@cq/ui";
 import { ReportMatchesSlot } from "./ReportMatchesSlot";
 
 const marcusHale = REPORT_FIXTURES.find((f) => f.key === "marcus_hale")!.viewModel;
+const kathleen = REPORT_FIXTURES.find((f) => f.key === "kathleen_mcreynolds")!.viewModel;
 
 describe("ReportMatchesSlot", () => {
-  it("renders nothing while matches is empty (CQ-021 fixtures always are, until CQ-023)", () => {
+  it("renders nothing while matches is empty (CQ-023 AC3/AC4)", () => {
     expect(marcusHale.matches).toHaveLength(0);
     const { container } = render(<ReportMatchesSlot viewModel={marcusHale} />);
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("renders nothing (its own placeholder) even if matches is non-empty, pending CQ-023", () => {
-    const withMatches = {
-      ...marcusHale,
-      matches: [
-        {
-          matched_property_id: "p1",
-          property_image_url: "https://example.test/p1.jpg",
-          property_address: "123 Main St",
-          bed_bath_sqft: "3bd / 2ba / 1500sqft",
-          deal_grade_badge: "Great deal",
-          property_tagline: "Strong STR comps nearby",
-          price: "300000.00",
-        },
-      ],
-    };
-    const { container } = render(<ReportMatchesSlot viewModel={withMatches} />);
-    expect(container).toBeEmptyDOMElement();
+  it("renders the match list when matches is non-empty (Kathleen McReynolds fixture)", () => {
+    expect(kathleen.matches.length).toBeGreaterThan(0);
+    render(<ReportMatchesSlot viewModel={kathleen} />);
+
+    expect(screen.getByText("Your top 3 property matches")).toBeInTheDocument();
+    expect(screen.getAllByTestId("match-card")).toHaveLength(kathleen.matches.length);
   });
 });
