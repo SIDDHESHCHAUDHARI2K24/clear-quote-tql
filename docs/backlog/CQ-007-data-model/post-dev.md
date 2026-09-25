@@ -39,8 +39,29 @@ Built the full Postgres schema (30 tables across 23 feature/integration `models.
 
 ## Review findings (stage 6)
 
-| Severity | Finding | Resolution |
-| --- | --- | --- |
+Fresh-subagent review (did not write this code). Findings below; commands re-run independently follow.
+
+| # | severity | file:line | finding | suggested fix |
+| --- | --- | --- | --- | --- |
+| 1 | critical | `backend/conftest.py` (test_engine fixture) / `backend/tests/test_db_isolation.py:18-22` | `test_engine` now runs `alembic upgrade head` instead of CQ-004's `Base.metadata.create_all()`, but `test_db_isolation.py` declares an ad-hoc `Base`-registered table (`_isolation_probe_cq004`) that no migration creates. On a genuinely fresh `cq_test` (fresh Postgres, CI, `make demo-reset`, new clone) this table never exists, so all 3 tests in that file fail with `relation "_isolation_probe_cq004" does not exist`. Verified: the local `cq_test` had this table lingering from before this branch's conftest change (stale state from CQ-004's `create_all`); after dropping it and re-running `uv run pytest backend`, exactly those 3 tests failed (40 passed / 3 failed), reproducing the error. Post-dev.md's "43 passed" is only true because of that stale leftover table, not because the suite passes clean — this branch never actually had CI run on it to catch it (see finding 3). | Rewrite `test_db_isolation.py` to exercise isolation against a real migrated table (e.g. insert/read a `settings` row) instead of an ad-hoc `Base`-declared table not covered by any migration; or have the `test_engine` fixture also run `Base.metadata.create_all(checkfirst=True)` for any tables the migrations don't own. |
+| 2 | major | `backend/app/features/settings/models.py:28-29` (`Setting.updated_by`), `backend/app/features/quotes/send/models.py:27-29` (`QuotePackage.recommended_quote_id`), `backend/app/features/applications/assets/models.py:42-44` (`Employment.party_id`), `backend/app/features/applications/verification/models.py:31-33` (`FieldValue.overridden_by`) | AGENTS/spec convention "Every FK column is indexed" (spec.md "Conventions (all tables)") and the item's Scope ("indexes on every FK and filterable column") are not met for these 4 FK columns — none has `index=True`, and `alembic/versions/4864c0fa0754_initial_schema.py` creates no index for any of them (confirmed by reading the generated `create_table`/`create_index` calls). No test catches this (`test_schema.py` only checks table/enum presence, not indexes). Will hurt CQ-012's revert-to-source-by-user lookups and CQ-013/CQ-029's `quote_packages.recommended_quote_id` lookups as data grows. | Add `index=True` to the four columns listed, regenerate the migration (or hand-add the 4 `op.create_index(...)` calls), and re-run `alembic check`. |
+| 3 | minor | branch `cq-007-data-model` (diverged from `phase-p0-p1` at `f37c20f`, before CQ-006 merged `.github/workflows/ci.yml`) | `gh run list --repo SIDDHESHCHAUDHARI2K24/clear-quote-tql --branch cq-007-data-model` returns zero runs — this branch never had the CI workflow file in its history, so pushes to it never triggered GitHub Actions. AC1's "roadmap exit check" and the rest of post-dev.md's test log were therefore only ever verified locally, never by CI, which is how finding 1 went uncaught. | Rebase/merge `phase-p0-p1` into this branch (or merge this branch first) before relying on CI signal; re-run CI once the workflow file is present. |
+
+### Commands re-run independently (fresh reviewer)
+
+| Command | Result |
+| --- | --- |
+| `gh run list --repo SIDDHESHCHAUDHARI2K24/clear-quote-tql --branch cq-007-data-model` | Empty — no CI has ever run on this branch (see finding 3) |
+| `createdb -U cq cq_review` (scratch DB) + `DATABASE_URL=...cq_review uv run alembic upgrade head` | Pass — `initial_schema` then `seed_settings_defaults` apply cleanly |
+| `uv run alembic downgrade base && uv run alembic upgrade head` (on `cq_review`) | Pass — round-trips with no errors |
+| `uv run alembic check` (on `cq_review`) | Pass — "No new upgrade operations detected" (models/migration agree) |
+| `psql cq_review -c '\dt'` / `SELECT key, value FROM settings` | Pass — 31 tables (30 + `alembic_version`), all 16 documented settings keys/values present |
+| `uv run pytest backend` (against local `cq_test`, table left in place) | Pass — 43 passed |
+| `uv run pytest backend` (after dropping the stale `_isolation_probe_cq004` table to simulate a fresh `cq_test`) | **Fail** — 40 passed, 3 failed, all in `test_db_isolation.py` (see finding 1); table was recreated afterward to restore the shared stack for other agents |
+| `uv run ruff check backend` / `ruff format --check backend` / `mypy backend/app backend/conftest.py backend/tests backend/scripts` | Pass |
+| `make lint` | Pass (backend + both frontend apps + packages) |
+| `make test` | Pass as reported (same caveat as the pytest row above — depends on the stale table) |
+| `git merge-tree --write-tree phase-p0-p1 HEAD` | Pass — clean merge, no conflicts |
 
 ## How to test manually
 
