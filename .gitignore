@@ -28,3 +28,6 @@ coverage/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+# CQ-022: cached storageState from e2e/global-setup.ts (real session
+# cookies for local dev/CI, never committed).
+/e2e/.auth/

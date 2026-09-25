@@ -20,7 +20,10 @@ describe("HeroNumbers", () => {
 
     const cashflowLabel = screen.getByText(/Estimated monthly cashflow \(STR\)/i);
     const cashflowTile = cashflowLabel.closest("div.rounded-lg")!;
-    const valueEl = cashflowTile.querySelector(".text-3xl")!;
+    // `.num` (not `.text-3xl`) -- CQ-022 AC7 shrinks the value text at the
+    // mobile breakpoint (`text-2xl sm:text-3xl`), so `.text-3xl` alone no
+    // longer matches; `.num` stays on the value element at every size.
+    const valueEl = cashflowTile.querySelector(".num.font-semibold")!;
     expect(valueEl.className).toContain("text-status-danger");
   });
 

@@ -19,11 +19,18 @@ function Tile({
   tone?: "danger";
 }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-4">
+    // CQ-022 AC7: at the 2x2 investment mobile layout (375px), 2 columns
+    // of `p-4`/`text-3xl` tiles don't leave enough room for the widest
+    // dollar figures ("$29,103" at text-3xl measured ~8px wider than the
+    // tile's available content width, verified against a live 375px
+    // render) -- `p-3`/`text-2xl` at the base breakpoint (restored to the
+    // original `p-4`/`text-3xl` from `sm:` up) fixes the overflow with no
+    // visible change above 640px.
+    <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-3 sm:p-4">
       <div className="text-sm font-medium text-neutral-600">{label}</div>
       <div
         className={cx(
-          "num mt-1 text-3xl font-semibold",
+          "num mt-1 text-2xl font-semibold sm:text-3xl",
           tone === "danger" ? "text-status-danger" : "text-navy-900",
         )}
       >
@@ -47,7 +54,16 @@ export function HeroNumbers({ option, strategy }: HeroNumbersProps) {
   return (
     <div
       data-testid="hero-numbers"
-      className={cx("grid gap-4", isPrimary ? "sm:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4")}
+      className={cx(
+        "grid gap-2 sm:gap-4",
+        // CQ-022 spec.md Responsive: "375 px mobile layout with hero tiles
+        // stacked 2x2 (investment) or 1x3 (primary)". Primary's implicit
+        // single-column base (no `grid-cols-*` until `sm:`) already yields
+        // 1x3 at mobile; investment needs an explicit 2-column base -- Tailwind's
+        // `grid` alone has no `grid-template-columns`, so without this it
+        // would render 1 tile per row (1x4), not 2x2.
+        isPrimary ? "sm:grid-cols-3" : "grid-cols-2 lg:grid-cols-4",
+      )}
     >
       <Tile label="Total monthly payment" value={formatMoney(option.hero.monthly_payment)} />
       <Tile label="Cash to close" value={formatMoney(option.hero.cash_to_close)} />

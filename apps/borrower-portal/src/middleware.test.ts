@@ -60,4 +60,21 @@ describe("middleware", () => {
 
     expect(response.headers.get("location")).toBeNull();
   });
+
+  it("redirects to /login?next=<path> for a protected path other than / (H2)", () => {
+    const response = middleware(requestFor("/report/abc123"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3020/login?next=%2Freport%2Fabc123",
+    );
+  });
+
+  it("carries the query string through into next", () => {
+    const response = middleware(requestFor("/report/abc123?option=xyz"));
+
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3020/login?next=%2Freport%2Fabc123%3Foption%3Dxyz",
+    );
+  });
 });

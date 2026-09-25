@@ -41,7 +41,7 @@ export function ComparisonTable({ options, strategy }: ComparisonTableProps) {
   const rows = ROWS.filter((row) => !row.investmentOnly || strategy !== "primary");
 
   return (
-    <table className="w-full border-collapse text-sm">
+    <table className="w-full border-collapse text-sm print:break-inside-avoid">
       <thead>
         <tr className="border-b border-neutral-200 text-left text-neutral-600">
           <th scope="col" className="px-3 py-2 font-medium">

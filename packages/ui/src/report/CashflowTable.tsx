@@ -38,7 +38,7 @@ export function CashflowTable({ cashflow }: CashflowTableProps) {
   );
 
   return (
-    <dl className="space-y-1.5 text-sm">
+    <dl className="space-y-1.5 text-sm print:break-inside-avoid">
       {rows.map((row) => (
         <div key={row.label} className="flex justify-between">
           <dt className="text-neutral-600">{row.label}</dt>

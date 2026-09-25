@@ -61,6 +61,49 @@ describe("AuthFlow", () => {
       expect(screen.getByText(/New here\?/)).toBeInTheDocument();
     });
 
+    it("returns to a safe `next` path on successful verify (CQ-022, H2)", async () => {
+      postMock
+        .mockResolvedValueOnce({ data: { challenge_id: "chal_123" }, error: undefined })
+        .mockResolvedValueOnce({ data: BORROWER_ME, error: undefined });
+      const user = userEvent.setup();
+
+      render(<AuthFlow mode="login" next="/report/abc123" />);
+
+      await user.type(screen.getByLabelText("Email"), "borrower@clearquote.test");
+      await user.type(screen.getByLabelText("Password"), "hunter22");
+      await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+      await user.type(await screen.findByLabelText("Verification code"), "123456");
+      await user.click(screen.getByRole("button", { name: "Verify" }));
+
+      await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/report/abc123"));
+    });
+
+    it("falls back to / for an unsafe `next` value (open-redirect guard)", async () => {
+      postMock
+        .mockResolvedValueOnce({ data: { challenge_id: "chal_123" }, error: undefined })
+        .mockResolvedValueOnce({ data: BORROWER_ME, error: undefined });
+      const user = userEvent.setup();
+
+      render(<AuthFlow mode="login" next="//evil.com" />);
+
+      await user.type(screen.getByLabelText("Email"), "borrower@clearquote.test");
+      await user.type(screen.getByLabelText("Password"), "hunter22");
+      await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+      await user.type(await screen.findByLabelText("Verification code"), "123456");
+      await user.click(screen.getByRole("button", { name: "Verify" }));
+
+      await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/"));
+    });
+
+    it("carries `next` through the 'Create an account' link", () => {
+      render(<AuthFlow mode="login" next="/report/abc123" />);
+
+      const link = screen.getByRole("link", { name: "Create an account" });
+      expect(link).toHaveAttribute("href", "/signup?next=%2Freport%2Fabc123");
+    });
+
     it("'Use a different email' returns to the login step", async () => {
       postMock.mockResolvedValueOnce({ data: { challenge_id: "chal_123" }, error: undefined });
       const user = userEvent.setup();
@@ -107,6 +150,19 @@ describe("AuthFlow", () => {
       const link = screen.getByRole("link", { name: "Sign in" });
       expect(link).toHaveAttribute("href", "/login");
       expect(screen.getByText(/Already have an account\?/)).toBeInTheDocument();
+    });
+
+    it("carries `next` through the 'Sign in' link", () => {
+      render(<AuthFlow mode="signup" next="/report/abc123" />);
+
+      const link = screen.getByRole("link", { name: "Sign in" });
+      expect(link).toHaveAttribute("href", "/login?next=%2Freport%2Fabc123");
+    });
+
+    it("prefills the email field from defaultEmail", () => {
+      render(<AuthFlow mode="signup" defaultEmail="casey@clearquote.test" />);
+
+      expect(screen.getByLabelText("Email")).toHaveValue("casey@clearquote.test");
     });
   });
 });
