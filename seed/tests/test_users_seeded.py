@@ -1,17 +1,22 @@
-"""AC4: exactly 2 LO, 1 Manager, 1 Admin, each with a bcrypt password_hash.
+"""AC4: exactly 2 LO, 1 Manager, 1 Admin, each with an argon2 password_hash.
 
 Review round 1, finding #3: no plaintext password lives in `seed/users.yaml`
 any more -- `seed_users` reads `SEED_STAFF_PASSWORD` from the environment
 (set for the whole test session by `seed/tests/conftest.py`).
+
+phase-p2 merge (X1): `seed_users` hashes with `app.core.security.hash_password`
+(argon2), the same primitive real staff login verifies against via
+`verify_password` -- not bcrypt, which `core.security.verify_password`
+always rejects.
 """
 
-import bcrypt
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.enums import UserRole
+from app.core.security import hash_password, verify_password
 from app.features.auth.models import User
 from seed.loader import MissingStaffPasswordError, load_users_fixture, seed_users
 
@@ -29,7 +34,7 @@ async def test_seed_users_creates_exactly_2_lo_1_manager_1_admin(db_session: Asy
     assert len(by_role.get(UserRole.ADMIN, [])) == 1
 
 
-async def test_seed_users_password_hashes_are_real_bcrypt_of_env_password(
+async def test_seed_users_password_hashes_are_real_argon2_of_env_password(
     db_session: AsyncSession,
 ) -> None:
     await seed_users(db_session)
@@ -43,8 +48,27 @@ async def test_seed_users_password_hashes_are_real_bcrypt_of_env_password(
     for user in users:
         assert user.email in fixture_emails
         assert user.password_hash != plaintext
-        assert user.password_hash.startswith("$2b$")
-        assert bcrypt.checkpw(plaintext.encode("utf-8"), user.password_hash.encode("ascii"))
+        assert user.password_hash.startswith("$argon2")
+        assert verify_password(user.password_hash, plaintext)
+
+
+async def test_seed_users_hashes_password_once(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Argon2 is deliberately CPU-expensive -- `seed_users` must hash the
+    shared demo password once, not once per fixture row."""
+    calls = 0
+
+    def _counting_hash_password(plain: str) -> str:
+        nonlocal calls
+        calls += 1
+        return hash_password(plain)
+
+    monkeypatch.setattr("seed.loader.hash_password", _counting_hash_password)
+
+    await seed_users(db_session)
+
+    assert calls == 1
 
 
 async def test_seed_users_fails_clearly_when_password_setting_unset(

@@ -5,10 +5,12 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_scoped_application
 from app.core.db import get_db
+from app.features.applications.models import Application
 from app.features.pricing.engine.quote_engine import compute_quote
 from app.features.pricing.engine.types import ConfigSnapshot
-from app.features.pricing.scenarios.deps import get_current_lo_stub
+from app.features.pricing.scenarios.deps import ensure_scenario_in_scope
 from app.features.pricing.scenarios.schemas import (
     AutoQuoteResponse,
     ManualQuoteCreateRequest,
@@ -43,7 +45,7 @@ async def post_scenario(
     application_id: uuid.UUID,
     request: ScenarioCreateRequest,
     db: AsyncSession = Depends(get_db),
-    lo_id: uuid.UUID = Depends(get_current_lo_stub),
+    _application: Application = Depends(get_scoped_application),
 ) -> ScenarioRead:
     scenario = await create_scenario(
         db,
@@ -67,7 +69,7 @@ async def post_scenario(
 async def get_products(
     scenario_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    lo_id: uuid.UUID = Depends(get_current_lo_stub),
+    _scope: None = Depends(ensure_scenario_in_scope),
 ) -> list[PricedProductRow]:
     products = await get_priced_products_for_scenario(db, scenario_id)
     return [PricedProductRow.model_validate(product.model_dump()) for product in products]
@@ -77,7 +79,7 @@ async def get_products(
 async def post_autoquote(
     scenario_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    lo_id: uuid.UUID = Depends(get_current_lo_stub),
+    _scope: None = Depends(ensure_scenario_in_scope),
 ) -> AutoQuoteResponse:
     par_quote, buydown_quote = await autoquote_scenario(db, scenario_id)
     return AutoQuoteResponse(
@@ -91,7 +93,7 @@ async def post_manual_quote(
     scenario_id: uuid.UUID,
     request: ManualQuoteCreateRequest,
     db: AsyncSession = Depends(get_db),
-    lo_id: uuid.UUID = Depends(get_current_lo_stub),
+    _scope: None = Depends(ensure_scenario_in_scope),
 ) -> QuoteRead:
     product = PricedProductDTO(**request.product.model_dump())
     quote = await create_manual_quote(db, scenario_id, product, request.label)

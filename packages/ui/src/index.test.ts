@@ -15,5 +15,13 @@ describe("@cq/ui barrel exports", () => {
     expect(typeof ui.Tabs).toBe("function");
     expect(ui.APPLICATION_STATUSES).toHaveLength(12);
     expect(ui.SOURCE_BADGE_SOURCES).toHaveLength(12);
+    expect(typeof ui.AuthCard).toBe("function");
+    expect(typeof ui.CredentialsForm).toBe("function");
+    expect(typeof ui.OtpForm).toBe("function");
+    expect(typeof ui.TextField).toBe("function");
+    expect(typeof ui.extractErrorMessage).toBe("function");
+    expect(typeof ui.useAsyncSubmit).toBe("function");
+    expect(typeof ui.isPublicPath).toBe("function");
+    expect(ui.STATIC_ASSET_PATTERN).toBeInstanceOf(RegExp);
   });
 });

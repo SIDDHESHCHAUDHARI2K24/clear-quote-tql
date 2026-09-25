@@ -162,6 +162,159 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/staff/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login */
+        post: operations["login_api_v1_auth_staff_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/staff/otp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Otp */
+        post: operations["verify_otp_api_v1_auth_staff_otp_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/staff/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout_api_v1_auth_staff_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/staff/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Me */
+        get: operations["get_me_api_v1_auth_staff_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/borrower/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Signup */
+        post: operations["signup_api_v1_auth_borrower_signup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/borrower/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login */
+        post: operations["login_api_v1_auth_borrower_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/borrower/otp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Otp */
+        post: operations["verify_otp_api_v1_auth_borrower_otp_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/borrower/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout_api_v1_auth_borrower_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/borrower/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Me */
+        get: operations["get_me_api_v1_auth_borrower_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -187,6 +340,47 @@ export interface components {
         AutoQuoteResponse: {
             par: components["schemas"]["QuoteRead"];
             buydown: components["schemas"]["QuoteRead"] | null;
+        };
+        /** BorrowerLoginRequest */
+        BorrowerLoginRequest: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** BorrowerMeOut */
+        BorrowerMeOut: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Email */
+            email: string;
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Full Name */
+            full_name: string;
+            /** First Name */
+            first_name: string;
+            latest_application: components["schemas"]["LatestApplicationOut"] | null;
+        };
+        /** BorrowerSignupRequest */
+        BorrowerSignupRequest: {
+            /** Full Name */
+            full_name: string;
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** ChallengeResponse */
+        ChallengeResponse: {
+            /** Challenge Id */
+            challenge_id: string;
         };
         /**
          * ConfigSnapshot
@@ -441,11 +635,28 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** LatestApplicationOut */
+        LatestApplicationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+        };
         /** ManualQuoteCreateRequest */
         ManualQuoteCreateRequest: {
             product: components["schemas"]["PricedProductRow-Input"];
             /** Label */
             label: string;
+        };
+        /** OtpVerifyRequest */
+        OtpVerifyRequest: {
+            /** Challenge Id */
+            challenge_id: string;
+            /** Code */
+            code: string;
         };
         /** PipelineResumeResponse */
         PipelineResumeResponse: {
@@ -706,6 +917,32 @@ export interface components {
             /** Quotes */
             quotes: components["schemas"]["QuoteRead"][];
         };
+        /** StaffLoginRequest */
+        StaffLoginRequest: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** StaffUserOut */
+        StaffUserOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            role: components["schemas"]["UserRole"];
+            /** Nmls */
+            nmls: string | null;
+            /** Title */
+            title: string | null;
+            /** Phone */
+            phone: string | null;
+        };
         /**
          * StrategyType
          * @description The engine's single occupancy/strategy field.
@@ -715,6 +952,11 @@ export interface components {
          * @enum {string}
          */
         StrategyType: "PRIMARY" | "LTR" | "STR";
+        /**
+         * UserRole
+         * @enum {string}
+         */
+        UserRole: "lo" | "manager" | "admin";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -744,7 +986,9 @@ export interface operations {
             path: {
                 application_id: string;
             };
-            cookie?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -775,7 +1019,9 @@ export interface operations {
             path: {
                 application_id: string;
             };
-            cookie?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -807,7 +1053,9 @@ export interface operations {
                 application_id: string;
                 field_key: string;
             };
-            cookie?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
         };
         requestBody: {
             content: {
@@ -843,7 +1091,9 @@ export interface operations {
                 application_id: string;
                 field_key: string;
             };
-            cookie?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -907,7 +1157,9 @@ export interface operations {
             path: {
                 application_id: string;
             };
-            cookie?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
         };
         requestBody: {
             content: {
@@ -942,7 +1194,9 @@ export interface operations {
             path: {
                 scenario_id: string;
             };
-            cookie?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -973,7 +1227,9 @@ export interface operations {
             path: {
                 scenario_id: string;
             };
-            cookie?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -1004,7 +1260,9 @@ export interface operations {
             path: {
                 scenario_id: string;
             };
-            cookie?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
         };
         requestBody: {
             content: {
@@ -1019,6 +1277,269 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_api_v1_auth_staff_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_otp_api_v1_auth_staff_otp_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OtpVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffUserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_v1_auth_staff_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_me_api_v1_auth_staff_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffUserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    signup_api_v1_auth_borrower_signup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BorrowerSignupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_api_v1_auth_borrower_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BorrowerLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_otp_api_v1_auth_borrower_otp_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OtpVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BorrowerMeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_v1_auth_borrower_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_me_api_v1_auth_borrower_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BorrowerMeOut"];
                 };
             };
             /** @description Validation Error */

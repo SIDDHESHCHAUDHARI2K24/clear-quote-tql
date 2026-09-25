@@ -42,10 +42,12 @@ from seed.config import load_seed_config  # noqa: E402
 from seed.generators.background_applications import seed_background_applications  # noqa: E402
 from seed.generators.documents import ensure_demo_docs_bucket, get_s3_client  # noqa: E402
 from seed.loader import (  # noqa: E402
+    BorrowerSeedResult,
     MissingStaffPasswordError,
     PersonaSeedResult,
     _staff_password,  # noqa: E402
     load_persona_fixtures,
+    seed_borrower_accounts,
     seed_persona,
     seed_providers,
     seed_users,
@@ -88,6 +90,10 @@ async def _seed_everything() -> dict[str, Any]:
             result = await seed_persona(db, persona, lo_id=lo_id, s3_client=s3_client)
             persona_results.append(result)
 
+        borrower_result = await seed_borrower_accounts(
+            db, client_ids=[r.client_id for r in persona_results]
+        )
+
         seed_config = load_seed_config()
         markets = [p["market"] for p in personas]
         background_summary = await seed_background_applications(
@@ -100,6 +106,7 @@ async def _seed_everything() -> dict[str, Any]:
     return {
         "users": user_result,
         "personas": persona_results,
+        "borrowers": borrower_result,
         "background": background_summary,
     }
 
@@ -132,6 +139,8 @@ def main() -> None:
     print(f"personas seeded: {len(persona_results)}")
     for r in persona_results:
         print(f"  {r.key}: {r.final_status.value}")
+    borrower_result: BorrowerSeedResult = summary["borrowers"]
+    print(f"borrower accounts seeded: {len(borrower_result.account_ids)}")
     if not any_pricing_ran:
         print(
             "NOTE: pricing stage SKIPPED for every persona -- CQ-013's "

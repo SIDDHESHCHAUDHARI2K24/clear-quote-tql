@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import Occupancy
 from app.features.applications.models import Application
 from app.integrations.tax.models import ProviderTaxRate
+from conftest import StaffSession
 
 
 async def _seed_tax(db_session: AsyncSession) -> None:
@@ -33,9 +34,11 @@ async def test_patch_field_value_sets_override(
     client: AsyncClient,
     db_session: AsyncSession,
     make_application: Callable[..., Awaitable[Application]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
 ) -> None:
     await _seed_tax(db_session)
-    application = await make_application(occupancy=Occupancy.PRIMARY)
+    staff = await make_staff_session()
+    application = await make_application(occupancy=Occupancy.PRIMARY, lo=staff.user)
     await db_session.commit()
 
     response = await client.patch(
@@ -56,9 +59,11 @@ async def test_revert_restores_source_value_and_clears_override(
     client: AsyncClient,
     db_session: AsyncSession,
     make_application: Callable[..., Awaitable[Application]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
 ) -> None:
     await _seed_tax(db_session)
-    application = await make_application(occupancy=Occupancy.PRIMARY)
+    staff = await make_staff_session()
+    application = await make_application(occupancy=Occupancy.PRIMARY, lo=staff.user)
     await db_session.commit()
 
     patch_response = await client.patch(
@@ -83,8 +88,10 @@ async def test_revert_not_overridable_field_key_is_422(
     client: AsyncClient,
     db_session: AsyncSession,
     make_application: Callable[..., Awaitable[Application]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
 ) -> None:
-    application = await make_application(occupancy=Occupancy.PRIMARY)
+    staff = await make_staff_session()
+    application = await make_application(occupancy=Occupancy.PRIMARY, lo=staff.user)
     await db_session.commit()
 
     response = await client.post(

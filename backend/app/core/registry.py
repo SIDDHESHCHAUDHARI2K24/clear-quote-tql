@@ -7,7 +7,7 @@ router under `/api/v1` without anyone touching `main.py`.
 
 `system` is not a `/api/v1` feature — `main.create_app()` mounts it
 directly and unprefixed for the `/health` contract — so it never goes in
-this list. `FEATURE_ROUTERS` starts empty; CQ-007 onward appends here.
+this list. CQ-007 onward appends here.
 """
 
 from importlib import import_module
@@ -18,6 +18,8 @@ FEATURE_ROUTERS: list[str] = [
     "app.features.applications.router",
     "app.features.pricing.enrichment.router",
     "app.features.pricing.scenarios.router",
+    "app.features.auth.staff.router",
+    "app.features.auth.borrower.router",
 ]
 
 

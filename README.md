@@ -22,7 +22,8 @@ Prototype of a mortgage quote and pre-approval experience for loan officers and 
 1. `cp .env.example .env`, then fill in:
    - `FIELD_ENCRYPTION_KEY` — generate with:
      `uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
-   - `SEED_STAFF_PASSWORD` — any local password; `make demo-reset` bcrypt-hashes it for the 4 seeded staff users and refuses to run if it's unset.
+   - `SEED_STAFF_PASSWORD` — any local password; `make demo-reset` argon2-hashes it for the 4 seeded staff users and refuses to run if it's unset.
+   - `SEED_BORROWER_PASSWORD` — optional; when set, `make demo-reset` also argon2-hashes it into a Borrower Portal account for every seeded persona client. Leave blank to skip borrower accounts.
    - The other variables have working local defaults already filled in.
 2. `uv sync` — installs the backend (Python 3.12).
 3. `pnpm install` — installs the frontends and shared packages.
