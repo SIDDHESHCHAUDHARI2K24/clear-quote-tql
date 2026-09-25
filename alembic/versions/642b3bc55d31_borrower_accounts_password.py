@@ -7,7 +7,7 @@ without the other, but nullable keeps the migration itself column-only
 (no backfill, no data migration).
 
 Revision ID: 642b3bc55d31
-Revises: 8aa99c7f2577
+Revises: e7b20ff388a7
 Create Date: 2026-09-25 03:08:27.877571
 
 """
@@ -19,7 +19,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '642b3bc55d31'
-down_revision: Union[str, None] = '8aa99c7f2577'
+down_revision: Union[str, None] = 'e7b20ff388a7'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
