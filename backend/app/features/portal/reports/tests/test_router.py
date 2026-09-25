@@ -235,6 +235,33 @@ async def test_report_token_isolation(
     assert random_token_response.status_code == 404
 
 
+async def test_report_not_found_message_matches_for_missing_and_foreign_token(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: MakeBorrowerSession,
+    make_application: Callable[..., Awaitable[Application]],
+    set_field_value: Callable[..., Awaitable[object]],
+) -> None:
+    """CQ-024 review carry-over (fresh-subagent finding #1 from CQ-022's
+    post-dev.md): a missing token and a token belonging to another
+    borrower must be indistinguishable from the response body, not just
+    the status code -- otherwise a caller could tell "this token doesn't
+    exist" apart from "this token exists but isn't yours"."""
+    _application, package = await _priced_package(db_session, make_application, set_field_value)
+    version = await _version_for_package(db_session, package)
+
+    await make_borrower_session(None)
+    foreign_response = await client.get(f"/api/v1/portal/reports/{version.report_token}")
+    assert foreign_response.status_code == 404
+
+    missing_response = await client.get("/api/v1/portal/reports/not-a-real-token")
+    assert missing_response.status_code == 404
+
+    assert (
+        foreign_response.json()["error"]["message"] == missing_response.json()["error"]["message"]
+    )
+
+
 async def test_superseded_version_carries_the_newest_token(
     client: AsyncClient,
     db_session: AsyncSession,

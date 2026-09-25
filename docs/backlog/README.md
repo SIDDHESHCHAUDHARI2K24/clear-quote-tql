@@ -29,7 +29,7 @@ Status here is updated by the agent at stage 8 and by the human at merge.
 | [CQ-021](CQ-021-report-components/spec.md) | Shared report components | P4 | CQ-005, CQ-008 | In Review |
 | [CQ-022](CQ-022-borrower-report/spec.md) | Borrower report page | P4 | CQ-021, CQ-015 | In Review |
 | [CQ-023](CQ-023-property-matches/spec.md) | Property matches | P4 | CQ-022, CQ-013 | To Do |
-| [CQ-024](CQ-024-borrower-actions/spec.md) | Borrower actions | P4 | CQ-022 | To Do |
+| [CQ-024](CQ-024-borrower-actions/spec.md) | Borrower actions | P4 | CQ-022 | In Review |
 | [CQ-025](CQ-025-dashboard/spec.md) | Dashboard | P5 | CQ-016 | To Do |
 | [CQ-026](CQ-026-clients/spec.md) | Clients | P5 | CQ-016 | To Do |
 | [CQ-027](CQ-027-applications-list/spec.md) | Applications list | P5 | CQ-016 | To Do |

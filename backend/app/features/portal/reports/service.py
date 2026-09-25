@@ -101,8 +101,16 @@ async def get_report_for_token(
         raise NotFoundError("Report not found")
 
     # 404 (never 403) for a token belonging to another borrower's package
-    # (spec.md AC5) -- ensure_borrower_owns_client already raises NotFoundError.
-    ensure_borrower_owns_client(borrower, application.client_id)
+    # (spec.md AC5) -- ensure_borrower_owns_client already raises
+    # NotFoundError, but with the message "Not found" (core/auth.py's own
+    # generic wording), which let a caller tell a missing token ("Report not
+    # found", above) apart from a foreign one. CQ-024 review carry-over
+    # (fresh-subagent finding #1): re-raise with the identical message so
+    # both cases are indistinguishable from the response alone.
+    try:
+        ensure_borrower_owns_client(borrower, application.client_id)
+    except NotFoundError:
+        raise NotFoundError("Report not found") from None
 
     now = datetime.now(UTC)
     # `_mark_viewed_if_first_load` only ever writes `viewed_at`, which

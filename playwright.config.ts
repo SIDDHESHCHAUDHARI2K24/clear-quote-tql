@@ -41,5 +41,19 @@ export default defineConfig({
         baseURL: process.env.PORTAL_BASE_URL ?? "http://localhost:3020",
       },
     },
+    // CQ-024 AC6: `borrower-action-reflects-in-console.spec.ts` drives both
+    // apps in one test (the borrower moves forward in the portal, then the
+    // LO console header shows the new status) -- neither of the two
+    // single-baseURL projects above fits, so it gets its own project with
+    // no `baseURL` and reads `LO_BASE_URL`/`PORTAL_BASE_URL` directly
+    // (same env vars, just used as full URLs inside the spec itself).
+    {
+      name: "cross-app",
+      testDir: "./e2e",
+      testMatch: "borrower-action-reflects-in-console.spec.ts",
+      use: {
+        ...devices["Desktop Chrome"],
+      },
+    },
   ],
 });
