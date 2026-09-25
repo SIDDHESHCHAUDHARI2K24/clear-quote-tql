@@ -41,7 +41,33 @@ None of these change any pinned module name, field name, JSON shape, or endpoint
 
 ## Review findings (stage 6)
 
-_(left empty — a fresh subagent reviewer fills this in.)_
+Reviewed by a fresh subagent (did not write this code) against `spec.md`, `plan.md`, `AGENTS.md`, and `docs/design/system-design.md`.
+
+### Commands re-run
+
+| Command | Result |
+| --- | --- |
+| `make up` (project `clear-quote`; `kaneo-evaluation-*` untouched) | Pass — all 6 services healthy |
+| `cp .env.example .env` | Not needed — `.env` already present in worktree, confirmed untracked (`git ls-files .env` empty; `.gitignore:8` ignores it) |
+| `pnpm install` | Not needed — `node_modules` already present |
+| `uv sync` | Pass |
+| `uv run pytest backend -q` | Pass — 16 passed |
+| `make lint` | Pass — ruff, ruff format, mypy (`backend/app`), eslint, tsc, prettier all clean |
+| `make test` | Pass — pytest 16 passed; `pnpm -r run test` 4 files passed |
+| `uv run uvicorn app.main:app --app-dir backend --port 8000` + `curl localhost:8000/health` | Pass — HTTP 200, all four checks `"ok"`; server stopped after |
+| `curl localhost:8000/openapi.json` inspected for `operationId` collisions | No literal collision (`get_health_health_get` vs `get_health_api_v1_health_get`), but see finding #1 |
+| `make down` (no `-v`) | Ran at end of review |
+
+### Findings
+
+| # | Severity | file:line | Finding | Suggested fix |
+| --- | --- | --- | --- | --- |
+| 1 | Major | `backend/app/main.py:32-37`, `backend/app/core/registry.py:13-15`, `backend/tests/test_registry.py:22-27` | Spec pins, verbatim: `create_app()` "mounts `/health` directly on app (not through the registry, and not under `/api/v1`)". Because `"app.features.system.router"` is also the one entry in the pinned `FEATURE_ROUTERS` list, `register_routers` additionally mounts it at `/api/v1/health`. Confirmed live: `GET /api/v1/health` returns 200 and both paths appear in `app.openapi()["paths"]`. This is a genuine contract violation (spec explicitly says "not under `/api/v1`"), not just a style nit — it pollutes the OpenAPI schema `packages/api-client/openapi.json` will hold, so CQ-005's generated client gets two functions for one conceptual endpoint (`getHealthHealthGet` and `getHealthApiV1HealthGet`). `test_system_router_is_mounted_unprefixed_and_registered` locks in the extra path as intended behavior rather than testing the pinned contract. plan.md decision 1 documents this as a conscious choice, but a real contradiction in the spec's own pins (FEATURE_ROUTERS must literally contain the system router; `/health` must never appear under `/api/v1`) is a "big gap" under AGENTS.md's stage-1 rule ("Big gaps → Kaneo comment + `needs-input`, stop"), not a "small gap with data available." | Either drop `include_in_schema=False` on the `/api/v1` mount so the duplicate never reaches the OpenAPI schema/generated client, or don't route the system module through `FEATURE_ROUTERS` at all (mount it only via the direct unprefixed `include_router` call) and keep `FEATURE_ROUTERS` empty until CQ-007's first real feature. At minimum, raise the pin contradiction in Kaneo per AGENTS.md rather than resolving it unilaterally in `plan.md`. |
+| 2 | Minor | `backend/app/features/system/schemas.py:11-13` | `CheckResult` is defined per the spec's module pin ("`schemas.py` HealthReport, CheckResult (Pydantic)") but is never used anywhere — `HealthReport.checks` is `dict[str, CheckStatus]` (`CheckStatus = str`), not `dict[str, CheckResult]`. Dead code. | Either use `CheckResult` in `HealthReport.checks` (matching the two-field `name`/`status` shape) or drop it if the flat `dict[str, str]` shape in the spec's pinned JSON example is intentional and `CheckResult` was just scaffolding. |
+| 3 | Minor | `Makefile:14-19` (`lint` target), `pyproject.toml` (`[tool.mypy] packages = ["app"]`) | `make lint`'s mypy step only type-checks `backend/app`; `backend/conftest.py`, `backend/tests/`, and `backend/scripts/export_openapi.py` (a pinned CQ-005 dependency) are never type-checked by the lint gate. Currently clean (`uv run mypy backend/conftest.py backend/tests backend/scripts` → no issues), so no live bug, but it's a coverage gap in the gate itself. | Add `backend/conftest.py backend/tests backend/scripts` to the `mypy` invocation in `make lint`, or a second mypy line for them. |
+| 4 | Nit | `docs/backlog/CQ-004-backend-skeleton/post-dev.md` "Deviations from spec" table | The `/api/v1/health` duplicate is described as "(implicit)" and "not a spec deviation" — but the spec's wording ("not under `/api/v1`") is explicit, not implicit. Understates finding #1 for a future auditor skimming this table. | Reword to acknowledge the explicit pin is contradicted, not just an implicit assumption. |
+
+No critical findings. AC1–AC7 are each backed by a real, meaningful test and all pass; error-handler 500 path never leaks exception text; CORS parsing (`NoDecode` + `mode="before"` validator) works correctly for the comma-separated env var; DB test isolation genuinely rolls back (proven with three sequential probes plus two real separate pytest tests); no secrets committed (`.env` untracked, `.env.example` holds only local-mock placeholder values); no real provider calls (health checks hit only the `make up` mocks).
 
 ## How to test manually
 
