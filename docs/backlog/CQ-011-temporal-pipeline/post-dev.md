@@ -75,10 +75,32 @@ This worktree's `.env` (gitignored, per-checkout) was already present from hando
 
 ## Review findings (stage 6)
 
-| Severity | Finding | Resolution |
-| --- | --- | --- |
+Fresh-subagent review (did not write this code). Verdict: **APPROVE** — no critical or major findings; all 7 ACs independently re-verified, including a real Temporal + real Postgres + real API round trip (separate from handoff 2's own smoke run, using a freshly created throwaway application).
 
-(Empty — stage 6 review is done afterward by a fresh subagent, per the agent loop.)
+### Commands re-run
+
+| Command | Result |
+| --- | --- |
+| `gh run view 36114014423 --log` | Confirmed: `backend` job actually ran `uv run pytest backend` (`collected 247 items`, all passed) and `ruff check`/`ruff format --check`/mypy green; `frontend` job's `pnpm -r run lint/typecheck/test` all green (27+4+4 frontend tests passed). Not just a green checkmark — the log shows real collection/pass counts. |
+| `git merge-tree --write-tree phase-p0-p1 HEAD` | Clean — printed a single tree hash, no `CONFLICT` markers. Merges into `phase-p0-p1` without conflict. |
+| `uv run pytest backend/app/workflows backend/app/features/applications/tests -q` (repo root, real `.env`) | `40 passed` — matches post-dev's own count. |
+| `uv run ruff check backend` | `All checks passed!` |
+| `uv run mypy backend/app backend/conftest.py backend/tests backend/scripts` | `Success: no issues found in 224 source files` |
+| Real Temporal + real API smoke run (separate throwaway application, IN/Hamilton primary/conventional, reusing already-seeded tax-rate/rate-sheet background data): `make worker` + `uvicorn` against the shared `clear-quote` stack (already up), `POST .../pipeline/start` | `200 {"started": true}`; within ~3s real wall-clock, `applications.status` → `priced`, `activity_events` had exactly 6 rows in order `pipeline.imported, pipeline.verified, pipeline.enriched ×3, pipeline.priced` (via direct SQL) — matches spec's Marcus Hale happy-path shape exactly. |
+| Same run, re-`POST .../pipeline/start` | `200 {"started": false}` — idempotent against the real server. |
+| Same run, `POST .../pipeline/resume` on a fresh random (never-started) id | `404 {"error": {"code": "WORKFLOW_NOT_RUNNING", "message": "...", "details": {"application_id": "..."}}}` — matches CQ-004's pinned error shape exactly. |
+| Cleanup | Deleted the throwaway `activity_events`/`applications`/`clients`/`users`/`provider_los_records`/`provider_credit_reports` rows; `applications` count back to 210 (10 personas + 200 background); stopped the `worker`/`uvicorn` processes started for this review; removed the `backend/.env` copy created for the smoke run; `make down` never run. |
+
+### Findings
+
+| # | Severity | file:line | Finding | Suggested fix |
+| --- | --- | --- | --- | --- |
+| 1 | minor | `backend/app/workflows/worker.py:31-55` vs `alembic/env.py:17-41` | Judge decision #17: the "every model module" import list is hand-duplicated in two files (currently identical sets, verified line-by-line). Nothing enforces they stay in sync, and the author's own post-dev notes say pytest structurally can't catch a drift (the test suite's own `alembic upgrade head` imports every model module first, process-wide, before any test runs) — a future feature's new `models.py` added to one list and not the other would silently break every real-worker activity touching that table (`NoReferencedTableError`) with no CI signal. | Add a small test asserting the two import lists are equal (e.g. parse both files' `import app....models` lines and diff the sets), or extract the list to one shared module (`app.core.model_registry`) both `alembic/env.py` and `worker.py` import — already suggested in post-dev's own Follow-ups, just not done. |
+| 2 | minor | `backend/app/workflows/activities.py:14-19` (event-type mapping) | Judge decision #5: `enrich_application`, `validate_pricing_inputs` and `auto_price_application` all write `pipeline.enriched` on success. This does satisfy spec's pinned 7-type vocabulary and AC5's two literal test sequences (Marcus's 6 rows, Aisha's 4-type sequence) exactly — re-verified by reading `test_activity_events_sequence.py` and re-running it — so it is not a contract break. But a full happy-path `activity_events` timeline can no longer distinguish which of the three stages produced a given "enriched" row, which weakens the "visible per-application run history" goal from system-design.md's Architecture section for CQ-016/028/029's future audit UI. | Already flagged in post-dev's Follow-ups for the consuming items' owners; no change needed in CQ-011 itself. Consider 2-3 additional pinned type strings (e.g. `pipeline.validated`, `pipeline.priced_scenarios`) in a later item — additive, non-breaking. |
+| 3 | nit | `backend/app/workflows/tests/test_activity_events_sequence.py:38-44`, `test_resume_signal.py:163-165` | Judge decision #18: ordering by `ActivityEvent.at` (Python-side `datetime.now(UTC)`) instead of `created_at` (`server_default=func.now()`, resolved once per Postgres transaction) is correctly reasoned for this test suite's single-transaction, savepoint-bound activity sessions, and reproduced the flake it describes when checked by hand. Not a bug. | None needed for CQ-011. Worth a one-line callout to CQ-016 (activity timeline UI) that it should also order by `at`, not `created_at`, for the same reason if it ever reads this table directly instead of through a service function. |
+| 4 | nit | `backend/app/features/applications/router.py:30-66` | `POST .../pipeline/start` and `.../pipeline/resume` have no auth dependency, unlike the pricing routes' `get_current_lo_stub`. Confirmed intentional (plan.md Decision #9: spec doesn't mention an LO-auth dependency for these two routes) and consistent with "no auth until CQ-014" — not a defect, just noting per the review brief's ask. | None needed now; CQ-014 should add the same auth dependency other LO routes get once it lands. |
+
+No critical or major findings. Every AC (1-7) was independently re-verified against its own test file's actual assertions (not just pass/fail counts) plus, for AC1/AC5/AC7, a live re-run against the real stack.
 
 ## How to test manually
 
