@@ -12,13 +12,17 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
+from seed.loader import seed_providers
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import Occupancy, Strategy
 from app.features.applications.models import Application
+from app.features.applications.property.models import PropertyAddressStatus
 from app.features.portal.reports.versions import REPORT_EXPIRY_DAYS, freeze_package_version
 from app.features.pricing.scenarios.service import auto_price
 from app.features.quotes.send.models import QuotePackage, QuotePackageVersion
+from app.integrations.property_search.models import ProviderListing
 
 from .conftest import seed_conventional_rate_sheet, seed_dscr_rate_sheet
 
@@ -183,3 +187,54 @@ async def test_freeze_package_version_expired_token_is_computed_not_stored(
     # `expires_at`, never stored `true` here.
     assert _snapshot(version)["header"]["expired"] is False
     assert datetime.now(UTC) > version.expires_at
+
+
+async def test_matches_frozen_in_version(
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    set_field_value: Callable[..., Awaitable[object]],
+) -> None:
+    """AC7 (CQ-023 spec.md): matches are frozen with the version -- deleting
+    every seeded listing after freezing must not change the already-frozen
+    snapshot (`quote_package_versions.snapshot` is a plain JSONB copy, never
+    recomputed on read)."""
+    await seed_providers(db_session)
+    await db_session.commit()
+
+    application = await make_application(
+        occupancy=Occupancy.INVESTMENT,
+        strategy=Strategy.LTR,
+        requested_price=Decimal("300000.00"),
+        first_name="Kathleen",
+        last_name="McReynolds",
+        address_status=PropertyAddressStatus.TBD,
+        county="Polk",
+        zip_code="33896",
+        buy_box_states=["FL"],
+        buy_box_metros=["Davenport", "Orlando"],
+        recommend_matches=True,
+    )
+    await set_field_value(application.id, "representative_fico", Decimal("720"))
+    await set_field_value(application.id, "property_tax_annual_rate", Decimal("0.0089"))
+    await set_field_value(application.id, "homeowners_ins_annual", Decimal("1500.00"))
+    await set_field_value(application.id, "market_rent_ltr", Decimal("2250.00"))
+    seed_dscr_rate_sheet(db_session, "ONE_TO_1_25", Decimal("7.250"))
+    await db_session.commit()
+
+    pricing_result = await auto_price(db_session, application.id)
+    package = await _make_package(db_session, application, list(pricing_result.quote_ids))
+    await db_session.commit()
+
+    version = await freeze_package_version(db_session, package=package)
+    await db_session.commit()
+
+    frozen_matches = _snapshot(version)["matches"]
+    assert len(frozen_matches) == 3
+
+    # Simulate `make demo-reset` re-seeding listings with different data --
+    # the already-frozen version's snapshot must not move.
+    await db_session.execute(delete(ProviderListing))
+    await db_session.commit()
+
+    await db_session.refresh(version)
+    assert _snapshot(version)["matches"] == frozen_matches
