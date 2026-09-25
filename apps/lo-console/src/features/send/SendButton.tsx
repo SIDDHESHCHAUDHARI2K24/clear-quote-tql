@@ -5,28 +5,46 @@ import { useState } from "react";
 import { Button, Overlay } from "@cq/ui";
 
 import type { Readiness, SendPackage } from "./api";
-
-export const SEND_STUB_MESSAGE = "Sending arrives in CQ-020";
+import { SendProgress } from "./SendProgress";
+import type { SendPhase } from "./useSendFlow";
 
 export interface SendButtonProps {
   pkg: SendPackage;
   readiness: Readiness | null;
+  phase: SendPhase;
+  onSend: () => void;
+  /** Clears a finished, failed or blocked send when the dialog closes. */
+  onReset: () => void;
 }
 
 /** Disabled with the first blocker as its tooltip until the package is
- * ready; then a confirm dialog with the recipient and attachments. The
- * dialog's action is a stub until CQ-020 adds the send endpoint. */
-export function SendButton({ pkg, readiness }: SendButtonProps) {
+ * ready; then a confirm dialog with the recipient and attachments. Send
+ * starts the workflow and the dialog follows its progress. */
+export function SendButton({ pkg, readiness, phase, onSend, onReset }: SendButtonProps) {
   const [open, setOpen] = useState(false);
-  const [stubbed, setStubbed] = useState(false);
   const ready = readiness?.ready === true;
   const tooltip = readiness === null ? "Checking readiness…" : readiness.blockers[0]?.message;
+  const inFlight = phase.kind === "starting" || phase.kind === "running";
+  const finished = phase.kind === "done";
+  const alreadySent = pkg.sent_at !== null;
+
+  const close = () => {
+    setOpen(false);
+    onReset();
+  };
 
   return (
     <>
       <span title={ready ? undefined : tooltip} data-testid="send-button-wrapper">
-        <Button disabled={!ready} onClick={() => setOpen(true)}>
-          Send to borrower
+        <Button
+          disabled={!ready || inFlight}
+          onClick={() => {
+            // A finished send's "Done" belongs to that send, not this one.
+            if (finished) onReset();
+            setOpen(true);
+          }}
+        >
+          {inFlight ? "Sending…" : alreadySent ? "Send again" : "Send to borrower"}
         </Button>
       </span>
       {!ready && tooltip && (
@@ -34,20 +52,26 @@ export function SendButton({ pkg, readiness }: SendButtonProps) {
           {tooltip}
         </p>
       )}
+      {!open && (inFlight || phase.kind === "failed") && <SendProgress phase={phase} compact />}
       <Overlay
         isOpen={open}
-        onClose={() => {
-          setOpen(false);
-          setStubbed(false);
-        }}
-        title="Send quotes to the borrower?"
+        onClose={close}
+        title={finished ? "Sent" : "Send quotes to the borrower?"}
         size="sm"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setStubbed(true)}>Send</Button>
+            {finished || phase.kind === "blocked" ? (
+              <Button onClick={close}>Close</Button>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={close}>
+                  {inFlight ? "Hide" : "Cancel"}
+                </Button>
+                <Button disabled={inFlight} onClick={onSend}>
+                  {phase.kind === "failed" ? "Try again" : "Send"}
+                </Button>
+              </>
+            )}
           </div>
         }
       >
@@ -67,11 +91,7 @@ export function SendButton({ pkg, readiness }: SendButtonProps) {
             <dd>{pkg.quote_ids.length} option(s), with a link to the full report</dd>
           </div>
         </dl>
-        {stubbed && (
-          <p role="status" className="mt-3 text-sm font-medium text-navy-700">
-            {SEND_STUB_MESSAGE}
-          </p>
-        )}
+        <SendProgress phase={phase} />
       </Overlay>
     </>
   );
