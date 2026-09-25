@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from decimal import Decimal
 from typing import Any
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import ApplicationSource, ApplicationStatus, Occupancy, Strategy, UserRole
 from app.features.applications.assets.models import Asset, Employment
 from app.features.applications.credit.models import Liability
-from app.features.applications.housing.models import HousingHistory
+from app.features.applications.housing.models import HousingHistory, HousingStatus
 from app.features.applications.models import Application, ApplicationParty, PartyRole
 from app.features.applications.property.models import Property, PropertyAddressStatus
 from app.features.applications.timeline.models import ActivityEvent
@@ -23,12 +24,13 @@ from app.features.auth.models import User
 from app.features.borrower.consent.models import Consent, ConsentStatus, ConsentType
 from app.features.clients.models import Client
 from app.features.notifications.outbox.models import OutboxEmail
+from app.features.portal.apply import service as apply_service
 from app.features.portal.apply.consent_text import CONSENT_TEXT_VERSION, consent_text_hash
 from app.features.portal.apply.models import ApplicationDraft
 from app.integrations.property_search.models import ProviderListing
 from app.workflows.constants import APPLICATION_PIPELINE_TASK_QUEUE
 
-from .conftest import FakeTemporal, SentEmail
+from .conftest import PDF_BYTES, FakeTemporal, SentEmail, StubS3
 
 Tabs = Callable[[], dict[str, dict[str, Any]]]
 BASE = "/api/v1/portal/applications"
@@ -483,3 +485,171 @@ async def test_submit_survives_temporal_outage(
     assert response.json()["pipeline_started"] is False
     application = await _application(db_session, response.json()["application_id"])
     assert application.status is ApplicationStatus.INTAKE
+
+
+async def test_pipeline_starts_before_email_and_survives_email_failure(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: Callable[..., Awaitable[Any]],
+    tampa_listing: ProviderListing,
+    valid_tabs: Tabs,
+    fake_temporal: FakeTemporal,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Review round 1, minor 1: the workflow starts right after the
+    application commits; a failing LO email is logged, never a 500."""
+    order: list[str] = []
+    original_start = fake_temporal.start_workflow
+
+    async def _start(*args: Any, **kwargs: Any) -> None:
+        order.append("pipeline")
+        await original_start(*args, **kwargs)
+
+    async def _broken_send_email(*args: Any, **kwargs: Any) -> None:
+        order.append("email")
+        raise RuntimeError("smtp down")
+
+    monkeypatch.setattr(fake_temporal, "start_workflow", _start)
+    monkeypatch.setattr(apply_service, "send_email", _broken_send_email)
+    await make_borrower_session()
+    draft_id = await _complete_draft(client, valid_tabs())
+
+    response = await client.post(f"{BASE}/{draft_id}/submit")
+    assert response.status_code == 200, response.json()
+    assert response.json()["pipeline_started"] is True
+    assert order == ["pipeline", "email"]
+    assert len(fake_temporal.started) == 1
+    application = await _application(db_session, response.json()["application_id"])
+    assert application.status is ApplicationStatus.INTAKE
+
+
+async def test_failed_submit_leaves_no_copied_documents(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: Callable[..., Awaitable[Any]],
+    tampa_listing: ProviderListing,
+    valid_tabs: Tabs,
+    fake_temporal: FakeTemporal,
+    stub_storage: StubS3,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Review round 1, minor 2: a submit that fails after the uploads were
+    copied deletes the copies, so no orphaned objects are left."""
+    await make_borrower_session()
+    draft_id = await _complete_draft(client, valid_tabs())
+    uploaded = await client.post(
+        f"{BASE}/{draft_id}/documents",
+        files={"file": ("a.pdf", PDF_BYTES, "application/pdf")},
+        data={"doc_type": "pay_stub"},
+    )
+    assert uploaded.status_code == 201
+    draft_keys = stub_storage.keys()
+
+    async def _failing_commit() -> None:
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(db_session, "commit", _failing_commit)
+    with pytest.raises(RuntimeError, match="db down"):
+        await client.post(f"{BASE}/{draft_id}/submit")
+    monkeypatch.undo()
+    await db_session.rollback()
+
+    assert stub_storage.keys() == draft_keys
+    assert fake_temporal.started == []
+
+
+async def test_one_submit_per_borrower_per_ten_minutes(
+    client: AsyncClient,
+    make_borrower_session: Callable[..., Awaitable[Any]],
+    tampa_listing: ProviderListing,
+    valid_tabs: Tabs,
+    fake_temporal: FakeTemporal,
+    sent_emails: list[SentEmail],
+) -> None:
+    """Review round 1, minor 6: several applications are allowed (plan.md
+    decision 27), but at most one submit per borrower per 10 minutes."""
+    await make_borrower_session()
+    first = await _complete_draft(client, valid_tabs())
+    assert (await client.post(f"{BASE}/{first}/submit")).status_code == 200
+
+    second = await _complete_draft(client, valid_tabs())
+    assert second != first
+    response = await client.post(f"{BASE}/{second}/submit")
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == "RATE_LIMITED"
+    assert len(fake_temporal.started) == 1
+
+    # A different borrower is not affected.
+    await make_borrower_session()
+    other = await _complete_draft(client, valid_tabs())
+    assert (await client.post(f"{BASE}/{other}/submit")).status_code == 200
+
+
+async def test_failed_submit_does_not_use_up_the_rate_limit(
+    client: AsyncClient,
+    make_borrower_session: Callable[..., Awaitable[Any]],
+    tampa_listing: ProviderListing,
+    valid_tabs: Tabs,
+    fake_temporal: FakeTemporal,
+    sent_emails: list[SentEmail],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only a submit that created an application counts: a 409 "no LO
+    available" can be retried straight away."""
+    await make_borrower_session()
+    draft_id = await _complete_draft(client, valid_tabs())
+
+    async def _no_lo(db: AsyncSession) -> None:
+        return None
+
+    monkeypatch.setattr(apply_service, "least_loaded_lo_id", _no_lo)
+    response = await client.post(f"{BASE}/{draft_id}/submit")
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "NO_LO_AVAILABLE"
+    monkeypatch.undo()
+
+    assert (await client.post(f"{BASE}/{draft_id}/submit")).status_code == 200
+
+
+async def test_prior_address_housing_status(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: Callable[..., Awaitable[Any]],
+    tampa_listing: ProviderListing,
+    valid_tabs: Tabs,
+    fake_temporal: FakeTemporal,
+    sent_emails: list[SentEmail],
+) -> None:
+    """Review round 1 nit: `prior_housing_status` (default `rent`)."""
+    await make_borrower_session()
+    tabs = valid_tabs()
+    tabs["you"] |= {
+        "residence_years": 1,
+        "residence_months": 0,
+        "prior_address": {
+            "street": "5 Old Rd",
+            "city": "Tampa",
+            "state": "FL",
+            "zip": "33602",
+            "residence_years": 4,
+            "residence_months": 0,
+        },
+        "prior_housing_status": "own",
+    }
+    draft_id = await _complete_draft(client, tabs)
+    app_id = (await client.post(f"{BASE}/{draft_id}/submit")).json()["application_id"]
+    housing = (
+        (
+            await db_session.execute(
+                select(HousingHistory)
+                .where(HousingHistory.application_id == uuid.UUID(app_id))
+                .order_by(HousingHistory.sequence)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert [(h.sequence, h.housing_status) for h in housing] == [
+        (0, HousingStatus.RENT),
+        (1, HousingStatus.OWN),
+    ]

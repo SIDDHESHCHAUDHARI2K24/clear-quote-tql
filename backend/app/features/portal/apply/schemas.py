@@ -68,6 +68,18 @@ class DraftDocumentOut(BaseModel):
     uploaded_at: datetime
 
 
+class StateMetros(BaseModel):
+    state: str
+    metros: list[str]
+
+
+class MetrosOut(BaseModel):
+    """Tab 2's two-tier metro picker: states, each with its metros (both
+    sorted). Only these names pass the `buy_box_metros` rule."""
+
+    states: list[StateMetros]
+
+
 class SubmitResponse(BaseModel):
     application_id: uuid.UUID
     draft_id: uuid.UUID

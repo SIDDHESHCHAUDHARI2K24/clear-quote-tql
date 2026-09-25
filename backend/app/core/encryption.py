@@ -31,6 +31,17 @@ def _fernet() -> Fernet:
     return Fernet(key.encode("utf-8") if isinstance(key, str) else key)
 
 
+def encrypt_str(value: str) -> str:
+    """Fernet token (urlsafe base64 text) for `value`, for ciphertext kept
+    outside an `EncryptedString` column, e.g. inside a JSONB document."""
+    return _fernet().encrypt(value.encode("utf-8")).decode("ascii")
+
+
+def decrypt_str(token: str) -> str:
+    """Inverse of `encrypt_str`."""
+    return _fernet().decrypt(token.encode("ascii")).decode("utf-8")
+
+
 class EncryptedString(TypeDecorator[str]):
     """Encrypts a UTF-8 string to a Fernet token before storing as bytes."""
 

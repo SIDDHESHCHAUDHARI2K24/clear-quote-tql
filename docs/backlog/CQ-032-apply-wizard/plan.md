@@ -35,6 +35,12 @@ Plan-level decisions that apply: E1 (drafts table, consent columns, `application
 | 22 | Decision | Submit idempotency | Decided: submit on an already-submitted draft returns 409 with the existing `application_id` in `details`. Submit with invalid tabs returns 422 with `details.field_errors` per tab and `details.first_invalid_tab`. |
 | 23 | Decision | New dependency | Decided: `python-multipart` added to `pyproject.toml`/`uv.lock` (FastAPI needs it for `UploadFile`/`Form`; nothing in the backend took multipart before). Small necessity, logged. |
 | 24 | Decision | Schema test | Decided: `backend/tests/test_schema.py`'s pinned `ConsentType` value set gains `application` (one-line necessity outside owned files). |
+| 25 | Decision | SSN in drafts (review round 1, major 1) | Decided: the plain SSN never reaches `application_drafts.data`. On a tab-1 PATCH the server moves `ssn` (and `co_borrower.ssn`) into a Fernet token (`core/encryption.encrypt_str`, the same key as `EncryptedString`) stored as `ssn_encrypted` inside the JSON, plus `ssn_last4`. No migration: the ciphertext lives in the JSON. Responses never carry `ssn` or `ssn_encrypted`: each person block returns `ssn_last4` and `ssn_set: true`. A PATCH that omits `ssn` (or sends it blank) keeps the stored one; a malformed `ssn` is not stored, clears the stored one and reports `"SSN must be 9 digits."`. Client-sent `ssn_encrypted` / `ssn_last4` / `ssn_set` are ignored. Submit decrypts into `application_parties.ssn_encrypted` (`EncryptedString`), then scrubs `ssn_encrypted` from the closed draft (`ssn_last4` stays). `core/encryption.py` gained `encrypt_str`/`decrypt_str` (small necessity outside owned files). |
+| 26 | Decision | Upload body bounds (review round 1, major 2 + minor 4) | Decided: `portal/apply/upload_guard.py` `UploadBodyLimitMiddleware` (pure ASGI, registered in `main.py` inside CORS) runs before routing, auth and parsing on `POST /api/v1/portal/applications/{id}/documents`: no `Content-Length` → 411 `LENGTH_REQUIRED`; `Content-Length` > 10 MB + 64 KB multipart overhead → 413 `FILE_TOO_LARGE`; a byte counter cuts off a body that runs past its declared length → 413. The route parses the multipart body by hand (`request.form(max_files=1)`), only after auth, draft ownership, the open-draft check and the 20-document cap pass. Two files, or a malformed body → 422 `"Upload one file at a time."`. The OpenAPI request body is unchanged (declared via `openapi_extra`). |
+| 27 | Decision | Several applications per borrower (review round 1, minor 6) | Decided: a borrower may submit several portal applications (they may buy several properties); after a submit, `POST /portal/applications` opens a new draft. At most one submit per borrower per 10 minutes (`auth/otp/rate_limit.hit`, key `rl:borrower:apply_submit:{account_id}`) → 429 `RATE_LIMITED`. The limit is checked after validation, but the counter ticks only once the application commits, so a 422, a 409 "no LO available" or a storage failure never locks the borrower out (one open draft per borrower plus the draft row lock keep two submits from racing past the check). |
+| 28 | Decision | Borrower metros list (review round 1, major 3) | Decided: `GET /api/v1/portal/applications/metros` (borrower session) returns `{states: [{state, metros: [...]}]}`, both sorted, from `service.known_metros` (distinct `provider_listings` state/metro): exactly the list the `buy_box_metros` rule accepts. Independent of CQ-028a's staff-side `/reference/metros`. |
+| 29 | Decision | Submit ordering (review round 1, minors 1-2) | Decided: the uploads are copied just before the application commit; any failure from the copy through the commit deletes the copies (no orphaned objects). The workflow starts right after that commit. The LO email and its outbox commit come next, wrapped so a failure is logged and never skips the pipeline or turns a committed submit into a 500. |
+| 30 | Decision | Request-validation 422s (review round 1 nit) | Decided: a global `RequestValidationError` handler (`core/errors.py`) returns FastAPI's usual `{"detail": [...]}` minus each error's `input` and `ctx`, so a malformed body never echoes an SSN back. Small necessity outside owned files. |
 
 No big gaps: nothing raised in Kaneo.
 
@@ -53,8 +59,9 @@ The draft's `data` is `{ "you": {...}, "property": {...}, "income": {...}, "cons
 | `first_name`, `last_name` | string, 1–100 | required |
 | `email` | — | read-only; not stored in tab data. Shown from the response's `email` (account email) |
 | `cell_phone` | string | required; 10 digits after stripping non-digits → `"Enter a 10-digit phone number."` |
-| `dob` | `YYYY-MM-DD` | required; `"You must be at least 18 years old."` (age ≥ 18, ≤ 120) |
-| `ssn` | string | required; 9 digits (dashes/spaces allowed) → `"SSN must be 9 digits."` |
+| `dob` | `YYYY-MM-DD` string only | required; anything else (a number, a datetime, `04/12/1988`) → `"Enter a date as YYYY-MM-DD."`; `"You must be at least 18 years old."` (age ≥ 18, ≤ 120) |
+| `ssn` | string, **write-only** | required once; 9 digits (dashes/spaces allowed) → `"SSN must be 9 digits."`. **Never returned** (decision 25): the draft comes back with `ssn_last4` (e.g. `"6789"`) and `ssn_set: true` instead. Once `ssn_set` is true the UI shows a masked `•••-••-6789` and **omits** `ssn` from later PATCHes (omitted or blank keeps the stored one); send `ssn` again only when the borrower types a new one |
+| `ssn_last4`, `ssn_set` | response only | server-written; ignored on PATCH (same for `co_borrower`) |
 | `marital_status` | `married` \| `unmarried` \| `separated` | required |
 | `dependents_count` | integer 0–20 | required |
 | `current_address` | `{street, city, state, zip}` | all required; `state` 2 letters (upper-cased), `zip` 5 digits |
@@ -62,8 +69,11 @@ The draft's `data` is `{ "you": {...}, "property": {...}, "income": {...}, "cons
 | `residence_years` | integer 0–99 | required |
 | `residence_months` | integer 0–11 | required |
 | `prior_address` | `{street, city, state, zip, residence_years, residence_months}` \| null | required when `residence_years*12 + residence_months < 24` (ignored otherwise) → error on `prior_address`: `"Add your prior address (you've lived at your current address under 2 years)."` |
+| `prior_housing_status` | `own` \| `rent` \| `rent_free` | optional, default `rent`: housing status at the prior address (written to `housing_history` sequence 1) |
 | `has_co_borrower` | boolean | default false; when false any `co_borrower` block is ignored (not validated, not written) |
-| `co_borrower` | `{first_name, last_name, email?, cell_phone, dob, ssn, marital_status, dependents_count}` \| null | required when `has_co_borrower`; same rules as the borrower (`email` optional, must look like an email) |
+| `co_borrower` | `{first_name, last_name, email?, cell_phone, dob, ssn, marital_status, dependents_count}` \| null | required when `has_co_borrower`; same rules as the borrower (`email` optional, must look like an email); `ssn` is write-only and comes back as `ssn_last4` + `ssn_set` exactly like the borrower's |
+
+Free text (address `street`/`city`, `employer_name`, `typed_name`, metro names, co-borrower `email`) is capped at 200 characters → `"Use 200 characters or fewer."`.
 
 ### Tab 2 `property`
 
@@ -73,7 +83,7 @@ The draft's `data` is `{ "you": {...}, "property": {...}, "income": {...}, "cons
 | `has_property` | boolean | required ("Do you have a property in mind?") |
 | `address` | `{street, city, state, zip}` | required when `has_property` |
 | `buy_box_states` | string[] (2-letter) | used when `!has_property` |
-| `buy_box_metros` | string[] (metro names) | when `!has_property`: at least one → `"Choose at least one metro."`; each must be a known metro inside a chosen state → `"Choose a metro from the list."` (metros come from CQ-028a's `GET /api/v1/reference/metros`, or `provider_listings`) |
+| `buy_box_metros` | string[] (metro names) | when `!has_property`: at least one → `"Choose at least one metro."`; each must be a known metro inside a chosen state → `"Choose a metro from the list."`. The picker loads `GET /api/v1/portal/applications/metros` (borrower session; decision 28) → `{states: [{state: "FL", metros: ["Davenport", "Tampa"]}, ...]}`: states for the first tier, that state's metros for the second |
 | `target_price` | decimal string | required, > 0 → `"Enter a price greater than 0."` |
 | `down_payment_pct` | decimal string | required; primary `0.03 / 0.05 / 0.10 / 0.15 / 0.20`, LTR/STR `0.15 / 0.20 / 0.25` → `"Choose one of the listed down payments."` |
 
@@ -94,7 +104,7 @@ Any negative number → `"Must be 0 or more."`. Money fields (price, income, deb
 
 | Field | Type | Rule / error text |
 | --- | --- | --- |
-| `soft_pull_authorized` | boolean | must be true → `"Check this box to continue."` |
+| `soft_pull_authorized` | boolean (JSON `true`/`false` only: `"true"` or `1` fail) | must be true → `"Check this box to continue."` |
 | `contact_consent` | boolean | must be true |
 | `terms_accepted` | boolean | must be true |
 | `typed_name` | string | must equal tab 1 `first_name + " " + last_name`, case-insensitive, whitespace collapsed → `"Type your full name exactly as entered on step 1."` |
@@ -112,10 +122,11 @@ Any negative number → `"Must be 0 or more."`. Money fields (price, income, deb
 ```
 
 - `PATCH .../draft` body `{tab, data}` → `{ draft: ApplyDraftOut, tab, tab_valid, field_errors: {path: message} }`. `field_errors` also lists "required" for fields not yet filled, so the UI shows errors only for touched fields (or all of them on "Next").
-- `POST .../submit` (no body) → `{ application_id, draft_id, status: "intake", assigned_lo_name, pipeline_started }`. 422 → `error.details: {field_errors: {tab: {path: msg}}, first_invalid_tab}`; 409 if already submitted (`error.details.application_id`).
-- Every error body has the app-wide shape `{"error": {code, message, details}}`.
+- `POST .../submit` (no body) → `{ application_id, draft_id, status: "intake", assigned_lo_name, pipeline_started }`. 422 → `error.details: {field_errors: {tab: {path: msg}}, first_invalid_tab}`; 409 if already submitted (`error.details.application_id`); 429 `RATE_LIMITED` for a second submit by the same borrower within 10 minutes (decision 27).
+- `GET /api/v1/portal/applications/metros` → `{states: [{state, metros}]}` (decision 28).
+- Every error body has the app-wide shape `{"error": {code, message, details}}`, except a malformed request body (wrong JSON types, unknown tab), which is FastAPI's `{"detail": [{type, loc, msg}]}` without `input`/`ctx` (decision 30).
 - Cross-field rules (prior address, co-borrower required, down payment option, metro, primary income) are checked once that tab's field-level rules pass, so a tab with several problems may reveal one of these on the next save.
-- `POST .../documents` multipart `file`, `doc_type` (`pay_stub`|`w2`|`bank_statement`) → the new document entry (201). 413 (`FILE_TOO_LARGE`) / 415 (`UNSUPPORTED_FILE_TYPE`) / 422 / 409 (after submit).
+- `POST .../documents` multipart `file` (one), `doc_type` (`pay_stub`|`w2`|`bank_statement`) → the new document entry (201). 413 (`FILE_TOO_LARGE`, also before auth when `Content-Length` is over the cap) / 411 (`LENGTH_REQUIRED`: send a `Content-Length`, which `fetch` with `FormData` does) / 415 (`UNSUPPORTED_FILE_TYPE`) / 422 (bad or missing `doc_type`, no file, two files, 20 documents already) / 409 (after submit).
 - `DELETE .../documents/{document_id}` → 204.
 
 ## What changes

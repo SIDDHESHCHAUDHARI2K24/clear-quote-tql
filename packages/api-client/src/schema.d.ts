@@ -420,6 +420,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/applications/metros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Metros
+         * @description States and their metros for tab 2's picker (decision 28). Declared
+         *     before `/{draft_id}` so `metros` is never read as a draft id.
+         */
+        get: operations["list_metros_api_v1_portal_applications_metros_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/applications/{draft_id}": {
         parameters: {
             query?: never;
@@ -485,7 +506,10 @@ export interface paths {
         put?: never;
         /**
          * Upload Document
-         * @description PDF, JPG or PNG, 10 MB at most (AC7).
+         * @description PDF, JPG or PNG, 10 MB at most (AC7). The multipart body is parsed
+         *     by hand, only after auth, ownership and the document cap pass
+         *     (decision 26); `UploadBodyLimitMiddleware` has already bounded its
+         *     size (411 without `Content-Length`, 413 over the cap).
          */
         post: operations["upload_document_api_v1_portal_applications__draft_id__documents_post"];
         delete?: never;
@@ -614,16 +638,6 @@ export interface components {
         AutoQuoteResponse: {
             par: components["schemas"]["QuoteRead"];
             buydown: components["schemas"]["QuoteRead"] | null;
-        };
-        /** Body_upload_document_api_v1_portal_applications__draft_id__documents_post */
-        Body_upload_document_api_v1_portal_applications__draft_id__documents_post: {
-            /** File */
-            file: string;
-            /**
-             * Doc Type
-             * @enum {string}
-             */
-            doc_type: "pay_stub" | "w2" | "bank_statement";
         };
         /**
          * BorrowerActionType
@@ -1122,6 +1136,15 @@ export interface components {
             year1_tax_savings: string | null;
         };
         /**
+         * MetrosOut
+         * @description Tab 2's two-tier metro picker: states, each with its metros (both
+         *     sorted). Only these names pass the `buy_box_metros` rule.
+         */
+        MetrosOut: {
+            /** States */
+            states: components["schemas"]["StateMetros"][];
+        };
+        /**
          * Occupancy
          * @description Per override O2: Primary, LTR or STR only — no `second_home`.
          * @enum {string}
@@ -1588,6 +1611,13 @@ export interface components {
             title: string | null;
             /** Phone */
             phone: string | null;
+        };
+        /** StateMetros */
+        StateMetros: {
+            /** State */
+            state: string;
+            /** Metros */
+            metros: string[];
         };
         /**
          * StatusPatchRequest
@@ -2482,6 +2512,37 @@ export interface operations {
             };
         };
     };
+    list_metros_api_v1_portal_applications_metros_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetrosOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_draft_api_v1_portal_applications__draft_id__get: {
         parameters: {
             query?: never;
@@ -2598,7 +2659,19 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["Body_upload_document_api_v1_portal_applications__draft_id__documents_post"];
+                "multipart/form-data": {
+                    /**
+                     * File
+                     * Format: binary
+                     * @description PDF, JPG or PNG, 10 MB at most.
+                     */
+                    file: string;
+                    /**
+                     * Doc Type
+                     * @enum {string}
+                     */
+                    doc_type: "pay_stub" | "w2" | "bank_statement";
+                };
             };
         };
         responses: {

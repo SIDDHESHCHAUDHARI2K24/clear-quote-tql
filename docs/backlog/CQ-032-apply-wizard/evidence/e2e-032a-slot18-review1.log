@@ -1,0 +1,28 @@
+signup 200
+otp verify 200
+draft fbdb6b66-a5e3-410f-9767-f634d5d15359 email prefilled: True current_tab: you
+metros: [{'state': 'AZ', 'metros': ['Scottsdale']}, {'state': 'CO', 'metros': ['Denver']}, {'state': 'FL', 'metros': ['Davenport', 'Tampa']}]
+patch you valid: True {}
+  you ssn fields in response: {'ssn_last4': '6789', 'ssn_set': True} | digits echoed: False
+patch property valid: True {}
+patch income valid: True {}
+patch consent valid: True {}
+resave you without ssn -> valid: True ssn_set: True
+unauthenticated 50 MB Content-Length -> HTTP/1.1 413 Request Entity Too Large
+upload pdf 201
+upload 11MB 413 Files must be 10 MB or smaller.
+upload exe 415 Only PDF, JPG and PNG files are accepted.
+submit 200 {'application_id': '84198b20-8a2c-43df-a2db-63f8cb851ff3', 'draft_id': 'fbdb6b66-a5e3-410f-9767-f634d5d15359', 'status': 'intake', 'assigned_lo_name': 'Jordan Lee', 'pipeline_started': True}
+assigned LO Jordan Lee jordan.lee@clearquote-demo.test
+staff otp 200
+summary status: priced stage: priced
+summary keys: ['application_id', 'client_name', 'default_tab', 'down_payment_amount', 'down_payment_pct', 'last_pipeline_stage', 'location', 'note_rate', 'occupancy', 'ppp_years', 'program', 'purchasing_power', 'status', 'strategy', 'tabs']
+summary excerpt: {}
+LO 'New application' emails: ['New application from Tina Tampa']
+raw ssn column borrower b'gAAAAABqtr92ffu61ZPOFPhT' ... contains digits: False
+quotes: 2
+documents: [{'doc_type': 'pay_stub', 'object_key': 'applications/84198b20-8a2c-43df-a2db-63f8cb851ff3/documents/d554c2fc-e25a-40f1-98d5-7b20fb72d0eb.pdf'}]
+consent: {'type': 'application', 'status': 'accepted', 'text_hash': '3bf2754c779b6e21797a332c5df81cc116ae7243bdb4cae6f08cd1105742edbb', 'ip': '127.0.0.1', 'user_agent': 'E2E/cq032', 'at': datetime.datetime(2026, 9, 25, 18, 37, 42, 397367, tzinfo=datetime.timezone.utc)}
+events: ['application.submitted', 'application.assigned', 'pipeline.verified', 'pipeline.enriched', 'pipeline.enriched', 'pipeline.enriched', 'pipeline.priced']
+source: portal
+draft data after submit: has 123456789: False | has ssn_encrypted: False | has ssn_last4: True

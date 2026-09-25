@@ -11,6 +11,7 @@ import pytest
 from app.features.portal.apply.validation import (
     MSG_AGE,
     MSG_CHECKBOX,
+    MSG_DOB_FORMAT,
     MSG_DOWN_PAYMENT,
     MSG_INCOME_PRIMARY,
     MSG_METRO_REQUIRED,
@@ -20,9 +21,11 @@ from app.features.portal.apply.validation import (
     MSG_PRIOR_ADDRESS,
     MSG_REQUIRED,
     MSG_SSN,
+    MSG_TOO_LONG,
     MSG_TYPED_NAME,
     TabName,
     ValidationContext,
+    YouTab,
     context_for,
     first_incomplete_tab,
     validate_all,
@@ -240,3 +243,71 @@ def test_unused_co_borrower_and_prior_address_are_ignored(valid_tabs: Tabs) -> N
     model, errors = validate_tab(TabName.YOU, you, _ctx())
     assert errors == {}
     assert model is not None
+
+
+@pytest.mark.parametrize("value", ["true", 1, "yes"])
+def test_consent_booleans_are_strict(valid_tabs: Tabs, value: Any) -> None:
+    """Review round 1 nit: only a JSON `true` ticks a consent box."""
+    consent = valid_tabs()["consent"] | {"soft_pull_authorized": value}
+    _, errors = validate_tab(TabName.CONSENT, consent, _ctx())
+    assert set(errors) == {"soft_pull_authorized"}
+
+
+@pytest.mark.parametrize("dob", [599_184_000, "1988-04-12T00:00:00", "19880412", "04/12/1988"])
+def test_dob_must_be_an_iso_date_string(valid_tabs: Tabs, dob: Any) -> None:
+    you = valid_tabs()["you"] | {"dob": dob}
+    _, errors = validate_tab(TabName.YOU, you, _ctx())
+    assert errors == {"dob": MSG_DOB_FORMAT}
+
+
+def test_free_text_is_capped_at_200_characters(valid_tabs: Tabs) -> None:
+    long = "x" * 201
+    you = valid_tabs()["you"]
+    you["current_address"] = you["current_address"] | {"street": long, "city": long}
+    _, errors = validate_tab(TabName.YOU, you, _ctx())
+    assert errors == {"current_address.street": MSG_TOO_LONG, "current_address.city": MSG_TOO_LONG}
+
+    income = valid_tabs()["income"] | {"employer_name": long}
+    _, errors = validate_tab(TabName.INCOME, income, _ctx())
+    assert errors == {"employer_name": MSG_TOO_LONG}
+
+    consent = valid_tabs()["consent"] | {"typed_name": long}
+    _, errors = validate_tab(TabName.CONSENT, consent, _ctx())
+    assert errors == {"typed_name": MSG_TOO_LONG}
+
+    prop = valid_tabs()["property"] | {"buy_box_metros": [long]}
+    _, errors = validate_tab(TabName.PROPERTY, prop, _ctx())
+    assert errors == {"buy_box_metros": MSG_TOO_LONG}
+
+
+def test_prior_housing_status_defaults_to_rent(valid_tabs: Tabs) -> None:
+    you = valid_tabs()["you"] | {
+        "residence_years": 1,
+        "residence_months": 0,
+        "prior_address": {
+            "street": "5 Old Rd",
+            "city": "Tampa",
+            "state": "FL",
+            "zip": "33602",
+            "residence_years": 4,
+            "residence_months": 0,
+        },
+    }
+    model, errors = validate_tab(TabName.YOU, you, _ctx())
+    assert errors == {}
+    assert isinstance(model, YouTab)
+    assert model.prior_housing_status == "rent"
+
+    _, errors = validate_tab(TabName.YOU, you | {"prior_housing_status": "castle"}, _ctx())
+    assert set(errors) == {"prior_housing_status"}
+
+
+def test_stored_ssn_ciphertext_satisfies_the_ssn_rule(valid_tabs: Tabs) -> None:
+    """Review round 1, major 1: a saved draft holds `ssn_encrypted`, not
+    `ssn`; that counts as provided."""
+    you = valid_tabs()["you"]
+    you.pop("ssn")
+    _, errors = validate_tab(TabName.YOU, you, _ctx())
+    assert errors == {"ssn": MSG_REQUIRED}
+    _, errors = validate_tab(TabName.YOU, you | {"ssn_encrypted": "token"}, _ctx())
+    assert errors == {}

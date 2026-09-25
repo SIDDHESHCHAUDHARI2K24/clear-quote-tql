@@ -64,9 +64,29 @@ def main() -> None:
         "consent": {"soft_pull_authorized": True, "contact_consent": True, "terms_accepted": True,
                     "typed_name": "tina tampa"},
     }
+    print("metros:", b.get("/portal/applications/metros").json()["states"][:3])
     for tab, data in tabs.items():
         r = b.patch(f"/portal/applications/{draft_id}/draft", json={"tab": tab, "data": data}).json()
         print("patch", tab, "valid:", r["tab_valid"], r["field_errors"])
+        if tab == "you":
+            you = r["draft"]["data"]["you"]
+            print("  you ssn fields in response:", {k: v for k, v in you.items() if "ssn" in k},
+                  "| digits echoed:", "123456789" in str(r) or "123-45-6789" in str(r))
+    resave = {k: v for k, v in tabs["you"].items() if k != "ssn"}
+    r = b.patch(f"/portal/applications/{draft_id}/draft", json={"tab": "you", "data": resave}).json()
+    print("resave you without ssn -> valid:", r["tab_valid"], "ssn_set:", r["draft"]["data"]["you"]["ssn_set"])
+
+    # Upload guard: an oversized Content-Length with no session is refused
+    # before auth or parsing (raw socket so the client never sends 50 MB).
+    import socket
+
+    with socket.create_connection(("localhost", 8118)) as sock:
+        sock.sendall(
+            f"POST /api/v1/portal/applications/{uuid.uuid4()}/documents HTTP/1.1\r\nHost: localhost\r\n"
+            "Content-Type: multipart/form-data; boundary=zzz\r\nContent-Length: 52428800\r\n\r\n".encode()
+            + b"--zzz\r\n"
+        )
+        print("unauthenticated 50 MB Content-Length ->", sock.recv(200).split(b"\r\n")[0].decode())
 
     pdf = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
     up = b.post(f"/portal/applications/{draft_id}/documents", files={"file": ("paystub.pdf", pdf, "application/pdf")},
@@ -129,6 +149,9 @@ def main() -> None:
         print("events:", [e["type"] for e in ev])
         src = await conn.fetchval("SELECT source::text FROM applications WHERE id=$1", uuid.UUID(app_id))
         print("source:", src)
+        draft_raw = await conn.fetchval("SELECT data::text FROM application_drafts WHERE id=$1", uuid.UUID(draft_id))
+        print("draft data after submit: has 123456789:", "123456789" in draft_raw,
+              "| has ssn_encrypted:", "ssn_encrypted" in draft_raw, "| has ssn_last4:", "ssn_last4" in draft_raw)
         await conn.close()
 
     asyncio.run(db_checks())

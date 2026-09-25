@@ -14,6 +14,8 @@ from app.features.portal.apply.models import ApplicationDraft
 from app.features.portal.apply.validation import MSG_INCOME_PRIMARY, MSG_PRIOR_ADDRESS
 from app.integrations.property_search.models import ProviderListing
 
+from .conftest import PDF_BYTES, PNG_BYTES, StubS3
+
 Tabs = Callable[[], dict[str, dict[str, Any]]]
 BASE = "/api/v1/portal/applications"
 
@@ -54,16 +56,35 @@ async def test_create_returns_existing_open_draft(
 
 
 async def test_other_borrower_gets_404(
-    client: AsyncClient, make_borrower_session: Callable[..., Awaitable[Any]]
+    client: AsyncClient,
+    make_borrower_session: Callable[..., Awaitable[Any]],
+    stub_storage: StubS3,
 ) -> None:
     await make_borrower_session()
     draft_id = (await client.post(BASE)).json()["id"]
+    doc_id = (
+        await client.post(
+            f"{BASE}/{draft_id}/documents",
+            files={"file": ("w2.png", PNG_BYTES, "image/png")},
+            data={"doc_type": "w2"},
+        )
+    ).json()["id"]
+    owner_keys = stub_storage.keys()
 
     await make_borrower_session()  # a different borrower signs in
     assert (await client.get(f"{BASE}/{draft_id}")).status_code == 404
     patch = await client.patch(f"{BASE}/{draft_id}/draft", json={"tab": "you", "data": {}})
     assert patch.status_code == 404
     assert (await client.post(f"{BASE}/{draft_id}/submit")).status_code == 404
+    upload = await client.post(
+        f"{BASE}/{draft_id}/documents",
+        files={"file": ("a.pdf", PDF_BYTES, "application/pdf")},
+        data={"doc_type": "pay_stub"},
+    )
+    assert upload.status_code == 404
+    assert stub_storage.keys() == owner_keys
+    assert (await client.delete(f"{BASE}/{draft_id}/documents/{doc_id}")).status_code == 404
+    assert len(owner_keys) == 1 and stub_storage.keys() == owner_keys
 
 
 async def test_autosave_returns_field_errors_without_blocking(
@@ -141,3 +162,68 @@ async def test_patch_rejects_unknown_tab(
     draft_id = (await client.post(BASE)).json()["id"]
     response = await client.patch(f"{BASE}/{draft_id}/draft", json={"tab": "reo", "data": {}})
     assert response.status_code == 422
+
+
+async def test_metros_for_the_picker(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: Callable[..., Awaitable[Any]],
+    tampa_listing: ProviderListing,
+) -> None:
+    """Review round 1, major 3: the borrower-side metro list for tab 2."""
+    assert (await client.get(f"{BASE}/metros")).status_code == 401
+    db_session.add_all(
+        [
+            ProviderListing(**_listing_fields(tampa_listing) | {"metro": "Davenport"}),
+            ProviderListing(**_listing_fields(tampa_listing) | {"state": "AZ", "metro": "Phoenix"}),
+        ]
+    )
+    await db_session.commit()
+    await make_borrower_session()
+    response = await client.get(f"{BASE}/metros")
+    assert response.status_code == 200
+    assert response.json() == {
+        "states": [
+            {"state": "AZ", "metros": ["Phoenix"]},
+            {"state": "FL", "metros": ["Davenport", "Tampa"]},
+        ]
+    }
+
+
+def _listing_fields(listing: ProviderListing) -> dict[str, Any]:
+    return {
+        column: getattr(listing, column)
+        for column in (
+            "address",
+            "city",
+            "state",
+            "zip",
+            "county",
+            "metro",
+            "list_price",
+            "beds",
+            "baths",
+            "sqft",
+            "property_type",
+            "image_url",
+            "deal_grade",
+            "str_permitted",
+        )
+    }
+
+
+async def test_422_bodies_never_echo_input(
+    client: AsyncClient, make_borrower_session: Callable[..., Awaitable[Any]]
+) -> None:
+    """Review round 1 nit: a malformed body (an SSN pasted where the tab or
+    data object belongs) is rejected without echoing the value back."""
+    await make_borrower_session()
+    draft_id = (await client.post(BASE)).json()["id"]
+    for body in (
+        {"tab": "123-45-6789", "data": {}},
+        {"tab": "you", "data": "123-45-6789"},
+    ):
+        response = await client.patch(f"{BASE}/{draft_id}/draft", json=body)
+        assert response.status_code == 422
+        assert "123-45-6789" not in response.text
+        assert all("input" not in error for error in response.json()["detail"])

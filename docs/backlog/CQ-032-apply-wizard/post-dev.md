@@ -69,6 +69,37 @@ Supporting tests: `test_validation.py` (18 rule tests, plus column-precision bou
 | Minor | Consent IP is the proxy's IP behind Railway (plan said first X-Forwarded-For hop) | Resolved by decision: uses the project's `client_ip` helper (socket peer), like the login rate limits; trusting the proxy header lands once in CQ-035. Plan decision 18 updated. Follow-up logged. |
 | Minor | LO email was sent over SMTP before the application commit | Fixed: the email is sent after the commit, and its outbox row commits right after; the E2E re-run confirms one email per application |
 
+## Review round 1 (stage 6, PR #14)
+
+Fresh-reviewer findings on PR #14, fixed by a separate fix worker (test first for each). Plan decisions 25–30 record the resulting contract.
+
+| Severity | Finding | Resolution | Evidence |
+| --- | --- | --- | --- |
+| Major 1 | `save_tab` stored the raw tab-1 `ssn` and `co_borrower.ssn` in `application_drafts.data`, and `draft_out` returned them | Fixed (decision 25): on save each SSN becomes a Fernet token `ssn_encrypted` (via `core/encryption.encrypt_str`) plus `ssn_last4` inside the JSON, with no migration. Responses carry only `ssn_last4` + `ssn_set`. An omitted or blank `ssn` keeps the stored one. A malformed one is not stored and is reported. Client-sent `ssn_encrypted`/`ssn_last4`/`ssn_set` are ignored. Submit decrypts into the party rows, then scrubs the ciphertext from the draft. The plan.md contract tells CQ-032b that SSNs come back masked | `tests/test_ssn_privacy.py` (raw `data::text` has no SSN, in any format, before or after submit; GET and PATCH are masked; a resave without the SSN keeps it; forged keys are ignored; the party rows decrypt to the digits; invalid SSNs are reported and not stored); `test_validation.py::test_stored_ssn_ciphertext_satisfies_the_ssn_rule`. E2E: `ssn fields in response: {'ssn_last4': '6789', 'ssn_set': True}`, and after submit `has 123456789: False, has ssn_encrypted: False` |
+| Major 2 | Upload body not bounded before parse or auth | Fixed (decision 26): `upload_guard.UploadBodyLimitMiddleware` (pure ASGI, inside CORS) returns 411 with no `Content-Length` and 413 when it is over 10 MB + 64 KB, and a byte counter returns 413 for a body longer than declared. The route parses by hand with `request.form(max_files=1)`, only after auth, ownership and the cap check | `tests/test_upload_guard.py`: an unauthenticated 50 MB `Content-Length` → 413 with the form parser never called; chunked → 411; a body over its `Content-Length` → 413 and nothing stored; two files → 422; missing parts → 422. E2E over a raw socket: `unauthenticated 50 MB Content-Length -> HTTP/1.1 413` |
+| Major 3 | No borrower-accessible metros list | Fixed (decision 28): `GET /api/v1/portal/applications/metros` → `{states:[{state, metros}]}` from `service.known_metros`; api-client regenerated | `test_drafts.py::test_metros_for_the_picker` (401 without a session; sorted states and metros). E2E: `[{'state': 'AZ', 'metros': ['Scottsdale']}, {'state': 'CO', ...}, {'state': 'FL', 'metros': ['Davenport', 'Tampa']}]` |
+| Minor 1 | An email failure after the commit could skip `_start_pipeline` or return a 500 | Fixed (decision 29): the pipeline starts right after the application commit. The email plus its outbox commit sit in try/except with logging and a rollback | `test_submit.py::test_pipeline_starts_before_email_and_survives_email_failure` (order `pipeline` → `email`; SMTP raising still gives 200 with `pipeline_started`) |
+| Minor 2 | Orphaned MinIO copies when submit failed after copying | Fixed: copies are tracked as they are made; any failure from the copy through the commit deletes them | `test_submit.py::test_failed_submit_leaves_no_copied_documents` (commit raising → only the draft key remains; no workflow started) |
+| Minor 3 | `test_submit_pipeline.py` asserted the last event's position | Fixed: asserts `pipeline.priced` membership | `test_submitted_tampa_str_reaches_priced` |
+| Minor 4 | 20-document cap checked after reading the file | Fixed: the cap (and ownership/open state) is checked before the body is parsed, then rechecked under the row lock | `test_upload_guard.py::test_document_cap_is_checked_before_reading` (cap reached → 422 with `Request.form` never called) |
+| Minor 5 | No 404 assertions for another borrower's upload/delete | Added | `test_drafts.py::test_other_borrower_gets_404` (upload → 404 with nothing stored; delete → 404 with the owner's object kept) |
+| Minor 6 | Several applications per borrower undecided; no submit throttle | Decision 27: several portal applications are allowed. At most one submit per borrower per 10 minutes → 429. The limit is checked after validation and counted only after the commit (the local `code-review` pass caught that counting before the commit locked out a borrower who got a 409 "no LO") | `test_submit.py::test_one_submit_per_borrower_per_ten_minutes`, `::test_failed_submit_does_not_use_up_the_rate_limit` |
+| Nit | Consent booleans coerced `"true"`/`1`; `dob` accepted numbers and datetimes | `StrictBool` consent fields; `dob` must be a `YYYY-MM-DD` string | `test_validation.py::test_consent_booleans_are_strict`, `::test_dob_must_be_an_iso_date_string` |
+| Nit | 422 bodies echoed `input` (an SSN could come back) | Global `RequestValidationError` handler drops `input` and `ctx` (decision 30) | `test_drafts.py::test_422_bodies_never_echo_input` |
+| Nit | No max length on free text | 200-character cap on street, city, employer, typed name, metro names and co-borrower email | `test_validation.py::test_free_text_is_capped_at_200_characters` |
+| Nit | The prior address's housing status was hard-coded to `rent` | Optional `prior_housing_status` (default `rent`), documented in the contract | `test_validation.py::test_prior_housing_status_defaults_to_rent`, `test_submit.py::test_prior_address_housing_status` |
+
+Small changes outside owned files: `core/encryption.py` (`encrypt_str`/`decrypt_str`), `core/errors.py` (422 handler) and `main.py` (middleware registration).
+
+Round-1 verification (slot 18):
+
+- `make lint`: exit 0.
+- `make test`: backend 557 passed, seed 32, and the frontend suites (ui 163, lo-console 60, borrower-portal 95, api-client 2).
+- Portal apply tests run 3× in a row: 63 passed each time.
+- E2E `evidence/e2e_apply.py` with the API on 8118 and `make worker` on `cq-s18`: the application reaches **Priced** with 2 quotes. Log: `evidence/e2e-032a-slot18-review1.log`.
+
+The Temporal workflow tests (`backend/app/workflows/tests`) were flaky on this loaded machine, on this branch **and on the unchanged base commit** (the base hung on one run). The failure is "another operation is in progress" at teardown, as the activities outlive the test on the shared connection. The P5/P6 conftest rewrite (a per-test `db_lock` and per-test workers) addresses this, and this branch now merges it.
+
 ## How to test manually
 
 1. `bash scripts/worktree-env.sh 18`, then `make demo-reset`. Start the API (`uv run uvicorn app.main:app --port 8118`, run from the repo root) and `make worker`.
@@ -79,4 +110,4 @@ Supporting tests: `test_validation.py` (18 rule tests, plus column-precision bou
 - The CQ-018 Quote Builder could open at the borrower's `down_payment_pct` preference (a `field_values` row with `source_ref = borrower_portal`).
 - CQ-035: trust `X-Forwarded-For` in `auth.common.client_ip` behind the Railway proxy; consent rows pick it up automatically.
 - CQ-033: use `portal_credit_key(application_id)` for a portal applicant's hard pull (the mock already returns 3 bureaus plus the middle score).
-- CQ-032b: build against the "Per-tab data contract" in plan.md. Metros for the picker come from CQ-028a's `reference/metros` (or `provider_listings`).
+- CQ-032b: build against the "Per-tab data contract" in plan.md. Metros for the picker come from `GET /api/v1/portal/applications/metros`. SSNs come back masked (`ssn_last4`, `ssn_set`): omit `ssn` from PATCHes once it is set. Uploads must send a `Content-Length` (`fetch` with `FormData` does).

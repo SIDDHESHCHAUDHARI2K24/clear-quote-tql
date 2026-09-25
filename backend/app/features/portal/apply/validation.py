@@ -21,11 +21,12 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Field,
     ValidationError,
     ValidationInfo,
     field_validator,
@@ -90,10 +91,23 @@ MSG_INCOME_PRIMARY = "Monthly income is required for a home you'll live in."
 MSG_CHECKBOX = "Check this box to continue."
 MSG_TYPED_NAME = "Type your full name exactly as entered on step 1."
 MSG_EMAIL = "Enter a valid email address."
+MSG_DOB_FORMAT = "Enter a date as YYYY-MM-DD."
+MSG_TOO_LONG = "Use 200 characters or fewer."
+
+MAX_TEXT = 200
+"""Cap on every free-text field (addresses, employer, typed name, metro
+names, co-borrower email)."""
+
+SSN_ENCRYPTED_KEY = "ssn_encrypted"
+"""Where a saved draft keeps a person's SSN: a Fernet token (plan.md
+decision 25). The plain `ssn` is only ever in a request body."""
+SSN_LAST4_KEY = "ssn_last4"
 
 _STATE_RE = re.compile(r"^[A-Za-z]{2}$")
 _ZIP_RE = re.compile(r"^\d{5}$")
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_SSN_CHARS_RE = re.compile(r"[\d\s-]+")
 
 
 @dataclass(frozen=True)
@@ -124,6 +138,21 @@ def digits_only(value: str) -> str:
     return re.sub(r"\D", "", value)
 
 
+def normalize_ssn(value: Any) -> str | None:
+    """The 9 digits of a well-formed SSN (dashes/spaces allowed), else
+    None."""
+    if not isinstance(value, str) or not _SSN_CHARS_RE.fullmatch(value):
+        return None
+    digits = digits_only(value)
+    return digits if len(digits) == 9 else None
+
+
+def _cap(value: str) -> str:
+    if len(value) > MAX_TEXT:
+        raise _custom(MSG_TOO_LONG)
+    return value
+
+
 def normalize_name(value: str) -> str:
     return " ".join(value.split()).casefold()
 
@@ -147,7 +176,7 @@ class Address(_TabModel):
     def _not_blank(cls, value: str) -> str:
         if not value:
             raise _custom(MSG_REQUIRED)
-        return value
+        return _cap(value)
 
     @field_validator("state")
     @classmethod
@@ -188,7 +217,10 @@ class PersonFields(_TabModel):
     last_name: str
     cell_phone: str
     dob: date
-    ssn: str
+    ssn_encrypted: str | None = None
+    """Set by the server on save (decision 25); declared before `ssn` so
+    the `ssn` rule can see it."""
+    ssn: str | None = Field(default=None, validate_default=True)
     marital_status: Literal["married", "unmarried", "separated"]
     dependents_count: int
 
@@ -211,10 +243,26 @@ class PersonFields(_TabModel):
 
     @field_validator("ssn")
     @classmethod
-    def _ssn(cls, value: str) -> str:
-        if not re.fullmatch(r"[\d\s-]+", value) or len(digits_only(value)) != 9:
+    def _ssn(cls, value: str | None, info: ValidationInfo) -> str | None:
+        """Either a well-formed `ssn` in this body or one already stored
+        (`ssn_encrypted`) satisfies the rule."""
+        if value is None:
+            if info.data.get(SSN_ENCRYPTED_KEY):
+                return None
+            raise _custom(MSG_REQUIRED)
+        ssn = normalize_ssn(value)
+        if ssn is None:
             raise _custom(MSG_SSN)
-        return digits_only(value)
+        return ssn
+
+    @field_validator("dob", mode="before")
+    @classmethod
+    def _dob_iso(cls, value: Any) -> Any:
+        if value is None:
+            return value
+        if not isinstance(value, str) or not _ISO_DATE_RE.fullmatch(value):
+            raise _custom(MSG_DOB_FORMAT)
+        return value
 
     @field_validator("dob")
     @classmethod
@@ -245,6 +293,8 @@ class CoBorrower(PersonFields):
     def _email(cls, value: str | None) -> str | None:
         if value in (None, ""):
             return None
+        if len(value) > MAX_TEXT:
+            raise _custom(MSG_TOO_LONG)
         if not _EMAIL_RE.fullmatch(value):
             raise _custom(MSG_EMAIL)
         return value
@@ -259,8 +309,15 @@ class YouTab(PersonFields):
     residence_years: int
     residence_months: int
     prior_address: PriorAddress | None = None
+    prior_housing_status: Literal["own", "rent", "rent_free"] = "rent"
+    """Housing status at the prior address (sequence 1); default `rent`."""
     has_co_borrower: bool = False
     co_borrower: CoBorrower | None = None
+
+    @field_validator("prior_housing_status", mode="before")
+    @classmethod
+    def _prior_status_default(cls, value: Any) -> Any:
+        return "rent" if value is None else value
 
     @field_validator("residence_years")
     @classmethod
@@ -344,7 +401,7 @@ class PropertyTab(_TabModel):
     def _metros(cls, value: list[str]) -> list[str]:
         cleaned: list[str] = []
         for metro in value:
-            name = metro.strip()
+            name = _cap(metro.strip())
             if name and name not in cleaned:
                 cleaned.append(name)
         return cleaned
@@ -396,7 +453,7 @@ class IncomeTab(_TabModel):
     @field_validator("employer_name")
     @classmethod
     def _employer(cls, value: str | None) -> str | None:
-        return value or None
+        return _cap(value) if value else None
 
     @model_validator(mode="after")
     def _primary_requires_income(self, info: ValidationInfo) -> IncomeTab:
@@ -410,10 +467,14 @@ class IncomeTab(_TabModel):
         return self
 
 
+StrictBool = Annotated[bool, Field(strict=True)]
+"""Only a JSON `true`/`false`: no "true", 1 or "yes" coercion."""
+
+
 class ConsentTab(_TabModel):
-    soft_pull_authorized: bool
-    contact_consent: bool
-    terms_accepted: bool
+    soft_pull_authorized: StrictBool
+    contact_consent: StrictBool
+    terms_accepted: StrictBool
     typed_name: str
 
     @field_validator("soft_pull_authorized", "contact_consent", "terms_accepted")
@@ -426,6 +487,7 @@ class ConsentTab(_TabModel):
     @field_validator("typed_name")
     @classmethod
     def _typed_name(cls, value: str, info: ValidationInfo) -> str:
+        _cap(value)
         expected = _ctx(info).full_name
         if not value or expected is None or normalize_name(value) != normalize_name(expected):
             raise _custom(MSG_TYPED_NAME)

@@ -19,6 +19,7 @@ from collections.abc import Awaitable, Callable
 from decimal import Decimal
 from typing import Any, cast
 
+from redis.asyncio import Redis
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,8 +28,15 @@ from temporalio.common import WorkflowIDReusePolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from app.core import clock, storage
+from app.core.encryption import decrypt_str, encrypt_str
 from app.core.enums import ApplicationSource, ApplicationStatus, FieldSource, Occupancy, Strategy
-from app.core.errors import AppError, ConflictError, NotFoundError, ValidationAppError
+from app.core.errors import (
+    AppError,
+    ConflictError,
+    NotFoundError,
+    RateLimitedError,
+    ValidationAppError,
+)
 from app.features.applications.assets.models import Asset, Document, Employment
 from app.features.applications.assignment import INACTIVE_STATUSES, least_loaded_lo_id
 from app.features.applications.credit.models import Liability
@@ -47,6 +55,7 @@ from app.features.applications.property.models import (
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.models import FieldValue
 from app.features.auth.models import BorrowerAccount, User
+from app.features.auth.otp.rate_limit import hit
 from app.features.borrower.consent.models import Consent, ConsentStatus, ConsentType
 from app.features.clients.models import Client
 from app.features.notifications.email.service import send_email
@@ -66,18 +75,25 @@ from .schemas import (
     ConsentTextOut,
     DraftPatchResponse,
     DraftTabs,
+    MetrosOut,
+    StateMetros,
     SubmitResponse,
     TabStatus,
 )
 from .validation import (
+    MSG_SSN,
+    SSN_ENCRYPTED_KEY,
+    SSN_LAST4_KEY,
     TAB_ORDER,
     ConsentTab,
     IncomeTab,
+    PersonFields,
     PropertyTab,
     TabName,
     YouTab,
     context_for,
     first_incomplete_tab,
+    normalize_ssn,
     validate_all,
     validate_tab,
 )
@@ -86,6 +102,10 @@ logger = logging.getLogger(__name__)
 
 MAX_TAB_BYTES = 64 * 1024
 DOCUMENTS_KEY = "documents"
+SSN_SET_KEY = "ssn_set"
+SUBMIT_LIMIT = 1
+SUBMIT_WINDOW_SECONDS = 600
+"""Decision 27: one submit per borrower per 10 minutes."""
 SOURCE_REF_PORTAL = "borrower_portal"
 _ACTOR_BORROWER = "borrower"
 _ACTOR_SYSTEM = "system"
@@ -110,6 +130,14 @@ async def known_metros(db: AsyncSession) -> dict[str, frozenset[str]]:
     for state, metro in rows:
         by_state.setdefault(state, set()).add(metro)
     return {state: frozenset(metros) for state, metros in by_state.items()}
+
+
+async def metros_out(db: AsyncSession) -> MetrosOut:
+    """`known_metros` for the tab 2 picker, sorted (decision 28)."""
+    metros = await known_metros(db)
+    return MetrosOut(
+        states=[StateMetros(state=state, metros=sorted(metros[state])) for state in sorted(metros)]
+    )
 
 
 async def get_owned_draft(
@@ -169,16 +197,91 @@ async def get_or_create_draft(db: AsyncSession, account: BorrowerAccount) -> App
     return draft
 
 
+_SSN_SERVER_KEYS = ("ssn", SSN_ENCRYPTED_KEY, SSN_LAST4_KEY, SSN_SET_KEY)
+"""Keys of a person block only the server writes (decision 25)."""
+
+
+def _secure_person(block: dict[str, Any], stored: Any) -> tuple[dict[str, Any], str | None]:
+    """Moves a person block's plain `ssn` into Fernet ciphertext
+    (decision 25). Returns the block to store and an SSN error message.
+
+    - a well-formed `ssn` -> `ssn_encrypted` + `ssn_last4`;
+    - no `ssn` (absent or blank) -> the stored ciphertext is kept;
+    - a malformed `ssn` -> nothing stored (the old one is cleared too) and
+      `MSG_SSN` reported. The malformed value is never persisted.
+
+    Client-sent `ssn_encrypted` / `ssn_last4` / `ssn_set` are dropped."""
+    raw = block.get("ssn")
+    secured = {k: v for k, v in block.items() if k not in _SSN_SERVER_KEYS}
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        if isinstance(stored, dict) and stored.get(SSN_ENCRYPTED_KEY):
+            secured[SSN_ENCRYPTED_KEY] = stored[SSN_ENCRYPTED_KEY]
+            secured[SSN_LAST4_KEY] = stored.get(SSN_LAST4_KEY)
+        return secured, None
+    ssn = normalize_ssn(raw)
+    if ssn is None:
+        return secured, MSG_SSN
+    secured[SSN_ENCRYPTED_KEY] = encrypt_str(ssn)
+    secured[SSN_LAST4_KEY] = ssn[-4:]
+    return secured, None
+
+
+def _secure_you_tab(incoming: dict[str, Any], stored: Any) -> tuple[dict[str, Any], dict[str, str]]:
+    """Applies `_secure_person` to the borrower and the co-borrower block.
+    Returns the tab to store and `{path: message}` SSN errors."""
+    stored = stored if isinstance(stored, dict) else {}
+    secured, error = _secure_person(incoming, stored)
+    errors = {"ssn": error} if error else {}
+    co = incoming.get("co_borrower")
+    if isinstance(co, dict):
+        secured_co, co_error = _secure_person(co, stored.get("co_borrower"))
+        secured["co_borrower"] = secured_co
+        if co_error:
+            errors["co_borrower.ssn"] = co_error
+    return secured, errors
+
+
+def _mask_person(block: dict[str, Any]) -> dict[str, Any]:
+    """`ssn_last4` is stored only next to its ciphertext (and survives the
+    post-submit scrub), so it alone says whether an SSN was given."""
+    masked = {k: v for k, v in block.items() if k not in ("ssn", SSN_ENCRYPTED_KEY, SSN_SET_KEY)}
+    masked[SSN_SET_KEY] = bool(block.get(SSN_LAST4_KEY))
+    if not masked[SSN_SET_KEY]:
+        masked.pop(SSN_LAST4_KEY, None)
+    return masked
+
+
+def _scrub_ssn_ciphertext(data: dict[str, Any]) -> dict[str, Any]:
+    """The draft data with every `ssn_encrypted` removed (after submit the
+    SSN lives only in `application_parties`); `ssn_last4` stays."""
+    you = data.get(TabName.YOU.value)
+    if not isinstance(you, dict):
+        return data
+    scrubbed = {k: v for k, v in you.items() if k != SSN_ENCRYPTED_KEY}
+    co = you.get("co_borrower")
+    if isinstance(co, dict):
+        scrubbed["co_borrower"] = {k: v for k, v in co.items() if k != SSN_ENCRYPTED_KEY}
+    return {**data, TabName.YOU.value: scrubbed}
+
+
 def _public_data(data: dict[str, Any]) -> dict[str, Any]:
     """The draft data as returned to the borrower: storage keys stripped
-    from the document list."""
+    from the document list; SSNs masked to `ssn_last4` + `ssn_set`."""
+    public = dict(data)
+    you = data.get(TabName.YOU.value)
+    if isinstance(you, dict):
+        masked = _mask_person(you)
+        co = you.get("co_borrower")
+        if isinstance(co, dict):
+            masked["co_borrower"] = _mask_person(co)
+        public[TabName.YOU.value] = masked
     income = data.get(TabName.INCOME.value)
-    if not isinstance(income, dict) or not isinstance(income.get(DOCUMENTS_KEY), list):
-        return data
-    documents = [
-        {k: v for k, v in doc.items() if k != "object_key"} for doc in income[DOCUMENTS_KEY]
-    ]
-    return {**data, TabName.INCOME.value: {**income, DOCUMENTS_KEY: documents}}
+    if isinstance(income, dict) and isinstance(income.get(DOCUMENTS_KEY), list):
+        documents = [
+            {k: v for k, v in doc.items() if k != "object_key"} for doc in income[DOCUMENTS_KEY]
+        ]
+        public[TabName.INCOME.value] = {**income, DOCUMENTS_KEY: documents}
+    return public
 
 
 async def draft_out(
@@ -237,8 +340,11 @@ async def save_tab(
     _ensure_open(draft)
 
     incoming = dict(tab_data)
+    ssn_errors: dict[str, str] = {}
     if tab is TabName.YOU:
         incoming.pop("email", None)  # read-only: always the account email
+        # Decision 25: the plain SSN never reaches the JSONB column.
+        incoming, ssn_errors = _secure_you_tab(incoming, (draft.data or {}).get(TabName.YOU.value))
     if tab is TabName.INCOME:
         incoming[DOCUMENTS_KEY] = _documents_of(draft.data or {})  # server-managed
 
@@ -249,6 +355,9 @@ async def save_tab(
 
     metros = await known_metros(db)
     _, errors = validate_tab(tab, incoming, context_for(data, metros))
+    # A malformed SSN was not stored, so the stored tab reports it as
+    # missing; report what was actually wrong instead.
+    errors = {**errors, **ssn_errors}
     return DraftPatchResponse(
         draft=await draft_out(db, draft, account),
         tab=tab,
@@ -332,10 +441,21 @@ async def _build_property(
     )
 
 
+def _plain_ssn(person: PersonFields) -> str:
+    """The person's SSN for the party row (whose `EncryptedString` column
+    re-encrypts it): from the draft's ciphertext (decision 25), or a plain
+    `ssn` when one was validated directly."""
+    if person.ssn is not None:
+        return person.ssn
+    if person.ssn_encrypted is None:  # validation guarantees one of them
+        raise ValidationAppError("An SSN is missing.")
+    return decrypt_str(person.ssn_encrypted)
+
+
 def _party(
     application_id: uuid.UUID,
     role: PartyRole,
-    person: Any,
+    person: PersonFields,
     *,
     email: str | None,
     no_co_applicant: bool = False,
@@ -345,7 +465,7 @@ def _party(
         role=role,
         first_name=person.first_name,
         last_name=person.last_name,
-        ssn_encrypted=person.ssn,
+        ssn_encrypted=_plain_ssn(person),
         dob=person.dob,
         marital_status=MaritalStatus(person.marital_status),
         dependents_count=person.dependents_count,
@@ -380,7 +500,7 @@ def _housing_rows(application_id: uuid.UUID, you: YouTab) -> list[HousingHistory
                 city=prior.city,
                 state=prior.state,
                 zip=prior.zip,
-                housing_status=HousingStatus.RENT,
+                housing_status=HousingStatus(you.prior_housing_status),
                 residence_years=prior.residence_years,
                 residence_months=prior.residence_months,
                 vom_completed=False,
@@ -403,13 +523,18 @@ async def _soft_pull_fico(db: AsyncSession, application_id: uuid.UUID) -> int | 
     return report.experian_score
 
 
-async def _move_documents(
-    db: AsyncSession, application_id: uuid.UUID, documents: list[dict[str, Any]]
+async def _copy_documents(
+    db: AsyncSession,
+    application_id: uuid.UUID,
+    documents: list[dict[str, Any]],
+    copied: list[str],
 ) -> list[str]:
     """Copies each draft upload to `applications/{id}/documents/` and
-    creates its `documents` row (plan.md #19). Returns the draft keys to
-    delete once the application commits."""
-    moved: list[str] = []
+    creates its `documents` row (plan.md #19). Each target key is appended
+    to `copied` as soon as it is written, so a failure part-way through
+    can delete exactly what was copied. Returns the draft keys to delete
+    once the application commits."""
+    sources: list[str] = []
     for doc in documents:
         source_key = str(doc["object_key"])
         stored = await storage.get_object(source_key)
@@ -418,6 +543,7 @@ async def _move_documents(
         await storage.put_object(
             target_key, stored.body, stored.content_type or str(doc["content_type"])
         )
+        copied.append(target_key)
         db.add(
             Document(
                 application_id=application_id,
@@ -426,8 +552,17 @@ async def _move_documents(
                 received_at=clock.now(),
             )
         )
-        moved.append(source_key)
-    return moved
+        sources.append(source_key)
+    return sources
+
+
+async def _delete_objects(keys: list[str]) -> None:
+    """Best-effort deletes (a leftover object is only storage, never data)."""
+    for key in keys:
+        try:
+            await storage.delete_object(key)
+        except Exception:
+            logger.warning("Could not delete object %s", key, exc_info=True)
 
 
 async def _start_pipeline(client_factory: TemporalClientFactory, application_id: uuid.UUID) -> bool:
@@ -457,6 +592,7 @@ async def submit(
     draft_id: uuid.UUID,
     *,
     client_factory: TemporalClientFactory,
+    valkey: Redis,
     ip: str,
     user_agent: str | None,
 ) -> SubmitResponse:
@@ -472,6 +608,14 @@ async def submit(
                 "first_invalid_tab": first_incomplete_tab(failures).value,
             },
         )
+    # Decision 27: several applications are fine, but at most one submit
+    # per borrower per 10 minutes. Checked here, counted only once the
+    # application commits, so a 422/409/storage failure never locks the
+    # borrower out. (One open draft per borrower plus the row lock mean
+    # two submits cannot race past this check.)
+    rate_key = f"rl:borrower:apply_submit:{account.id}"
+    if int(await valkey.get(rate_key) or 0) >= SUBMIT_LIMIT:
+        raise RateLimitedError("You just submitted an application. Try again in a few minutes.")
     you = cast(YouTab, parsed[TabName.YOU])
     prop = cast(PropertyTab, parsed[TabName.PROPERTY])
     income = cast(IncomeTab, parsed[TabName.INCOME])
@@ -606,15 +750,14 @@ async def submit(
         )
     )
 
-    draft_keys = await _move_documents(db, app_id, _documents_of(data))
-
     borrower_name = you.full_name
+    lo_name, lo_email, account_email, draft_pk = lo.full_name, lo.email, account.email, draft.id
     db.add(
         ActivityEvent(
             application_id=app_id,
             actor=_ACTOR_BORROWER,
             type="application.submitted",
-            payload={"source": ApplicationSource.PORTAL.value, "draft_id": str(draft.id)},
+            payload={"source": ApplicationSource.PORTAL.value, "draft_id": str(draft_pk)},
             at=now,
         )
     )
@@ -623,7 +766,7 @@ async def submit(
             application_id=app_id,
             actor=_ACTOR_SYSTEM,
             type="application.assigned",
-            payload={"lo_id": str(lo.id), "lo_name": lo.full_name, "rule": "least_loaded"},
+            payload={"lo_id": str(lo.id), "lo_name": lo_name, "rule": "least_loaded"},
             at=now,
         )
     )
@@ -633,40 +776,60 @@ async def submit(
         if prop.has_property and prop.address is not None
         else f"To be determined: {', '.join(prop.buy_box_metros)}"
     )
-    draft.submitted_application_id = app_id
-    draft.updated_at = now
-    await db.commit()
+    # Uploads are copied last, right before the commit; if anything from
+    # the copy through the commit fails, the copies are deleted so no
+    # orphaned objects are left (review round 1, minor 2).
+    copied: list[str] = []
+    try:
+        draft_keys = await _copy_documents(db, app_id, _documents_of(data), copied)
+        # Decision 25: after submit the SSN lives only in
+        # `application_parties`; the draft keeps `ssn_last4` alone.
+        draft.data = _scrub_ssn_ciphertext(data)
+        draft.submitted_application_id = app_id
+        draft.updated_at = now
+        await db.commit()
+    except BaseException:
+        await _delete_objects(copied)
+        raise
 
-    # The LO email goes out only once the application exists (SMTP sends
-    # immediately; a rolled-back submit must not have emailed anyone). Its
-    # outbox row commits on its own right after.
-    await send_email(
-        db,
-        to=lo.email,
-        subject=templates.new_application_subject(borrower_name),
-        html=templates.new_application_html(
-            lo_name=lo.full_name,
-            borrower_name=borrower_name,
-            borrower_email=account.email,
-            goal=_OCCUPANCY_LABEL[prop.occupancy],
-            price=_money(prop.target_price),
-            location=location,
-        ),
-        application_id=app_id,
-    )
-    await db.commit()
+    try:
+        await hit(valkey, rate_key, limit=SUBMIT_LIMIT, window_seconds=SUBMIT_WINDOW_SECONDS)
+    except Exception:  # committed: a Valkey hiccup must not fail the submit
+        logger.warning("Could not count the submit for %s", account_email, exc_info=True)
 
-    for key in draft_keys:
-        try:
-            await storage.delete_object(key)
-        except Exception:
-            logger.warning("Could not delete draft upload %s", key, exc_info=True)
-
+    # Decision 17: the workflow starts as soon as the application exists,
+    # before anything that could still fail.
     started = await _start_pipeline(client_factory, app_id)
+
+    # Decision 21: the LO email goes out only once the application exists
+    # (SMTP sends immediately; a rolled-back submit must not have emailed
+    # anyone). Its outbox row commits on its own. A failure here is logged
+    # and never turns a committed submit into an error.
+    try:
+        await send_email(
+            db,
+            to=lo_email,
+            subject=templates.new_application_subject(borrower_name),
+            html=templates.new_application_html(
+                lo_name=lo_name,
+                borrower_name=borrower_name,
+                borrower_email=account_email,
+                goal=_OCCUPANCY_LABEL[prop.occupancy],
+                price=_money(prop.target_price),
+                location=location,
+            ),
+            application_id=app_id,
+        )
+        await db.commit()
+    except Exception:
+        logger.exception("Could not email the LO about portal application %s", app_id)
+        await db.rollback()
+
+    await _delete_objects(draft_keys)
     return SubmitResponse(
         application_id=app_id,
-        draft_id=draft.id,
+        draft_id=draft_pk,
         status="intake",
-        assigned_lo_name=lo.full_name,
+        assigned_lo_name=lo_name,
         pipeline_started=started,
     )

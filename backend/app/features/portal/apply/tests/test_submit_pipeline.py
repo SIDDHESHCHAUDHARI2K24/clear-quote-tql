@@ -125,7 +125,9 @@ async def test_submitted_tampa_str_reaches_priced(
     )
     assert "pipeline.imported" not in event_types
     assert "pipeline.verified" in event_types
-    assert event_types[-1] == "pipeline.priced"
+    # Membership, not position: events written in the same instant have no
+    # guaranteed order.
+    assert "pipeline.priced" in event_types
     # No LO action: the only non-pipeline events are the submit's own.
     assert {t for t in event_types if not t.startswith("pipeline.")} == {
         "application.submitted",
