@@ -1,13 +1,14 @@
 // CQ-019 Send tab: AC6 (draft edits persist after reload) plus the preview
 // checks (AC1 default draft, AC3/AC4 letter, AC5 blockers, AC7 sandbox).
-// AC6 edits Sam Reed's package (Jordan's persona, not used by the other
-// specs before `workspace.spec.ts` withdraws him), so a rerun needs
-// `make demo-reset` only for the recommendation it changed.
+// AC6 edits Sam Reed's package (Jordan's persona); `afterAll` below PUTs
+// his original draft back (M10, post-merge review), so a rerun of this
+// file no longer needs `make demo-reset` first.
 import path from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
 import { applicationIdByClientEmail, flushLoginRateLimit } from "../helpers/db";
+import { loConsoleApiBaseUrl } from "../helpers/env";
 import { staffLogin } from "../helpers/staffLogin";
 
 const staffPassword = process.env.SEED_STAFF_PASSWORD;
@@ -18,6 +19,63 @@ const MANAGER_EMAIL = "casey.nguyen@clearquote-demo.test";
 const EVIDENCE_DIR = path.resolve(__dirname, "../../docs/backlog/CQ-019-send-tab/evidence");
 
 test.describe.configure({ mode: "serial" });
+
+interface PackageBody {
+  quote_ids: string[];
+  recommended_quote_id: string | null;
+  lo_note: string | null;
+}
+
+// M10 (post-merge review): the AC6 test below edits Sam Reed's real draft
+// (removes a quote, changes the recommendation, sets a note) -- captured
+// here before it does, and PUT back once every test in this file has run,
+// so a rerun doesn't need `make demo-reset` first (the file header's old
+// claim) and other specs sharing Sam Reed's persona see his seeded state.
+let originalSamPackage: PackageBody | null = null;
+
+async function packagePut(page: Page, applicationId: string, body: PackageBody): Promise<void> {
+  const apiBaseUrl = loConsoleApiBaseUrl();
+  await page.evaluate(
+    async ({ apiBaseUrl, applicationId, body }) => {
+      const response = await fetch(`${apiBaseUrl}/api/v1/applications/${applicationId}/package`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error(`PUT /package failed: ${response.status}`);
+    },
+    { apiBaseUrl, applicationId, body },
+  );
+}
+
+async function packageGet(page: Page, applicationId: string): Promise<PackageBody> {
+  const apiBaseUrl = loConsoleApiBaseUrl();
+  return page.evaluate(
+    async ({ apiBaseUrl, applicationId }) => {
+      const response = await fetch(`${apiBaseUrl}/api/v1/applications/${applicationId}/package`, {
+        credentials: "include",
+      });
+      const data = await response.json();
+      return {
+        quote_ids: data.quote_ids as string[],
+        recommended_quote_id: data.recommended_quote_id as string | null,
+        lo_note: data.lo_note as string | null,
+      };
+    },
+    { apiBaseUrl, applicationId },
+  );
+}
+
+test.afterAll(async ({ browser }) => {
+  if (!originalSamPackage || !staffPassword) return;
+  const applicationId = applicationIdByClientEmail("sam.reed@clearquote-demo.test");
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await staffLogin(page, LO_EMAIL, staffPassword);
+  await packagePut(page, applicationId, originalSamPackage);
+  await context.close();
+});
 
 // A TBD persona's report runs CQ-023's property matches through the mock
 // providers' simulated latency (several seconds), so previews get longer.
@@ -118,7 +176,8 @@ test("AC3 + AC4: letter previews for Kathleen (TBD) and Sam Reed (LLC)", async (
 test("AC6: removing a quote, changing the recommendation and the note persist after reload", async ({
   page,
 }) => {
-  await openSend(page, LO_EMAIL, "sam.reed@clearquote-demo.test");
+  const applicationId = await openSend(page, LO_EMAIL, "sam.reed@clearquote-demo.test");
+  originalSamPackage = await packageGet(page, applicationId);
   const selected = page.getByTestId("selected-quote");
   await expect(selected).toHaveCount(3);
   const saved = () =>

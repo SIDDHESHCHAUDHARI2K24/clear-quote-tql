@@ -28,7 +28,11 @@ from app.integrations.pricing.schemas import PricingRequestDTO
 _PERCENT = Decimal("0.01")
 _DEFAULT_DOWN_PAYMENT_PRIMARY = Decimal("0.20")
 _DEFAULT_DOWN_PAYMENT_INVESTMENT = Decimal("0.25")
-_DEFAULT_INVESTMENT_PPP_YEARS = 5
+DEFAULT_INVESTMENT_PPP_YEARS = 5
+"""What this request sends for an investment scenario with no PPP set: OB's
+own 5-year default. The single definition (nit, post-merge review); the
+Quote Builder (`builder/service.py`) and the Send-tab view model
+(`send/view_model.py`) both import it instead of keeping their own copy."""
 _DEFAULT_ASSUMED_DSCR = Decimal("1.00")
 _DEFAULT_LOCK_DAYS = 30
 
@@ -129,7 +133,7 @@ async def build_ob_search_request(
 
     ppp_years = overrides.prepayment_penalty_years
     if ppp_years is None:
-        ppp_years = _DEFAULT_INVESTMENT_PPP_YEARS if is_investment else 0
+        ppp_years = DEFAULT_INVESTMENT_PPP_YEARS if is_investment else 0
 
     dscr = None
     short_term_rental = None

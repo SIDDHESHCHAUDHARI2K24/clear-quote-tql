@@ -50,6 +50,17 @@ class QuotePackage(Base):
     """MinIO key."""
     report_token: Mapped[str] = mapped_column(String, unique=True, index=True)
     """The magic-link token."""
+    lo_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
+    """Set once `update_package` (`PUT`) has ever run for this draft.
+    Distinguishes an unsent draft the LO deliberately emptied (`quote_ids:
+    []`, `lo_edited=True`) from one that's empty only because it predates
+    any priced quote (`lo_edited=False`) -- only the latter gets the
+    default selection re-applied on the next `GET` (post-merge review,
+    code-review follow-up on M5). A timestamp comparison (`created_at ==
+    updated_at`) was tried first and dropped: Postgres's `now()` is
+    transaction-start time, so it's unreliable whenever a create and a
+    later write land in the same transaction (as they do under this
+    codebase's `db_session` test fixture)."""
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

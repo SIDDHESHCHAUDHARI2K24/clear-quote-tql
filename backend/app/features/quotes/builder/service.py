@@ -38,7 +38,11 @@ from app.features.auth.models import User
 from app.features.pricing.engine.quote_engine import discount_points_percent
 from app.features.pricing.engine.types import DSCRBucket
 from app.features.pricing.scenarios.models import Scenario
-from app.features.pricing.scenarios.ob_request import ObRequestOverrides, build_ob_search_request
+from app.features.pricing.scenarios.ob_request import (
+    DEFAULT_INVESTMENT_PPP_YEARS,
+    ObRequestOverrides,
+    build_ob_search_request,
+)
 from app.features.pricing.scenarios.service import (
     NoEligibleProductsError,
     PricingResult,
@@ -215,16 +219,11 @@ def _short_pct(fraction: Decimal) -> str:
     return text.rstrip("0").rstrip(".") if "." in text else text
 
 
-_DEFAULT_INVESTMENT_PPP_YEARS = 5
-"""What the OB request sends for an investment scenario with no PPP set
-(`ob_request._DEFAULT_INVESTMENT_PPP_YEARS`)."""
-
-
 def _prepay_label(years: int | None) -> str:
     """Investment only. `None` means the scenario never set one, so it was
     priced at OB's 5-year default; only an explicit `0` is no penalty."""
     if years is None:
-        years = _DEFAULT_INVESTMENT_PPP_YEARS
+        years = DEFAULT_INVESTMENT_PPP_YEARS
     if years == 0:
         return "No prepayment penalty"
     return f"{years}-year prepay"
@@ -527,7 +526,7 @@ def _stored_inputs(scenario: Scenario, is_primary: bool) -> tuple[object, ...]:
     lock_days = int(extras.get("lock_days") or _DEFAULT_LOCK_DAYS)
     ppp = extras.get("prepayment_penalty_years")
     if not is_primary and ppp is None:
-        ppp = _DEFAULT_INVESTMENT_PPP_YEARS
+        ppp = DEFAULT_INVESTMENT_PPP_YEARS
     return (scenario_inputs(scenario), lock_days, ppp, scenario.dscr_bucket)
 
 
@@ -698,7 +697,13 @@ async def _reprice_scenario(db: AsyncSession, scenario: Scenario) -> _RepriceOut
 
 async def _delete_quote_row(db: AsyncSession, quote: Quote) -> bool:
     """Deletes the quote; returns whether it was the recommendation (which
-    is cleared)."""
+    is cleared).
+
+    Code review M4: `drop_quote_from_drafts` used to move the draft's
+    recommendation to the quote left in its place while this function
+    unconditionally cleared the application's -- the two disagreed. Now the
+    application follows the draft's own new pick (or clears too, when there
+    was no draft or nothing was left)."""
     application = (
         await db.execute(
             select(Application)
@@ -708,10 +713,12 @@ async def _delete_quote_row(db: AsyncSession, quote: Quote) -> bool:
     ).scalar_one()
     from app.features.quotes.send.service import drop_quote_from_drafts
 
-    await drop_quote_from_drafts(db, quote.id)
+    followed = await drop_quote_from_drafts(db, quote.id)
     cleared = application.recommended_quote_id == quote.id
     if cleared:
-        application.recommended_quote_id = None
+        application.recommended_quote_id = (
+            followed[1] if followed is not None and followed[0] == application.id else None
+        )
         await db.flush()
     await db.delete(quote)
     await db.flush()
@@ -826,8 +833,10 @@ async def recommend_quote(db: AsyncSession, quote: Quote, user: User) -> Applica
 
 async def delete_quote(db: AsyncSession, quote: Quote, user: User) -> None:
     """`DELETE /quotes/{id}`: clears the recommendation when it pointed here.
-    409 when a quote package (draft or sent) names the quote -- deleting it
-    would break that package's snapshot and its `quotes.id` FK."""
+    409 only when a *sent* quote package names the quote -- deleting it
+    would break that package's frozen snapshot and its `quotes.id` FK. An
+    unsent draft never blocks the delete (nit, post-merge review; code
+    review #2): the quote just leaves the draft (`drop_quote_from_drafts`)."""
     scenario = await get_scenario(db, quote.scenario_id)
     application = await lock_application(db, scenario.application_id)
     quote = await _refetch_after_lock(db, quote.id)

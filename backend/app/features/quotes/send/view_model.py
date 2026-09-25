@@ -5,8 +5,12 @@ The LO's Send-tab preview (`GET /packages/{id}/report`) calls it with the
 live draft; `portal/reports/versions.py::freeze_package_version` calls it at
 send time and stores the result as the version snapshot the portal serves.
 Because both go through here, the preview and the sent report can only
-differ in the send-time header fields (`prepared_at`, `rates_as_of`,
-`expires_at`, `expired`, `superseded`) -- AC2's contract test pins that.
+differ in the send-time header fields (`prepared_at`, `expires_at`,
+`expired`, `superseded`) -- AC2's contract test pins that. `rates_as_of` is
+*not* one of them: it is compared for equality like every other field
+(nit, post-merge review) -- both calls pass `as_of` as today's date, so it
+only actually differs if a preview is compared against a report sent on an
+earlier day.
 
 Maps `Quote`/`Scenario`/`Application`/`Property`/`Client`/`User` rows into
 CQ-021's `ReportInputs`, adds CQ-023's matches, and runs CQ-021's pure
@@ -33,6 +37,7 @@ from app.features.clients.models import Client
 from app.features.matches.service import compute_matches_for_package
 from app.features.pricing.engine.types import QuoteComputation, ScenarioInputs, StrategyType
 from app.features.pricing.scenarios.models import Scenario
+from app.features.pricing.scenarios.ob_request import DEFAULT_INVESTMENT_PPP_YEARS
 from app.features.quotes.builder.models import Quote
 from app.features.quotes.report.builder import build_report_view_model
 from app.features.quotes.report.inputs import ReportInputs, ReportOptionInput
@@ -41,11 +46,10 @@ from app.features.quotes.send.models import QuotePackage
 
 DEFAULT_RECOMMENDATION_TEXT = "We recommend this option based on your loan file."
 _DEFAULT_LO_TITLE = "Loan Officer"
-DEFAULT_INVESTMENT_PPP_YEARS = 5
-"""What the OB request sends for an investment scenario with no PPP set
-(`pricing/scenarios/ob_request._DEFAULT_INVESTMENT_PPP_YEARS`), so the
-report labels the prepay the quote was actually priced with (plan.md
-Decision 15)."""
+# `DEFAULT_INVESTMENT_PPP_YEARS` (imported above, the single definition --
+# nit, post-merge review): what the OB request sends for an investment
+# scenario with no PPP set, so the report labels the prepay the quote was
+# actually priced with (plan.md Decision 15).
 
 
 def strategy_type(application: Application) -> StrategyType:

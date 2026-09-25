@@ -125,3 +125,41 @@ async def test_manual_quote_no_longer_offered_blocks(
         "message": "1 manual quote is no longer offered — delete or re-pick",
         "tab": "pricing",
     }
+
+
+async def test_readiness_blocks_instead_of_500_when_investment_strategy_is_missing(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """M6: an investment application with no LTR/STR strategy set makes
+    `strategy_type` raise inside `load_package_context`; unhandled that
+    422s the whole readiness call and the Send tab is stuck on "Checking
+    readiness…". It must come back as a blocker instead."""
+    ids = await _seed(db_session, "marcus_hale")
+    application_id = ids["marcus_hale"]
+    await make_staff_session(role=UserRole.MANAGER)
+    application = await db_session.get(Application, application_id)
+    assert application is not None
+    assert application.occupancy is not None
+    assert application.occupancy.value == "investment"
+    # The default draft is created first, while the strategy is still set
+    # (a fresh application with no draft yet and no strategy is a
+    # different, unrelated gap in `new_default_package`'s own recommendation
+    # drafting -- out of scope for this finding, which is about the
+    # readiness call over an *existing* package).
+    await client.get(f"/api/v1/applications/{application_id}/package")
+    await db_session.execute(
+        update(Application).where(Application.id == application_id).values(strategy=None)
+    )
+    await db_session.commit()
+
+    readiness = await _readiness(client, application_id)
+    assert readiness == {
+        "ready": False,
+        "blockers": [
+            {
+                "code": "strategy_missing",
+                "message": "Pick a rental strategy (LTR or STR)",
+                "tab": "property",
+            }
+        ],
+    }

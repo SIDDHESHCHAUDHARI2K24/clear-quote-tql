@@ -3,6 +3,9 @@
 Blockers, in the order the Send button's tooltip picks the first one
 (plan.md Decision 12):
 
+0. `strategy_missing` -- an investment application with no LTR/STR strategy
+   set: every other check needs `load_package_context`, which needs the
+   strategy, so this one short-circuits the rest (code review M6).
 1. `quotes_stale` -- a selected quote is stale: `quote.stale`, or priced more
    than 21 days ago (catalog §12 `is_rate_stale`; plan.md Decision 9).
 2. `quote_not_offered` -- a selected Manual quote whose product left the
@@ -22,6 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import ApplicationTab, FlagSeverity
+from app.core.errors import ValidationAppError
 from app.features.applications.verification.models import Flag
 from app.features.quotes.builder.models import Quote
 from app.features.quotes.send.models import QuotePackage
@@ -89,7 +93,20 @@ async def package_blockers(
     db: AsyncSession, package: QuotePackage, *, now: datetime | None = None
 ) -> list[Blocker]:
     now = now or datetime.now(UTC)
-    ctx = await load_package_context(db, package)
+    try:
+        ctx = await load_package_context(db, package)
+    except ValidationAppError:
+        # M6: an investment application with no strategy set (LTR/STR) makes
+        # `strategy_type` raise inside `load_package_context`; unhandled
+        # that 422s the whole readiness call and leaves the Send tab stuck
+        # on "Checking readiness...". Report it as a blocker instead.
+        return [
+            Blocker(
+                "strategy_missing",
+                "Pick a rental strategy (LTR or STR)",
+                ApplicationTab.PROPERTY.value,
+            )
+        ]
     blockers: list[Blocker] = []
 
     if any(is_rate_stale(q, now) for q in ctx.quotes):
