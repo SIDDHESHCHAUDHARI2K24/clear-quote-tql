@@ -24,11 +24,14 @@ export interface SignupFormProps {
   // plan.md Decision #5, this fires the same way whether or not the email
   // already has an account — the caller can't tell the difference.
   onChallenge: (challengeId: string, email: string) => void;
+  // Prefills the email field (CQ-022, H2: "allowing an email prefill" from
+  // the login page's `?email=` link) — still fully editable.
+  defaultEmail?: string;
 }
 
-export function SignupForm({ onChallenge }: SignupFormProps) {
+export function SignupForm({ onChallenge, defaultEmail }: SignupFormProps) {
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(defaultEmail ?? "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [clientError, setClientError] = useState<string | null>(null);

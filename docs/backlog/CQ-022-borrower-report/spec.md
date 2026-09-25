@@ -50,14 +50,14 @@ The borrower opens the link from their email and lands on their numbers: 3 or 4 
 
 ## Acceptance criteria
 
-- [ ] AC1 — Opening the link from Marcus Hale's email (after CQ-020) shows his report; the API response equals the frozen snapshot of that sent version.
-- [ ] AC2 — First load moves his status to Viewed and writes one activity event; a reload writes none.
-- [ ] AC3 — Selecting the Buydown option updates hero numbers and breakdown and sets `?option=`; reloading keeps the selection; the alternative-view note appears.
-- [ ] AC4 — Grace Kim's report (sent 25 days ago) shows the expired banner and no action buttons.
-- [ ] AC5 — A token belonging to another borrower, or a random token, returns 404 and the friendly not-found page.
-- [ ] AC6 — Print preview (Playwright `page.pdf`) of Marcus Hale's report contains the hero numbers, both expanded sections and no switcher or buttons, with no table split across pages.
-- [ ] AC7 — At 375 px width there is no horizontal scroll and hero tiles follow the stacked layout.
-- [ ] AC8 — Priya Nair's report shows no investment content (reuses the CQ-021 gating check on the live page); Lighthouse accessibility score ≥ 95; react-doctor passes.
+- [x] AC1 — Opening the link from Marcus Hale's email (after CQ-020) shows his report; the API response equals the frozen snapshot of that sent version. (Verified with the sent-version factory now, per this item's own "Notes for the agent"; re-check end to end once CQ-020 lands — see post-dev.md.)
+- [x] AC2 — First load moves his status to Viewed and writes one activity event; a reload writes none.
+- [x] AC3 — Selecting the Buydown option updates hero numbers and breakdown and sets `?option=`; reloading keeps the selection; the alternative-view note appears.
+- [x] AC4 — Grace Kim's report (sent 25 days ago) shows the expired banner and no action buttons.
+- [x] AC5 — A token belonging to another borrower, or a random token, returns 404 and the friendly not-found page.
+- [x] AC6 — Print preview (Playwright `page.pdf`) of Marcus Hale's report contains the hero numbers, both expanded sections and no switcher or buttons, with no table split across pages. (Verified against Luis Romero's live sent report, the only non-expired seeded persona with one — see post-dev.md.)
+- [x] AC7 — At 375 px width there is no horizontal scroll and hero tiles follow the stacked layout.
+- [x] AC8 — Priya Nair's report shows no investment content (reuses the CQ-021 gating check on the live page); Lighthouse accessibility score ≥ 95; react-doctor passes. (Gating check reuses CQ-021's suite against the same `ReportPage` component the live route renders — Priya has no seeded sent version; Lighthouse ran against Luis Romero's live report: 100/100 — see post-dev.md.)
 
 ## Test plan
 

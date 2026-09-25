@@ -315,6 +315,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/reports/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Report */
+        get: operations["get_report_api_v1_portal_reports__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -376,6 +393,47 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** Breakdown */
+        Breakdown: {
+            /** Payment Lines */
+            payment_lines: components["schemas"]["BreakdownLine"][];
+            /** Payment Total */
+            payment_total: string;
+            /** Cash To Close Lines */
+            cash_to_close_lines: components["schemas"]["BreakdownLine"][];
+            /** Cash To Close Total */
+            cash_to_close_total: string;
+        };
+        /** BreakdownLine */
+        BreakdownLine: {
+            /** Label */
+            label: string;
+            /** Amount */
+            amount: string;
+        };
+        /** CashflowTable */
+        CashflowTable: {
+            /** Rent Label */
+            rent_label: string;
+            /** Gross Amount */
+            gross_amount: string;
+            /** Expense Ratio */
+            expense_ratio: string | null;
+            /** Qualifying Rent */
+            qualifying_rent: string;
+            /** Pitia */
+            pitia: string;
+            /** Monthly Cashflow */
+            monthly_cashflow: string;
+            /** Annual Cashflow */
+            annual_cashflow: string;
+            /** Dscr */
+            dscr: string;
+            /** Cap Rate Pct */
+            cap_rate_pct: string;
+            /** Monthly Cashflow Incl Tax */
+            monthly_cashflow_incl_tax: string;
         };
         /** ChallengeResponse */
         ChallengeResponse: {
@@ -571,6 +629,29 @@ export interface components {
                 ][]
             ][];
         };
+        /** CostSegTable */
+        CostSegTable: {
+            /** Purchase Price */
+            purchase_price: string;
+            /** Land Allocation Pct */
+            land_allocation_pct: string;
+            /** Land Value Allocation */
+            land_value_allocation: string;
+            /** Depreciable Building Basis */
+            depreciable_building_basis: string;
+            /** Accelerated Property Pct */
+            accelerated_property_pct: string;
+            /** Accelerated Basis Amount */
+            accelerated_basis_amount: string;
+            /** Bonus Depreciation Pct */
+            bonus_depreciation_pct: string;
+            /** Year One Tax Deduction */
+            year_one_tax_deduction: string;
+            /** Investor Marginal Tax Rate */
+            investor_marginal_tax_rate: string;
+            /** Year One Tax Savings */
+            year_one_tax_savings: string;
+        };
         /**
          * DSCRBucket
          * @description DSCR classification bucket. Boundaries are inclusive on the lower edge.
@@ -635,6 +716,21 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** HeroNumbers */
+        HeroNumbers: {
+            /** Monthly Payment */
+            monthly_payment: string;
+            /** Cash To Close */
+            cash_to_close: string;
+            /** Loan Amount */
+            loan_amount: string | null;
+            /** Monthly Cashflow */
+            monthly_cashflow: string | null;
+            /** Year1 Tax Savings */
+            year1_tax_savings: string | null;
+            /** Year1 Tax Savings Monthly */
+            year1_tax_savings_monthly: string | null;
+        };
         /** LatestApplicationOut */
         LatestApplicationOut: {
             /**
@@ -674,6 +770,31 @@ export interface components {
             workflow_id: string;
             /** Started */
             started: boolean;
+        };
+        /**
+         * PortalReportResponse
+         * @description `ReportViewModel` plus the two fields only a live request can answer:
+         *     `borrower_action` (from `QuotePackageVersion.borrower_action`, `None`
+         *     until CQ-024) and `newest_report_token` (set only when this version is
+         *     superseded, per spec.md's "SupersededBanner ... a link to the newest
+         *     version").
+         */
+        PortalReportResponse: {
+            header: components["schemas"]["ReportHeader"];
+            strategy: components["schemas"]["ReportStrategy"];
+            /** Options */
+            options: components["schemas"]["ReportOption"][];
+            recommendation: components["schemas"]["ReportRecommendation"];
+            /** Matches */
+            matches: components["schemas"]["ReportMatch"][];
+            disclosures: components["schemas"]["ReportDisclosures"];
+            lo: components["schemas"]["ReportLo"];
+            /** Borrower Action */
+            borrower_action?: {
+                [key: string]: unknown;
+            } | null;
+            /** Newest Report Token */
+            newest_report_token?: string | null;
         };
         /** PricedProductRow */
         "PricedProductRow-Input": {
@@ -878,181 +999,6 @@ export interface components {
              */
             updated_at: string;
         };
-        /**
-         * ScenarioCreateRequest
-         * @description The LO-owned pricing inputs (system-design's "only inputs the LO
-         *     owns" table) minus note rate, which is chosen per-quote, not at
-         *     scenario-creation time. FICO, tax, insurance, HOA and rent/STR are
-         *     enrichment-owned and read from `field_values` server-side.
-         */
-        ScenarioCreateRequest: {
-            /** Purchase Price */
-            purchase_price: number | string;
-            /** Down Payment Pct */
-            down_payment_pct: number | string;
-            strategy: components["schemas"]["StrategyType"];
-            /** Prepayment Penalty Years */
-            prepayment_penalty_years?: number | null;
-            /** Label */
-            label?: string | null;
-        };
-        /** ScenarioRead */
-        ScenarioRead: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Application Id
-             * Format: uuid
-             */
-            application_id: string;
-            /** Inputs */
-            inputs: {
-                [key: string]: unknown;
-            } | unknown[] | string | number | boolean | null;
-            /** Config Snapshot */
-            config_snapshot: {
-                [key: string]: unknown;
-            } | unknown[] | string | number | boolean | null;
-            /** Dscr Bucket */
-            dscr_bucket: string | null;
-            /** Quotes */
-            quotes: components["schemas"]["QuoteRead"][];
-        };
-        /** StaffLoginRequest */
-        StaffLoginRequest: {
-            /** Email */
-            email: string;
-            /** Password */
-            password: string;
-        };
-        /** StaffUserOut */
-        StaffUserOut: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Email */
-            email: string;
-            /** Full Name */
-            full_name: string;
-            role: components["schemas"]["UserRole"];
-            /** Nmls */
-            nmls: string | null;
-            /** Title */
-            title: string | null;
-            /** Phone */
-            phone: string | null;
-        };
-        /**
-         * StrategyType
-         * @description The engine's single occupancy/strategy field.
-         *
-         *     Mapping from `applications.occupancy` + `applications.strategy` (CQ-007)
-         *     onto this enum is CQ-013's job, not this item's.
-         * @enum {string}
-         */
-        StrategyType: "PRIMARY" | "LTR" | "STR";
-        /**
-         * UserRole
-         * @enum {string}
-         */
-        UserRole: "lo" | "manager" | "admin";
-        /** ValidationError */
-        ValidationError: {
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
-        };
-        /** Breakdown */
-        Breakdown: {
-            /** Payment Lines */
-            payment_lines: components["schemas"]["BreakdownLine"][];
-            /** Payment Total */
-            payment_total: string;
-            /** Cash To Close Lines */
-            cash_to_close_lines: components["schemas"]["BreakdownLine"][];
-            /** Cash To Close Total */
-            cash_to_close_total: string;
-        };
-        /** BreakdownLine */
-        BreakdownLine: {
-            /** Label */
-            label: string;
-            /** Amount */
-            amount: string;
-        };
-        /** CashflowTable */
-        CashflowTable: {
-            /** Rent Label */
-            rent_label: string;
-            /** Gross Amount */
-            gross_amount: string;
-            /** Expense Ratio */
-            expense_ratio: string | null;
-            /** Qualifying Rent */
-            qualifying_rent: string;
-            /** Pitia */
-            pitia: string;
-            /** Monthly Cashflow */
-            monthly_cashflow: string;
-            /** Annual Cashflow */
-            annual_cashflow: string;
-            /** Dscr */
-            dscr: string;
-            /** Cap Rate Pct */
-            cap_rate_pct: string;
-            /** Monthly Cashflow Incl Tax */
-            monthly_cashflow_incl_tax: string;
-        };
-        /** CostSegTable */
-        CostSegTable: {
-            /** Purchase Price */
-            purchase_price: string;
-            /** Land Allocation Pct */
-            land_allocation_pct: string;
-            /** Land Value Allocation */
-            land_value_allocation: string;
-            /** Depreciable Building Basis */
-            depreciable_building_basis: string;
-            /** Accelerated Property Pct */
-            accelerated_property_pct: string;
-            /** Accelerated Basis Amount */
-            accelerated_basis_amount: string;
-            /** Bonus Depreciation Pct */
-            bonus_depreciation_pct: string;
-            /** Year One Tax Deduction */
-            year_one_tax_deduction: string;
-            /** Investor Marginal Tax Rate */
-            investor_marginal_tax_rate: string;
-            /** Year One Tax Savings */
-            year_one_tax_savings: string;
-        };
-        /** HeroNumbers */
-        HeroNumbers: {
-            /** Monthly Payment */
-            monthly_payment: string;
-            /** Cash To Close */
-            cash_to_close: string;
-            /** Loan Amount */
-            loan_amount: string | null;
-            /** Monthly Cashflow */
-            monthly_cashflow: string | null;
-            /** Year1 Tax Savings */
-            year1_tax_savings: string | null;
-            /** Year1 Tax Savings Monthly */
-            year1_tax_savings_monthly: string | null;
-        };
         /** ReportDisclosures */
         ReportDisclosures: {
             /** Core */
@@ -1154,6 +1100,102 @@ export interface components {
          * @enum {string}
          */
         ReportStrategy: "primary" | "ltr" | "str";
+        /**
+         * ScenarioCreateRequest
+         * @description The LO-owned pricing inputs (system-design's "only inputs the LO
+         *     owns" table) minus note rate, which is chosen per-quote, not at
+         *     scenario-creation time. FICO, tax, insurance, HOA and rent/STR are
+         *     enrichment-owned and read from `field_values` server-side.
+         */
+        ScenarioCreateRequest: {
+            /** Purchase Price */
+            purchase_price: number | string;
+            /** Down Payment Pct */
+            down_payment_pct: number | string;
+            strategy: components["schemas"]["StrategyType"];
+            /** Prepayment Penalty Years */
+            prepayment_penalty_years?: number | null;
+            /** Label */
+            label?: string | null;
+        };
+        /** ScenarioRead */
+        ScenarioRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Inputs */
+            inputs: {
+                [key: string]: unknown;
+            } | unknown[] | string | number | boolean | null;
+            /** Config Snapshot */
+            config_snapshot: {
+                [key: string]: unknown;
+            } | unknown[] | string | number | boolean | null;
+            /** Dscr Bucket */
+            dscr_bucket: string | null;
+            /** Quotes */
+            quotes: components["schemas"]["QuoteRead"][];
+        };
+        /** StaffLoginRequest */
+        StaffLoginRequest: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** StaffUserOut */
+        StaffUserOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            role: components["schemas"]["UserRole"];
+            /** Nmls */
+            nmls: string | null;
+            /** Title */
+            title: string | null;
+            /** Phone */
+            phone: string | null;
+        };
+        /**
+         * StrategyType
+         * @description The engine's single occupancy/strategy field.
+         *
+         *     Mapping from `applications.occupancy` + `applications.strategy` (CQ-007)
+         *     onto this enum is CQ-013's job, not this item's.
+         * @enum {string}
+         */
+        StrategyType: "PRIMARY" | "LTR" | "STR";
+        /**
+         * UserRole
+         * @enum {string}
+         */
+        UserRole: "lo" | "manager" | "admin";
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
+        };
         /**
          * ReportViewModel
          * @description The one contract. See module docstring.
@@ -1739,6 +1781,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BorrowerMeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_api_v1_portal_reports__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalReportResponse"];
                 };
             };
             /** @description Validation Error */
