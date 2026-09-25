@@ -15,6 +15,7 @@ from importlib import import_module
 from fastapi import FastAPI
 
 FEATURE_ROUTERS: list[str] = [
+    "app.features.applications.router",
     "app.features.pricing.enrichment.router",
     "app.features.pricing.scenarios.router",
 ]

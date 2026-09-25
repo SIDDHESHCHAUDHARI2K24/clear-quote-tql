@@ -2,15 +2,36 @@
 
 Append one entry per handoff, newest at the bottom. A new session reads spec.md, plan.md, then the latest entry.
 
-## Handoff N — YYYY-MM-DD HH:MM — <agent>
+## Handoff 1 — 2026-09-25 — Claude (implementation agent)
 
-- **Branch / last commit:** `cq-xxx-slug` @ `abc1234`
-- **Stage:** 1 Brainstorm | 2 Plan | 3 Execute | 4 Code | 5 Test | 6 Review | 7 Verify | 8 Commit
-- **Done:**
-- **In progress:** file, function, what is half-finished
+- **Branch / last commit:** `cq-011-temporal-pipeline` @ see `git log -1` (committed right after this entry — this file is part of that commit)
+- **Stage:** 5 Test done, 7 Verify done for everything buildable pre-merge; stopped before the post-CQ-010-merge pass per the orchestrator's explicit instruction (do not start it, hand off instead).
+- **Done:** All of CQ-011's scope built and green: `ApplicationPipelineWorkflow`, all 6 contract activities + 1 internal (`record_pipeline_resumed`), retry policies, worker entrypoint + `make worker`, both API endpoints, and the full test suite (AC1–AC7, `backend/app/workflows/tests/*` + `backend/app/features/applications/tests/test_pipeline_endpoints.py`) — `237 passed` on the full backend suite, `ruff check`/`ruff format --check`/`mypy` all clean. Also ran one smoke test against the real local Temporal server (localhost:7233) — worker connected, registered, and a started workflow was dispatched to it (see `post-dev.md`). Decisions logged in `plan.md` (#1–#13); #13 records the mid-session CQ-010 merge news.
+- **In progress / left for next session:** Aisha's persona test (both `test_application_pipeline_personas.py` and `test_activity_events_sequence.py`) still uses the pre-merge Decision #4 workaround (monkeypatching `build_ob_search_request` to null out `Occupancy`) instead of CQ-010's real nullable `applications.occupancy`. `import_application`'s activity still lazy-imports and every workflow test still installs the fake `import_from_los` stub (`backend/app/workflows/tests/conftest.py::_fake_import_from_los`) instead of the real, now-merged function. `phase-p0-p1` (which now contains CQ-010) has **not** been merged into this branch.
 - **Next 3 steps:**
-  1.
-  2.
-  3.
-- **Open questions / blockers:**
-- **Verify state:** commands to run first (e.g. `make up && make test`)
+  1. `git merge phase-p0-p1` into `cq-011-temporal-pipeline`, resolve any conflicts (none expected — this branch only added new files plus `Makefile`/`core/registry.py` appends).
+  2. Swap the fake import stub for the real `app.features.applications.service.import_from_los` (keep `install_import_from_los` available for AC2/AC3's spy/failure-double tests); stop manually seeding `representative_fico` in `make_persona_application` for personas that now go through the real import (it does its own soft credit pull) — keep that seed only where a test still installs the fake stub.
+  3. Update Aisha's fixture to set `occupancy=None` for real (drop the `build_ob_search_request` monkeypatch), change the flag assertion's `field_key` from `"Occupancy"` to `"occupancy_type"`, add the persona-7 resume-signal test the orchestrator asked for, rerun the full 10-persona matrix + `make lint`/`uv run pytest backend`, then push and record the CI run id/result in `post-dev.md`.
+- **Open questions / blockers:** None blocking — all follow-ups are mechanical (swap a stub, update two fixtures, add one test). plan.md Decision #5 (the `pipeline.enriched` type reuse across 3 activities) is a standing design note for CQ-016/028/029 owners, not a blocker.
+- **Verify state:** `make up` (stack already running, shared — never `make down`); this worktree needs its own local `.env` (copy `.env.example`, generate a `FIELD_ENCRYPTION_KEY`, set `DEV_LO_ID=00000000-0000-0000-0000-000000000001`) and its own test DB (`TEST_DATABASE_URL` points at `cq_test_cq011`, already created in the shared Postgres container — the shared `cq_test`'s `alembic_version` belonged to a different branch mid-session and didn't match this one). Then `uv run pytest backend -q` (expect `237 passed`) and `make lint` (backend half clean; frontend half fails in this worktree only because `pnpm install` was never run here — pre-existing, unrelated to this item).
+
+## Handoff 2 — 2026-09-25 — Claude (implementation agent)
+
+- **Branch / last commit:** `cq-011-temporal-pipeline`, merged `phase-p0-p1` (merge commit `337757a`, no conflicts) then implemented the post-merge pass on top — see `git log -1` for the final commit (this file's update is part of it).
+- **Stage:** All 8 stages done for this item, including the post-merge pass handoff 1 deliberately stopped short of.
+- **Done, in order:**
+  1. `pnpm install` in the worktree (never run here before — frontend half of `make lint` now works).
+  2. `git merge phase-p0-p1` — clean, no conflicts (CQ-010 only touched `applications/service.py`/`models.py`; this item only touched `router.py`/`schemas.py` plus new `workflows/` files).
+  3. Swapped `import_application`'s lazy import + `Any` return type for a real module-scope import of `import_from_los`/`ImportResult` (plan.md #14).
+  4. Rebuilt `make_persona_application` (`backend/app/workflows/tests/conftest.py`) to seed a `ProviderLosRecord`/`ProviderCreditReport` pair instead of pre-building child rows directly, so the real `import_from_los` writes `application_parties`/`housing_history`/`employment`/`liabilities`/`assets`/`representative_fico` itself (plan.md #14) — avoids both duplicate rows and the `field_values` unique-constraint collision.
+  5. Rebuilt Aisha Coleman's (persona 7) fixture for real (`occupancy=None`, dropped the `build_ob_search_request` monkeypatch), updated the flag assertion to `field_key="occupancy_type"` in both `test_application_pipeline_personas.py` and `test_activity_events_sequence.py` (plan.md #15).
+  6. Added `test_resume_reprices_aisha_coleman_after_occupancy_fix` (`test_resume_signal.py`): stops at `needs_attention` from `validate_pricing_inputs`, LO sets `occupancy`, resume reaches `priced`, asserts the flag resolves and the exact 10-event sequence (plan.md #15).
+  7. Found + fixed two real bugs the merge/real-Temporal smoke run surfaced: (a) `application_pipeline.py` needed `app.features.applications.service` added to its `imports_passed_through()` block (Temporal sandbox couldn't resolve `ImportResult`'s `uuid.UUID` forward ref otherwise — plan.md #16); (b) `backend/app/workflows/worker.py` needed the full "every model module" import list (mirrors `alembic/env.py`) — a bare worker process never transitively imports `app.features.clients.models`, so `import_application` failed on `applications.client_id`'s FK to `clients` with `NoReferencedTableError`; pytest can't catch this since the test session's `alembic upgrade head` already imports every model first (plan.md #17).
+  8. Fixed a real order-flake in `test_activity_events_sequence.py`/`test_resume_signal.py`: ordering by `ActivityEvent.created_at` (a `server_default=func.now()`, resolved once per Postgres transaction — every event in one test's savepoint-bound sessions ties) is unreliable; switched to `ActivityEvent.at` (Python-side, strictly increasing) (plan.md #18).
+  9. Full 10-persona matrix, `make lint`, `make test` (backend + `seed` + frontend), and `make demo-reset` (with `SEED_STAFF_PASSWORD` set) all green — `247 passed` backend (up from 237; +10 net from the new resume test plus fixture consolidation), 3 consecutive full-suite runs with no flakes.
+  10. Ran a real Temporal + real API smoke test (`make worker` + `make api` against the shared local stack, a throwaway application row in `cq_dev`, real `curl`s to both pipeline endpoints) — reached `priced` for real in ~6s with the exact 6-row `activity_events` sequence, confirmed idempotent start (`200 {"started": false}`) and resume-404 against the real server, then cleaned up every throwaway row (verified `applications` count back to 210, matching a fresh `demo-reset`). This run is what caught bug (b) above.
+- **In progress / left for next session:** Nothing — this item's scope is complete. CI run recorded below once it lands.
+- **Open questions / blockers:** None. Two standing (non-blocking) design notes carried in `post-dev.md`'s Follow-ups: plan.md #5's `activity_events` type reuse (CQ-016/028/029 owners), and extracting the now-duplicated "every model module" import list (`alembic/env.py` + `worker.py`) to one shared module in a future item.
+- **Verify state:** `make up` (shared stack, already running — never `make down`). This worktree's `.env` needs `SEED_STAFF_PASSWORD` added (any value) for `make demo-reset`; everything else is unchanged from handoff 1's `.env` setup. `uv run pytest backend -q` → `247 passed`. `make lint` → all green (backend + frontend, `pnpm install` now done). `make test` → all green. `make demo-reset` → persona end-statuses match spec's table. CI run: see below once pushed.
+
+**CI run:** pushed to `origin/cq-011-temporal-pipeline`; GitHub Actions run [`36114014423`](https://github.com/SIDDHESHCHAUDHARI2K24/clear-quote-tql/actions/runs/36114014423) — **success**, both jobs green (`backend` in 55s: ruff/mypy/pytest all pass; `frontend` in 32s: eslint/tsc/prettier/vitest all pass).
