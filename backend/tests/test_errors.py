@@ -8,8 +8,10 @@ from app.core.errors import (
     AppError,
     AuthenticationError,
     ConflictError,
+    ForbiddenError,
     IntegrationError,
     NotFoundError,
+    RateLimitedError,
     ValidationAppError,
     register_exception_handlers,
 )
@@ -39,6 +41,14 @@ def _build_test_app() -> FastAPI:
     def _raise_integration() -> None:
         raise IntegrationError("Upstream failed")
 
+    @app.get("/raise/forbidden")
+    def _raise_forbidden() -> None:
+        raise ForbiddenError("Not allowed")
+
+    @app.get("/raise/rate-limited")
+    def _raise_rate_limited() -> None:
+        raise RateLimitedError("Too many attempts. Try again later.")
+
     @app.get("/raise/unhandled")
     def _raise_unhandled() -> None:
         raise RuntimeError("boom")
@@ -54,6 +64,8 @@ def _build_test_app() -> FastAPI:
         ("/raise/conflict", 409, "CONFLICT"),
         ("/raise/authentication", 401, "AUTHENTICATION_ERROR"),
         ("/raise/integration", 502, "INTEGRATION_ERROR"),
+        ("/raise/forbidden", 403, "FORBIDDEN"),
+        ("/raise/rate-limited", 429, "RATE_LIMITED"),
     ],
 )
 def test_each_apperror_subclass(path: str, status_code: int, code: str) -> None:

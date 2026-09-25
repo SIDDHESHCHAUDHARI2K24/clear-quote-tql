@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     field_encryption_key: str | None = None
 
     valkey_url: str
+    # CQ-014: db the pytest `valkey` fixture FLUSHDBs; unset means
+    # `valkey_url` with db index 15 (see backend/conftest.py).
+    test_valkey_url: str | None = None
 
     s3_endpoint: str
     s3_bucket: str
@@ -44,6 +47,22 @@ class Settings(BaseSettings):
     temporal_task_queue: str
 
     cors_origins: Annotated[list[str], NoDecode] = []
+
+    # CQ-014: staff/borrower session and OTP tuning. Defaults match the
+    # decisions in docs/backlog/CQ-014-staff-auth/plan.md (#5-#7); every
+    # environment can override via env vars, none are required to set them.
+    staff_session_ttl_seconds: int = 43200
+    borrower_session_ttl_seconds: int = 604800
+    otp_ttl_seconds: int = 300
+    otp_max_attempts: int = 5
+    login_rate_limit_per_email: int = 5
+    login_rate_limit_per_ip: int = 20
+    login_rate_limit_window_seconds: int = 900
+
+    # Local/dev-only demo passwords consumed by `scripts/seed_dev_users.py`
+    # (CQ-014) and CQ-015's borrower equivalent. Unset in prod-like envs.
+    demo_staff_password: str | None = None
+    demo_borrower_password: str | None = None
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -72,6 +91,13 @@ class Settings(BaseSettings):
                 "(generate one with `Fernet.generate_key()`)."
             )
         return self
+
+    @property
+    def cookie_secure(self) -> bool:
+        """False for `local`/`test` (plain HTTP dev servers, no TLS); the
+        session cookies (CQ-014 `cq_staff_session`, CQ-015 borrower
+        equivalent) must be `Secure` everywhere else."""
+        return self.app_env not in {"local", "test"}
 
 
 @lru_cache

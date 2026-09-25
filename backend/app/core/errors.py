@@ -62,6 +62,16 @@ class IntegrationError(AppError):
     status_code = 502
 
 
+class ForbiddenError(AppError):
+    code = "FORBIDDEN"
+    status_code = 403
+
+
+class RateLimitedError(AppError):
+    code = "RATE_LIMITED"
+    status_code = 429
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle_app_error(request: Request, exc: AppError) -> JSONResponse:
