@@ -147,3 +147,39 @@ All commands run from this worktree against the shared `clear-quote` stack's rea
 ## MinIO image follow-up resolved (2026-09-25)
 
 Decision #17's flagged cross-cutting finding (`infra/docker-compose.yml`'s `minio`/`minio-init` use the same unpullable `minio/minio`/`minio/mc` images CI hit) is now fixed, as `CQ-003: fix: switch MinIO to a pullable image`: `infra/docker-compose.yml`'s `minio` now runs `bitnamilegacy/minio`, pinned to the exact same tag (`2025.5.24-debian-12-r5`) as this workflow's `minio` service (repinned from `bitnamilegacy/minio:latest` to that same tag, so local and CI can't diverge again); `minio-init` is gone (bucket creation moved to `MINIO_DEFAULT_BUCKETS`, matching CI). Full evidence — tag lookup, permission-denied-on-old-volume fix, fresh-clone image-pull proof, `demo-reset`, `pytest seed`, `make lint`/`make test`, `actionlint` — is in `docs/backlog/CQ-003-local-infra/post-dev.md`'s "MinIO image follow-up" section (that file owns `infra/docker-compose.yml`). CI's own commit here is just the one-line tag repin plus this note.
+
+## Review findings — CI clean-up pass (round 2, fresh reviewer, 2026-09-25)
+
+Fresh-subagent review (did not write this code). Scope: gate G3 of `docs/backlog/phase-p0-p1-merge-plan.md`, the "CI clean-up pass" sections of CQ-003/CQ-006 spec/plan/post-dev, and the CQ-011 api-client regeneration, on `cq-006-ci-cleanup` (head `bfc1fb9`) vs `phase-p0-p1`.
+
+| # | Severity | file:line | Finding | Suggested fix |
+| --- | --- | --- | --- | --- |
+| 1 | minor | `infra/docker-compose.yml` (`minio` service) | `bitnamilegacy/minio` is Bitnami/Broadcom's frozen "legacy" image line (free unhardened Bitnami images stopped receiving updates ~Aug 2025); the pinned tag `2025.5.24-debian-12-r5` will never get further patches. Acceptable for a local/demo stack with no exposed attack surface, but this is a real gap if the same image is ever reused for a hosted environment. | Track as a known follow-up in `phase-p0-p1-merge-plan.md`'s "Known follow-ups" list — re-evaluate the MinIO image (e.g. self-built `minio/minio` from source, or another S3-compatible image) before CQ-035 (Railway/production infra) rather than carrying `bitnamilegacy` forward untracked. |
+| 2 | minor | `seed/tests/conftest.py:18`, `backend/conftest.py:48` | Both use `os.environ.setdefault("INTEGRATION_LATENCY_ENABLED", "false")`, which silently loses to any already-set environment variable. Verified this is **not** currently triggered by the documented setup path: `uv run` (uv 0.11.26) does not auto-load `.env` into `os.environ` (confirmed directly), and `pydantic-settings`' own `env_file=".env"` read happens only inside `Settings()`, after conftest's `setdefault` already ran — env vars outrank dotenv in its precedence, so `cp .env.example .env` (the documented flow in every item's post-dev "how to test manually") does not reproduce the hang. Reproduced empirically: with `.env`'s `INTEGRATION_LATENCY_ENABLED=true` present but not exported into the shell, `uv run pytest seed/tests/test_provider_rows_seeded.py` completed in 5.00s, not minutes — matching CQ-003 post-dev's own conclusion that the hang it hit came from manually sourcing `.env` into an interactive shell, not from `make test` itself. Still a fragile pattern: a future direnv/.envrc, IDE run-config, or CI step that exports `.env` into the process environment would silently reintroduce a multi-minute `make test`, with no error, just slowness. | Replace the plain `os.environ.setdefault` for `INTEGRATION_LATENCY_ENABLED` with a session-scoped autouse fixture that force-sets it via `monkeypatch.setenv` (or equivalent), so no test run can silently inherit a real-latency setting regardless of how the environment got there. Leave `FIELD_ENCRYPTION_KEY`/`DEV_LO_ID` as `setdefault` (a real `.env` value legitimately should win there). |
+| 3 | nit | `infra/docker-compose.yml` | Every `make up` prints `Found orphan containers (clear-quote-minio-init-1)` — the removed `minio-init` service's old container is still on disk in this shared worktree/stack. Cosmetic only (documented, doesn't affect health checks or buckets). | `docker compose -f infra/docker-compose.yml down --remove-orphans` once, or note it in the shared-stack handoff so the next session isn't confused by the warning. |
+
+No critical or major findings.
+
+### Commands re-run by this reviewer
+
+| Command | Result |
+| --- | --- |
+| `git grep -n -E "minio/minio\|minio/mc"` (repo-wide) | Only in code comments and backlog docs explaining the migration; no live config (`docker-compose.yml`, `ci.yml`) references the old images |
+| Read `infra/docker-compose.yml`'s `temporal-ui` service | `depends_on: temporal: condition: service_started` only — no dependency on any bucket-init service (G3 check 1 met) |
+| Diff `infra/docker-compose.yml`'s and `.github/workflows/ci.yml`'s `minio` image/tag | Identical: `bitnamilegacy/minio:2025.5.24-debian-12-r5` in both, `MINIO_DEFAULT_BUCKETS: "clear-quote,clearquote-demo-docs"` in both |
+| `docker compose -f infra/docker-compose.yml config` | Exit 0 |
+| `docker pull` on all 6 compose images (`postgres:16-alpine`, `valkey/valkey:7-alpine`, `bitnamilegacy/minio:2025.5.24-debian-12-r5`, `axllent/mailpit:latest`, `temporalio/auto-setup:latest`, `temporalio/ui:latest`) | All 6 succeed |
+| `.env.example`'s `S3_*` vs compose's `minio` service | Match: `http://localhost:9010`, `cq-minio`/`cq-minio-secret`, `clear-quote` |
+| `git diff phase-p0-p1...HEAD -- docs/backlog/CQ-003-local-infra/spec.md` | Confirmed the edit is limited to the compose table's `minio`/`minio-init` rows and AC5's text/evidence command — no other scope creep |
+| `make up` (twice, no `make down` in between) | Both succeed; all 6 services `Healthy` |
+| Bucket check (`mc ls` via a throwaway `bitnamilegacy/minio-client` container) | Both `clear-quote/` and `clearquote-demo-docs/` present |
+| `make lint` | ruff / ruff format / mypy (224 files) / eslint / tsc / prettier all pass |
+| `make test` with the `backend` job's exact CI env (dummy `VALKEY_URL`/`TEMPORAL_*`, real Postgres + MinIO with CI's credentials) | `uv run pytest backend`: 247 passed; `uv run pytest seed`: 23 passed; `pnpm -r run test`: 4/4 workspaces green |
+| `actionlint .github/workflows/ci.yml` | Exit 0, no output |
+| `gh run view` (36116218516, 36116421914, 36119132631) | All three `conclusion: success`; each `backend` job's steps include `uv run pytest seed` as its own green step; `api-client-drift` job present and green in all three |
+| `gh api .../check-runs/<job>/annotations` on every job of all three runs | No `actions/checkout`/`actions/setup-node`/`actions/cache`/`astral-sh/setup-uv` Node-20 deprecation annotations anywhere — only an unrelated "ubuntu-latest → Ubuntu 26" notice and one harmless `setup-uv` cache-save race |
+| api-client drift-guard proof (scratch, discarded): added a throwaway `GET /__drift_guard_scratch_probe` route to `backend/app/main.py` on a scratch commit, ran the `api-client-drift` job's exact steps (`uv sync --frozen`, `pnpm install --frozen-lockfile`, `make api-client`, `git diff --exit-code -- packages/api-client`) | `git diff --exit-code` exited **1** (drift correctly detected) — then `git checkout -- packages/api-client` and `git reset --hard HEAD~1` discarded the scratch commit; working tree confirmed clean afterward |
+
+### Verdict
+
+APPROVE. No critical/major findings; 2 minor, 1 nit (all non-blocking, tracked above). G3 is fully met: `temporal-ui` has no bucket-init dependency, actions are on current majors (`checkout@v7`, `setup-node@v7`, `cache@v6`, `setup-uv@v10.2.0`), AC2 evidence is correct (real push + pull_request runs), CI runs `pytest seed`, no Node-20 deprecation annotations across the last three runs, and the api-client drift guard is proven to actually fail on drift.
