@@ -1150,8 +1150,8 @@
     "semantic_hash": ""
   },
   "backend/app/workflows/activities.py": {
-    "mtime": 1790336155.4295382,
-    "ast_hash": "1fbabdebc22979519ea44fb49f121b39",
+    "mtime": 1790339103.4655952,
+    "ast_hash": "2c309cf9f6d1e427cf3e068903fe843d",
     "semantic_hash": ""
   },
   "backend/app/workflows/application_pipeline.py": {
@@ -1990,8 +1990,8 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/post-dev.md": {
-    "mtime": 1790338515.397824,
-    "ast_hash": "3cffaf8cd410d13d04d0d7c3d8ee6cfc",
+    "mtime": 1790339384.0576315,
+    "ast_hash": "1bece5f1056624b9109c9dd9e62e7754",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/spec.md": {
@@ -3420,13 +3420,13 @@
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/StatusActionsMenu.test.tsx": {
-    "mtime": 1790337302.349878,
-    "ast_hash": "80efd2a2e965398dd25946bf3d2348ee",
+    "mtime": 1790339241.4125469,
+    "ast_hash": "ab45850d149d21074a8449eccee54ee5",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/StatusActionsMenu.tsx": {
-    "mtime": 1790337199.4426038,
-    "ast_hash": "695b2f0931d34bf3cdecf1f254cdcaec",
+    "mtime": 1790339212.2081912,
+    "ast_hash": "6077c29184b236f6648c30a90361847d",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/TabRail.test.tsx": {
@@ -3445,13 +3445,13 @@
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/WorkspaceProvider.test.tsx": {
-    "mtime": 1790336989.0182302,
-    "ast_hash": "e096356970e23b1e15ee48c7afb51b37",
+    "mtime": 1790339249.9581633,
+    "ast_hash": "0a548281ad409091f429e5db61ab86f2",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/WorkspaceProvider.tsx": {
-    "mtime": 1790337302.3747518,
-    "ast_hash": "c689e023e1ccb8f026fba96bc6e73e4a",
+    "mtime": 1790339201.1454167,
+    "ast_hash": "15af05f2cbc0d0e245d906d2d4f6b1f2",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/workspace/WorkspaceShell.tsx": {
@@ -3500,8 +3500,8 @@
     "semantic_hash": ""
   },
   "backend/app/features/applications/summary/service.py": {
-    "mtime": 1790336399.964015,
-    "ast_hash": "71dc4af88ffea25e9a123b2348885097",
+    "mtime": 1790339065.3766913,
+    "ast_hash": "49a3e9b20ca2af449db69afdaba367ff",
     "semantic_hash": ""
   },
   "backend/app/features/applications/summary/tests/__init__.py": {
@@ -3520,13 +3520,13 @@
     "semantic_hash": ""
   },
   "backend/app/features/applications/summary/tests/test_service.py": {
-    "mtime": 1790336342.312183,
-    "ast_hash": "48709c5ef7abe8da2934d43e92f36936",
+    "mtime": 1790339085.7648883,
+    "ast_hash": "a499ef2a06e893d52f09d9863da7cf76",
     "semantic_hash": ""
   },
   "backend/app/workflows/tests/test_pipeline_stage_writes.py": {
-    "mtime": 1790336185.351115,
-    "ast_hash": "768516ca62762e0547a88ad2c86d2d86",
+    "mtime": 1790339177.8768473,
+    "ast_hash": "58d0de124cfcfd447ed9d724afa3924a",
     "semantic_hash": ""
   },
   "e2e/helpers/db.ts": {
@@ -3545,13 +3545,13 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/evidence/header-1280.png": {
-    "mtime": 1790338375.8449442,
-    "ast_hash": "bdf8ecd152aea36f519c587322a81b80",
+    "mtime": 1790339332.7606387,
+    "ast_hash": "388d2bdd48a0fe30d59f24b67c2f281b",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/evidence/header-1440.png": {
-    "mtime": 1790338375.926795,
-    "ast_hash": "a56f2667a751fd37d54250a83b2b3d6c",
+    "mtime": 1790339332.8424094,
+    "ast_hash": "a2f51782796451120ab10f6488d39f0f",
     "semantic_hash": ""
   }
 }
