@@ -133,7 +133,7 @@ Backend/frontend unit and integration tests, ruff, mypy, eslint, tsc, prettier a
 
 ## Review round 2 (fresh-subagent code review, `/code-review --effort low`)
 
-A fresh code-review subagent (no context from writing the fix) reviewed `bb75632..HEAD` (the 20 files named in Review round 1's table). It found 0 new correctness bugs and 10 cleanup/altitude findings; the reviewer's own top-3 picks (items 1, 2 and 5 below) were acted on plus three more (3, 4, 9); the rest are logged as follow-ups. Commit `<pending — see the push below>`.
+A fresh code-review subagent (no context from writing the fix) reviewed `bb75632..HEAD` (the 20 files named in Review round 1's table). It found 0 new correctness bugs and 10 cleanup/altitude findings; the reviewer's own top-3 picks (items 1, 2 and 5 below) were acted on plus three more (3, 4, 9); the rest are logged as follow-ups. Commit `cd5ee65` ("CQ-029: fix: code review round 2 (fresh-subagent, effort low)").
 
 | # | Finding | Resolution |
 | --- | --- | --- |
