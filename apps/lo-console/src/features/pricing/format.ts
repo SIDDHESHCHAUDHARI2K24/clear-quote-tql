@@ -71,8 +71,15 @@ export function fractionToPercentInputValue(value: string | null | undefined): s
   return n === null ? "" : (n * 100).toFixed(3);
 }
 
+// PR review round (fresh stage-6): 4dp was enough for ordinary rates but
+// truncated a genuine edit of a small one -- e.g. typing "0.0089" (percent
+// scale) for a tax rate is `0.0089 / 100 = 0.000089` at 6dp, but rounded to
+// "0.0001" at 4dp, silently changing the value the LO typed. 6dp comfortably
+// covers every seeded `property_tax_annual_rate` (the only badge-carrying
+// percent field) without changing the output for any value that already
+// fit in 4dp (trailing zeros only).
 export function percentInputValueToFraction(percentText: string): string {
   if (percentText === "") return "";
   const n = Number(percentText);
-  return Number.isFinite(n) ? (n / 100).toFixed(4) : "";
+  return Number.isFinite(n) ? (n / 100).toFixed(6) : "";
 }

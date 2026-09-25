@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { MoneyInput } from "@cq/ui";
 import type { SourceBadgeSource } from "@cq/ui";
@@ -31,13 +31,28 @@ export function EnrichedMoneyField({
   disabled = false,
 }: EnrichedMoneyFieldProps) {
   const [draft, setDraft] = useState(field?.value ?? "");
+  // PR review round (fresh stage-6): same no-edit-no-override rule as
+  // `EnrichedPercentField`, for consistency -- `touched` is set only by
+  // the input's own `onChange`. A `ref`, not `useState`: it's read only
+  // inside `handleBlur`, so it never needs to trigger a render, and using
+  // `useState` here made react-doctor flag it as "state only used in
+  // handlers" / "state adjusted after a prop change".
+  const touched = useRef(false);
 
   useEffect(() => {
     setDraft(field?.value ?? "");
+    touched.current = false;
   }, [field?.value]);
 
+  const handleChange = (value: string) => {
+    setDraft(value);
+    touched.current = true;
+  };
+
   const handleBlur = () => {
-    if (field && draft !== "" && draft !== field.value) {
+    if (!touched.current || !field) return;
+    touched.current = false;
+    if (draft !== "" && draft !== field.value) {
       onOverride(draft);
     }
   };
@@ -49,7 +64,7 @@ export function EnrichedMoneyField({
       <span className="text-xs font-medium text-neutral-600">{label}</span>
       <MoneyInput
         value={draft}
-        onChange={setDraft}
+        onChange={handleChange}
         onBlur={handleBlur}
         disabled={disabled || !field}
         aria-label={ariaLabel}

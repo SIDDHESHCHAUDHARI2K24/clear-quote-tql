@@ -95,6 +95,56 @@ test("AC3: overriding property tax shows LO override, recomputes the total and m
   await expect(page.getByText(/LO override/i)).toHaveCount(0);
 });
 
+test("PR review round (fresh stage-6): tabbing through every field with no edits leaves badges and staleness unchanged", async ({
+  page,
+}) => {
+  // CRITICAL finding: focusing and blurring `EnrichedPercentField` with no
+  // edit used to fire `onOverride` for small rates (round-trip display
+  // rounding made the blurred value look different from `field.value`),
+  // silently marking quotes stale and flipping the badge to "LO override".
+  // Kathleen McReynolds (LTR) is used rather than Marcus Hale -- this spec
+  // runs `test.describe.configure({ mode: "serial" })` against one shared
+  // seeded stack, and the AC3 test above this one already overrode and
+  // reverted Marcus's property tax rate, which leaves his quotes
+  // permanently stale (no un-marking endpoint in this item's scope --
+  // post-dev.md). Kathleen's fields are untouched by any earlier test in
+  // this file, so her stale-banner absence is a real assertion.
+  const applicationId = applicationIdByClientEmail("kathleen.mcreynolds@clearquote-demo.test");
+  await staffLogin(page, MANAGER_EMAIL, staffPassword!);
+  await page.goto(`/applications/${applicationId}/pricing`);
+  await expect(page.getByLabel("Loan amount")).toBeVisible();
+
+  const fieldLabels = [
+    "Purchase price",
+    "Down payment percent",
+    "Down payment amount",
+    "Property tax annual rate",
+    "Homeowners insurance annual premium",
+    "HOA monthly fee",
+    "Market rent",
+  ];
+
+  const badgesBefore = await page
+    .locator("[data-source]")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("data-source")));
+  expect(badgesBefore.length).toBeGreaterThan(0);
+  expect(badgesBefore).not.toContain("lo_override");
+
+  for (const label of fieldLabels) {
+    const input = page.getByLabel(label);
+    await input.click();
+    await input.blur();
+  }
+
+  await expect(page.getByText(/LO override/i)).toHaveCount(0);
+  await expect(page.getByText("Quotes are out of date — Re-price")).not.toBeVisible();
+
+  const badgesAfter = await page
+    .locator("[data-source]")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("data-source")));
+  expect(badgesAfter).toEqual(badgesBefore);
+});
+
 test("AC8: react-doctor accessibility -- axe finds no violations on the pricing panel", async ({
   page,
 }) => {

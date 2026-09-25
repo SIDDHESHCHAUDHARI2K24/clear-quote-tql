@@ -20,7 +20,10 @@ from app.core.enums import Occupancy, Strategy
 from app.core.errors import NotFoundError, ValidationAppError
 from app.features.applications.models import Application
 from app.features.applications.verification.models import FieldValue
-from app.features.pricing.engine.quote_engine import compute_quote
+from app.features.pricing.engine.quote_engine import (
+    compute_quote,
+    insurance_annual_rate_from_amount,
+)
 from app.features.pricing.engine.types import (
     ConfigSnapshot,
     DSCRBucket,
@@ -168,7 +171,9 @@ async def _gather_base_scenario_inputs(
     insurance_annual = await _field_decimal(db, application.id, "homeowners_ins_annual")
     if insurance_annual is None:
         raise ValidationAppError("Cannot price: missing homeowners_ins_annual.")
-    insurance_rate = insurance_annual / purchase_price
+    # CQ-017 review round: money math lives only in `quote_engine`
+    # (AGENTS.md); this was dividing inline.
+    insurance_rate = insurance_annual_rate_from_amount(purchase_price, insurance_annual)
 
     hoa_monthly = await _field_decimal(db, application.id, "hoa_fee_monthly") or Decimal("0")
 

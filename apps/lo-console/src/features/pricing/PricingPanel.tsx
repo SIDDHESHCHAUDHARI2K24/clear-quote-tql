@@ -358,7 +358,9 @@ export function PricingPanel() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-neutral-600">Expense ratio</span>
-                  <span className="num text-navy-900">20.00%</span>
+                  <span className="num text-navy-900">
+                    {formatPercent2dp(breakdown?.config_snapshot.str_expense_ratio ?? null)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-neutral-600">Underwritten rent</span>
