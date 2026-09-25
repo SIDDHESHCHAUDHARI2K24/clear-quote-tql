@@ -36,7 +36,7 @@ async def test_default_retries_are_bounded_in_tests(
     application = await make_persona_application()
     calls: list[uuid.UUID] = []
 
-    async def _always_fails(application_id: uuid.UUID, db: AsyncSession) -> object:
+    async def _always_fails(application_id: uuid.UUID, db: AsyncSession, **_: object) -> object:
         calls.append(application_id)
         raise ConnectionError("transient")
 

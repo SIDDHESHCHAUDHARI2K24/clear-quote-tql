@@ -18,8 +18,9 @@ blocking flag clears (spec "After any edit"; plan.md Decisions #8, #9).
 
 Steps 2-4 run under the application row lock (review M1), and step 4 is
 skipped while an earlier resume is still pending (the last `pipeline.*`
-event is our own `pipeline.resume_requested`), so two quick edits send one
-signal and write one event.
+event is our own `pipeline.resume_requested`) and the run is still
+running, so two quick edits send one signal and write one event. A run
+that closed meanwhile is restarted as usual.
 """
 
 from __future__ import annotations
@@ -141,7 +142,9 @@ async def _resume_pending(db: AsyncSession, application_id: uuid.UUID) -> bool:
                 ActivityEvent.application_id == application_id,
                 ActivityEvent.type.startswith("pipeline."),
             )
-            .order_by(ActivityEvent.at.desc(), ActivityEvent.created_at.desc())
+            # `created_at` is the DB clock for every writer; `at` is not
+            # (`CLOCK_NOW` moves ours, the worker stamps the wall clock).
+            .order_by(ActivityEvent.created_at.desc(), ActivityEvent.at.desc())
             .limit(1)
         )
     ).first()
@@ -152,7 +155,7 @@ async def _resume_pending(db: AsyncSession, application_id: uuid.UUID) -> bool:
 
 
 async def _plan_resume(
-    client: Client, application_id: uuid.UUID
+    client: Client, application_id: uuid.UUID, pending: bool = False
 ) -> tuple[ResumeReason, Callable[[], Awaitable[None]] | None]:
     """Decides how to resume without touching the DB: signal a running run,
     start one when none exists (seeded apps), or give up on a closed run.
@@ -185,6 +188,9 @@ async def _plan_resume(
 
         return "started", _start
     if description.status is WorkflowExecutionStatus.RUNNING:
+        if pending:
+            # Our last resume is still waiting to be picked up by this run.
+            return "already_requested", None
 
         async def _signal() -> None:
             await handle.signal(ApplicationPipelineWorkflow.resume)
@@ -248,17 +254,19 @@ async def reverify_and_maybe_resume(
     if blocking_open:
         await db.commit()
         return ResumeOutcome(requested=False, reason="blocking_flags_remain")
-    if await _resume_pending(db, application_id):
-        await db.commit()
-        return ResumeOutcome(requested=True, reason="already_requested")
+    pending = await _resume_pending(db, application_id)
 
     try:
         client = await temporal()
-        reason, dispatch = await _plan_resume(client, application_id)
+        reason, dispatch = await _plan_resume(client, application_id, pending)
     except Exception:
         logger.exception("Could not resume the pipeline for %s", application_id)
         await db.commit()
         return ResumeOutcome(requested=False, reason="temporal_unavailable")
+
+    if reason == "already_requested":
+        await db.commit()
+        return ResumeOutcome(requested=True, reason=reason)
 
     requested = reason in ("resumed", "started")
     events.add_event(

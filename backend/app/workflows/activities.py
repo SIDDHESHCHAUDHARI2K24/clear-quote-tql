@@ -200,7 +200,10 @@ async def verify_application(application_id: str) -> VerificationResult:
     app_uuid = uuid.UUID(application_id)
     async with workflow_db.session_factory() as db:
         await _set_stage(db, app_uuid, PipelineStage.VERIFYING)
-        run_result = await run_and_persist(app_uuid, db)
+        # CQ-028a review: no commit here, so the flags and the status below
+        # land in one transaction under the application lock; an LO edit's
+        # re-verify then sees both or neither.
+        run_result = await run_and_persist(app_uuid, db, commit=False)
         passed = not any(
             result.severity is FlagSeverity.BLOCKING and not result.passed
             for result in run_result.rule_results

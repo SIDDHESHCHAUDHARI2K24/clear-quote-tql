@@ -1532,6 +1532,1072 @@
         }
       }
     },
+    "/api/v1/applications/{application_id}/sections/{tab}": {
+      "get": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Get Section",
+        "operationId": "get_section_api_v1_applications__application_id__sections__tab__get",
+        "parameters": [
+          {
+            "name": "tab",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SectionTab"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/fields/{field_key}": {
+      "put": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Put Field",
+        "operationId": "put_field_api_v1_applications__application_id__fields__field_key__put",
+        "parameters": [
+          {
+            "name": "field_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Field Key"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldEditRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Revert Field",
+        "operationId": "revert_field_api_v1_applications__application_id__fields__field_key__delete",
+        "parameters": [
+          {
+            "name": "field_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Field Key"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/parties/{party_id}/ssn-reveal": {
+      "post": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Reveal Ssn",
+        "operationId": "reveal_ssn_api_v1_applications__application_id__parties__party_id__ssn_reveal_post",
+        "parameters": [
+          {
+            "name": "party_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Party Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SsnRevealResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/housing_history": {
+      "post": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Add Housing",
+        "operationId": "add_housing_api_v1_applications__application_id__housing_history_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HousingCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/housing_history/{row_id}": {
+      "patch": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Patch Housing",
+        "operationId": "patch_housing_api_v1_applications__application_id__housing_history__row_id__patch",
+        "parameters": [
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Row Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HousingPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/parties": {
+      "post": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Add Party",
+        "operationId": "add_party_api_v1_applications__application_id__parties_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartyCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/parties/{party_id}": {
+      "patch": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Patch Party",
+        "operationId": "patch_party_api_v1_applications__application_id__parties__party_id__patch",
+        "parameters": [
+          {
+            "name": "party_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Party Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartyPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/liabilities": {
+      "post": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Add Liability",
+        "operationId": "add_liability_api_v1_applications__application_id__liabilities_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiabilityCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/liabilities/{row_id}": {
+      "patch": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Patch Liability",
+        "operationId": "patch_liability_api_v1_applications__application_id__liabilities__row_id__patch",
+        "parameters": [
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Row Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiabilityPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/credit/import-liabilities": {
+      "post": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Import Liabilities",
+        "operationId": "import_liabilities_api_v1_applications__application_id__credit_import_liabilities_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/credit/hard-pull-request": {
+      "post": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Request Hard Pull",
+        "operationId": "request_hard_pull_api_v1_applications__application_id__credit_hard_pull_request_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HardPullRequestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/property": {
+      "patch": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Patch Property",
+        "operationId": "patch_property_api_v1_applications__application_id__property_patch",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/documents/{document_id}": {
+      "patch": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Patch Document",
+        "operationId": "patch_document_api_v1_applications__application_id__documents__document_id__patch",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reference/metros": {
+      "get": {
+        "tags": [
+          "reference"
+        ],
+        "summary": "List Metros",
+        "operationId": "list_metros_api_v1_reference_metros_get",
+        "parameters": [
+          {
+            "name": "states",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated state codes, e.g. FL,NC",
+              "title": "States"
+            },
+            "description": "Comma-separated state codes, e.g. FL,NC"
+          },
+          {
+            "name": "cq_staff_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Staff Session"
+            }
+          },
+          {
+            "name": "cq_borrower_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cq Borrower Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetrosResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/portal/support": {
       "post": {
         "tags": [
@@ -1713,6 +2779,49 @@
   },
   "components": {
     "schemas": {
+      "AddressInput": {
+        "properties": {
+          "street_address": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Street Address"
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "title": "City"
+          },
+          "state": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "State"
+          },
+          "zip": {
+            "type": "string",
+            "pattern": "^\\d{5}$",
+            "title": "Zip"
+          },
+          "county": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "County"
+          }
+        },
+        "type": "object",
+        "required": [
+          "street_address",
+          "city",
+          "state",
+          "zip"
+        ],
+        "title": "AddressInput"
+      },
       "ApplicationListResponse": {
         "properties": {
           "items": {
@@ -2015,6 +3124,100 @@
         ],
         "title": "ApplicationTab",
         "description": "Matches the 7 workspace tabs."
+      },
+      "AssetsSummary": {
+        "properties": {
+          "verified_assets_total": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Verified Assets Total"
+          },
+          "reserves_months": {
+            "type": "integer",
+            "title": "Reserves Months"
+          },
+          "reserves_required": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reserves Required"
+          },
+          "cash_to_close": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cash To Close"
+          },
+          "required_funds": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Funds"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sufficient",
+              "insufficient",
+              "awaiting_pricing"
+            ],
+            "title": "Status"
+          },
+          "income_applicable": {
+            "type": "boolean",
+            "title": "Income Applicable"
+          },
+          "monthly_income_total": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Income Total"
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentItem"
+            },
+            "type": "array",
+            "title": "Documents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verified_assets_total",
+          "reserves_months",
+          "reserves_required",
+          "cash_to_close",
+          "required_funds",
+          "status",
+          "income_applicable",
+          "monthly_income_total",
+          "documents"
+        ],
+        "title": "AssetsSummary"
       },
       "AutoQuoteResponse": {
         "properties": {
@@ -2514,6 +3717,111 @@
         "title": "ConfigSnapshot",
         "description": "Pricing configuration, snapshotted per-quote so old quotes never change\nwhen defaults change later (`scenarios.config_snapshot` stores one of\nthese as JSON per CQ-007)."
       },
+      "ConsentStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "accepted",
+          "declined",
+          "expired"
+        ],
+        "title": "ConsentStatus"
+      },
+      "ConsentSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ConsentStatus"
+          },
+          "requested_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested At"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decline_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decline Reason"
+          },
+          "fico_after_pull": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fico After Pull"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "requested_at",
+          "requested_by",
+          "expires_at",
+          "decided_at",
+          "decline_reason",
+          "fico_after_pull"
+        ],
+        "title": "ConsentSummary",
+        "description": "E11: latest hard-pull consent request (CQ-033 fills the decision)."
+      },
       "CostSegTable": {
         "properties": {
           "purchase_price": {
@@ -2572,6 +3880,113 @@
         "title": "CostSegTable",
         "type": "object"
       },
+      "CreditSummary": {
+        "properties": {
+          "representative_fico": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Representative Fico"
+          },
+          "fico_bracket": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fico Bracket"
+          },
+          "pull_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "soft_pull",
+                  "hard_pull"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pull Type"
+          },
+          "pulled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pulled At"
+          },
+          "liabilities_monthly_total": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Liabilities Monthly Total"
+          },
+          "dti_applicable": {
+            "type": "boolean",
+            "title": "Dti Applicable"
+          },
+          "dti": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dti"
+          },
+          "dti_status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "awaiting_pricing",
+              "no_income",
+              "not_applicable"
+            ],
+            "title": "Dti Status"
+          },
+          "consent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConsentSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "representative_fico",
+          "fico_bracket",
+          "pull_type",
+          "pulled_at",
+          "liabilities_monthly_total",
+          "dti_applicable",
+          "dti",
+          "dti_status",
+          "consent"
+        ],
+        "title": "CreditSummary"
+      },
       "DSCRBucket": {
         "type": "string",
         "enum": [
@@ -2581,6 +3996,88 @@
         ],
         "title": "DSCRBucket",
         "description": "DSCR classification bucket. Boundaries are inclusive on the lower edge."
+      },
+      "DocumentItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "doc_type": {
+            "type": "string",
+            "title": "Doc Type"
+          },
+          "received": {
+            "type": "boolean",
+            "title": "Received"
+          },
+          "received_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "doc_type",
+          "received",
+          "received_at"
+        ],
+        "title": "DocumentItem"
+      },
+      "DocumentPatch": {
+        "properties": {
+          "received": {
+            "type": "boolean",
+            "title": "Received"
+          }
+        },
+        "type": "object",
+        "required": [
+          "received"
+        ],
+        "title": "DocumentPatch"
+      },
+      "FieldEditRequest": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "FieldEditRequest"
       },
       "FieldSource": {
         "type": "string",
@@ -2716,6 +4213,16 @@
         ],
         "title": "FieldValueRead"
       },
+      "FlagSeverity": {
+        "type": "string",
+        "enum": [
+          "info",
+          "warning",
+          "blocking"
+        ],
+        "title": "FlagSeverity",
+        "description": "Decision: `blocking` halts pipeline progression (Verifying ->\nNeedsAttention) and blocks Send; `warning` is a visible tab count only;\n`info` is reserved for auto-fix outcomes and never becomes a `flags`\nrow."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2728,6 +4235,22 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HardPullRequestResponse": {
+        "properties": {
+          "consent": {
+            "$ref": "#/components/schemas/ConsentSummary"
+          },
+          "section": {
+            "$ref": "#/components/schemas/SectionResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "consent",
+          "section"
+        ],
+        "title": "HardPullRequestResponse"
       },
       "HealthReport": {
         "properties": {
@@ -2820,6 +4343,186 @@
         "title": "HeroNumbers",
         "type": "object"
       },
+      "HousingCreate": {
+        "properties": {
+          "street_address": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Street Address"
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "title": "City"
+          },
+          "state": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "State"
+          },
+          "zip": {
+            "type": "string",
+            "pattern": "^\\d{5}$",
+            "title": "Zip"
+          },
+          "housing_status": {
+            "$ref": "#/components/schemas/HousingStatus"
+          },
+          "residence_years": {
+            "type": "integer",
+            "maximum": 80.0,
+            "minimum": 0.0,
+            "title": "Residence Years"
+          },
+          "residence_months": {
+            "type": "integer",
+            "maximum": 11.0,
+            "minimum": 0.0,
+            "title": "Residence Months"
+          },
+          "vom_completed": {
+            "type": "boolean",
+            "title": "Vom Completed",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "street_address",
+          "city",
+          "state",
+          "zip",
+          "housing_status",
+          "residence_years",
+          "residence_months"
+        ],
+        "title": "HousingCreate"
+      },
+      "HousingPatch": {
+        "properties": {
+          "street_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street Address"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "zip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip"
+          },
+          "housing_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HousingStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residence_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residence Years"
+          },
+          "residence_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residence Months"
+          },
+          "vom_completed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vom Completed"
+          }
+        },
+        "type": "object",
+        "title": "HousingPatch"
+      },
+      "HousingStatus": {
+        "type": "string",
+        "enum": [
+          "own",
+          "rent",
+          "rent_free"
+        ],
+        "title": "HousingStatus"
+      },
+      "HousingSummary": {
+        "properties": {
+          "total_months": {
+            "type": "integer",
+            "title": "Total Months"
+          },
+          "required_months": {
+            "type": "integer",
+            "title": "Required Months"
+          },
+          "meets_requirement": {
+            "type": "boolean",
+            "title": "Meets Requirement"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_months",
+          "required_months",
+          "meets_requirement"
+        ],
+        "title": "HousingSummary"
+      },
       "LatestApplicationOut": {
         "properties": {
           "id": {
@@ -2838,6 +4541,112 @@
           "status"
         ],
         "title": "LatestApplicationOut"
+      },
+      "LiabilityCreate": {
+        "properties": {
+          "creditor_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Creditor Name"
+          },
+          "account_type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Account Type"
+          },
+          "monthly_payment": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Monthly Payment"
+          },
+          "balance": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Balance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "creditor_name",
+          "account_type",
+          "monthly_payment",
+          "balance"
+        ],
+        "title": "LiabilityCreate"
+      },
+      "LiabilityPatch": {
+        "properties": {
+          "creditor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Creditor Name"
+          },
+          "account_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Type"
+          },
+          "monthly_payment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Payment"
+          },
+          "balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance"
+          }
+        },
+        "type": "object",
+        "title": "LiabilityPatch"
       },
       "LoOption": {
         "properties": {
@@ -3056,6 +4865,22 @@
         ],
         "title": "MatchOut"
       },
+      "MetrosResponse": {
+        "properties": {
+          "states": {
+            "items": {
+              "$ref": "#/components/schemas/StateMetros"
+            },
+            "type": "array",
+            "title": "States"
+          }
+        },
+        "type": "object",
+        "required": [
+          "states"
+        ],
+        "title": "MetrosResponse"
+      },
       "Occupancy": {
         "type": "string",
         "enum": [
@@ -3084,6 +4909,244 @@
           "code"
         ],
         "title": "OtpVerifyRequest"
+      },
+      "PartyCreate": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Last Name"
+          },
+          "ssn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ssn"
+          },
+          "dob": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dob"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "cell_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cell Phone"
+          },
+          "home_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Phone"
+          },
+          "work_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Phone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_name",
+          "last_name"
+        ],
+        "title": "PartyCreate",
+        "description": "Adds the co-borrower (the only party the LO can add)."
+      },
+      "PartyPatch": {
+        "properties": {
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "ssn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ssn"
+          },
+          "dob": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dob"
+          },
+          "marital_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marital Status"
+          },
+          "dependents_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dependents Count"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "cell_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cell Phone"
+          },
+          "home_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Phone"
+          },
+          "work_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Phone"
+          },
+          "business_vesting": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Vesting"
+          },
+          "llc_entity_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llc Entity Name"
+          },
+          "no_co_applicant_check": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Co Applicant Check"
+          }
+        },
+        "type": "object",
+        "title": "PartyPatch"
       },
       "PipelineResumeResponse": {
         "properties": {
@@ -3587,6 +5650,140 @@
           "is_buydown_rate"
         ],
         "title": "PricedProductRow"
+      },
+      "PropertyPatch": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AddressInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tbd": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tbd"
+          },
+          "recommend_matches": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommend Matches"
+          },
+          "buy_box_states": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buy Box States"
+          },
+          "buy_box_metros": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buy Box Metros"
+          },
+          "property_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PropertyType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "number_of_units": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number Of Units"
+          }
+        },
+        "type": "object",
+        "title": "PropertyPatch",
+        "description": "Every key optional; `address` and `tbd=true` are mutually exclusive."
+      },
+      "PropertySummary": {
+        "properties": {
+          "tbd": {
+            "type": "boolean",
+            "title": "Tbd"
+          },
+          "recommend_matches": {
+            "type": "boolean",
+            "title": "Recommend Matches"
+          },
+          "buy_box_states": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Buy Box States"
+          },
+          "buy_box_metros": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Buy Box Metros"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tbd",
+          "recommend_matches",
+          "buy_box_states",
+          "buy_box_metros"
+        ],
+        "title": "PropertySummary"
+      },
+      "PropertyType": {
+        "type": "string",
+        "enum": [
+          "single_family",
+          "two_to_four_unit",
+          "condo",
+          "townhome"
+        ],
+        "title": "PropertyType"
       },
       "QuotePreviewRequest": {
         "properties": {
@@ -4554,6 +6751,24 @@
         "title": "ReportStrategy",
         "type": "string"
       },
+      "ResumeResult": {
+        "properties": {
+          "requested": {
+            "type": "boolean",
+            "title": "Requested"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "requested",
+          "reason"
+        ],
+        "title": "ResumeResult"
+      },
       "ScenarioCreateRequest": {
         "properties": {
           "purchase_price": {
@@ -4707,6 +6922,326 @@
         ],
         "title": "ScenarioRead"
       },
+      "SectionField": {
+        "properties": {
+          "field_key": {
+            "type": "string",
+            "title": "Field Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FieldSource"
+          },
+          "overridden": {
+            "type": "boolean",
+            "title": "Overridden"
+          },
+          "original_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Value"
+          },
+          "editable": {
+            "type": "boolean",
+            "title": "Editable",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_key",
+          "label",
+          "value",
+          "source",
+          "overridden"
+        ],
+        "title": "SectionField"
+      },
+      "SectionFlag": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tab": {
+            "$ref": "#/components/schemas/ApplicationTab"
+          },
+          "field_key": {
+            "type": "string",
+            "title": "Field Key"
+          },
+          "rule": {
+            "type": "string",
+            "title": "Rule"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/FlagSeverity"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tab",
+          "field_key",
+          "rule",
+          "severity",
+          "message"
+        ],
+        "title": "SectionFlag"
+      },
+      "SectionRecord": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "party",
+              "housing_history",
+              "liability",
+              "asset",
+              "employment",
+              "document",
+              "property",
+              "loan",
+              "credit"
+            ],
+            "title": "Kind"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "manual": {
+            "type": "boolean",
+            "title": "Manual",
+            "default": false
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/SectionField"
+            },
+            "type": "array",
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "id",
+          "fields"
+        ],
+        "title": "SectionRecord"
+      },
+      "SectionResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "tab": {
+            "$ref": "#/components/schemas/SectionTab"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatus"
+          },
+          "occupancy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Occupancy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/SectionRecord"
+            },
+            "type": "array",
+            "title": "Records"
+          },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/SectionFlag"
+            },
+            "type": "array",
+            "title": "Flags"
+          },
+          "housing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HousingSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CreditSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assets": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssetsSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "property": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PropertySummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resume": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResumeResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "tab",
+          "status",
+          "occupancy",
+          "records",
+          "flags"
+        ],
+        "title": "SectionResponse"
+      },
+      "SectionTab": {
+        "type": "string",
+        "enum": [
+          "borrowers",
+          "housing",
+          "credit",
+          "assets",
+          "property"
+        ],
+        "title": "SectionTab"
+      },
+      "SsnRevealResponse": {
+        "properties": {
+          "party_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Party Id"
+          },
+          "ssn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ssn"
+          }
+        },
+        "type": "object",
+        "required": [
+          "party_id",
+          "ssn"
+        ],
+        "title": "SsnRevealResponse"
+      },
       "StaffLoginRequest": {
         "properties": {
           "email": {
@@ -4829,6 +7364,27 @@
         ],
         "title": "StaleCheckResponse",
         "description": "The counts one `mark_stale` run changed. Every count is zero on a\nrepeat run."
+      },
+      "StateMetros": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "metros": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Metros"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "metros"
+        ],
+        "title": "StateMetros"
       },
       "StatusPatchRequest": {
         "properties": {

@@ -233,7 +233,10 @@ async def write_flag(
     Coleman). `message` (P5/P6 foundation, E8) is the human-readable text;
     `None` falls back to `rules.flag_message(rule, field_key)`.
     Does not commit — the caller controls the transaction boundary.
+    Takes the application row lock (CQ-028a review), so concurrent writers
+    (rules, the pricing validator, the DSCR loop) never both insert.
     """
+    await lock_application(db, application_id)
     text = message or flag_message(rule, field_key)
     existing = (
         await db.execute(
@@ -290,7 +293,9 @@ async def resolve_flag(
     return existing
 
 
-async def run_and_persist(application_id: uuid.UUID, db: AsyncSession) -> VerificationRunResult:
+async def run_and_persist(
+    application_id: uuid.UUID, db: AsyncSession, *, commit: bool = True
+) -> VerificationRunResult:
     """Assembles the application's `VerificationContext`, evaluates every
     rule, applies auto-fixes back onto `application_parties`, writes failing
     non-`info` results as `flags` rows, and resolves any previously-raised
@@ -299,7 +304,9 @@ async def run_and_persist(application_id: uuid.UUID, db: AsyncSession) -> Verifi
 
     Takes the application row lock first (CQ-028a review M1), so the
     pipeline's verify and the verification tabs' re-verify never race on
-    `flags`."""
+    `flags`. `commit=False` leaves the transaction (and the lock) open, so
+    the pipeline's verify can set the status from these results before
+    anyone else re-verifies."""
     await lock_application(db, application_id)
     application = await db.get(Application, application_id)
     if application is None:
@@ -345,5 +352,6 @@ async def run_and_persist(application_id: uuid.UUID, db: AsyncSession) -> Verifi
                     run_result.flags_resolved.append(resolved)
 
     await db.flush()
-    await db.commit()
+    if commit:
+        await db.commit()
     return run_result

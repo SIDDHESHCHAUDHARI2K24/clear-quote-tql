@@ -207,6 +207,15 @@ async def test_resume_is_not_repeated_while_pending(
     types = await _event_types(db_session, app.id)
     assert types.count("pipeline.resume_requested") == 1
 
+    # The started run fails before picking the resume up: not a dead end.
+    workflow_id = application_workflow_id(str(app.id))
+    fake_temporal.running.discard(workflow_id)
+    fake_temporal.closed[workflow_id] = WorkflowExecutionStatus.TERMINATED
+    third = (await client.put(f"{base}/fields/borrower_email", json={"value": "x@e.w"})).json()
+
+    assert third["resume"] == {"requested": True, "reason": "started"}
+    assert fake_temporal.starts == [workflow_id, workflow_id]
+
 
 async def test_resume_restarts_failed_run(
     client: AsyncClient, make_app: MakeApp, fake_temporal: FakeTemporal
