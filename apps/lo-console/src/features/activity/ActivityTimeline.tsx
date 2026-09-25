@@ -9,7 +9,15 @@ import { fetchActivity } from "./api";
 import { categoryForEventType, iconForEventType } from "./icons";
 
 export interface ActivityTimelineProps {
-  applicationId: string;
+  /** Fetches `GET .../applications/{id}/activity` itself, paginated. Omit
+   * when passing `events` instead. */
+  applicationId?: string;
+  /** CQ-026 (Clients, plan.md Decision 8): a pre-fetched, already-merged
+   * event list (e.g. a client's activity across every application) --
+   * renders directly, no fetch and no further pagination (the caller has
+   * already capped it, e.g. at 50). Exactly one of `applicationId`/`events`
+   * is expected per usage. */
+  events?: ActivityEvent[];
 }
 
 interface DayGroup {
@@ -74,12 +82,25 @@ type LoadState =
 
 /** spec.md CQ-029 "Timeline": `GET .../activity`, grouped by day, one icon
  * per event-type category, system events visually quieter (AC1). Exported
- * for CQ-026's client-detail page (plan.md E9) to reuse as-is. */
-export function ActivityTimeline({ applicationId }: ActivityTimelineProps) {
-  const [state, setState] = useState<LoadState>({ kind: "loading" });
+ * for CQ-026's client-detail page (plan.md E9/Decision 8) to reuse either
+ * by `applicationId` (fetches + paginates itself) or by a pre-fetched,
+ * already-merged `events` list (no fetch, no further pagination). */
+export function ActivityTimeline({ applicationId, events: givenEvents }: ActivityTimelineProps) {
+  const [state, setState] = useState<LoadState>(
+    givenEvents
+      ? {
+          kind: "ready",
+          events: givenEvents,
+          page: 1,
+          pageSize: givenEvents.length,
+          total: givenEvents.length,
+        }
+      : { kind: "loading" },
+  );
   const [page, setPage] = useState(1);
 
   useEffect(() => {
+    if (givenEvents || !applicationId) return;
     let cancelled = false;
     setState({ kind: "loading" });
     fetchActivity(applicationId, page).then(({ data, error }) => {
@@ -102,7 +123,7 @@ export function ActivityTimeline({ applicationId }: ActivityTimelineProps) {
     return () => {
       cancelled = true;
     };
-  }, [applicationId, page]);
+  }, [applicationId, givenEvents, page]);
 
   if (state.kind === "loading") {
     return (

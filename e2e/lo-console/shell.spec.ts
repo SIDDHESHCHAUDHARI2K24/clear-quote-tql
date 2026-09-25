@@ -68,10 +68,10 @@ test("the nav links go to the stub pages (Dashboard is CQ-025's real page)", asy
   // CQ-027 (small, logged necessity): `/applications` is no longer a stub
   // -- it has no "Built in CQ-027" text -- so it carries no `item` here;
   // its own coverage is `e2e/lo-console/applications-list.spec.ts`.
-  for (const [label, path, item] of [
-    ["Clients", "/clients", "CQ-026"],
-    ["Applications", "/applications", null],
-  ] as const) {
+  //
+  // CQ-026 (small, logged necessity): `/clients` is no longer a stub
+  // either -- its own coverage is `e2e/lo-console/clients-list.spec.ts`.
+  for (const [label, path, item] of [["Applications", "/applications", null]] as const) {
     await nav.getByRole("link", { name: label }).click();
     await page.waitForURL(path);
     await expect(page.getByRole("heading", { level: 1, name: label })).toBeVisible();
