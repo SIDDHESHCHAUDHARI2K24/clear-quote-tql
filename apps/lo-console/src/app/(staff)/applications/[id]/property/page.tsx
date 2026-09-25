@@ -1,3 +1,6 @@
-export default function PropertyTabPage() {
-  return <p className="text-sm text-neutral-600">Built in CQ-028.</p>;
+import { PropertyTab } from "../../../../../features/verification/property/PropertyTab";
+
+export default async function PropertyTabPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <PropertyTab applicationId={id} />;
 }
