@@ -41,6 +41,11 @@ class QuotePackage(Base):
         UUID(as_uuid=True), ForeignKey("quotes.id"), nullable=True, index=True
     )
     lo_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommendation_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """CQ-019: the "What we recommend" sentence, pre-drafted by the server
+    from the recommended quote's scenario and re-drafted whenever the
+    recommendation changes. `freeze_package_version` uses it, so the sent
+    report says exactly what the Send tab preview said."""
     letter_key: Mapped[str | None] = mapped_column(String, nullable=True)
     """MinIO key."""
     report_token: Mapped[str] = mapped_column(String, unique=True, index=True)

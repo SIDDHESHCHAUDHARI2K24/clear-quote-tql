@@ -67,6 +67,9 @@ async def post_scenario(
     db: AsyncSession = Depends(get_db),
     _application: Application = Depends(get_scoped_application),
 ) -> ScenarioRead:
+    # CQ-018 review n2 (fixed in CQ-019): take the per-application write
+    # lock like every other Quote Builder write.
+    await lock_application(db, application_id)
     # CQ-018: a missing OB-required field (e.g. Aisha Coleman's Occupancy)
     # 422s as `missing_field` before anything is written.
     await ensure_priceable(db, application_id, request.down_payment_pct)

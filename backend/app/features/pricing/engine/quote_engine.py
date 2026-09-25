@@ -14,7 +14,8 @@ populating `QuoteComputation`.
 
 from __future__ import annotations
 
-from decimal import ROUND_HALF_UP, Decimal
+from collections.abc import Iterable
+from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
 
 from app.features.pricing.engine.mi_matrix import mi_factor
 from app.features.pricing.engine.types import (
@@ -347,6 +348,17 @@ def match_ceiling_price(approved_purchase_price: Decimal) -> Decimal:
 
 
 # --- Orchestration -------------------------------------------------------------
+
+
+def verified_assets_floor(verified_amounts: Iterable[Decimal]) -> Decimal:
+    """catalog §3 `total_verified_assets` floored to the $1,000 below it:
+    the pre-approval letter's "Verified Assets $135K+" threshold (CQ-019).
+    Rounds down so the letter never overstates what was verified."""
+    total = sum(verified_amounts, Decimal("0"))
+    return (total / _ASSET_FLOOR_STEP).to_integral_value(rounding=ROUND_FLOOR) * _ASSET_FLOOR_STEP
+
+
+_ASSET_FLOOR_STEP = Decimal("1000")
 
 
 def compute_quote(inputs: ScenarioInputs, config: ConfigSnapshot) -> QuoteComputation:

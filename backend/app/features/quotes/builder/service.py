@@ -778,11 +778,22 @@ async def reprice_application(
     return RepriceResponse(application_id=application.id, quote_ids=quote_ids, priced_at=priced_at)
 
 
+async def _refetch_after_lock(db: AsyncSession, quote_id: uuid.UUID) -> Quote:
+    """CQ-018 review n3 (fixed in CQ-019): a concurrent delete can commit
+    between the scope check and the application lock, so re-read the quote
+    once the lock is held and 404 when it is gone."""
+    quote = await db.get(Quote, quote_id, populate_existing=True)
+    if quote is None:
+        raise NotFoundError(f"Quote not found: {quote_id}")
+    return quote
+
+
 async def recommend_quote(db: AsyncSession, quote: Quote, user: User) -> Application:
     """`POST /quotes/{id}/recommend`: one recommended quote per application
     (a single column, so setting it un-stars any other)."""
     scenario = await get_scenario(db, quote.scenario_id)
     application = await lock_application(db, scenario.application_id)
+    quote = await _refetch_after_lock(db, quote.id)
     previous = application.recommended_quote_id
     application.recommended_quote_id = quote.id
     db.add(
@@ -808,6 +819,7 @@ async def delete_quote(db: AsyncSession, quote: Quote, user: User) -> None:
     would break that package's snapshot and its `quotes.id` FK."""
     scenario = await get_scenario(db, quote.scenario_id)
     application = await lock_application(db, scenario.application_id)
+    quote = await _refetch_after_lock(db, quote.id)
     if await _quote_in_package(db, quote.id):
         raise ConflictError("This quote is part of a quote package and can't be deleted.")
     was_recommended = application.recommended_quote_id == quote.id
