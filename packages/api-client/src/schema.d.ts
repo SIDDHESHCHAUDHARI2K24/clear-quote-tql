@@ -73,6 +73,44 @@ export interface paths {
         patch: operations["patch_status_api_v1_applications__application_id__status_patch"];
         trace?: never;
     };
+    "/api/v1/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Applications */
+        get: operations["get_applications_api_v1_applications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/los": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Lo Options
+         * @description Backs the frontend's LO `Select` (spec.md "Frontend", Manager/Admin
+         *     only) -- 403s for an LO (E16), same as every other admin-scoped route.
+         */
+        get: operations["get_lo_options_api_v1_applications_los_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/applications/{application_id}/field-values/{field_key}": {
         parameters: {
             query?: never;
@@ -421,6 +459,60 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ApplicationListResponse
+         * @description `GET /applications` response: `core/pagination.Page[ApplicationRow]`
+         *     (`items`, `total`, `page`, `page_size`).
+         */
+        ApplicationListResponse: {
+            /** Items */
+            items: components["schemas"]["ApplicationRow"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * ApplicationRow
+         * @description One row of `GET /applications` (spec.md "Row"). Shared with CQ-026
+         *     (E9) -- keep this shape stable; CQ-026 imports it directly rather than
+         *     redefining it.
+         */
+        ApplicationRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Client Name */
+            client_name: string;
+            /** Property Label */
+            property_label: string | null;
+            /**
+             * Strategy
+             * @enum {string}
+             */
+            strategy: "primary" | "ltr" | "str";
+            /** Purchase Price */
+            purchase_price: string | null;
+            status: components["schemas"]["ApplicationStatus"];
+            /** Flag Count */
+            flag_count: number;
+            /**
+             * Lo Id
+             * Format: uuid
+             */
+            lo_id: string;
+            /** Lo Name */
+            lo_name: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /**
          * ApplicationStatus
          * @description Mirrors the application status machine in `system-design.md`,
@@ -862,6 +954,22 @@ export interface components {
             id: string;
             /** Status */
             status: string;
+        };
+        /**
+         * LoOption
+         * @description One entry of `GET /applications/los` -- the frontend's "LO" `Select`
+         *     for a Manager/Admin (spec.md "Frontend"). Nothing else in the backend
+         *     exposes a role=lo user list yet, so this item owns it (small, scoped
+         *     necessity -- plan.md).
+         */
+        LoOption: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Full Name */
+            full_name: string;
         };
         /** LocationResponse */
         LocationResponse: {
@@ -1588,6 +1696,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApplicationSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_applications_api_v1_applications_get: {
+        parameters: {
+            query?: {
+                /** @description Client name or email, partial, case-insensitive */
+                q?: string | null;
+                /** @description Manager/Admin only; ignored for an LO's own request */
+                lo_id?: string | null;
+                /** @description Comma list of status labels, plus the alias sent_or_later */
+                status?: string | null;
+                /** @description Comma list of primary, ltr, str */
+                strategy?: string | null;
+                amount_min?: number | string | null;
+                amount_max?: number | string | null;
+                state?: string | null;
+                has_property?: boolean | null;
+                created_from?: string | null;
+                created_to?: string | null;
+                sort?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_lo_options_api_v1_applications_los_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoOption"][];
                 };
             };
             /** @description Validation Error */
