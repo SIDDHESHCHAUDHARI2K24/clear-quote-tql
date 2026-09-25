@@ -675,8 +675,8 @@
     "semantic_hash": ""
   },
   "backend/app/features/quotes/builder/service.py": {
-    "mtime": 1790351385.2986233,
-    "ast_hash": "e1c57e430b4bf28d272828472895c5b5",
+    "mtime": 1790352358.428501,
+    "ast_hash": "31c61c5fe6c346c7474ed0ee837af0ac",
     "semantic_hash": ""
   },
   "backend/app/features/quotes/builder/tests/__init__.py": {
@@ -2030,8 +2030,8 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/post-dev.md": {
-    "mtime": 1790352181.657253,
-    "ast_hash": "a9745dbd4c8ffabf6e057349391216dc",
+    "mtime": 1790352741.1363811,
+    "ast_hash": "f4bb847b7ea15ad2f2a16c3b867d4ca4",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/spec.md": {
@@ -3545,12 +3545,12 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/evidence/header-1280.png": {
-    "mtime": 1790352080.313216,
+    "mtime": 1790352725.5800648,
     "ast_hash": "388d2bdd48a0fe30d59f24b67c2f281b",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-016-application-workspace/evidence/header-1440.png": {
-    "mtime": 1790352080.3134897,
+    "mtime": 1790352725.5808163,
     "ast_hash": "b25898e63566d649ab1de59f56593b1a",
     "semantic_hash": ""
   },
@@ -3705,7 +3705,7 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-017-pricing-panel/evidence/pricing-panel-priya.png": {
-    "mtime": 1790352080.3139687,
+    "mtime": 1790352725.5815113,
     "ast_hash": "439a6067e2c42f6b7210fa70033db433",
     "semantic_hash": ""
   },
@@ -4150,8 +4150,8 @@
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/quote-builder/QuoteBuilder.test.tsx": {
-    "mtime": 1790351784.2425604,
-    "ast_hash": "51dde61be3dd600ff41ec0074393f2d5",
+    "mtime": 1790352644.0041795,
+    "ast_hash": "05dc559f5ca9080ba5b8d9b5e1778c0a",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/quote-builder/QuoteBuilder.tsx": {
@@ -4165,18 +4165,18 @@
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/quote-builder/QuoteGroups.test.tsx": {
-    "mtime": 1790351784.2601085,
-    "ast_hash": "c41be8821428292650833eb60f58fe17",
+    "mtime": 1790352644.0021682,
+    "ast_hash": "729dbbd1ee913de23c286811d26bdd73",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/quote-builder/QuoteGroups.tsx": {
-    "mtime": 1790351812.2704425,
-    "ast_hash": "15e5bd208f081928e7605021f74ca5d6",
+    "mtime": 1790352643.9992776,
+    "ast_hash": "17ce01b21b96fbed1bcf060396aca18b",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/quote-builder/ScenarioOverlay.tsx": {
-    "mtime": 1790351784.27412,
-    "ast_hash": "beff15816c235068b0c1c48cf9a2f4b6",
+    "mtime": 1790352382.7157342,
+    "ast_hash": "5165210e42162e5d8cf1cf52f32202dc",
     "semantic_hash": ""
   },
   "apps/lo-console/src/features/quote-builder/__fixtures__/products-marcus-hale.json": {
@@ -4235,13 +4235,13 @@
     "semantic_hash": ""
   },
   "backend/app/features/quotes/builder/tests/test_router.py": {
-    "mtime": 1790351259.2510593,
-    "ast_hash": "65fc1b825f8edbdf0a6a67c7566e9c46",
+    "mtime": 1790352371.403654,
+    "ast_hash": "1c3001314d1dce14ba114f6ce34bf414",
     "semantic_hash": ""
   },
   "e2e/lo-console/quote-builder.spec.ts": {
-    "mtime": 1790352075.8106966,
-    "ast_hash": "6387dd4b83222d66d25935ef63f9747c",
+    "mtime": 1790352644.0062308,
+    "ast_hash": "3982ecc9ea29e64aee5a2b6c30a57b91",
     "semantic_hash": ""
   },
   "e2e/lo-console/reprice-after-override.spec.ts": {
@@ -4250,42 +4250,42 @@
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac1-marcus-groups.png": {
-    "mtime": 1790352046.0430806,
+    "mtime": 1790352684.0162659,
     "ast_hash": "aa80e91ff5d61d685fae95e596b69c15",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac3-marcus-25-down.png": {
-    "mtime": 1790352049.3700862,
+    "mtime": 1790352687.908231,
     "ast_hash": "14b35a029673e33c05295a4ab2d5c2df",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac4-manual-grid.png": {
-    "mtime": 1790352051.7684598,
+    "mtime": 1790352690.3800273,
     "ast_hash": "98386f0570b558e956ca476ba50ec9f9",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac6-aisha-missing-occupancy.png": {
-    "mtime": 1790352052.9733334,
+    "mtime": 1790352691.5962722,
     "ast_hash": "86be824f2c5ac584072605b509c0e53f",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac7-priya-primary.png": {
-    "mtime": 1790352054.0336592,
+    "mtime": 1790352692.654564,
     "ast_hash": "318983bd0cb025ac73c7bc13d50686b5",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac8-after-reprice.png": {
-    "mtime": 1790352060.0774229,
-    "ast_hash": "e5dce82e61e9e0e70f0b599587a1126e",
+    "mtime": 1790352698.4106545,
+    "ast_hash": "78f299f8c27beac7cdde309fc5ff11b6",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/ac8-stale-banner.png": {
-    "mtime": 1790352059.153523,
+    "mtime": 1790352697.4886138,
     "ast_hash": "957df3e6295649f9cb2b2097b8a35cfe",
     "semantic_hash": ""
   },
   "docs/backlog/CQ-018-quote-builder/evidence/compare-marcus.png": {
-    "mtime": 1790352055.7138858,
+    "mtime": 1790352694.219571,
     "ast_hash": "66060025631cd6712c36ed79f1863055",
     "semantic_hash": ""
   }
