@@ -15,7 +15,7 @@ Every number is display formatting of engine output (`Quote.computed`) or a
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
@@ -24,6 +24,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.errors import ValidationAppError
 from app.features.applications.assets.models import Asset, Document
 from app.features.applications.models import ApplicationParty, BusinessVesting, PartyRole
@@ -254,7 +255,7 @@ async def build_letter_context(
     lo = ctx.lo
     prop = ctx.prop
     return LetterContext(
-        letter_date=(letter_date or datetime.now(UTC).date()).strftime("%m/%d/%Y"),
+        letter_date=(letter_date or clock.now().date()).strftime("%m/%d/%Y"),
         borrower_name=borrower_name,
         is_llc=is_llc,
         lo_name=lo.full_name,

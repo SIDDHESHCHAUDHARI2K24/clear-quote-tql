@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import ColumnElement, Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.auth import scope_applications
 from app.core.config import get_settings
 from app.core.enums import ApplicationStatus, Strategy, UserRole
@@ -373,7 +374,7 @@ async def _sent_versions_for_client(
         .where(QuotePackage.application_id.in_(application_ids))
         .order_by(QuotePackageVersion.sent_at.desc())
     )
-    now = datetime.now(UTC)
+    now = clock.now()
     # code review finding: the LO console and borrower portal are separate
     # Next.js apps on different origins, so a bare relative `/report/...`
     # path (resolved against the LO console's own origin from

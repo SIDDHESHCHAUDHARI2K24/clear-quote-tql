@@ -4,19 +4,24 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
+from app.core.config import get_settings
 from app.core.enums import UserRole
 from app.features.applications.models import Application
 from app.features.clients.models import Client
+from app.features.pricing.scenarios.models import Scenario
 from app.features.quotes.builder.models import Quote
 from app.features.quotes.builder.tests.test_router import _seed
+from app.features.quotes.stale.service import STALE_QUOTE_DAYS_KEY
+from app.features.settings.models import Setting
 from conftest import StaffSession
 
 MakeStaff = Callable[..., Awaitable[StaffSession]]
@@ -166,3 +171,52 @@ async def test_readiness_blocks_instead_of_500_when_investment_strategy_is_missi
             }
         ],
     }
+
+
+# --- U3 (merge plan M4/M5): the stale_quote_days setting and core/clock -------
+
+
+def _freeze(monkeypatch: pytest.MonkeyPatch, at: datetime) -> None:
+    frozen = get_settings().model_copy(update={"clock_now": at.isoformat()})
+    monkeypatch.setattr(clock, "get_settings", lambda: frozen)
+
+
+async def _set_stale_days(db: AsyncSession, days: int) -> None:
+    await db.merge(Setting(key=STALE_QUOTE_DAYS_KEY, value=days))
+    await db.commit()
+
+
+async def test_readiness_reads_the_clock_and_the_setting(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_staff_session: MakeStaff,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """U3: `is_rate_stale` uses `core/clock.now()` (CLOCK_NOW) and the
+    `stale_quote_days` setting CQ-030's job reads -- not a second,
+    hard-coded 21-day rule on the real clock."""
+    ids = await _seed(db_session, "marcus_hale")
+    application_id = ids["marcus_hale"]
+    await make_staff_session(role=UserRole.MANAGER)
+    assert await _readiness(client, application_id) == {"ready": True, "blockers": []}
+    newest = (
+        await db_session.execute(
+            select(func.max(Quote.priced_at))
+            .join(Scenario, Quote.scenario_id == Scenario.id)
+            .where(Scenario.application_id == application_id)
+        )
+    ).scalar_one()
+    stale_first = {"code": "quotes_stale", "message": "Quotes are out of date", "tab": "pricing"}
+
+    await _set_stale_days(db_session, 21)
+    _freeze(monkeypatch, newest + timedelta(days=20))
+    assert (await _readiness(client, application_id))["ready"] is True
+    _freeze(monkeypatch, newest + timedelta(days=22))
+    assert (await _readiness(client, application_id))["blockers"][0] == stale_first
+
+    # The setting, not a constant: 30 days clears it at +22d, 10 flags +15d.
+    await _set_stale_days(db_session, 30)
+    assert (await _readiness(client, application_id))["ready"] is True
+    await _set_stale_days(db_session, 10)
+    _freeze(monkeypatch, newest + timedelta(days=15))
+    assert (await _readiness(client, application_id))["blockers"][0] == stale_first

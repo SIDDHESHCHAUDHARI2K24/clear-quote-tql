@@ -25,12 +25,12 @@ from __future__ import annotations
 import dataclasses
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio import activity
 
+from app.core import clock
 from app.core.enums import ApplicationSource, ApplicationStatus, FlagSeverity
 from app.features.applications.models import Application
 from app.features.applications.service import ImportResult, import_from_los
@@ -93,7 +93,7 @@ async def _write_event(
             actor=_ACTOR_SYSTEM,
             type=event_type,
             payload=payload,
-            at=datetime.now(UTC),
+            at=clock.now(),
         )
     )
     await db.commit()

@@ -20,13 +20,13 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from decimal import Decimal
 
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.enums import ApplicationStatus, ApplicationTab
 from app.core.errors import ConflictError
 from app.features.applications.locking import lock_application
@@ -255,7 +255,7 @@ async def patch_application_status(
             actor=str(actor_id),
             type=_STATUS_EVENT_TYPE[request.status],
             payload={"reason": request.reason},
-            at=datetime.now(UTC),
+            at=clock.now(),
         )
     )
     await db.commit()

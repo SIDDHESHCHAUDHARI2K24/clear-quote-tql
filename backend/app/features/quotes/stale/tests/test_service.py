@@ -23,12 +23,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import clock
 from app.core.config import get_settings
-from app.core.enums import ApplicationStatus
+from app.core.enums import ApplicationStatus, UserRole
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
+from app.features.auth.models import User
 from app.features.clients.models import Client
 from app.features.pricing.scenarios.models import Scenario
 from app.features.quotes.builder.models import Quote
+from app.features.quotes.builder.service import reprice_application
 from app.features.quotes.send.models import QuotePackage, QuotePackageVersion
 from app.features.quotes.stale.schemas import StaleResult
 from app.features.quotes.stale.service import (
@@ -192,11 +194,176 @@ async def test_option_selected_keeps_status(db_session: AsyncSession) -> None:
     assert result.applications_marked_stale == 0
 
 
-async def test_reprice_clears_stale(db_session: AsyncSession) -> None:
-    """AC5 (pending -- re-check after CQ-018): re-pricing Grace through the
-    pipeline's pricing stage, then `clear_stale` (the hook CQ-018's
-    `/reprice` calls), moves her to Priced with fresh `priced_at` and
-    clears the stale flags; the next run changes nothing."""
+async def test_reprice_clears_stale(
+    db_session: AsyncSession,
+    client: AsyncClient,
+    make_staff_session: Callable[..., Awaitable[object]],
+) -> None:
+    """AC5 through CQ-018's real `POST /applications/{id}/reprice` (U3):
+    Grace Kim is Stale; the re-price moves her to Priced with a fresh
+    `priced_at` on every quote it refreshed, clears their stale flags, and
+    writes one `application.repriced_from_stale` event; the next run
+    changes nothing."""
+    grace = (await _seed(db_session, "grace_kim"))["grace_kim"]
+    await mark_stale(db_session, datetime.now(UTC))
+    await db_session.commit()
+    assert await _status(db_session, grace) is ApplicationStatus.STALE
+    assert all(q.stale for q in await _quotes(db_session, grace.id))
+
+    await make_staff_session(role=UserRole.MANAGER)
+    before_reprice = datetime.now(UTC)
+    response = await client.post(f"/api/v1/applications/{grace.id}/reprice")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    fresh_ids = {uuid.UUID(i) for i in body["quote_ids"]}
+
+    assert await _status(db_session, grace) is ApplicationStatus.PRICED
+    quotes = {q.id: q for q in await _quotes(db_session, grace.id)}
+    assert fresh_ids and fresh_ids <= quotes.keys()
+    assert all(quotes[i].priced_at >= before_reprice for i in fresh_ids)
+    assert not any(quotes[i].stale for i in fresh_ids)
+    assert datetime.fromisoformat(body["priced_at"]) >= before_reprice
+    events = (
+        (
+            await db_session.execute(
+                select(ActivityEvent).where(
+                    ActivityEvent.application_id == grace.id,
+                    ActivityEvent.type == EVENT_REPRICED_FROM_STALE,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(events) == 1
+
+    assert await mark_stale(db_session, datetime.now(UTC)) == StaleResult()
+    assert await _status(db_session, grace) is ApplicationStatus.PRICED
+
+
+async def test_autoquote_clears_stale(
+    db_session: AsyncSession,
+    client: AsyncClient,
+    make_staff_session: Callable[..., Awaitable[object]],
+) -> None:
+    """U3: Save & AutoQuote (`POST /scenarios/{id}/autoquote`) is a re-price
+    too -- its fresh Par/Buydown move a Stale application back to Priced."""
+    grace = (await _seed(db_session, "grace_kim"))["grace_kim"]
+    await mark_stale(db_session, datetime.now(UTC))
+    await db_session.commit()
+    assert await _status(db_session, grace) is ApplicationStatus.STALE
+    scenario_id = (
+        await db_session.execute(
+            select(Scenario.id).where(Scenario.application_id == grace.id).limit(1)
+        )
+    ).scalar_one()
+
+    await make_staff_session(role=UserRole.MANAGER)
+    response = await client.post(f"/api/v1/scenarios/{scenario_id}/autoquote")
+    assert response.status_code == 200, response.text
+
+    assert await _status(db_session, grace) is ApplicationStatus.PRICED
+    assert await _repriced_events(db_session, grace.id) == 1
+
+
+async def test_autoquote_keeps_stale_while_another_scenario_is_stale(
+    db_session: AsyncSession,
+    client: AsyncClient,
+    make_staff_session: Callable[..., Awaitable[object]],
+) -> None:
+    """U3 code review: Save & AutoQuote on scenario A must not clear the
+    application's Stale status while scenario B's quotes are still stale;
+    once B is re-priced too, it moves to Priced."""
+    grace = (await _seed(db_session, "grace_kim"))["grace_kim"]
+    await make_staff_session(role=UserRole.MANAGER)
+    groups = (await client.get(f"/api/v1/applications/{grace.id}/scenarios")).json()["groups"]
+    group = groups[0]
+    first = uuid.UUID(group["id"])
+    created = await client.post(
+        f"/api/v1/applications/{grace.id}/scenarios",
+        json={
+            "purchase_price": group["inputs"]["purchase_price"],
+            "down_payment_pct": "0.30",
+            "strategy": group["inputs"]["strategy"],
+        },
+    )
+    assert created.status_code == 200, created.text
+    second = uuid.UUID(created.json()["id"])
+    # A new scenario has no quotes until its first Save & AutoQuote.
+    priced = await client.post(f"/api/v1/scenarios/{second}/autoquote")
+    assert priced.status_code == 200, priced.text
+    await db_session.execute(
+        update(Quote)
+        .where(Quote.scenario_id.in_([first, second]))
+        .values(stale=True)
+        .execution_options(synchronize_session=False)
+    )
+    await db_session.execute(
+        update(Application)
+        .where(Application.id == grace.id)
+        .values(status=ApplicationStatus.STALE)
+        .execution_options(synchronize_session=False)
+    )
+    await db_session.commit()
+
+    response = await client.post(f"/api/v1/scenarios/{first}/autoquote")
+    assert response.status_code == 200, response.text
+    assert await _status(db_session, grace) is ApplicationStatus.STALE
+    assert await _repriced_events(db_session, grace.id) == 0
+
+    response = await client.post(f"/api/v1/scenarios/{second}/autoquote")
+    assert response.status_code == 200, response.text
+    assert await _status(db_session, grace) is ApplicationStatus.PRICED
+    assert await _repriced_events(db_session, grace.id) == 1
+
+
+async def test_in_place_reprice_under_an_expired_version_is_not_reflagged(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CQ-030 plan.md #17a, resolved in U3: Luis Romero (OptionSelected)
+    has an expired sent version. A re-price refreshes his Par/Buydown in
+    place (same ids, still in the expired snapshot) at `CLOCK_NOW`; the
+    next run must not flag them again -- only quotes priced by the
+    version's `sent_at` count as "shown by the expired version"."""
+    luis = (await _seed(db_session, "luis_romero"))["luis_romero"]
+    later = datetime.now(UTC) + timedelta(days=22)
+    await mark_stale(db_session, later)
+    assert all(q.stale for q in await _quotes(db_session, luis.id))
+
+    frozen = get_settings().model_copy(update={"clock_now": later.isoformat()})
+    monkeypatch.setattr(clock, "get_settings", lambda: frozen)
+    lo = await db_session.get(User, luis.lo_id)
+    assert lo is not None
+    before_ids = {q.id for q in await _quotes(db_session, luis.id)}
+    repriced = await reprice_application(db_session, luis, lo)
+    refreshed = set(repriced.quote_ids) & before_ids
+    assert refreshed, "Par/Buydown are refreshed in place"
+    assert repriced.priced_at == later
+
+    result = await mark_stale(db_session, later + timedelta(hours=1))
+
+    by_id = {q.id: q for q in await _quotes(db_session, luis.id)}
+    assert not any(by_id[i].stale for i in repriced.quote_ids)
+    assert result.quotes_marked_stale == 0
+    assert await _status(db_session, luis) is ApplicationStatus.OPTION_SELECTED
+
+
+async def _repriced_events(db: AsyncSession, application_id: uuid.UUID) -> int:
+    return (
+        await db.execute(
+            select(func.count())
+            .select_from(ActivityEvent)
+            .where(
+                ActivityEvent.application_id == application_id,
+                ActivityEvent.type == EVENT_REPRICED_FROM_STALE,
+            )
+        )
+    ).scalar_one()
+
+
+async def test_pipeline_reprice_then_clear_stale(db_session: AsyncSession) -> None:
+    """The pipeline pricing path + `clear_stale` (the original CQ-030
+    fixture for AC5): fresh quotes lose their flag, superseded ones keep it."""
     grace = (await _seed(db_session, "grace_kim"))["grace_kim"]
     await mark_stale(db_session, datetime.now(UTC))
     assert await _status(db_session, grace) is ApplicationStatus.STALE
@@ -285,13 +452,14 @@ async def test_mark_stale_strict_boundary_on_quote_age(db_session: AsyncSession)
 
 
 async def test_mark_application_quotes_stale_helper(db_session: AsyncSession) -> None:
-    """E12 shared helper: flags every quote once, returns the count, and
-    never changes status or writes events."""
+    """E12 shared helper: flags every quote once, returns the changed ids
+    (U3: callers log them in their one event), and never changes status or
+    writes events."""
     marcus = (await _seed(db_session, "marcus_hale"))["marcus_hale"]
-    count = len(await _quotes(db_session, marcus.id))
+    ids = sorted(q.id for q in await _quotes(db_session, marcus.id))
 
-    assert await mark_application_quotes_stale(db_session, marcus.id, "fico_bucket") == count
-    assert await mark_application_quotes_stale(db_session, marcus.id, "fico_bucket") == 0
+    assert await mark_application_quotes_stale(db_session, marcus.id, "fico_bucket") == ids
+    assert await mark_application_quotes_stale(db_session, marcus.id, "fico_bucket") == []
     assert await _status(db_session, marcus) is ApplicationStatus.PRICED
     assert await _stale_events(db_session, marcus.id) == 0
 
