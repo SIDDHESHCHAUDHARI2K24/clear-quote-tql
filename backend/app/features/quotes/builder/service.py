@@ -722,17 +722,17 @@ async def _reprice_scenario(db: AsyncSession, scenario: Scenario, now: datetime)
     )
 
 
-async def _other_scenarios_have_stale_quotes(
-    db: AsyncSession, application_id: uuid.UUID, scenario_id: uuid.UUID
-) -> bool:
+async def _application_has_stale_quotes(db: AsyncSession, application_id: uuid.UUID) -> bool:
+    """Whether *any* quote on the application is still stale -- including
+    ones the just-repriced scenario itself left stale (a no-longer-offered
+    quote, `_reprice_scenario`'s "not-offered quote" branch). Review minor
+    (U3 merge): a scenario-scoped check missed that case, so a reprice could
+    still move the application to Priced while one of its own quotes stayed
+    stale."""
     stmt = (
         select(Quote.id)
         .join(Scenario, Quote.scenario_id == Scenario.id)
-        .where(
-            Scenario.application_id == application_id,
-            Scenario.id != scenario_id,
-            Quote.stale.is_(True),
-        )
+        .where(Scenario.application_id == application_id, Quote.stale.is_(True))
         .limit(1)
     )
     return (await db.execute(stmt)).scalar_one_or_none() is not None
@@ -799,11 +799,13 @@ async def autoquote_replacing(
     outcome = await _reprice_scenario(db, scenario, clock.now())
     par_quote, buydown_quote = outcome.par, outcome.buydown
     # U3 (M4, CQ-030 AC5): the fresh picks move a Stale application back to
-    # Priced -- but only when no *other* scenario still has stale quotes
-    # (U3 code review): re-pricing scenario A must not clear the status while
-    # B's (maybe recommended) quotes are still out of date. The quotes ->
+    # Priced -- but only when no quote on the application is still stale
+    # after this reprice (U3 code review, then a follow-up review minor):
+    # re-pricing scenario A must not clear the status while B's (maybe
+    # recommended) quotes are still out of date, nor while A's own
+    # not-offered quote (`_reprice_scenario`) is still stale. The quotes ->
     # packages -> application locks are already held.
-    if not await _other_scenarios_have_stale_quotes(db, application.id, scenario.id):
+    if not await _application_has_stale_quotes(db, application.id):
         await clear_stale(db, application.id, fresh_quote_ids=_fresh_ids(outcome))
     db.add(
         _event(
@@ -858,8 +860,13 @@ async def reprice_application(
     )
     # U3 (M4, CQ-030 AC5): Stale -> Priced with one
     # `application.repriced_from_stale` event, before the commit and under
-    # the quotes -> packages -> application locks taken above.
-    await clear_stale(db, application.id, fresh_quote_ids=quote_ids, now=priced_at)
+    # the quotes -> packages -> application locks taken above -- but only
+    # when no quote on the application is still stale after repricing every
+    # scenario (review minor, same guard as `autoquote_replacing`): a
+    # not-offered quote (`_reprice_scenario`) left stale must keep the
+    # application Stale even though every other quote was refreshed.
+    if not await _application_has_stale_quotes(db, application.id):
+        await clear_stale(db, application.id, fresh_quote_ids=quote_ids, now=priced_at)
     await db.commit()
     return RepriceResponse(application_id=application.id, quote_ids=quote_ids, priced_at=priced_at)
 

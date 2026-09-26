@@ -102,6 +102,7 @@ async def make_activity_event(
         actor: str = "system",
         payload: object = None,
         at: datetime | None = None,
+        created_at: datetime | None = None,
     ) -> ActivityEvent:
         event = ActivityEvent(
             application_id=application.id,
@@ -110,6 +111,14 @@ async def make_activity_event(
             payload=payload,
             at=at or datetime.now(UTC),
         )
+        if created_at is not None:
+            # Overrides the `created_at` server default (Postgres `now()`,
+            # fixed for the whole test transaction) so a test can simulate
+            # two rows inserted at different real moments under one frozen
+            # `at` (U3 review minor: `at DESC` alone ties when `CLOCK_NOW`
+            # is frozen, so `list_activity`/`list_activity_for_applications`
+            # add `created_at DESC` as the tiebreak).
+            event.created_at = created_at
         db_session.add(event)
         await db_session.flush()
         return event

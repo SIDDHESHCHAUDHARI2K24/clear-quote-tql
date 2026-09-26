@@ -40,6 +40,31 @@ async def test_merges_events_across_applications_newest_first(
     assert [e.id for e in events] == [newer.id, older.id]
 
 
+async def test_tiebreak_is_insertion_order_newest_first(
+    db_session: AsyncSession,
+    make_lo: Callable[..., Awaitable[User]],
+    make_client: Callable[..., Awaitable[Client]],
+    make_application: Callable[..., Awaitable[Application]],
+    make_activity_event: Callable[..., Awaitable[ActivityEvent]],
+) -> None:
+    """U3 review minor: two events sharing the same `at` (a frozen
+    `CLOCK_NOW`) come back in insertion order, newest first -- `created_at
+    DESC` breaks the tie `at DESC` alone leaves undefined."""
+    lo = await make_lo()
+    client = await make_client(lo)
+    app_a = await make_application(lo=lo, client=client)
+
+    base_created = _NOW - timedelta(minutes=1)
+    first = await make_activity_event(app_a, "pipeline.imported", at=_NOW, created_at=base_created)
+    second = await make_activity_event(
+        app_a, "pipeline.verified", at=_NOW, created_at=base_created + timedelta(seconds=1)
+    )
+
+    events = await list_activity_for_applications(db_session, client, [app_a])
+
+    assert [e.id for e in events][:2] == [second.id, first.id]
+
+
 async def test_limit_caps_the_merged_result(
     db_session: AsyncSession,
     make_lo: Callable[..., Awaitable[User]],

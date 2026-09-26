@@ -364,6 +364,41 @@ async def test_every_written_event_type_has_a_readable_message_and_correct_actor
         assert item["actor"]["name"] == "System"
 
 
+async def test_activity_tiebreak_is_insertion_order_newest_first(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    make_activity_event: Callable[..., Awaitable[ActivityEvent]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+) -> None:
+    """U3 review minor: under a frozen `CLOCK_NOW`, two events can share the
+    exact same `at`. `at DESC` alone leaves their order undefined; ordering
+    by `created_at DESC` too breaks the tie by insertion order, newest
+    first."""
+    owner = await make_staff_session(role=UserRole.LO)
+    application = await make_application(lo=owner.user)
+    await db_session.commit()
+
+    same_at = datetime.now(UTC)
+    base_created = datetime.now(UTC) - timedelta(minutes=1)
+    first = await make_activity_event(
+        application, "pipeline.imported", at=same_at, created_at=base_created
+    )
+    second = await make_activity_event(
+        application,
+        "pipeline.verified",
+        at=same_at,
+        created_at=base_created + timedelta(seconds=1),
+    )
+    await db_session.commit()
+
+    response = await client.get(f"/api/v1/applications/{application.id}/activity")
+    assert response.status_code == 200, response.text
+    ids = [item["id"] for item in response.json()["items"]]
+
+    assert ids[:2] == [str(second.id), str(first.id)]
+
+
 async def test_activity_pagination(
     client: AsyncClient,
     db_session: AsyncSession,

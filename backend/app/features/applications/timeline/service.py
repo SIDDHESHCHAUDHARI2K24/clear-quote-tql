@@ -1,8 +1,9 @@
 """`GET /applications/{id}/activity` (spec.md "Timeline").
 
 `list_activity` is the single-application entry point: paginates
-`activity_events` newest first (plan.md decision — `at DESC, id DESC` for a
-stable order when two events share a timestamp), then maps each row to an
+`activity_events` newest first (plan.md decision — `at DESC, created_at
+DESC, id DESC`, so two events sharing a frozen `CLOCK_NOW` still come back
+in insertion order, newest first; U3 review minor), then maps each row to an
 `ActivityEventOut` via `_resolve_actor` (plan.md decision 3) and
 `describe_event` (decision 4).
 
@@ -223,7 +224,7 @@ async def list_activity(
     stmt = (
         select(ActivityEvent)
         .where(ActivityEvent.application_id == application.id)
-        .order_by(ActivityEvent.at.desc(), ActivityEvent.id.desc())
+        .order_by(ActivityEvent.at.desc(), ActivityEvent.created_at.desc(), ActivityEvent.id.desc())
     )
     result = await paginate(db, stmt, page, page_size)
 
@@ -266,7 +267,7 @@ async def list_activity_for_applications(
     stmt = (
         select(ActivityEvent)
         .where(ActivityEvent.application_id.in_(application_ids))
-        .order_by(ActivityEvent.at.desc(), ActivityEvent.id.desc())
+        .order_by(ActivityEvent.at.desc(), ActivityEvent.created_at.desc(), ActivityEvent.id.desc())
         .limit(limit)
     )
     events = list((await db.execute(stmt)).scalars().all())

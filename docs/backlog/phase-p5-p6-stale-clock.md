@@ -113,3 +113,22 @@ Slot 31 (API 8131, LO 3131, portal 3231, queue `cq-s31`), after `make demo-reset
 
 - The mid-job status-change edge in `mark_stale` is still accepted (lock doc).
 - CQ-016 AC5 (Sent/Viewed re-priced but not re-sent) is unchanged: `clear_stale` still moves only Stale → Priced (CQ-030 #16).
+
+## Review minors (post-merge)
+
+- **Status guard now checks the whole application.** `reprice_application` and `autoquote_replacing` (`quotes/builder/service.py`) only move Stale → Priced through `_application_has_stale_quotes`, which checks every quote on the application -- not `Scenario.id != scenario_id` as before. The old, scenario-scoped check missed the case where `_reprice_scenario` itself leaves the just-repriced scenario's own quote stale (a manual pick whose product left the grid); the application could still flip to Priced with a stale quote sitting on it. Test: `quotes/stale/tests/test_service.py::test_reprice_application_keeps_stale_when_a_quote_stays_stale`.
+- **Timeline tiebreak.** `list_activity` and `list_activity_for_applications` (`applications/timeline/service.py`) order by `at DESC, created_at DESC, id DESC`. Under a frozen `CLOCK_NOW` two events can share the same `at` exactly; `created_at DESC` breaks the tie by insertion order, newest first (a random-UUID `id DESC` alone does not). Tests: `applications/timeline/tests/test_router.py::test_activity_tiebreak_is_insertion_order_newest_first` and `applications/timeline/tests/test_service.py::test_tiebreak_is_insertion_order_newest_first`.
+- **Seed reads the same clock.** `seed/loader.py` (`seed_borrower_accounts`'s `email_verified_at`, `seed_no_application_borrower`'s `email_verified_at`, `_add_activity_event`'s `at`, `apply_send_fixture`'s `now`/`sent_at`) and `seed/generators/background_applications.py` (`seed_background_applications`'s `now`) call `core.clock.now()` instead of `datetime.now(UTC)`. Under a `CLOCK_NOW` demo, seeded fixtures date themselves relative to the frozen instant, matching whatever the API and worker see. Under the real clock (no `CLOCK_NOW` set, `make demo-reset`'s normal path), `clock.now()` returns `datetime.now(UTC)` exactly, so every persona's end state (statuses, which quotes are stale, which sent versions are expired) is unchanged -- the existing seed suite (`seed/tests/`) still passes as-is.
+
+### Two deliberate exceptions to "one event per stale marking"
+
+The summary above says every stale marking goes through `mark_application_quotes_stale` and gets exactly one event from its caller. Two paths flag a quote `stale = true` outside that helper, on purpose, and neither writes its own event:
+
+1. **`mark_stale` step 1's bulk age UPDATE** (`quotes/stale/service.py`). Before step 3 decides which *applications* move to Stale, step 1 flags every quote past the age cutoff, for every application -- not only the ones whose status changes. A Priced application whose deciding quote is still fresh can have an older, non-deciding quote (e.g. a superseded manual pick) flip to `stale = true` in this same UPDATE, silently: no event names that quote, because the application itself did not change state. This is intentional -- an event per non-deciding quote would be noise on every job run -- but it means `stale = true` is not always evidence of a logged marking.
+2. **`_reprice_scenario`'s not-offered quote flag** (`quotes/builder/service.py`). When a re-price finds no matching product for an existing quote (it left the grid), it recomputes the quote's display figures at the new inputs but sets `quote.stale = True` directly, not through the shared helper. The caller's one event (`quotes.repriced` / `scenario.autoquoted`) reports the ids it refreshed and deleted, but does not name the quote left stale this way.
+
+Readiness still blocks on both: `send/readiness.py`'s `package_blockers` reads `quote.stale` off the row directly (`is_rate_stale`), so a quote flagged by either path still blocks sending regardless of which path (or no event) flagged it.
+
+### One clock, shared
+
+`CLOCK_NOW` (`.env.example`) is read by `core.clock.now()`, which both the API process and the Temporal worker process import -- there is exactly one env var, not a per-process override, so a demo that sets `CLOCK_NOW` in the repo-root `.env` gets the same frozen instant in both places (a reprice through the API and the stale-check job running in the worker agree on "now"). Setting it in only one process's environment (e.g. exporting it in a shell that starts just the API) desyncs them.
