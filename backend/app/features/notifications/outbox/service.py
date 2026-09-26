@@ -33,12 +33,18 @@ from app.features.notifications.outbox.schemas import (
     OutboxEmailDetail,
     OutboxEmailRow,
 )
+from app.features.quotes.delivery.email_template import SUBJECT as QUOTE_SENT_SUBJECT
 
 # Single source of truth for `infer_email_type` (Python classification) and
 # `_type_sql_condition` (the `type=` filter's SQL) -- plan.md decision 1.
 # Extend this as CQ-020/24/34 land real sends; unmatched subjects fall back
 # to "other" until then (logged as a follow-up, not a gap: no AC depends on
 # those senders' subjects today).
+#
+# `quote_sent` matches both the seed/legacy subject ("...pre-approval is
+# ready") and the real CQ-020 subject (`email_template.SUBJECT`, imported
+# so the two never drift apart again) -- a real send was showing as "Other"
+# because only the former was listed here (P5/P6 verification follow-up).
 _TYPE_SUBJECT_RULES: dict[str, tuple[str, ...]] = {
     "otp": ("sign-in code", "already have a Clear Quote account"),
     "borrower_action": (
@@ -46,7 +52,7 @@ _TYPE_SUBJECT_RULES: dict[str, tuple[str, ...]] = {
         "has a question about their options",
         "asked for updated numbers",
     ),
-    "quote_sent": ("pre-approval is ready",),
+    "quote_sent": ("pre-approval is ready", QUOTE_SENT_SUBJECT.lower()),
 }
 KNOWN_EMAIL_TYPES = (*_TYPE_SUBJECT_RULES.keys(), "other")
 

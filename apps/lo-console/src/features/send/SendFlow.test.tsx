@@ -168,7 +168,7 @@ describe("Send flow (CQ-020)", () => {
     );
     expect(within(rows[0]).getByRole("link", { name: "Open in Outbox" })).toHaveAttribute(
       "href",
-      "/outbox?email=11111111-0000-0000-0000-000000000001",
+      "/outbox?email_id=11111111-0000-0000-0000-000000000001",
     );
     // Polling stopped at done.
     const calls = sendStatusCalls();
