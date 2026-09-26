@@ -18,13 +18,13 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.enums import ApplicationTab, FieldSource, FlagSeverity, Occupancy
 from app.features.applications.assets.models import Asset, Employment
 from app.features.applications.credit.models import Liability
@@ -213,7 +213,7 @@ async def _build_context(db: AsyncSession, application: Application) -> Verifica
         monthly_income=Decimal(monthly_income),
         reserves_months=reserves_months,
         latest_scenario=latest_scenario,
-        as_of=date.today(),
+        as_of=clock.now().date(),
     )
 
 
@@ -288,7 +288,7 @@ async def resolve_flag(
     ).scalar_one_or_none()
     if existing is None:
         return None
-    existing.resolved_at = datetime.now(UTC)
+    existing.resolved_at = clock.now()
     await db.flush()
     return existing
 

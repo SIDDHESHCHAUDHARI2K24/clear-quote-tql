@@ -7,7 +7,8 @@ Blockers, in the order the Send button's tooltip picks the first one
    set: every other check needs `load_package_context`, which needs the
    strategy, so this one short-circuits the rest (code review M6).
 1. `quotes_stale` -- a selected quote is stale: `quote.stale`, or priced more
-   than 21 days ago (catalog §12 `is_rate_stale`; plan.md Decision 9).
+   than `stale_quote_days` ago (the settings row CQ-030's job reads, seeded
+   21; catalog §12 `is_rate_stale`; plan.md Decision 9; U3 merge plan M4).
 2. `quote_not_offered` -- a selected Manual quote whose product left the
    grid on the last reprice (CQ-018 follow-up; plan.md Decision 11).
 3. `open_flag` -- one per open flag with `blocking` severity (the spec's
@@ -19,11 +20,12 @@ Blockers, in the order the Send button's tooltip picks the first one
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.enums import ApplicationStatus, ApplicationTab, FlagSeverity
 from app.core.errors import ValidationAppError
 from app.features.applications.models import Application
@@ -31,9 +33,7 @@ from app.features.applications.verification.models import Flag
 from app.features.quotes.builder.models import Quote
 from app.features.quotes.send.models import QuotePackage
 from app.features.quotes.send.view_model import load_package_context
-
-RATE_STALE_DAYS = 21
-"""catalog §12 `is_rate_stale`: "True if quote age > 21 days"."""
+from app.features.quotes.stale.service import get_stale_quote_days
 
 STALE_MESSAGE = "Quotes are out of date"
 
@@ -67,8 +67,10 @@ def flag_message(field_key: str, rule: str) -> str:
     return f"Open flag: {field} — {reason}"
 
 
-def is_rate_stale(quote: Quote, now: datetime) -> bool:
-    return quote.stale or quote.priced_at < now - timedelta(days=RATE_STALE_DAYS)
+def is_rate_stale(quote: Quote, now: datetime, stale_days: int) -> bool:
+    """catalog §12 `is_rate_stale`: "True if quote age > `stale_days`" --
+    the same strict boundary as CQ-030's `mark_stale`."""
+    return quote.stale or quote.priced_at < now - timedelta(days=stale_days)
 
 
 async def _not_offered(db: AsyncSession, quotes: list[Quote]) -> int:
@@ -93,7 +95,8 @@ async def _not_offered(db: AsyncSession, quotes: list[Quote]) -> int:
 async def package_blockers(
     db: AsyncSession, package: QuotePackage, *, now: datetime | None = None
 ) -> list[Blocker]:
-    now = now or datetime.now(UTC)
+    now = now or clock.now()
+    stale_days = await get_stale_quote_days(db)
     try:
         ctx = await load_package_context(db, package)
     except ValidationAppError:
@@ -110,7 +113,7 @@ async def package_blockers(
         ]
     blockers: list[Blocker] = []
 
-    if any(is_rate_stale(q, now) for q in ctx.quotes):
+    if any(is_rate_stale(q, now, stale_days) for q in ctx.quotes):
         blockers.append(Blocker("quotes_stale", STALE_MESSAGE, ApplicationTab.PRICING.value))
     not_offered = await _not_offered(db, ctx.quotes)
     if not_offered:

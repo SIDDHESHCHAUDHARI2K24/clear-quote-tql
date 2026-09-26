@@ -12,12 +12,12 @@ borrower's behalf -- see `templates.py`'s own AC5 note and
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.auth import ensure_borrower_owns_client
 from app.core.enums import ApplicationStatus
 from app.core.errors import ConflictError, NotFoundError, ValidationAppError
@@ -156,7 +156,7 @@ async def submit_action(
     except NotFoundError:
         raise NotFoundError("Report not found") from None
 
-    now = datetime.now(UTC)
+    now = clock.now()
     expired = now > version.expires_at
 
     # Superseded blocks every action type (plan.md Decision 3): the

@@ -303,7 +303,7 @@ async def perform_hard_pull(
         logger.info(
             "Hard pull for application %s crossed a FICO bucket: %s", application_id, reason
         )
-        stale = await mark_application_quotes_stale(db, application_id, reason)
+        stale = len(await mark_application_quotes_stale(db, application_id, reason))
 
     events.add_event(
         db,

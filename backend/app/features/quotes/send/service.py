@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import secrets
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
 from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.auth import scope_applications
 from app.core.errors import ConflictError, NotFoundError, ValidationAppError
 from app.features.applications.locking import lock_application, lock_application_packages
@@ -117,8 +118,9 @@ async def _apply_default_selection(
                     "quote_id": str(selection.recommended_quote_id),
                     "previous_quote_id": None,
                     "source": "default_draft",
+                    "message": "Recommended quote picked for the draft package",
                 },
-                at=datetime.now(UTC),
+                at=clock.now(),
             )
         )
 
@@ -396,8 +398,9 @@ async def update_package(
                     "quote_id": str(recommended),
                     "previous_quote_id": str(previous) if previous is not None else None,
                     "source": "send_tab",
+                    "message": "Recommended quote changed on the Send tab",
                 },
-                at=datetime.now(UTC),
+                at=clock.now(),
             )
         )
     await db.flush()
@@ -417,7 +420,7 @@ async def package_readiness(db: AsyncSession, package: QuotePackage) -> PackageR
 async def package_report(db: AsyncSession, package: QuotePackage) -> ReportViewModel:
     """The LO preview: exactly what `freeze_package_version` would snapshot
     if the package were sent today (AC2)."""
-    today = datetime.now(UTC)
+    today = clock.now()
     return await build_package_view_model(
         db,
         package,

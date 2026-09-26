@@ -25,13 +25,12 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import storage
+from app.core import clock, storage
 from app.core.config import get_settings
 from app.core.enums import ApplicationStatus
 from app.core.errors import AppError
@@ -132,7 +131,7 @@ async def freeze(db: AsyncSession, package_id: uuid.UUID, workflow_id: str) -> u
         raise PackageNotReadyError("; ".join(b.message for b in blockers))
 
     await _set_step(db, package.id, workflow_id, SendStatus.RENDERING)
-    version = await freeze_package_version(db, package=package, sent_at=datetime.now(UTC))
+    version = await freeze_package_version(db, package=package, sent_at=clock.now())
     version.send_workflow_id = workflow_id
     # M3 (plan.md Decision 2): the package's current content *is* the newest
     # sent version from here on; a later PUT reopens it as a draft. The
@@ -294,7 +293,7 @@ async def record(db: AsyncSession, version_id: uuid.UUID, workflow_id: str) -> N
                 actor=_ACTOR_SYSTEM,
                 type=SENT_EVENT_TYPE,
                 payload=payload,
-                at=datetime.now(UTC),
+                at=clock.now(),
             )
         )
         client_row = await db.get(Client, application.client_id)

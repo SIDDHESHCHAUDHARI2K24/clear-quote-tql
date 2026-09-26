@@ -10,12 +10,12 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.enums import Occupancy, Strategy
 from app.core.errors import NotFoundError, ValidationAppError
 from app.features.applications.models import Application
@@ -300,7 +300,7 @@ async def _persist_quote(
         lock_days=product.lock_period_days,
         computed=_json_safe(computation),
         label=label,
-        priced_at=datetime.now(UTC),
+        priced_at=clock.now(),
     )
     db.add(quote)
     await db.flush()

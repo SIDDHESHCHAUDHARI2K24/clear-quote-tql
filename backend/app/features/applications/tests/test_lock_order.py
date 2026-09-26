@@ -7,9 +7,10 @@ each other in a cycle.
 
 Each race runs on two real connections against committed data (the usual
 rollback-only `db_session` can't be seen from a second connection), with
-one side paused while it holds its locks so the interleaving that used to
-deadlock happens every run, not by chance. `_committed_data` empties the
-tables the test filled afterwards.
+one side paused while it holds its locks until the other side is seen
+waiting on a lock (`pg_stat_activity`, U3 review minor c -- no fixed sleep),
+so the interleaving that used to deadlock happens every run, not by chance.
+`_committed_data` empties the tables the test filled afterwards.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from typing import Any
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import event as sa_event
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
@@ -56,7 +58,8 @@ from app.features.quotes.stale import service as stale_service
 from app.integrations.credit.models import CreditPullType, ProviderCreditReport
 
 RACE_TIMEOUT = 30
-PAUSE = 0.6
+WAITER_TIMEOUT = 10.0
+WAITER_POLL = 0.02
 FIELD = "property_tax_annual_rate"
 
 Factory = async_sessionmaker[AsyncSession]
@@ -108,20 +111,52 @@ async def _events(db: AsyncSession, application_id: uuid.UUID, type_: str) -> in
     ).scalar_one()
 
 
+async def _until_another_backend_waits_on_a_lock(factory: Factory) -> None:
+    """Polls `pg_stat_activity` (on a third connection) until some other
+    backend of this test database is blocked on a heavyweight lock -- the
+    racing side has reached the lock the holder keeps. Bounded: fails after
+    `WAITER_TIMEOUT` seconds instead of hanging or silently racing."""
+    engine = factory.kw["bind"]
+    assert isinstance(engine, AsyncEngine)
+    deadline = asyncio.get_running_loop().time() + WAITER_TIMEOUT
+    async with engine.connect() as conn:
+        while True:
+            waiting: int = (
+                await conn.execute(
+                    text(
+                        "SELECT count(*) FROM pg_stat_activity "
+                        "WHERE datname = current_database() "
+                        "AND wait_event_type = 'Lock' AND pid <> pg_backend_pid()"
+                    )
+                )
+            ).scalar_one()
+            await conn.rollback()
+            if waiting:
+                return
+            if asyncio.get_running_loop().time() > deadline:
+                raise AssertionError("the racing session never waited on a lock")
+            await asyncio.sleep(WAITER_POLL)
+
+
 def _paused(
-    original: Callable[..., Awaitable[Any]], holding: asyncio.Event, *, before: bool = True
+    original: Callable[..., Awaitable[Any]],
+    holding: asyncio.Event,
+    factory: Factory,
+    *,
+    before: bool = True,
 ) -> Callable[..., Awaitable[Any]]:
     """Wraps a step that runs while its caller holds its locks: signals
-    `holding`, then keeps the locks for `PAUSE` seconds."""
+    `holding`, then keeps the locks until the other session is waiting on
+    one of them."""
 
     async def _wrapper(*args: Any, **kwargs: Any) -> Any:
         if before:
             holding.set()
-            await asyncio.sleep(PAUSE)
+            await _until_another_backend_waits_on_a_lock(factory)
             return await original(*args, **kwargs)
         result = await original(*args, **kwargs)
         holding.set()
-        await asyncio.sleep(PAUSE)
+        await _until_another_backend_waits_on_a_lock(factory)
         return result
 
     return _wrapper
@@ -157,7 +192,9 @@ async def test_reprice_holding_its_locks_then_mark_stale_does_not_deadlock(
     app_id = await _seed_marcus(factory)
     holding = asyncio.Event()
     monkeypatch.setattr(
-        builder_service, "ensure_priceable", _paused(builder_service.ensure_priceable, holding)
+        builder_service,
+        "ensure_priceable",
+        _paused(builder_service.ensure_priceable, holding, factory),
     )
     later = now() + timedelta(days=60)
 
@@ -191,7 +228,7 @@ async def test_mark_stale_holding_its_locks_then_reprice_does_not_deadlock(
     monkeypatch.setattr(
         stale_service,
         "_deciding_quote_priced_at",
-        _paused(stale_service._deciding_quote_priced_at, holding),
+        _paused(stale_service._deciding_quote_priced_at, holding, factory),
     )
     later = now() + timedelta(days=60)
 
@@ -209,15 +246,44 @@ async def test_mark_stale_holding_its_locks_then_reprice_does_not_deadlock(
         assert quotes and not any(q.stale for q in quotes)
         assert await _events(db, app_id, "quotes.repriced") == 1
         assert await _events(db, app_id, stale_service.EVENT_APPLICATION_STALE) == 1
+        # U3: the re-price that ran after the job cleared it (Stale -> Priced).
+        application = await db.get(Application, app_id)
+        assert application is not None
+        assert application.status is ApplicationStatus.PRICED
+        assert await _events(db, app_id, stale_service.EVENT_REPRICED_FROM_STALE) == 1
 
 
 async def test_mark_stale_locks_its_quotes_by_id_before_updating(
     factory: Factory, test_engine: AsyncEngine
 ) -> None:
-    """Step 1 locks (ordered by id) before its UPDATE, so while another
-    session holds one of the application's quotes, `mark_stale` updates
-    nothing -- it waits at the lock instead of updating in heap order."""
+    """Step 1 locks its quotes in id order (`ORDER BY quotes.id ... FOR NO
+    KEY UPDATE OF quotes`, asserted on the SQL it sends -- U3 review minor
+    b) before its first quote UPDATE; and while another session holds one
+    of the application's quotes, `mark_stale` updates nothing -- it waits
+    at the lock instead of updating in heap order."""
     app_id = await _seed_marcus(factory)
+    statements: list[str] = []
+
+    def _record(conn: Any, cursor: Any, statement: str, *args: Any) -> None:
+        statements.append(statement)
+
+    async with factory() as job:
+        sync_conn = (await job.connection()).sync_connection
+        assert sync_conn is not None
+        sa_event.listen(sync_conn, "before_cursor_execute", _record)
+        try:
+            await stale_service.mark_stale(job, now() + timedelta(days=60))
+        finally:
+            sa_event.remove(sync_conn, "before_cursor_execute", _record)
+        await job.rollback()
+    first_lock = next(i for i, s in enumerate(statements) if "FOR NO KEY UPDATE OF quotes" in s)
+    first_update = next(
+        i for i, s in enumerate(statements) if s.lstrip().startswith("UPDATE quotes")
+    )
+    assert first_lock < first_update, statements
+    lock_sql = " ".join(statements[first_lock].split())
+    assert "ORDER BY quotes.id FOR NO KEY UPDATE OF quotes" in lock_sql, lock_sql
+
     async with factory() as holder:
         await lock_application_quotes(holder, app_id)
         async with factory() as job:
@@ -340,7 +406,7 @@ async def test_hard_pull_holding_its_locks_then_send_does_not_deadlock(
     monkeypatch.setattr(
         consents_service,
         "perform_hard_pull",
-        _paused(consents_service.perform_hard_pull, holding, before=False),
+        _paused(consents_service.perform_hard_pull, holding, factory, before=False),
     )
 
     async def _send_after_pull_locks() -> None:
@@ -362,7 +428,7 @@ async def test_send_record_holding_its_lock_then_hard_pull_does_not_deadlock(
     monkeypatch.setattr(
         steps.MockCrmClient,
         "log_event",
-        _paused(steps.MockCrmClient.log_event, holding),
+        _paused(steps.MockCrmClient.log_event, holding, factory),
     )
 
     async def _pull_after_record_lock() -> None:
@@ -390,7 +456,7 @@ async def test_send_record_holding_its_locks_then_a_star_does_not_deadlock(
         stars_before = await _events(db, app_id, "quote.recommended")
     holding = asyncio.Event()
     monkeypatch.setattr(
-        steps.MockCrmClient, "log_event", _paused(steps.MockCrmClient.log_event, holding)
+        steps.MockCrmClient, "log_event", _paused(steps.MockCrmClient.log_event, holding, factory)
     )
 
     async def _record() -> None:
