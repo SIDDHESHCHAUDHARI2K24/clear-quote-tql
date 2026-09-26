@@ -33,10 +33,10 @@ async def test_build_worker_logs_registration_and_starts(
     logging.getLogger("app.workflows.worker").disabled = False
 
     # This test's own, dedicated environment/client -- not the shared
-    # session-scoped `temporal_client`/`temporal_worker` fixtures, which
-    # already have a worker polling `APPLICATION_PIPELINE_TASK_QUEUE` for
-    # the rest of the suite; a second `Worker` on the same client + task
-    # queue is rejected ("overlapping worker task types").
+    # `temporal_client`/`temporal_worker` fixtures, whose worker polls
+    # `APPLICATION_PIPELINE_TASK_QUEUE` in other tests; a second `Worker`
+    # on the same client + task queue is rejected ("overlapping worker
+    # task types").
     async with await WorkflowEnvironment.start_time_skipping() as env:
         worker = worker_module.build_worker(env.client)
 

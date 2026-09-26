@@ -17,6 +17,8 @@ from fastapi import FastAPI
 FEATURE_ROUTERS: list[str] = [
     "app.features.applications.router",
     "app.features.applications.summary.router",
+    "app.features.applications.listing.router",
+    "app.features.dashboard.router",
     "app.features.pricing.enrichment.router",
     "app.features.pricing.scenarios.router",
     "app.features.pricing.panel.router",
@@ -28,6 +30,18 @@ FEATURE_ROUTERS: list[str] = [
     "app.features.auth.borrower.router",
     "app.features.portal.reports.router",
     "app.features.portal.actions.router",
+    "app.features.applications.timeline.router",
+    "app.features.notifications.outbox.router",
+    "app.features.admin.integrations.router",
+    "app.features.admin.settings.router",
+    "app.features.applications.sections.router",
+    "app.features.reference.router",
+    "app.features.portal.apply.router",
+    "app.features.portal.support.router",
+    "app.features.portal.home.router",
+    "app.features.portal.consents.router",
+    "app.features.admin.jobs.router",
+    "app.features.clients.router",
 ]
 
 

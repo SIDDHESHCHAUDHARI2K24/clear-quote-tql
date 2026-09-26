@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable
+from datetime import timedelta
 from typing import Any
 
 from temporalio.client import Client
@@ -61,6 +62,7 @@ from app.workflows.activities import (
     draft_quote_set,
     enrich_application,
     import_application,
+    load_application_source,
     record_pipeline_resumed,
     validate_pricing_inputs,
     verify_application,
@@ -69,6 +71,12 @@ from app.workflows.application_pipeline import ApplicationPipelineWorkflow
 from app.workflows.constants import APPLICATION_PIPELINE_TASK_QUEUE
 from app.workflows.send_activities import SEND_ACTIVITIES
 from app.workflows.send_quote_package import SendQuotePackageWorkflow
+from app.workflows.stale_quote_check import (
+    StaleQuoteCheckWorkflow,
+    mark_stale_activity,
+    resolve_clock_now,
+)
+from app.workflows.stale_schedule import ScheduleRegistration, ensure_stale_quote_schedule
 
 logger = logging.getLogger(__name__)
 
@@ -85,14 +93,26 @@ CONTRACT_ACTIVITIES: list[Callable[..., Any]] = [
 # workflow calls when a `resume` signal is processed -- not one of the six
 # contract activities, but it still has to be registered on the same task
 # queue to run.
+# `load_application_source` (P5/P6 foundation, E14) is another internal
+# activity: the workflow's first step, deciding whether to skip the import
+# stage for a portal application.
+# CQ-030: the stale quote job's workflow and its two activities, run by the
+# `stale-quote-check` Temporal Schedule on the same task queue.
 ACTIVITIES: list[Callable[..., Any]] = [
     *CONTRACT_ACTIVITIES,
     record_pipeline_resumed,
+    load_application_source,
+    resolve_clock_now,
+    mark_stale_activity,
     # CQ-020: SendQuotePackageWorkflow shares the same task queue (one
     # worker process per slot, `make worker`).
     *SEND_ACTIVITIES,
 ]
-WORKFLOWS: list[type] = [ApplicationPipelineWorkflow, SendQuotePackageWorkflow]
+WORKFLOWS: list[type] = [
+    ApplicationPipelineWorkflow,
+    StaleQuoteCheckWorkflow,
+    SendQuotePackageWorkflow,
+]
 
 
 def build_worker(client: Client) -> Worker:
@@ -120,6 +140,18 @@ def build_worker(client: Client) -> Worker:
     return worker
 
 
+async def register_schedules(client: Client) -> ScheduleRegistration:
+    """CQ-030 (AC6): registers the stale quote Schedule idempotently --
+    created if missing, updated if the interval changed, never duplicated
+    across worker restarts."""
+    settings = get_settings()
+    return await ensure_stale_quote_schedule(
+        client,
+        interval=timedelta(seconds=settings.stale_check_interval_seconds),
+        task_queue=APPLICATION_PIPELINE_TASK_QUEUE,
+    )
+
+
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
     settings = get_settings()
@@ -129,7 +161,18 @@ async def main() -> None:
         settings.temporal_address,
         settings.temporal_namespace,
     )
+    await run_worker(client)
+
+
+async def run_worker(client: Client) -> None:
+    """Builds the worker, registers the schedules and runs the worker.
+    Review m1: a schedule registration failure is logged and never stops
+    the pipeline worker; the next worker start retries the registration."""
     worker = build_worker(client)
+    try:
+        await register_schedules(client)
+    except Exception:
+        logger.exception("Could not register the stale quote schedule; the worker runs without it")
     await worker.run()
 
 

@@ -26,8 +26,17 @@ from app.features.pricing.engine.quote_engine import loan_amount, ltv_pct
 from app.integrations.pricing.schemas import PricingRequestDTO
 
 _PERCENT = Decimal("0.01")
-_DEFAULT_DOWN_PAYMENT_PRIMARY = Decimal("0.20")
-_DEFAULT_DOWN_PAYMENT_INVESTMENT = Decimal("0.25")
+
+# Single source of truth (code review round 2, following on from CQ-029
+# review round 1 minor 3): `scenarios/service.py` re-exports these two
+# (`import`ed there, not redefined) so `create_default_scenarios`/
+# `admin/settings/service.py`'s settings page use the exact same default
+# this module falls back to when no down payment override is given. This
+# module -- not `service.py` -- is the canonical definition because
+# `service.py` already imports from here (`build_ob_search_request`),
+# so defining them here avoids a circular import the other way around.
+DEFAULT_DOWN_PAYMENT_PRIMARY = Decimal("0.20")
+DEFAULT_DOWN_PAYMENT_INVESTMENT = Decimal("0.25")
 DEFAULT_INVESTMENT_PPP_YEARS = 5
 """What this request sends for an investment scenario with no PPP set: OB's
 own 5-year default. The single definition (nit, post-merge review); the
@@ -122,7 +131,7 @@ async def build_ob_search_request(
     down_payment_pct = overrides.down_payment_pct
     if down_payment_pct is None:
         down_payment_pct = (
-            _DEFAULT_DOWN_PAYMENT_INVESTMENT if is_investment else _DEFAULT_DOWN_PAYMENT_PRIMARY
+            DEFAULT_DOWN_PAYMENT_INVESTMENT if is_investment else DEFAULT_DOWN_PAYMENT_PRIMARY
         )
 
     purchase_price = application.requested_price

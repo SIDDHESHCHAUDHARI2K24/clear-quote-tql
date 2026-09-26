@@ -10,12 +10,12 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.enums import Occupancy, Strategy
 from app.core.errors import NotFoundError, ValidationAppError
 from app.features.applications.models import Application
@@ -38,13 +38,25 @@ from app.features.pricing.scenarios.dscr_loop import (
     run_two_pass_dscr,
 )
 from app.features.pricing.scenarios.models import Scenario
-from app.features.pricing.scenarios.ob_request import ObRequestOverrides, build_ob_search_request
+from app.features.pricing.scenarios.ob_request import (
+    DEFAULT_DOWN_PAYMENT_INVESTMENT,
+    DEFAULT_DOWN_PAYMENT_PRIMARY,
+    ObRequestOverrides,
+    build_ob_search_request,
+)
 from app.features.quotes.builder.models import Quote
 from app.integrations.pricing.mock import MockPricingClient
 from app.integrations.pricing.schemas import PricedProductDTO
 
-_DEFAULT_DOWN_PAYMENT_PRIMARY = Decimal("0.20")
-_DEFAULT_DOWN_PAYMENT_INVESTMENT = Decimal("0.25")
+# DEFAULT_DOWN_PAYMENT_PRIMARY/_INVESTMENT above are imported, not
+# redefined here (code review round 2, following CQ-029 review round 1
+# minor 3): `ob_request.py` is the single source of truth, since it's a
+# lower-level module this file already imports from (defining them here
+# and importing them *there* would be circular). `admin/settings/
+# service.py` imports these two names from this module (re-exported) for
+# its settings page's "default down payment" row; `create_default_
+# scenarios` below uses them directly.
+
 _MI_REMOVAL_DOWN_PAYMENT = Decimal("0.20")
 _BUYDOWN_MAX_POINTS = Decimal("0.01")
 """1.00 point == 0.01 as a fraction, the same scale as `PricedProductDTO.
@@ -288,7 +300,7 @@ async def _persist_quote(
         lock_days=product.lock_period_days,
         computed=_json_safe(computation),
         label=label,
-        priced_at=datetime.now(UTC),
+        priced_at=clock.now(),
     )
     db.add(quote)
     await db.flush()
@@ -653,14 +665,14 @@ async def create_default_scenarios(
 
     if application.occupancy is Occupancy.PRIMARY:
         resolved_down_payment = (
-            down_payment_pct if down_payment_pct is not None else _DEFAULT_DOWN_PAYMENT_PRIMARY
+            down_payment_pct if down_payment_pct is not None else DEFAULT_DOWN_PAYMENT_PRIMARY
         )
         result = await _create_default_scenarios_primary(
             db, application, config, resolved_down_payment
         )
     else:
         resolved_down_payment = (
-            down_payment_pct if down_payment_pct is not None else _DEFAULT_DOWN_PAYMENT_INVESTMENT
+            down_payment_pct if down_payment_pct is not None else DEFAULT_DOWN_PAYMENT_INVESTMENT
         )
         resolved_ppp = prepayment_penalty_years if prepayment_penalty_years is not None else 5
         result = await _create_default_scenarios_investment(

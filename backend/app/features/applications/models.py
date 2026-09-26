@@ -27,7 +27,13 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base, pg_enum
 from app.core.encryption import EncryptedString
-from app.core.enums import ApplicationStatus, LoanPurpose, Occupancy, Strategy
+from app.core.enums import (
+    ApplicationSource,
+    ApplicationStatus,
+    LoanPurpose,
+    Occupancy,
+    Strategy,
+)
 
 
 class PartyRole(enum.StrEnum):
@@ -73,7 +79,11 @@ class Application(Base):
     purpose: Mapped[LoanPurpose] = mapped_column(
         pg_enum(LoanPurpose, "loan_purpose"), default=LoanPurpose.PURCHASE
     )
-    requested_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    requested_price: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True, index=True
+    )
+    """CQ-027: indexed for the applications-list `amount_min`/`amount_max`
+    filter and `sort=amount`/`-amount` (migration `f1a2b3c4d5e6`)."""
     # Denormalized from `properties`/`housing_history` for the
     # applications-list filter, per spec.
     subject_state: Mapped[str | None] = mapped_column(String(2), nullable=True, index=True)
@@ -97,10 +107,23 @@ class Application(Base):
     -> `applications`) foreign-key cycle so `Base.metadata` can still be
     topologically sorted; the migration adds this constraint with a
     separate `ALTER TABLE` after both tables exist."""
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    source: Mapped[ApplicationSource] = mapped_column(
+        pg_enum(ApplicationSource, "application_source"),
+        default=ApplicationSource.LOS,
+        server_default=ApplicationSource.LOS.value,
     )
+    """P5/P6 foundation (E14): `los` (imported) or `portal` (CQ-032 apply
+    wizard). The pipeline skips `import_application` for `portal` rows."""
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    """CQ-027: indexed for the applications-list `created_from`/`created_to`
+    filter (migration `f1a2b3c4d5e6`)."""
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), index=True
+    )
+    """CQ-027: indexed for the applications-list default `sort=-updated_at`
+    (migration `f1a2b3c4d5e6`)."""
 
 
 class ApplicationParty(Base):

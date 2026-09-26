@@ -12,15 +12,16 @@ borrower's behalf -- see `templates.py`'s own AC5 note and
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.auth import ensure_borrower_owns_client
 from app.core.enums import ApplicationStatus
 from app.core.errors import ConflictError, NotFoundError, ValidationAppError
+from app.features.applications.locking import lock_application
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.auth.models import BorrowerAccount, User
@@ -141,13 +142,12 @@ async def submit_action(
     if version is None:
         raise NotFoundError("Report not found")
 
-    application = (
-        await db.execute(
-            select(Application).where(Application.id == package.application_id).with_for_update()
-        )
-    ).scalar_one_or_none()
-    if application is None:
-        raise NotFoundError("Report not found")
+    # The one application lock (applications/locking.py), taken last:
+    # package -> version -> application.
+    try:
+        application = await lock_application(db, package.application_id)
+    except NotFoundError:
+        raise NotFoundError("Report not found") from None
 
     # 404 (never 403), identical message to `portal/reports/service.py`'s
     # own two 404 paths (CQ-024 review carry-over finding #1).
@@ -156,7 +156,7 @@ async def submit_action(
     except NotFoundError:
         raise NotFoundError("Report not found") from None
 
-    now = datetime.now(UTC)
+    now = clock.now()
     expired = now > version.expires_at
 
     # Superseded blocks every action type (plan.md Decision 3): the

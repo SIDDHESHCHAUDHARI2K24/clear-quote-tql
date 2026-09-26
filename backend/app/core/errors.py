@@ -13,6 +13,8 @@ either (see CQ-009's `PricingValidationError`, which subclasses
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 
@@ -85,6 +87,18 @@ def register_exception_handlers(app: FastAPI) -> None:
                 }
             },
         )
+
+    @app.exception_handler(RequestValidationError)
+    async def _handle_request_validation_error(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        """FastAPI's default 422 body, minus each error's `input` (and
+        `ctx`): a request body can carry an SSN, which must never be
+        echoed back (CQ-032 review round 1)."""
+        errors = [
+            {k: v for k, v in error.items() if k not in ("input", "ctx")} for error in exc.errors()
+        ]
+        return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
 
     @app.exception_handler(Exception)
     async def _handle_unhandled_error(request: Request, exc: Exception) -> JSONResponse:

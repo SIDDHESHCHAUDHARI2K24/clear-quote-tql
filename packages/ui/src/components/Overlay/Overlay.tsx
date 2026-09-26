@@ -1,23 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import type { ReactNode } from "react";
 
 import { cx } from "../../utils/cx";
-
-const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "textarea:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])',
-].join(",");
-
-function getFocusableElements(container: HTMLElement | null): HTMLElement[] {
-  if (!container) return [];
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-}
+import { useFocusTrap } from "../../utils/useFocusTrap";
 
 export interface OverlayProps {
   isOpen: boolean;
@@ -37,67 +24,9 @@ const SIZE_CLASSES: Record<NonNullable<OverlayProps["size"]>, string> = {
 
 export function Overlay({ isOpen, onClose, title, size = "md", footer, children }: OverlayProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
-
-  // Focus trap + return-focus-on-close (docs/backlog/CQ-005-frontend-skeleton/
-  // post-dev.md's known gap, fixed by CQ-016 since CQ-018/CQ-024 dialogs
-  // depend on it): on open, remember whatever had focus and move focus into
-  // the dialog; on close (including unmount), focus returns to whatever had
-  // it before the dialog opened.
-  //
-  // Deliberately its own effect, keyed only on `isOpen` -- not also on
-  // `onClose` (see the effect below). A consumer's `onClose` is very often
-  // a fresh closure on every render (e.g. it reads other local state), and
-  // this effect's cleanup re-focuses the dialog's first element on every
-  // re-run: keying it to `onClose` too would re-steal focus away from
-  // whatever the user is doing (like typing in a field inside the dialog)
-  // on every keystroke -- and since the first focusable element is often a
-  // button, a later space/enter keystroke would then "click" it and close
-  // the dialog out from under the user. Caught by
-  // `StatusActionsMenu.test.tsx` (CQ-016) typing into its reason field.
-  useEffect(() => {
-    if (!isOpen) return;
-
-    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-    const focusable = getFocusableElements(dialogRef.current);
-    (focusable[0] ?? dialogRef.current)?.focus();
-
-    return () => {
-      previouslyFocusedRef.current?.focus?.();
-      previouslyFocusedRef.current = null;
-    };
-  }, [isOpen]);
-
-  // Escape-to-close + Tab/Shift+Tab wrap within the dialog's focusable
-  // elements instead of escaping to the page behind it. Safe to re-attach
-  // on every `onClose` change -- unlike the effect above, it has no focus
-  // side effect of its own.
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (e.key !== "Tab") return;
-
-      const elements = getFocusableElements(dialogRef.current);
-      if (elements.length === 0) return;
-      const first = elements[0];
-      const last = elements[elements.length - 1];
-
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, onClose]);
+  // Focus trap, Escape-to-close and return-focus-on-close live in the
+  // shared `useFocusTrap` hook (P5/P6 foundation: `Drawer` reuses it).
+  useFocusTrap(dialogRef, isOpen, onClose);
 
   if (!isOpen) return null;
 

@@ -55,6 +55,17 @@ function psql(sql: string): string {
   ).trim();
 }
 
+// Runs a write statement (UPDATE/DELETE/INSERT) directly against this
+// worktree's Postgres via `docker compose exec psql` -- for spec cleanup
+// only (e.g. a full-suite `afterAll` that undoes a shared persona's own
+// mutation so a later spec file sees her original seeded state; see
+// `aisha-occupancy-resume.spec.ts` and `apply-wizard-resume.spec.ts`).
+// Discards any returned rows -- use a real `pg` query via `getPool()`
+// instead if you need the result.
+export function execSql(sql: string): void {
+  psql(sql);
+}
+
 // Returns the application id for the (single) application belonging to the
 // client with this email -- every seeded persona (seed/personas/*.yaml) has
 // exactly one.
@@ -78,11 +89,52 @@ function valkeyDbIndex(): string {
   return match[1];
 }
 
+// CQ-034 spec.md AC4: the borrower_accounts.id the support rate limit key
+// (`rl:support:borrower:{id}`) is keyed on -- distinct from `clients.id`
+// (applicationIdByClientEmail's join target).
+export function borrowerAccountIdByEmail(email: string): string {
+  const id = psql(
+    `select id from borrower_accounts where lower(email) = lower('${email}') limit 1;`,
+  );
+  if (!id) {
+    throw new Error(
+      `No borrower_accounts row found for ${email} -- run make demo-reset (with SEED_BORROWER_PASSWORD set) first`,
+    );
+  }
+  return id;
+}
+
+// CQ-034 spec.md AC4 ("the rate-limit test may flush only this borrower's
+// rl:* key"): deletes exactly one Valkey key, `rl:support:borrower:
+// {borrowerAccountId}` (service.py's `_RATE_LIMIT_KEY_PREFIX`) -- not a
+// `rl:*` wildcard sweep like `flushLoginRateLimit`, so a run of this test
+// never clears another persona's or another rate-limited action's
+// counters mid-suite.
+export function flushSupportRateLimit(borrowerAccountId: string): void {
+  execFileSync(
+    "docker",
+    [
+      "compose",
+      "-f",
+      "infra/docker-compose.yml",
+      "exec",
+      "-T",
+      "valkey",
+      "valkey-cli",
+      "-n",
+      valkeyDbIndex(),
+      "del",
+      `rl:support:borrower:${borrowerAccountId}`,
+    ],
+    { cwd: REPO_ROOT },
+  );
+}
+
 // A workspace spec that does several real staff logins (each one a real
 // email+password+OTP round trip) can trip the staff login endpoint's own
 // abuse-prevention rate limit (`auth/staff/service.py`, Valkey-backed)
-// within a single run -- flushing this worktree's own Valkey db between
-// logins (its `rl:*` rate-limit keys only) keeps the suite deterministic without weakening the real limit
+// within a single run -- clearing this worktree's rate-limit keys between
+// logins keeps the suite deterministic without weakening the real limit
 // (this never touches another worktree's db, see `valkeyDbIndex`).
 export function flushLoginRateLimit(): void {
   execFileSync(
@@ -97,12 +149,12 @@ export function flushLoginRateLimit(): void {
       "valkey-cli",
       "-n",
       valkeyDbIndex(),
-      // Only the rate-limit counters (`rl:*`), never `flushdb`: that also
-      // dropped the borrower sessions `global-setup.ts` saved, so every
-      // report spec 401'd when `e2e/lo-console` ran first in the same
-      // invocation (CQ-018 PR review round 1).
-      "EVAL",
-      "for _, key in ipairs(redis.call('KEYS', ARGV[1])) do redis.call('DEL', key) end return 0",
+      // Only the login rate-limit counters (`rl:*`, auth/otp/rate_limit.py)
+      // -- not the whole db, which would also drop the borrower sessions
+      // `e2e/global-setup.ts` saved for the report specs (P5/P6
+      // foundation: a full-suite run broke on exactly that).
+      "eval",
+      "for _, k in ipairs(redis.call('keys', ARGV[1])) do redis.call('del', k) end",
       "0",
       "rl:*",
     ],
@@ -127,6 +179,23 @@ function getPool(): Pool {
     pool = new Pool({ connectionString: nodePgConnectionString(databaseUrl) });
   }
   return pool;
+}
+
+/**
+ * Runs a read query directly against this worktree's Postgres and returns
+ * its rows -- for spec-time assertions that need to compute an expected
+ * value independently of the endpoint under test (e.g. a milestone spec
+ * recomputing dashboard tile counts from the seed via SQL rather than
+ * re-reading `GET /dashboard`'s own answer). Unlike `execSql` (fire-and-
+ * forget, `psql -tAc`, for writes), this goes through the same `pg` pool
+ * as `latestReportTokenForBorrower` so typed rows come back.
+ */
+export async function queryRows<T extends Record<string, unknown> = Record<string, unknown>>(
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  const { rows } = await getPool().query<T>(sql, params);
+  return rows;
 }
 
 /**

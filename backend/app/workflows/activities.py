@@ -17,6 +17,7 @@ success/failure outcomes):
 | auto_price_application           | pipeline.enriched (reused) | pipeline.pricing_blocked |
 | draft_quote_set                    | pipeline.priced        | pipeline.pricing_blocked |
 | (resume signal -> record_pipeline_resumed) | pipeline.resumed | n/a |
+| load_application_source (P5/P6 E14)        | (no event)       | n/a |
 """
 
 from __future__ import annotations
@@ -24,13 +25,13 @@ from __future__ import annotations
 import dataclasses
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio import activity
 
-from app.core.enums import ApplicationStatus, FlagSeverity
+from app.core import clock
+from app.core.enums import ApplicationSource, ApplicationStatus, FlagSeverity
 from app.features.applications.models import Application
 from app.features.applications.service import ImportResult, import_from_los
 from app.features.applications.timeline.models import ActivityEvent
@@ -92,7 +93,7 @@ async def _write_event(
             actor=_ACTOR_SYSTEM,
             type=event_type,
             payload=payload,
-            at=datetime.now(UTC),
+            at=clock.now(),
         )
     )
     await db.commit()
@@ -145,6 +146,22 @@ async def _fail_pricing_stage(db: AsyncSession, application_id: uuid.UUID, exc: 
     await _write_event(db, application_id, _TYPE_PRICING_BLOCKED, {"message": message})
 
 
+@activity.defn(name="load_application_source")
+async def load_application_source(application_id: str) -> str:
+    """P5/P6 foundation (E14): returns `applications.source` (`"los"` or
+    `"portal"`) so the workflow can skip `import_application` for a portal
+    application (CQ-032), whose parties/property/employment/assets were
+    written locally at submit and have no LOS record to import. Read-only:
+    writes no status, stage or event. A missing row reads as `los`, so the
+    import stage reports the setup error exactly as before."""
+    app_uuid = uuid.UUID(application_id)
+    async with workflow_db.session_factory() as db:
+        application = await db.get(Application, app_uuid)
+        if application is None:
+            return ApplicationSource.LOS.value
+        return ApplicationSource(application.source).value
+
+
 @activity.defn(name="import_application")
 async def import_application(application_id: str) -> ImportResult:
     """Wraps CQ-010's `applications.service.import_from_los` (`application_
@@ -183,7 +200,10 @@ async def verify_application(application_id: str) -> VerificationResult:
     app_uuid = uuid.UUID(application_id)
     async with workflow_db.session_factory() as db:
         await _set_stage(db, app_uuid, PipelineStage.VERIFYING)
-        run_result = await run_and_persist(app_uuid, db)
+        # CQ-028a review: no commit here, so the flags and the status below
+        # land in one transaction under the application lock; an LO edit's
+        # re-verify then sees both or neither.
+        run_result = await run_and_persist(app_uuid, db, commit=False)
         passed = not any(
             result.severity is FlagSeverity.BLOCKING and not result.passed
             for result in run_result.rule_results

@@ -15,12 +15,12 @@ from __future__ import annotations
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.enums import ApplicationTab, FieldSource, FlagSeverity, Occupancy, Strategy
 from app.core.errors import IntegrationError, NotFoundError, ValidationAppError
 from app.features.applications.models import Application
@@ -28,9 +28,8 @@ from app.features.applications.property.models import Property
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.models import FieldValue
 from app.features.applications.verification.service import resolve_flag, write_flag
-from app.features.pricing.scenarios.models import Scenario
 from app.features.pricing.scenarios.ob_request import build_ob_search_request
-from app.features.quotes.builder.models import Quote
+from app.features.quotes.stale.service import mark_application_quotes_stale
 from app.integrations.common.errors import PricingValidationError
 from app.integrations.insurance.mock import MockInsuranceClient
 from app.integrations.pricing.mock import (
@@ -331,7 +330,10 @@ of them is pricing-affecting by definition -- there is no narrower
 allow-list (plan.md Decision 8)."""
 
 
-async def _mark_application_quotes_stale(
+_FIELD_ACTION_TEXT = {"override": "overridden", "revert": "reverted"}
+
+
+async def _mark_quotes_stale_after_field_change(
     db: AsyncSession,
     application_id: uuid.UUID,
     field_key: str,
@@ -349,38 +351,43 @@ async def _mark_application_quotes_stale(
     (only `quote_ids` may then be empty -- review finding). CQ-018 clears
     `stale` on reprice.
 
-    A single `UPDATE ... WHERE stale = false RETURNING id` (not a SELECT
-    then a separate UPDATE) so two concurrent overrides can't both read the
-    same non-stale rows and each write their own activity event for the
-    same transition (review finding: the DB's own row-level locking
-    serializes the two UPDATEs instead).
-    """
+    U3 (merge plan M4): the flagging goes through the one stale path,
+    `quotes.stale.service.mark_application_quotes_stale` (a single
+    conditional `UPDATE ... WHERE stale = false RETURNING id`, so two
+    concurrent overrides can't both flag the same rows); this call site
+    writes the one `quotes.marked_stale` event, with a `message` for the
+    CQ-029 timeline. The caller holds quotes -> application
+    (applications/locking.py)."""
     if field_key not in _PRICING_AFFECTING_FIELDS:
         return
-    stale_subquery = (
-        select(Quote.id)
-        .join(Scenario, Scenario.id == Quote.scenario_id)
-        .where(Scenario.application_id == application_id, Quote.stale.is_(False))
+    quote_ids = await mark_application_quotes_stale(
+        db, application_id, f"field_{action}:{field_key}"
     )
-    result = await db.execute(
-        update(Quote).where(Quote.id.in_(stale_subquery)).values(stale=True).returning(Quote.id)
-    )
-    quote_ids = result.scalars().all()
+    change = f"{field_key.replace('_', ' ')} {_FIELD_ACTION_TEXT.get(action, action)}"
     db.add(
         ActivityEvent(
             application_id=application_id,
             actor=str(actor_id),
             type="quotes.marked_stale",
             payload={
+                # U3 code review: say "marked stale" only when a quote was.
+                "message": (f"Quotes marked stale: {change}" if quote_ids else change.capitalize()),
                 "field_key": field_key,
                 "action": action,
                 "old_value": str(old_value) if old_value is not None else None,
                 "new_value": str(new_value) if new_value is not None else None,
                 "quote_ids": [str(q) for q in quote_ids],
             },
-            at=datetime.now(UTC),
+            at=clock.now(),
         )
     )
+
+
+async def _commit_or_flush(db: AsyncSession, commit: bool) -> None:
+    if commit:
+        await db.commit()
+    else:
+        await db.flush()
 
 
 async def override_field_value(
@@ -389,12 +396,19 @@ async def override_field_value(
     field_key: str,
     value: Decimal | str,
     lo_id: uuid.UUID,
+    *,
+    commit: bool = True,
 ) -> FieldValue:
+    """Overrides `field_key` and marks the application's quotes stale.
+
+    `commit=False` (the `/field-values` route, PR #34 review m2) flushes
+    instead, so the caller writes its own activity event under the same
+    lock and commits the override and the event together."""
     if field_key not in _FIELD_HANDLERS:
         raise ValidationAppError(f"Not an overridable pricing field: {field_key}")
     json_value = str(value) if isinstance(value, Decimal) else value
     existing = await _existing_field_value(db, application_id, field_key)
-    now = datetime.now(UTC)
+    now = clock.now()
     if existing is not None:
         old_value = existing.value
         existing.value = json_value
@@ -402,10 +416,10 @@ async def override_field_value(
         existing.source_ref = None
         existing.overridden_by = lo_id
         existing.overridden_at = now
-        await _mark_application_quotes_stale(
+        await _mark_quotes_stale_after_field_change(
             db, application_id, field_key, lo_id, "override", old_value, json_value
         )
-        await db.commit()
+        await _commit_or_flush(db, commit)
         return existing
     row = FieldValue(
         application_id=application_id,
@@ -416,19 +430,25 @@ async def override_field_value(
         overridden_at=now,
     )
     db.add(row)
-    await _mark_application_quotes_stale(
+    await _mark_quotes_stale_after_field_change(
         db, application_id, field_key, lo_id, "override", None, json_value
     )
-    await db.commit()
+    await _commit_or_flush(db, commit)
     return row
 
 
 async def revert_field_value(
-    db: AsyncSession, application_id: uuid.UUID, field_key: str, actor_id: uuid.UUID
+    db: AsyncSession,
+    application_id: uuid.UUID,
+    field_key: str,
+    actor_id: uuid.UUID,
+    *,
+    commit: bool = True,
 ) -> FieldValue:
     """Clears the override and re-runs that field's own enrichment fetch to
     restore the source value (there is no separate "pre-override value"
-    column on `field_values` -- see plan.md Decision under AC3)."""
+    column on `field_values` -- see plan.md Decision under AC3).
+    `commit=False`: see `override_field_value`."""
     handler = _FIELD_HANDLERS.get(field_key)
     if handler is None:
         raise ValidationAppError(f"Not an overridable pricing field: {field_key}")
@@ -444,8 +464,8 @@ async def revert_field_value(
     application = await _get_application(db, application_id)
     property_ = await _get_property(db, application_id)
     row = await handler(db, application, property_)
-    await _mark_application_quotes_stale(
+    await _mark_quotes_stale_after_field_change(
         db, application_id, field_key, actor_id, "revert", old_value, row.value
     )
-    await db.commit()
+    await _commit_or_flush(db, commit)
     return row

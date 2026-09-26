@@ -35,13 +35,15 @@ from app.features.pricing.panel.schemas import (
     PricingViewResponse,
 )
 from app.features.pricing.scenarios.models import Scenario
+from app.features.pricing.scenarios.ob_request import (
+    DEFAULT_DOWN_PAYMENT_INVESTMENT,
+    DEFAULT_DOWN_PAYMENT_PRIMARY,
+)
 from app.features.quotes.builder.models import Quote
 
-_DEFAULT_DOWN_PAYMENT_PRIMARY = Decimal("0.20")
-_DEFAULT_DOWN_PAYMENT_INVESTMENT = Decimal("0.25")
-"""Same system-design defaults `pricing.scenarios.service.create_default_
-scenarios` uses, for the one case this view has no persisted `Scenario` to
-read yet (a brand-new application that hasn't been auto-priced)."""
+# The down-payment defaults for the one case this view has no persisted
+# `Scenario` to read yet (a brand-new application that hasn't been
+# auto-priced) come from `ob_request`, the single definition (P56-merge).
 
 
 async def _get_application(db: AsyncSession, application_id: uuid.UUID) -> Application:
@@ -185,9 +187,9 @@ async def _inputs_and_config(
         strategy, ppp_years = _default_strategy_and_ppp(application)
         purchase_price = application.requested_price
         down_payment_pct = (
-            _DEFAULT_DOWN_PAYMENT_PRIMARY
+            DEFAULT_DOWN_PAYMENT_PRIMARY
             if strategy is StrategyType.PRIMARY
-            else _DEFAULT_DOWN_PAYMENT_INVESTMENT
+            else DEFAULT_DOWN_PAYMENT_INVESTMENT
         )
         config = ConfigSnapshot()
 
@@ -330,9 +332,9 @@ async def get_pricing_view(db: AsyncSession, application: Application) -> Pricin
         inputs_view = PricingInputsView(
             purchase_price=application.requested_price or Decimal("0"),
             down_payment_pct=(
-                _DEFAULT_DOWN_PAYMENT_PRIMARY
+                DEFAULT_DOWN_PAYMENT_PRIMARY
                 if strategy is StrategyType.PRIMARY
-                else _DEFAULT_DOWN_PAYMENT_INVESTMENT
+                else DEFAULT_DOWN_PAYMENT_INVESTMENT
             ),
             strategy=strategy,
             prepayment_penalty_years=ppp_years if ppp_years is not None else default_ppp,

@@ -284,7 +284,8 @@ async def letter_pdf(
     ).scalar_one_or_none()
     if version is None or version.letter_key is None:
         raise NotFoundError("No letter has been sent for this package.")
-    pdf = await storage.get_object(version.letter_key)
-    if pdf is None:
-        raise NotFoundError("The letter file is missing.")
-    return pdf, version.version
+    try:
+        stored = await storage.get_object(version.letter_key)
+    except storage.ObjectNotFoundError:
+        raise NotFoundError("The letter file is missing.") from None
+    return stored.body, version.version

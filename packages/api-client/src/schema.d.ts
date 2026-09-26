@@ -73,6 +73,66 @@ export interface paths {
         patch: operations["patch_status_api_v1_applications__application_id__status_patch"];
         trace?: never;
     };
+    "/api/v1/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Applications */
+        get: operations["get_applications_api_v1_applications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/los": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Lo Options
+         * @description Backs the frontend's LO `Select` (spec.md "Frontend", Manager/Admin
+         *     only) -- 403s for an LO (E16), same as every other admin-scoped route.
+         */
+        get: operations["get_lo_options_api_v1_applications_los_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Dashboard
+         * @description An LO always sees their own files (`lo_id` is ignored for them); a
+         *     Manager/Admin sees every file, or just one LO's when `lo_id` is set
+         *     (`core.auth.scope_applications`).
+         */
+        get: operations["get_dashboard_api_v1_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/applications/{application_id}/field-values/{field_key}": {
         parameters: {
             query?: never;
@@ -628,6 +688,635 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/applications/{application_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Activity */
+        get: operations["get_activity_api_v1_applications__application_id__activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Outbox Emails */
+        get: operations["list_outbox_emails_api_v1_outbox_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outbox/{email_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Outbox Email */
+        get: operations["get_outbox_email_api_v1_outbox__email_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outbox/{email_id}/attachments/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Attachment */
+        get: operations["download_attachment_api_v1_outbox__email_id__attachments__key__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Integrations */
+        get: operations["get_integrations_api_v1_admin_integrations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integrations/{adapter}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Integration */
+        put: operations["put_integration_api_v1_admin_integrations__adapter__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings Page */
+        get: operations["get_settings_page_api_v1_admin_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/sections/{tab}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Section */
+        get: operations["get_section_api_v1_applications__application_id__sections__tab__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/fields/{field_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Field */
+        put: operations["put_field_api_v1_applications__application_id__fields__field_key__put"];
+        post?: never;
+        /** Revert Field */
+        delete: operations["revert_field_api_v1_applications__application_id__fields__field_key__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/parties/{party_id}/ssn-reveal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reveal Ssn */
+        post: operations["reveal_ssn_api_v1_applications__application_id__parties__party_id__ssn_reveal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/housing_history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Housing */
+        post: operations["add_housing_api_v1_applications__application_id__housing_history_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/housing_history/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Housing */
+        patch: operations["patch_housing_api_v1_applications__application_id__housing_history__row_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/parties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Party */
+        post: operations["add_party_api_v1_applications__application_id__parties_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/parties/{party_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Party */
+        patch: operations["patch_party_api_v1_applications__application_id__parties__party_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/liabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Liability */
+        post: operations["add_liability_api_v1_applications__application_id__liabilities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/liabilities/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Liability */
+        patch: operations["patch_liability_api_v1_applications__application_id__liabilities__row_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/credit/import-liabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Liabilities */
+        post: operations["import_liabilities_api_v1_applications__application_id__credit_import_liabilities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/credit/hard-pull-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Hard Pull */
+        post: operations["request_hard_pull_api_v1_applications__application_id__credit_hard_pull_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/property": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Property */
+        patch: operations["patch_property_api_v1_applications__application_id__property_patch"];
+        trace?: never;
+    };
+    "/api/v1/applications/{application_id}/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Document */
+        patch: operations["patch_document_api_v1_applications__application_id__documents__document_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/reference/metros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Metros */
+        get: operations["list_metros_api_v1_reference_metros_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Or Get Draft
+         * @description Creates the borrower's draft, or returns the open one.
+         */
+        post: operations["create_or_get_draft_api_v1_portal_applications_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/applications/metros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Metros
+         * @description States and their metros for tab 2's picker (decision 28). Declared
+         *     before `/{draft_id}` so `metros` is never read as a draft id.
+         */
+        get: operations["list_metros_api_v1_portal_applications_metros_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/applications/{draft_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Draft */
+        get: operations["get_draft_api_v1_portal_applications__draft_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/applications/{draft_id}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Autosave Tab
+         * @description Saves one tab and returns its validation errors (never blocks).
+         */
+        patch: operations["autosave_tab_api_v1_portal_applications__draft_id__draft_patch"];
+        trace?: never;
+    };
+    "/api/v1/portal/applications/{draft_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Application */
+        post: operations["submit_application_api_v1_portal_applications__draft_id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/applications/{draft_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Document
+         * @description PDF, JPG or PNG, 10 MB at most (AC7). The multipart body is parsed
+         *     by hand, only after auth, ownership and the document cap pass
+         *     (decision 26); `UploadBodyLimitMiddleware` has already bounded its
+         *     size (411 without `Content-Length`, 413 over the cap).
+         */
+        post: operations["upload_document_api_v1_portal_applications__draft_id__documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/applications/{draft_id}/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Document */
+        delete: operations["delete_document_api_v1_portal_applications__draft_id__documents__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/support": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Support */
+        post: operations["submit_support_api_v1_portal_support_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Portal Home */
+        get: operations["get_portal_home_api_v1_portal_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/consents/{consent_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Consent */
+        get: operations["get_consent_api_v1_portal_consents__consent_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/consents/{consent_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept Consent */
+        post: operations["accept_consent_api_v1_portal_consents__consent_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/consents/{consent_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decline Consent */
+        post: operations["decline_consent_api_v1_portal_consents__consent_id__decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/jobs/stale-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Stale Check */
+        post: operations["run_stale_check_api_v1_admin_jobs_stale_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Clients */
+        get: operations["get_clients_api_v1_clients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clients/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Client */
+        get: operations["get_client_api_v1_clients__client_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -649,6 +1338,147 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivityActor */
+        ActivityActor: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "system" | "staff" | "borrower";
+            /** Name */
+            name: string;
+        };
+        /** ActivityEventOut */
+        ActivityEventOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            actor: components["schemas"]["ActivityActor"];
+            /** Type */
+            type: string;
+            /** Message */
+            message: string;
+            /** Payload Summary */
+            payload_summary: string | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+        };
+        /**
+         * ActivityItem
+         * @description One row of the "Recent activity" feed.
+         */
+        ActivityItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Actor */
+            actor: string;
+            /** Type */
+            type: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Client Name */
+            client_name: string;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+        };
+        /** AdapterStatus */
+        AdapterStatus: {
+            /** Adapter */
+            adapter: string;
+            /** Provider */
+            provider: string;
+            /** Last Call At */
+            last_call_at: string | null;
+            /** Last Latency Ms */
+            last_latency_ms: number | null;
+            /** Last Result */
+            last_result: string;
+            /** Calls Last Hour */
+            calls_last_hour: number;
+            /** Force Failure */
+            force_failure: boolean;
+        };
+        /** AddressInput */
+        AddressInput: {
+            /** Street Address */
+            street_address: string;
+            /** City */
+            city: string;
+            /** State */
+            state: string;
+            /** Zip */
+            zip: string;
+            /** County */
+            county?: string | null;
+        };
+        /**
+         * ApplicationListResponse
+         * @description `GET /applications` response: `core/pagination.Page[ApplicationRow]`
+         *     (`items`, `total`, `page`, `page_size`).
+         */
+        ApplicationListResponse: {
+            /** Items */
+            items: components["schemas"]["ApplicationRow"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * ApplicationRow
+         * @description One row of `GET /applications` (spec.md "Row"). Shared with CQ-026
+         *     (E9) -- keep this shape stable; CQ-026 imports it directly rather than
+         *     redefining it.
+         */
+        ApplicationRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Client Name */
+            client_name: string;
+            /** Property Label */
+            property_label: string | null;
+            /**
+             * Strategy
+             * @enum {string}
+             */
+            strategy: "primary" | "ltr" | "str";
+            /** Purchase Price */
+            purchase_price: string | null;
+            status: components["schemas"]["ApplicationStatus"];
+            /** Flag Count */
+            flag_count: number;
+            /**
+             * Lo Id
+             * Format: uuid
+             */
+            lo_id: string;
+            /** Lo Name */
+            lo_name: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** ApplicationScenariosRead */
         ApplicationScenariosRead: {
             /**
@@ -712,6 +1542,85 @@ export interface components {
          * @enum {string}
          */
         ApplicationTab: "borrowers" | "housing" | "credit" | "assets" | "property" | "pricing" | "send";
+        /** ApplyDraftOut */
+        ApplyDraftOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Email */
+            email: string;
+            current_tab: components["schemas"]["TabName"];
+            tabs: components["schemas"]["DraftTabs"];
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+            /** Submitted Application Id */
+            submitted_application_id: string | null;
+            consent: components["schemas"]["app__features__portal__apply__schemas__ConsentTextOut"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** AssetsSummary */
+        AssetsSummary: {
+            /** Verified Assets Total */
+            verified_assets_total: string;
+            /** Reserves Months */
+            reserves_months: number;
+            /** Reserves Required */
+            reserves_required: string | null;
+            /** Cash To Close */
+            cash_to_close: string | null;
+            /** Required Funds */
+            required_funds: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "sufficient" | "insufficient" | "awaiting_pricing";
+            /** Income Applicable */
+            income_applicable: boolean;
+            /** Monthly Income Total */
+            monthly_income_total: string | null;
+            /** Documents */
+            documents: components["schemas"]["DocumentItem"][];
+        };
+        /** AttachmentOut */
+        AttachmentOut: {
+            /** Key */
+            key: string;
+            /** Filename */
+            filename: string;
+        };
+        /**
+         * AttentionItem
+         * @description One row of the "Needs your attention" list: NeedsAttention, Inquiry
+         *     or OptionSelected, oldest status change first.
+         */
+        AttentionItem: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Client Name */
+            client_name: string;
+            status: components["schemas"]["ApplicationStatus"];
+            /** Reason */
+            reason: string;
+            /** Age Days */
+            age_days: number;
+        };
         /** AutoQuoteResponse */
         AutoQuoteResponse: {
             par: components["schemas"]["QuoteRead"];
@@ -747,6 +1656,8 @@ export interface components {
             full_name: string;
             /** First Name */
             first_name: string;
+            /** Phone */
+            phone: string | null;
             latest_application: components["schemas"]["LatestApplicationOut"] | null;
         };
         /** BorrowerSignupRequest */
@@ -803,6 +1714,118 @@ export interface components {
         ChallengeResponse: {
             /** Challenge Id */
             challenge_id: string;
+        };
+        /**
+         * ClientDetail
+         * @description `GET /clients/{id}` response (spec.md "Backend").
+         */
+        ClientDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone: string | null;
+            /**
+             * Lo Id
+             * Format: uuid
+             */
+            lo_id: string;
+            /** Lo Name */
+            lo_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Applications */
+            applications: components["schemas"]["ApplicationRow"][];
+            /** Sent Versions */
+            sent_versions: components["schemas"]["ClientSentVersion"][];
+            /** Activity */
+            activity: components["schemas"]["ActivityEventOut"][];
+        };
+        /**
+         * ClientListResponse
+         * @description `GET /clients` response: `core/pagination.Page[ClientRow]`.
+         */
+        ClientListResponse: {
+            /** Items */
+            items: components["schemas"]["ClientRow"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * ClientRow
+         * @description One row of `GET /clients` (spec.md "Rows").
+         */
+        ClientRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone: string | null;
+            /**
+             * Lo Id
+             * Format: uuid
+             */
+            lo_id: string;
+            /** Lo Name */
+            lo_name: string;
+            /** Application Count */
+            application_count: number;
+            active_status: components["schemas"]["ApplicationStatus"] | null;
+            /** Last Activity */
+            last_activity: string | null;
+        };
+        /**
+         * ClientSentVersion
+         * @description One row of a client's "Quotes sent" section (spec.md "Backend"):
+         *     one `quote_package_versions` row, across every application the client
+         *     has.
+         */
+        ClientSentVersion: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Version */
+            version: number;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /** Recommended Option Label */
+            recommended_option_label: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "sent" | "viewed" | "expired" | "superseded" | "option_selected" | "move_forward" | "ask_other" | "ask_updated" | "inquiry";
+            /** Report Link */
+            report_link: string;
         };
         /**
          * ConfigSnapshot
@@ -993,6 +2016,60 @@ export interface components {
                 ][]
             ][];
         };
+        /** ConsentAcceptRequest */
+        ConsentAcceptRequest: {
+            /** Typed Name */
+            typed_name: string;
+            /** Text Version */
+            text_version: string;
+            /** Text Sha256 */
+            text_sha256: string;
+        };
+        /** ConsentDeclineRequest */
+        ConsentDeclineRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** ConsentLoOut */
+        ConsentLoOut: {
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone: string | null;
+            /** Nmls */
+            nmls: string | null;
+        };
+        /**
+         * ConsentStatus
+         * @enum {string}
+         */
+        ConsentStatus: "pending" | "accepted" | "declined" | "expired";
+        /**
+         * ConsentSummary
+         * @description E11: latest hard-pull consent request (CQ-033 fills the decision).
+         */
+        ConsentSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            status: components["schemas"]["ConsentStatus"];
+            /** Requested At */
+            requested_at: string | null;
+            /** Requested By */
+            requested_by: string | null;
+            /** Expires At */
+            expires_at: string | null;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decline Reason */
+            decline_reason: string | null;
+            /** Fico After Pull */
+            fico_after_pull: number | null;
+        };
         /** CostSegTable */
         CostSegTable: {
             /** Purchase Price */
@@ -1016,12 +2093,167 @@ export interface components {
             /** Year One Tax Savings */
             year_one_tax_savings: string;
         };
+        /** CreditSummary */
+        CreditSummary: {
+            /** Representative Fico */
+            representative_fico: number | null;
+            /** Fico Bracket */
+            fico_bracket: string | null;
+            /** Pull Type */
+            pull_type: ("soft_pull" | "hard_pull") | null;
+            /** Pulled At */
+            pulled_at: string | null;
+            /** Liabilities Monthly Total */
+            liabilities_monthly_total: string;
+            /** Dti Applicable */
+            dti_applicable: boolean;
+            /** Dti */
+            dti: string | null;
+            /**
+             * Dti Status
+             * @enum {string}
+             */
+            dti_status: "ok" | "awaiting_pricing" | "no_income" | "not_applicable";
+            consent: components["schemas"]["ConsentSummary"] | null;
+        };
         /**
          * DSCRBucket
          * @description DSCR classification bucket. Boundaries are inclusive on the lower edge.
          * @enum {string}
          */
         DSCRBucket: "BELOW_1_00" | "ONE_TO_1_25" | "GE_1_25";
+        /**
+         * DashboardLoOption
+         * @description One entry in the Manager/Admin LO filter `Select`.
+         *
+         *     Named `DashboardLoOption` (not the bare `LoOption` CQ-027's
+         *     `applications.listing.schemas.LoOption` already uses) so the two
+         *     FastAPI schemas don't collide once both routers are mounted --
+         *     otherwise `openapi-typescript` would need to fall back to the fully
+         *     qualified `app__features__..._LoOption` component name, breaking the
+         *     `components["schemas"]["LoOption"]` re-export both features rely on
+         *     (CQ-025 fix, cq-025-fix branch).
+         */
+        DashboardLoOption: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Full Name */
+            full_name: string;
+        };
+        /** DashboardResponse */
+        DashboardResponse: {
+            tiles: components["schemas"]["DashboardTiles"];
+            /** Attention */
+            attention: components["schemas"]["AttentionItem"][];
+            /** Stale */
+            stale: components["schemas"]["StaleItem"][];
+            /** Activity */
+            activity: components["schemas"]["ActivityItem"][];
+            /** Los */
+            los: components["schemas"]["DashboardLoOption"][] | null;
+        };
+        /**
+         * DashboardTiles
+         * @description One count per spec.md's tile table, all scoped by role/`lo_id`.
+         */
+        DashboardTiles: {
+            /** Clients */
+            clients: number;
+            /** Applications */
+            applications: number;
+            /** Pre Approvals Sent */
+            pre_approvals_sent: number;
+            /** With Property */
+            with_property: number;
+            /** Awaiting Review */
+            awaiting_review: number;
+            /** Needs Attention */
+            needs_attention: number;
+            /** Stale Quotes */
+            stale_quotes: number;
+        };
+        /** DocumentItem */
+        DocumentItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Doc Type */
+            doc_type: string;
+            /** Received */
+            received: boolean;
+            /** Received At */
+            received_at: string | null;
+        };
+        /** DocumentPatch */
+        DocumentPatch: {
+            /** Received */
+            received: boolean;
+        };
+        /** DraftDocumentOut */
+        DraftDocumentOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Doc Type
+             * @enum {string}
+             */
+            doc_type: "pay_stub" | "w2" | "bank_statement";
+            /** Filename */
+            filename: string;
+            /** Content Type */
+            content_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+        };
+        /** DraftPatchRequest */
+        DraftPatchRequest: {
+            tab: components["schemas"]["TabName"];
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+        };
+        /** DraftPatchResponse */
+        DraftPatchResponse: {
+            draft: components["schemas"]["ApplyDraftOut"];
+            tab: components["schemas"]["TabName"];
+            /** Tab Valid */
+            tab_valid: boolean;
+            /** Field Errors */
+            field_errors: {
+                [key: string]: string;
+            };
+        };
+        /** DraftTabs */
+        DraftTabs: {
+            you: components["schemas"]["TabStatus"];
+            property: components["schemas"]["TabStatus"];
+            income: components["schemas"]["TabStatus"];
+            consent: components["schemas"]["TabStatus"];
+        };
+        /**
+         * EmailStatus
+         * @enum {string}
+         */
+        EmailStatus: "queued" | "sent" | "failed";
+        /** FieldEditRequest */
+        FieldEditRequest: {
+            /** Value */
+            value: string | number | boolean | string[] | null;
+        };
         /**
          * FieldSource
          * @description Drives the source badge + "revert to source" UI on `field_values`.
@@ -1063,10 +2295,29 @@ export interface components {
             /** Overridden At */
             overridden_at: string | null;
         };
+        /**
+         * FlagSeverity
+         * @description Decision: `blocking` halts pipeline progression (Verifying ->
+         *     NeedsAttention) and blocks Send; `warning` is a visible tab count only;
+         *     `info` is reserved for auto-fix outcomes and never becomes a `flags`
+         *     row.
+         * @enum {string}
+         */
+        FlagSeverity: "info" | "warning" | "blocking";
+        /** ForceFailureRequest */
+        ForceFailureRequest: {
+            /** Force Failure */
+            force_failure: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HardPullRequestResponse */
+        HardPullRequestResponse: {
+            consent: components["schemas"]["ConsentSummary"];
+            section: components["schemas"]["SectionResponse"];
         };
         /** HealthReport */
         HealthReport: {
@@ -1095,6 +2346,64 @@ export interface components {
             /** Year1 Tax Savings Monthly */
             year1_tax_savings_monthly: string | null;
         };
+        /** HousingCreate */
+        HousingCreate: {
+            /** Street Address */
+            street_address: string;
+            /** City */
+            city: string;
+            /** State */
+            state: string;
+            /** Zip */
+            zip: string;
+            housing_status: components["schemas"]["HousingStatus"];
+            /** Residence Years */
+            residence_years: number;
+            /** Residence Months */
+            residence_months: number;
+            /**
+             * Vom Completed
+             * @default false
+             */
+            vom_completed: boolean;
+        };
+        /** HousingPatch */
+        HousingPatch: {
+            /** Street Address */
+            street_address?: string | null;
+            /** City */
+            city?: string | null;
+            /** State */
+            state?: string | null;
+            /** Zip */
+            zip?: string | null;
+            housing_status?: components["schemas"]["HousingStatus"] | null;
+            /** Residence Years */
+            residence_years?: number | null;
+            /** Residence Months */
+            residence_months?: number | null;
+            /** Vom Completed */
+            vom_completed?: boolean | null;
+        };
+        /**
+         * HousingStatus
+         * @enum {string}
+         */
+        HousingStatus: "own" | "rent" | "rent_free";
+        /** HousingSummary */
+        HousingSummary: {
+            /** Total Months */
+            total_months: number;
+            /** Required Months */
+            required_months: number;
+            /** Meets Requirement */
+            meets_requirement: boolean;
+        };
+        /** IntegrationsResponse */
+        IntegrationsResponse: {
+            /** Adapters */
+            adapters: components["schemas"]["AdapterStatus"][];
+        };
         /** LatestApplicationOut */
         LatestApplicationOut: {
             /**
@@ -1104,6 +2413,44 @@ export interface components {
             id: string;
             /** Status */
             status: string;
+        };
+        /** LiabilityCreate */
+        LiabilityCreate: {
+            /** Creditor Name */
+            creditor_name: string;
+            /** Account Type */
+            account_type: string;
+            /** Monthly Payment */
+            monthly_payment: number | string;
+            /** Balance */
+            balance: number | string;
+        };
+        /** LiabilityPatch */
+        LiabilityPatch: {
+            /** Creditor Name */
+            creditor_name?: string | null;
+            /** Account Type */
+            account_type?: string | null;
+            /** Monthly Payment */
+            monthly_payment?: number | string | null;
+            /** Balance */
+            balance?: number | string | null;
+        };
+        /**
+         * LoOption
+         * @description One entry of `GET /applications/los` -- the frontend's "LO" `Select`
+         *     for a Manager/Admin (spec.md "Frontend"). Nothing else in the backend
+         *     exposes a role=lo user list yet, so this item owns it (small, scoped
+         *     necessity -- plan.md).
+         */
+        LoOption: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Full Name */
+            full_name: string;
         };
         /** LocationResponse */
         LocationResponse: {
@@ -1157,6 +2504,20 @@ export interface components {
             year1_tax_savings: string | null;
         };
         /**
+         * MetrosOut
+         * @description Tab 2's two-tier metro picker: states, each with its metros (both
+         *     sorted). Only these names pass the `buy_box_metros` rule.
+         */
+        MetrosOut: {
+            /** States */
+            states: components["schemas"]["StateMetros"][];
+        };
+        /** MetrosResponse */
+        MetrosResponse: {
+            /** States */
+            states: components["schemas"]["StateMetros"][];
+        };
+        /**
          * Occupancy
          * @description Per override O2: Primary, LTR or STR only — no `second_home`.
          * @enum {string}
@@ -1168,6 +2529,62 @@ export interface components {
             challenge_id: string;
             /** Code */
             code: string;
+        };
+        /** OutboxEmailDetail */
+        OutboxEmailDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** To Email */
+            to_email: string;
+            /** Subject */
+            subject: string;
+            /** Type */
+            type: string;
+            status: components["schemas"]["EmailStatus"];
+            /** Application Id */
+            application_id: string | null;
+            /** Client Name */
+            client_name: string | null;
+            /** Sent At */
+            sent_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Html */
+            html: string;
+            /** Attachments */
+            attachments: components["schemas"]["AttachmentOut"][];
+        };
+        /** OutboxEmailRow */
+        OutboxEmailRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** To Email */
+            to_email: string;
+            /** Subject */
+            subject: string;
+            /** Type */
+            type: string;
+            status: components["schemas"]["EmailStatus"];
+            /** Application Id */
+            application_id: string | null;
+            /** Client Name */
+            client_name: string | null;
+            /** Sent At */
+            sent_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** PackageRead */
         PackageRead: {
@@ -1217,6 +2634,79 @@ export interface components {
             /** Lo Note */
             lo_note?: string | null;
         };
+        /** Page[ActivityEventOut] */
+        Page_ActivityEventOut_: {
+            /** Items */
+            items: components["schemas"]["ActivityEventOut"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /** Page[OutboxEmailRow] */
+        Page_OutboxEmailRow_: {
+            /** Items */
+            items: components["schemas"]["OutboxEmailRow"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * PartyCreate
+         * @description Adds the co-borrower (the only party the LO can add).
+         */
+        PartyCreate: {
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /** Ssn */
+            ssn?: string | null;
+            /** Dob */
+            dob?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Cell Phone */
+            cell_phone?: string | null;
+            /** Home Phone */
+            home_phone?: string | null;
+            /** Work Phone */
+            work_phone?: string | null;
+        };
+        /** PartyPatch */
+        PartyPatch: {
+            /** First Name */
+            first_name?: string | null;
+            /** Last Name */
+            last_name?: string | null;
+            /** Ssn */
+            ssn?: string | null;
+            /** Dob */
+            dob?: string | null;
+            /** Marital Status */
+            marital_status?: string | null;
+            /** Dependents Count */
+            dependents_count?: number | null;
+            /** Email */
+            email?: string | null;
+            /** Cell Phone */
+            cell_phone?: string | null;
+            /** Home Phone */
+            home_phone?: string | null;
+            /** Work Phone */
+            work_phone?: string | null;
+            /** Business Vesting */
+            business_vesting?: string | null;
+            /** Llc Entity Name */
+            llc_entity_name?: string | null;
+            /** No Co Applicant Check */
+            no_co_applicant_check?: boolean | null;
+        };
         /** PipelineResumeResponse */
         PipelineResumeResponse: {
             /** Workflow Id */
@@ -1234,6 +2724,82 @@ export interface components {
             /** Started */
             started: boolean;
         };
+        /** PortalApplicationOut */
+        PortalApplicationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            stage: components["schemas"]["PortalStage"];
+            /** Label */
+            label: string;
+            next_action: components["schemas"]["PortalNextAction"];
+            /** Secondary Report Token */
+            secondary_report_token?: string | null;
+            lo?: components["schemas"]["PortalLoOut"] | null;
+        };
+        /** PortalConsentOut */
+        PortalConsentOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            status: components["schemas"]["ConsentStatus"];
+            /** Requested At */
+            requested_at: string | null;
+            /** Expires At */
+            expires_at: string | null;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decline Reason */
+            decline_reason: string | null;
+            /** Borrower Name */
+            borrower_name: string;
+            lo: components["schemas"]["ConsentLoOut"] | null;
+            text: components["schemas"]["app__features__portal__consents__schemas__ConsentTextOut"];
+            /** Fico After Pull */
+            fico_after_pull: number | null;
+        };
+        /** PortalHomeResponse */
+        PortalHomeResponse: {
+            /** First Name */
+            first_name: string;
+            /** Email */
+            email: string;
+            /** Applications */
+            applications: components["schemas"]["PortalApplicationOut"][];
+        };
+        /** PortalLoOut */
+        PortalLoOut: {
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string | null;
+            /** Email */
+            email: string;
+        };
+        /** PortalNextAction */
+        PortalNextAction: {
+            type: components["schemas"]["PortalNextActionType"];
+            /** Report Token */
+            report_token?: string | null;
+            /** Consent Id */
+            consent_id?: string | null;
+            /** Draft Id */
+            draft_id?: string | null;
+        };
+        /**
+         * PortalNextActionType
+         * @enum {string}
+         */
+        PortalNextActionType: "view_report" | "continue_application" | "authorize_credit_check" | "none";
         /** PortalReportActionRequest */
         PortalReportActionRequest: {
             type: components["schemas"]["BorrowerActionType"];
@@ -1280,6 +2846,18 @@ export interface components {
             /** Newest Report Token */
             newest_report_token?: string | null;
         };
+        /**
+         * PortalStage
+         * @description Borrower-facing stage (spec.md's mapping table), plus `draft` for an
+         *     open `application_drafts` row (CQ-032a) that has no `Application` yet.
+         * @enum {string}
+         */
+        PortalStage: "applied" | "in_review" | "preapproved" | "option_selected" | "closed" | "draft";
+        /**
+         * PreferredContact
+         * @enum {string}
+         */
+        PreferredContact: "email" | "phone";
         /** PricedProductRow */
         "PricedProductRow-Input": {
             /** Investor Name */
@@ -1389,6 +2967,40 @@ export interface components {
             /** Has Stale Quotes */
             has_stale_quotes: boolean;
         };
+        /**
+         * PropertyPatch
+         * @description Every key optional; `address` and `tbd=true` are mutually exclusive.
+         */
+        PropertyPatch: {
+            address?: components["schemas"]["AddressInput"] | null;
+            /** Tbd */
+            tbd?: boolean | null;
+            /** Recommend Matches */
+            recommend_matches?: boolean | null;
+            /** Buy Box States */
+            buy_box_states?: string[] | null;
+            /** Buy Box Metros */
+            buy_box_metros?: string[] | null;
+            property_type?: components["schemas"]["PropertyType"] | null;
+            /** Number Of Units */
+            number_of_units?: number | null;
+        };
+        /** PropertySummary */
+        PropertySummary: {
+            /** Tbd */
+            tbd: boolean;
+            /** Recommend Matches */
+            recommend_matches: boolean;
+            /** Buy Box States */
+            buy_box_states: string[];
+            /** Buy Box Metros */
+            buy_box_metros: string[];
+        };
+        /**
+         * PropertyType
+         * @enum {string}
+         */
+        PropertyType: "single_family" | "two_to_four_unit" | "condo" | "townhome";
         /** QuoteCardRead */
         QuoteCardRead: {
             /**
@@ -1877,6 +3489,13 @@ export interface components {
              */
             priced_at: string;
         };
+        /** ResumeResult */
+        ResumeResult: {
+            /** Requested */
+            requested: boolean;
+            /** Reason */
+            reason: string;
+        };
         /**
          * ScenarioCreateRequest
          * @description The LO-owned pricing inputs (system-design's "only inputs the LO
@@ -1983,6 +3602,85 @@ export interface components {
             lock_days: number;
             dscr_bucket?: components["schemas"]["DSCRBucket"] | null;
         };
+        /** SectionField */
+        SectionField: {
+            /** Field Key */
+            field_key: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: string | number | boolean | string[] | null;
+            source: components["schemas"]["FieldSource"];
+            /** Overridden */
+            overridden: boolean;
+            /** Original Value */
+            original_value?: string | number | boolean | string[] | null;
+            /**
+             * Editable
+             * @default true
+             */
+            editable: boolean;
+        };
+        /** SectionFlag */
+        SectionFlag: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            tab: components["schemas"]["ApplicationTab"];
+            /** Field Key */
+            field_key: string;
+            /** Rule */
+            rule: string;
+            severity: components["schemas"]["FlagSeverity"];
+            /** Message */
+            message: string | null;
+        };
+        /** SectionRecord */
+        SectionRecord: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "party" | "housing_history" | "liability" | "asset" | "employment" | "document" | "property" | "loan" | "credit";
+            /** Id */
+            id: string | null;
+            /** Role */
+            role?: string | null;
+            /**
+             * Manual
+             * @default false
+             */
+            manual: boolean;
+            /** Fields */
+            fields: components["schemas"]["SectionField"][];
+        };
+        /** SectionResponse */
+        SectionResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            tab: components["schemas"]["SectionTab"];
+            status: components["schemas"]["ApplicationStatus"];
+            occupancy: components["schemas"]["Occupancy"] | null;
+            /** Records */
+            records: components["schemas"]["SectionRecord"][];
+            /** Flags */
+            flags: components["schemas"]["SectionFlag"][];
+            housing?: components["schemas"]["HousingSummary"] | null;
+            credit?: components["schemas"]["CreditSummary"] | null;
+            assets?: components["schemas"]["AssetsSummary"] | null;
+            property?: components["schemas"]["PropertySummary"] | null;
+            resume?: components["schemas"]["ResumeResult"] | null;
+        };
+        /**
+         * SectionTab
+         * @enum {string}
+         */
+        SectionTab: "borrowers" | "housing" | "credit" | "assets" | "property";
         /**
          * SendStarted
          * @description `POST /packages/{id}/send` 202. A double click while a send is in
@@ -2065,6 +3763,35 @@ export interface components {
             /** Recipient Email */
             recipient_email: string | null;
         };
+        /** SettingValue */
+        SettingValue: {
+            /** Key */
+            key: string;
+            /** Value */
+            value: unknown;
+            /** Description */
+            description: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "settings_table" | "code_default";
+        };
+        /** SettingsResponse */
+        SettingsResponse: {
+            /** Settings */
+            settings: components["schemas"]["SettingValue"][];
+        };
+        /** SsnRevealResponse */
+        SsnRevealResponse: {
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Ssn */
+            ssn: string | null;
+        };
         /** StaffLoginRequest */
         StaffLoginRequest: {
             /** Email */
@@ -2090,6 +3817,49 @@ export interface components {
             title: string | null;
             /** Phone */
             phone: string | null;
+        };
+        /**
+         * StaleCheckResponse
+         * @description The counts one `mark_stale` run changed. Every count is zero on a
+         *     repeat run.
+         */
+        StaleCheckResponse: {
+            /**
+             * Ran At
+             * Format: date-time
+             */
+            ran_at: string;
+            /** Quotes Marked Stale */
+            quotes_marked_stale: number;
+            /** Versions Expired */
+            versions_expired: number;
+            /** Applications Marked Stale */
+            applications_marked_stale: number;
+            /** Application Ids */
+            application_ids: string[];
+        };
+        /**
+         * StaleItem
+         * @description One row of the "Going stale" list: the recommended quote or latest
+         *     sent version is older than 21 days.
+         */
+        StaleItem: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Days Old */
+            days_old: number;
+        };
+        /** StateMetros */
+        StateMetros: {
+            /** State */
+            state: string;
+            /** Metros */
+            metros: string[];
         };
         /**
          * StatusPatchRequest
@@ -2121,6 +3891,62 @@ export interface components {
          * @enum {string}
          */
         StrategyType: "PRIMARY" | "LTR" | "STR";
+        /** SubmitResponse */
+        SubmitResponse: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /**
+             * Draft Id
+             * Format: uuid
+             */
+            draft_id: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "intake";
+            /** Assigned Lo Name */
+            assigned_lo_name: string;
+            /** Pipeline Started */
+            pipeline_started: boolean;
+        };
+        /** SupportLoContact */
+        SupportLoContact: {
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone: string | null;
+        };
+        /** SupportRequestCreate */
+        SupportRequestCreate: {
+            topic: components["schemas"]["SupportTopic"];
+            /** Message */
+            message: string;
+            preferred_contact: components["schemas"]["PreferredContact"];
+            /** Phone */
+            phone?: string | null;
+        };
+        /** SupportRequestResponse */
+        SupportRequestResponse: {
+            /** Reference */
+            reference: string;
+            lo: components["schemas"]["SupportLoContact"];
+        };
+        /**
+         * SupportTopic
+         * @enum {string}
+         */
+        SupportTopic: "application" | "quote" | "documents" | "other";
+        /**
+         * TabName
+         * @enum {string}
+         */
+        TabName: "you" | "property" | "income" | "consent";
         /** TabStateResponse */
         TabStateResponse: {
             tab: components["schemas"]["ApplicationTab"];
@@ -2131,6 +3957,11 @@ export interface components {
             state: "ok" | "flagged" | "pending";
             /** Flag Count */
             flag_count: number;
+        };
+        /** TabStatus */
+        TabStatus: {
+            /** Complete */
+            complete: boolean;
         };
         /**
          * UserRole
@@ -2149,6 +3980,24 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** ConsentTextOut */
+        app__features__portal__apply__schemas__ConsentTextOut: {
+            /** Version */
+            version: string;
+            /** Text */
+            text: string;
+        };
+        /** ConsentTextOut */
+        app__features__portal__consents__schemas__ConsentTextOut: {
+            /** Version */
+            version: string;
+            /** Body */
+            body: string;
+            /** Authorization */
+            authorization: string;
+            /** Sha256 */
+            sha256: string;
         };
     };
     responses: never;
@@ -2282,6 +4131,119 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApplicationSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_applications_api_v1_applications_get: {
+        parameters: {
+            query?: {
+                /** @description Client name or email, partial, case-insensitive */
+                q?: string | null;
+                /** @description Manager/Admin only; ignored for an LO's own request */
+                lo_id?: string | null;
+                /** @description Comma list of status labels, plus the alias sent_or_later */
+                status?: string | null;
+                /** @description Comma list of primary, ltr, str */
+                strategy?: string | null;
+                amount_min?: number | string | null;
+                amount_max?: number | string | null;
+                state?: string | null;
+                has_property?: boolean | null;
+                created_from?: string | null;
+                created_to?: string | null;
+                sort?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_lo_options_api_v1_applications_los_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoOption"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dashboard_api_v1_dashboard_get: {
+        parameters: {
+            query?: {
+                lo_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3405,6 +5367,1311 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortalReportActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_activity_api_v1_applications__application_id__activity_get: {
+        parameters: {
+            query?: {
+                page?: number | null;
+                page_size?: number | null;
+            };
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ActivityEventOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_outbox_emails_api_v1_outbox_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                type?: ("otp" | "borrower_action" | "quote_sent" | "other") | null;
+                application_id?: string | null;
+                page?: number | null;
+                page_size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_OutboxEmailRow_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_outbox_email_api_v1_outbox__email_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                email_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutboxEmailDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_attachment_api_v1_outbox__email_id__attachments__key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                email_id: string;
+                key: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_integrations_api_v1_admin_integrations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_integration_api_v1_admin_integrations__adapter__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                adapter: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForceFailureRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdapterStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_page_api_v1_admin_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_section_api_v1_applications__application_id__sections__tab__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tab: components["schemas"]["SectionTab"];
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_field_api_v1_applications__application_id__fields__field_key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_key: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revert_field_api_v1_applications__application_id__fields__field_key__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_key: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reveal_ssn_api_v1_applications__application_id__parties__party_id__ssn_reveal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party_id: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SsnRevealResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_housing_api_v1_applications__application_id__housing_history_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HousingCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_housing_api_v1_applications__application_id__housing_history__row_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HousingPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_party_api_v1_applications__application_id__parties_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_party_api_v1_applications__application_id__parties__party_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party_id: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartyPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_liability_api_v1_applications__application_id__liabilities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LiabilityCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_liability_api_v1_applications__application_id__liabilities__row_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LiabilityPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_liabilities_api_v1_applications__application_id__credit_import_liabilities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_hard_pull_api_v1_applications__application_id__credit_hard_pull_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HardPullRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_property_api_v1_applications__application_id__property_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_document_api_v1_applications__application_id__documents__document_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                application_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_metros_api_v1_reference_metros_get: {
+        parameters: {
+            query: {
+                /** @description Comma-separated state codes, e.g. FL,NC */
+                states: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetrosResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_or_get_draft_api_v1_portal_applications_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyDraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_metros_api_v1_portal_applications_metros_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetrosOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_draft_api_v1_portal_applications__draft_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyDraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    autosave_tab_api_v1_portal_applications__draft_id__draft_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftPatchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_application_api_v1_portal_applications__draft_id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmitResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_document_api_v1_portal_applications__draft_id__documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * File
+                     * Format: binary
+                     * @description PDF, JPG or PNG, 10 MB at most.
+                     */
+                    file: string;
+                    /**
+                     * Doc Type
+                     * @enum {string}
+                     */
+                    doc_type: "pay_stub" | "w2" | "bank_statement";
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftDocumentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_document_api_v1_portal_applications__draft_id__documents__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+                document_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_support_api_v1_portal_support_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportRequestCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portal_home_api_v1_portal_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalHomeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_consent_api_v1_portal_consents__consent_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                consent_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalConsentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_consent_api_v1_portal_consents__consent_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                consent_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentAcceptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalConsentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_consent_api_v1_portal_consents__consent_id__decline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                consent_id: string;
+            };
+            cookie?: {
+                cq_borrower_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentDeclineRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalConsentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_stale_check_api_v1_admin_jobs_stale_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaleCheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_clients_api_v1_clients_get: {
+        parameters: {
+            query?: {
+                /** @description Name or email, partial, case-insensitive */
+                q?: string | null;
+                /** @description Manager/Admin only; ignored for an LO's own request */
+                lo_id?: string | null;
+                created_from?: string | null;
+                created_to?: string | null;
+                has_active?: boolean | null;
+                sort?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_client_api_v1_clients__client_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: {
+                cq_staff_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDetail"];
                 };
             };
             /** @description Validation Error */

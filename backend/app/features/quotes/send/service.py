@@ -9,15 +9,16 @@ from __future__ import annotations
 
 import secrets
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
 from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.auth import scope_applications
 from app.core.errors import ConflictError, NotFoundError, ValidationAppError
-from app.features.applications.locks import lock_application
+from app.features.applications.locking import lock_application, lock_application_packages
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.auth.models import User
@@ -57,15 +58,21 @@ _ACTOR_SYSTEM = "system"
 """`ActivityEvent.actor`: "a user id (as string) or the literal `system`"."""
 
 
-async def _newest_package(db: AsyncSession, application_id: uuid.UUID) -> QuotePackage | None:
-    return (
-        await db.execute(
-            select(QuotePackage)
-            .where(QuotePackage.application_id == application_id)
-            .order_by(QuotePackage.created_at.desc(), QuotePackage.id.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
+async def _newest_package(
+    db: AsyncSession, application_id: uuid.UUID, *, fresh: bool = False
+) -> QuotePackage | None:
+    """`fresh=True` re-reads the row (`populate_existing`): use it after
+    taking the package lock, so a concurrent writer's committed edit is
+    seen instead of this session's older copy."""
+    stmt = (
+        select(QuotePackage)
+        .where(QuotePackage.application_id == application_id)
+        .order_by(QuotePackage.created_at.desc(), QuotePackage.id.desc())
+        .limit(1)
+    )
+    if fresh:
+        stmt = stmt.execution_options(populate_existing=True)
+    return (await db.execute(stmt)).scalar_one_or_none()
 
 
 async def recommendation_text_for(
@@ -111,8 +118,9 @@ async def _apply_default_selection(
                     "quote_id": str(selection.recommended_quote_id),
                     "previous_quote_id": None,
                     "source": "default_draft",
+                    "message": "Recommended quote picked for the draft package",
                 },
-                at=datetime.now(UTC),
+                at=clock.now(),
             )
         )
 
@@ -225,8 +233,11 @@ async def get_or_create_package(db: AsyncSession, application: Application) -> Q
         package.sent_at is not None or not _is_untouched_empty_draft(package)
     ):
         return package
+    # Lock order (applications/locking.py): packages -> application; the
+    # untouched draft below is re-selected in place.
+    await lock_application_packages(db, application.id)
     application = await lock_application(db, application.id)
-    package = await _newest_package(db, application.id)
+    package = await _newest_package(db, application.id, fresh=True)
     if package is None:
         package = await new_default_package(db, application)
     elif package.sent_at is None and _is_untouched_empty_draft(package):
@@ -304,6 +315,10 @@ async def update_package(
     to the application and the recommended quote is among them, re-drafts
     the recommendation text when the recommendation changes, and keeps
     `applications.recommended_quote_id` in step (plan.md Decision 8)."""
+    # Lock order (applications/locking.py): packages -> application, the
+    # order the borrower's report actions (package -> version ->
+    # application) take too.
+    await lock_application_packages(db, application.id)
     application = await lock_application(db, application.id)
     quote_ids = list(body.quote_ids)
     if len(set(quote_ids)) != len(quote_ids):
@@ -383,8 +398,9 @@ async def update_package(
                     "quote_id": str(recommended),
                     "previous_quote_id": str(previous) if previous is not None else None,
                     "source": "send_tab",
+                    "message": "Recommended quote changed on the Send tab",
                 },
-                at=datetime.now(UTC),
+                at=clock.now(),
             )
         )
     await db.flush()
@@ -404,7 +420,7 @@ async def package_readiness(db: AsyncSession, package: QuotePackage) -> PackageR
 async def package_report(db: AsyncSession, package: QuotePackage) -> ReportViewModel:
     """The LO preview: exactly what `freeze_package_version` would snapshot
     if the package were sent today (AC2)."""
-    today = datetime.now(UTC)
+    today = clock.now()
     return await build_package_view_model(
         db,
         package,

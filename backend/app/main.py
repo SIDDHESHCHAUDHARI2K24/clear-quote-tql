@@ -16,6 +16,7 @@ from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.registry import register_routers
 from app.core.valkey import close_valkey
+from app.features.portal.apply.upload_guard import UploadBodyLimitMiddleware
 from app.features.quotes.report.schemas import report_view_model_openapi_components
 from app.features.system.router import router as system_router
 
@@ -52,6 +53,11 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(title="Clear Quote API", lifespan=_lifespan)
+
+    # CQ-032: bounds the draft-upload body before routing, auth or parsing.
+    # Added before CORS so CORS stays the outer layer and its 411/413 still
+    # carry the CORS headers the portal needs to read them.
+    app.add_middleware(UploadBodyLimitMiddleware)
 
     if settings.cors_origins:
         app.add_middleware(

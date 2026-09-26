@@ -138,6 +138,13 @@ class QuotePackageVersion(Base):
     viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     """Set on the first successful borrower load (CQ-022 AC2); later loads
     never overwrite it."""
+    expired_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    """CQ-030: stamped once by the stale job (`quotes/stale/service.
+    mark_stale`) with its run's `now` after `expires_at` has passed; null
+    while the version is live. Makes "expired" queryable; the report still
+    computes `expired` from `expires_at` at request time."""
     superseded: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
     """True once a newer version of the same package has been sent."""
     borrower_action: Mapped[dict | list | str | float | bool | None] = mapped_column(

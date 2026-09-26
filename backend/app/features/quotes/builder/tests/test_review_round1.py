@@ -300,11 +300,28 @@ def _capture_sql() -> Iterator[list[str]]:
         event.remove(Engine, "before_cursor_execute", _listener)
 
 
-def _locks_application(statements: list[str]) -> bool:
-    return any(
-        "FROM applications" in s and "FOR UPDATE" in s and "quotes" not in s.split("FROM")[0]
-        for s in statements
+def _first(statements: list[str], predicate: Callable[[str], bool]) -> int | None:
+    return next((i for i, s in enumerate(statements) if predicate(s)), None)
+
+
+def _application_lock(statements: list[str]) -> int | None:
+    """The one application lock (applications/locking.py)."""
+    return _first(
+        statements,
+        lambda s: (
+            "FROM applications" in s
+            and "FOR NO KEY UPDATE" in s
+            and "quotes" not in s.split("FROM")[0]
+        ),
     )
+
+
+def _quotes_lock(statements: list[str]) -> int | None:
+    return _first(statements, lambda s: "FOR NO KEY UPDATE OF quotes" in s)
+
+
+def _packages_lock(statements: list[str]) -> int | None:
+    return _first(statements, lambda s: "FROM quote_packages" in s and "FOR UPDATE" in s)
 
 
 async def test_every_builder_write_locks_the_application_row(
@@ -344,11 +361,108 @@ async def test_every_builder_write_locks_the_application_row(
         ),
         ("DELETE", f"/api/v1/quotes/{buydown['id']}", None),
     ]
+    # U2 (applications/locking.py): a write that UPDATEs/DELETEs existing
+    # quotes locks them first; one that edits the draft package locks it
+    # next; the application lock comes last.
+    touches_quotes = {"reprice", "autoquote", "PUT", "field-values", "DELETE"}
+    touches_packages = {"reprice", "autoquote", "recommend", "DELETE"}
     for method, url, body in calls:
         with _capture_sql() as statements:
             response = await client.request(method, url, json=body)
         assert response.status_code in (200, 204), (url, response.text)
-        assert _locks_application(statements), url
+        app_lock = _application_lock(statements)
+        assert app_lock is not None, url
+        tags = {method, *url.split("/")}
+        if tags & touches_quotes:
+            quotes_lock = _quotes_lock(statements)
+            assert quotes_lock is not None and quotes_lock < app_lock, url
+        if tags & touches_packages:
+            packages_lock = _packages_lock(statements)
+            assert packages_lock is not None and packages_lock < app_lock, url
+
+
+async def test_send_tab_writes_lock_packages_before_the_application(
+    client: AsyncClient, db_session: AsyncSession, make_staff_session: MakeStaff
+) -> None:
+    """U3 (PR #35 review minor d): the Send tab's first load (the
+    `get_or_create_package` slow path, which creates the draft) and its PUT
+    (`update_package`) lock the application's packages before the
+    application (applications/locking.py)."""
+    ids = await _seed(db_session, "marcus_hale")
+    await make_staff_session(role=UserRole.MANAGER)
+    application_id = ids["marcus_hale"]
+    url = f"/api/v1/applications/{application_id}/package"
+
+    with _capture_sql() as first_load:
+        response = await client.get(url)
+    assert response.status_code == 200, response.text
+    package = response.json()
+    with _capture_sql() as put:
+        response = await client.put(
+            url,
+            json={
+                "quote_ids": package["quote_ids"][:1],
+                "recommended_quote_id": package["quote_ids"][0],
+            },
+        )
+    assert response.status_code == 200, response.text
+
+    for statements in (first_load, put):
+        app_lock = _application_lock(statements)
+        packages_lock = _packages_lock(statements)
+        assert app_lock is not None, statements
+        assert packages_lock is not None and packages_lock < app_lock, statements
+
+
+async def test_scenario_put_marks_stale_through_the_shared_path_with_one_event(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_staff_session: MakeStaff,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """U3 (merge plan M4): `update_scenario` flags only that scenario's
+    quotes through CQ-030's `mark_application_quotes_stale`, and its one
+    `scenario.updated` event carries a `message` and the flagged ids."""
+    from app.features.quotes.builder import service as builder_service
+    from app.features.quotes.stale import service as stale_service
+
+    ids = await _seed(db_session, "marcus_hale")
+    await make_staff_session(role=UserRole.MANAGER)
+    application_id = ids["marcus_hale"]
+    group = (await _scenarios(client, application_id))["groups"][0]
+    calls: list[str] = []
+
+    async def _spy(db: AsyncSession, app_id: uuid.UUID, reason: str, **kw: Any) -> Any:
+        calls.append(reason)
+        return await stale_service.mark_application_quotes_stale(db, app_id, reason, **kw)
+
+    monkeypatch.setattr(builder_service, "mark_application_quotes_stale", _spy)
+
+    response = await client.put(
+        f"/api/v1/scenarios/{group['id']}", json=_put_body(group, lock_days=45)
+    )
+    assert response.status_code == 200, response.text
+
+    assert calls == ["scenario_updated"]
+    rows = await _quote_rows(db_session, application_id)
+    in_group = {uuid.UUID(q["id"]) for q in group["quotes"]}
+    assert in_group and all(rows[i][2] for i in in_group)
+    [event_row] = (
+        (
+            await db_session.execute(
+                select(ActivityEvent).where(
+                    ActivityEvent.application_id == application_id,
+                    ActivityEvent.type == "scenario.updated",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    payload = event_row.payload
+    assert isinstance(payload, dict)
+    assert payload["message"] == "Quotes marked stale: scenario inputs changed"
+    assert {uuid.UUID(i) for i in payload["quote_ids"]} == in_group
 
 
 # --- minor 5 ------------------------------------------------------------------

@@ -21,17 +21,22 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Literal
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.auth import scope_applications
 from app.core.enums import Occupancy, Strategy
 from app.core.errors import ConflictError, NotFoundError, ValidationAppError
-from app.features.applications.locks import lock_application
+from app.features.applications.locking import (
+    lock_application,
+    lock_application_packages,
+    lock_application_quotes,
+)
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.auth.models import User
@@ -65,6 +70,7 @@ from app.features.quotes.builder.schemas import (
     ScenarioUpdateRequest,
 )
 from app.features.quotes.send.models import QuotePackage
+from app.features.quotes.stale.service import clear_stale, mark_application_quotes_stale
 from app.integrations.common.errors import PricingValidationError
 from app.integrations.pricing.mock import ALWAYS_REQUIRED, CONDITIONALLY_REQUIRED_INVESTMENT
 from app.integrations.pricing.schemas import PricedProductDTO
@@ -457,7 +463,7 @@ def _event(application_id: uuid.UUID, user: User, type_: str, payload: dict) -> 
         actor=str(user.id),
         type=type_,
         payload=payload,
-        at=datetime.now(UTC),
+        at=clock.now(),
     )
 
 
@@ -475,6 +481,9 @@ async def update_scenario(
     `no_eligible_products`, M2) all leave the scenario and its quotes as
     they were."""
     scenario = await get_scenario(db, scenario_id)
+    # Lock order (applications/locking.py): quotes -> application; the
+    # stale marking below UPDATEs this scenario's quotes.
+    await lock_application_quotes(db, scenario.application_id)
     application = await lock_application(db, scenario.application_id)
     await ensure_priceable(db, application.id, request.down_payment_pct)
     is_primary = application_strategy(application) == "PRIMARY"
@@ -505,13 +514,31 @@ async def update_scenario(
     await _price_or_rollback(db, scenario)
 
     if _stored_inputs(scenario, is_primary) != before:
-        await db.execute(update(Quote).where(Quote.scenario_id == scenario.id).values(stale=True))
+        # U3 (merge plan M4): the one stale path, scoped to this scenario's
+        # quotes; `scenario.updated` is this marking's one activity event.
+        scenario_quote_ids = list(
+            (await db.execute(select(Quote.id).where(Quote.scenario_id == scenario.id)))
+            .scalars()
+            .all()
+        )
+        marked = await mark_application_quotes_stale(
+            db, application.id, "scenario_updated", quote_ids=scenario_quote_ids
+        )
         db.add(
             _event(
                 application.id,
                 user,
                 "scenario.updated",
-                {"scenario_id": str(scenario.id), "inputs": request.model_dump(mode="json")},
+                {
+                    "message": (
+                        "Quotes marked stale: scenario inputs changed"
+                        if marked
+                        else "Scenario inputs changed"
+                    ),
+                    "scenario_id": str(scenario.id),
+                    "inputs": request.model_dump(mode="json"),
+                    "quote_ids": [str(i) for i in marked],
+                },
             )
         )
     await db.commit()
@@ -616,7 +643,7 @@ class _RepriceOutcome:
     recommendation_cleared: bool
 
 
-async def _reprice_scenario(db: AsyncSession, scenario: Scenario) -> _RepriceOutcome:
+async def _reprice_scenario(db: AsyncSession, scenario: Scenario, now: datetime) -> _RepriceOutcome:
     """Refresh inputs, price, then replace the Par/Buydown picks and
     re-price every other quote in the scenario. Pricing runs before any
     write to a quote, and a pricing failure (missing field, empty grid)
@@ -628,6 +655,7 @@ async def _reprice_scenario(db: AsyncSession, scenario: Scenario) -> _RepriceOut
     quote package that names one keep pointing at the repriced row. A
     leftover auto quote is deleted; its id (and whether it was the
     recommendation) is reported so the caller can log it (minor 3).
+    `now` (`core/clock.now()`, M5) stamps every refreshed `priced_at`.
     Flushes only; the caller commits."""
     await rebuild_scenario_inputs(db, scenario)
     products, par, buydown = await _price_or_rollback(db, scenario)
@@ -645,7 +673,6 @@ async def _reprice_scenario(db: AsyncSession, scenario: Scenario) -> _RepriceOut
         .scalars()
         .all()
     )
-    now = datetime.now(UTC)
     old_par = next((q for q in existing if q.label == "Par"), None)
     old_buydown = next((q for q in existing if q.label == "Buydown"), None)
 
@@ -695,6 +722,28 @@ async def _reprice_scenario(db: AsyncSession, scenario: Scenario) -> _RepriceOut
     )
 
 
+async def _application_has_stale_quotes(db: AsyncSession, application_id: uuid.UUID) -> bool:
+    """Whether *any* quote on the application is still stale -- including
+    ones the just-repriced scenario itself left stale (a no-longer-offered
+    quote, `_reprice_scenario`'s "not-offered quote" branch). Review minor
+    (U3 merge): a scenario-scoped check missed that case, so a reprice could
+    still move the application to Priced while one of its own quotes stayed
+    stale."""
+    stmt = (
+        select(Quote.id)
+        .join(Scenario, Quote.scenario_id == Scenario.id)
+        .where(Scenario.application_id == application_id, Quote.stale.is_(True))
+        .limit(1)
+    )
+    return (await db.execute(stmt)).scalar_one_or_none() is not None
+
+
+def _fresh_ids(outcome: _RepriceOutcome) -> list[uuid.UUID]:
+    """The quotes a re-price wrote or refreshed (Par/Buydown in place, plus
+    every other quote it re-priced) -- never one it left stale."""
+    return [q.id for q in (outcome.par, outcome.buydown, *outcome.others) if q is not None]
+
+
 async def _delete_quote_row(db: AsyncSession, quote: Quote) -> bool:
     """Deletes the quote; returns whether the application's recommendation
     was *cleared* by it -- `True` only when the deleted quote was the
@@ -729,16 +778,35 @@ async def _delete_quote_row(db: AsyncSession, quote: Quote) -> bool:
     return cleared
 
 
+async def _lock_for_quote_writes(db: AsyncSession, application_id: uuid.UUID) -> Application:
+    """The locks of a write that UPDATEs or DELETEs the application's
+    existing quotes and may edit its unsent draft package (reprice, Save &
+    AutoQuote, quote delete), in the one lock order (applications/locking.
+    py): quotes -> packages -> application."""
+    await lock_application_quotes(db, application_id)
+    await lock_application_packages(db, application_id)
+    return await lock_application(db, application_id)
+
+
 async def autoquote_replacing(
     db: AsyncSession, scenario_id: uuid.UUID, user: User
 ) -> tuple[Quote, Quote | None]:
     """`POST /scenarios/{id}/autoquote` (Save & AutoQuote): replaces the
     scenario's Par/Buydown with a fresh pick (spec AC3)."""
     scenario = await get_scenario(db, scenario_id)
-    application = await lock_application(db, scenario.application_id)
+    application = await _lock_for_quote_writes(db, scenario.application_id)
     await ensure_priceable(db, application.id, scenario_inputs(scenario).down_payment_pct)
-    outcome = await _reprice_scenario(db, scenario)
+    outcome = await _reprice_scenario(db, scenario, clock.now())
     par_quote, buydown_quote = outcome.par, outcome.buydown
+    # U3 (M4, CQ-030 AC5): the fresh picks move a Stale application back to
+    # Priced -- but only when no quote on the application is still stale
+    # after this reprice (U3 code review, then a follow-up review minor):
+    # re-pricing scenario A must not clear the status while B's (maybe
+    # recommended) quotes are still out of date, nor while A's own
+    # not-offered quote (`_reprice_scenario`) is still stale. The quotes ->
+    # packages -> application locks are already held.
+    if not await _application_has_stale_quotes(db, application.id):
+        await clear_stale(db, application.id, fresh_quote_ids=_fresh_ids(outcome))
     db.add(
         _event(
             application.id,
@@ -765,20 +833,18 @@ async def reprice_application(
     """`POST /applications/{id}/reprice`: re-runs AutoQuote for every
     scenario (the stale banner's "Re-price"), clearing `stale` and bumping
     `priced_at` on every quote (AC8)."""
-    await lock_application(db, application.id)
+    await _lock_for_quote_writes(db, application.id)
     await ensure_priceable(db, application.id)
     groups = await _scenarios_with_quotes(db, application.id)
     quote_ids: list[uuid.UUID] = []
     deleted_ids: list[uuid.UUID] = []
     recommendation_cleared = False
+    priced_at = clock.now()
     for scenario, _quotes in groups:
-        outcome = await _reprice_scenario(db, scenario)
-        quote_ids.extend(
-            q.id for q in (outcome.par, outcome.buydown, *outcome.others) if q is not None
-        )
+        outcome = await _reprice_scenario(db, scenario, priced_at)
+        quote_ids.extend(_fresh_ids(outcome))
         deleted_ids.extend(outcome.deleted_ids)
         recommendation_cleared |= outcome.recommendation_cleared
-    priced_at = datetime.now(UTC)
     db.add(
         _event(
             application.id,
@@ -792,6 +858,15 @@ async def reprice_application(
             },
         )
     )
+    # U3 (M4, CQ-030 AC5): Stale -> Priced with one
+    # `application.repriced_from_stale` event, before the commit and under
+    # the quotes -> packages -> application locks taken above -- but only
+    # when no quote on the application is still stale after repricing every
+    # scenario (review minor, same guard as `autoquote_replacing`): a
+    # not-offered quote (`_reprice_scenario`) left stale must keep the
+    # application Stale even though every other quote was refreshed.
+    if not await _application_has_stale_quotes(db, application.id):
+        await clear_stale(db, application.id, fresh_quote_ids=quote_ids, now=priced_at)
     await db.commit()
     return RepriceResponse(application_id=application.id, quote_ids=quote_ids, priced_at=priced_at)
 
@@ -810,6 +885,9 @@ async def recommend_quote(db: AsyncSession, quote: Quote, user: User) -> Applica
     """`POST /quotes/{id}/recommend`: one recommended quote per application
     (a single column, so setting it un-stars any other)."""
     scenario = await get_scenario(db, quote.scenario_id)
+    # Lock order (applications/locking.py): the unsent draft follows the
+    # star, so its package is locked before the application.
+    await lock_application_packages(db, scenario.application_id)
     application = await lock_application(db, scenario.application_id)
     quote = await _refetch_after_lock(db, quote.id)
     previous = application.recommended_quote_id
@@ -828,6 +906,8 @@ async def recommend_quote(db: AsyncSession, quote: Quote, user: User) -> Applica
                 "previous_quote_id": str(previous) if previous is not None else None,
                 "rate": str(quote.rate),
                 "label": quote.label,
+                # Review m5 (PR #34): the CQ-029 timeline shows `message`.
+                "message": f"Recommended {quote.label} at {quote.rate}%",
             },
         )
     )
@@ -842,7 +922,7 @@ async def delete_quote(db: AsyncSession, quote: Quote, user: User) -> None:
     unsent draft never blocks the delete (nit, post-merge review; code
     review #2): the quote just leaves the draft (`drop_quote_from_drafts`)."""
     scenario = await get_scenario(db, quote.scenario_id)
-    application = await lock_application(db, scenario.application_id)
+    application = await _lock_for_quote_writes(db, scenario.application_id)
     quote = await _refetch_after_lock(db, quote.id)
     if await _quote_in_package(db, quote.id):
         raise ConflictError("This quote is part of a quote package and can't be deleted.")

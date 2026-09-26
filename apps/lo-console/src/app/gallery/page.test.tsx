@@ -47,4 +47,20 @@ describe("Gallery page", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open overlay" })).toBeInTheDocument();
   });
+
+  it("renders the P5/P6 foundation primitives", () => {
+    render(<GalleryPage />);
+
+    expect(screen.getByRole("navigation", { name: "Pagination (middle page)" })).toBeVisible();
+    expect(screen.getByText("Showing 26–50 of 212")).toBeInTheDocument();
+    expect(screen.getByText("No results")).toBeInTheDocument();
+    expect(screen.getByLabelText("Loan officer (filter)")).toHaveValue("");
+    expect(screen.getByLabelText("Loan officer (error)")).toHaveAccessibleDescription(
+      "Choose a loan officer",
+    );
+    expect(screen.getByRole("button", { name: /Status \(filter\)/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open drawer" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No applications match" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show success toast" })).toBeInTheDocument();
+  });
 });

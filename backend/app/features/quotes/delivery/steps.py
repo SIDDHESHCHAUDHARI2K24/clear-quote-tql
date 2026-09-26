@@ -25,16 +25,16 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import storage
+from app.core import clock, storage
 from app.core.config import get_settings
 from app.core.enums import ApplicationStatus
 from app.core.errors import AppError
+from app.features.applications.locking import lock_application
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.clients.models import Client
@@ -131,7 +131,7 @@ async def freeze(db: AsyncSession, package_id: uuid.UUID, workflow_id: str) -> u
         raise PackageNotReadyError("; ".join(b.message for b in blockers))
 
     await _set_step(db, package.id, workflow_id, SendStatus.RENDERING)
-    version = await freeze_package_version(db, package=package, sent_at=datetime.now(UTC))
+    version = await freeze_package_version(db, package=package, sent_at=clock.now())
     version.send_workflow_id = workflow_id
     # M3 (plan.md Decision 2): the package's current content *is* the newest
     # sent version from here on; a later PUT reopens it as a draft. The
@@ -227,9 +227,10 @@ async def email_borrower(db: AsyncSession, version_id: uuid.UUID, workflow_id: s
     await db.commit()
 
     assert version.letter_key is not None
-    pdf = await storage.get_object(version.letter_key)
-    if pdf is None:
-        raise RuntimeError(f"Letter PDF missing in storage: {version.letter_key}")
+    try:
+        pdf = (await storage.get_object(version.letter_key)).body
+    except storage.ObjectNotFoundError as exc:
+        raise RuntimeError(f"Letter PDF missing in storage: {version.letter_key}") from exc
     message = render_borrower_email(_snapshot(version), report_url=report_url(version.report_token))
     try:
         await deliver_outbox_email(
@@ -247,16 +248,20 @@ async def record(db: AsyncSession, version_id: uuid.UUID, workflow_id: str) -> N
     """Step 5. Status Sent + one activity event + one CRM event, in one
     transaction; commits."""
     version = await _version(db, version_id)
-    package = await db.get(QuotePackage, version.package_id)
-    assert package is not None
-    application = (
+    # Lock order (applications/locking.py): package -> application. The
+    # final `_set_step` UPDATEs the package, so it is locked first, the
+    # same order as the Send tab and Quote Builder writers; the application
+    # lock is the one `FOR NO KEY UPDATE` lock, so a concurrent writer's
+    # activity/CRM inserts are not blocked.
+    package = (
         await db.execute(
-            select(Application)
-            .where(Application.id == package.application_id)
+            select(QuotePackage)
+            .where(QuotePackage.id == version.package_id)
             .with_for_update()
             .execution_options(populate_existing=True)
         )
     ).scalar_one()
+    application = await lock_application(db, package.application_id)
     already = (
         await db.execute(
             select(ActivityEvent.id).where(
@@ -288,7 +293,7 @@ async def record(db: AsyncSession, version_id: uuid.UUID, workflow_id: str) -> N
                 actor=_ACTOR_SYSTEM,
                 type=SENT_EVENT_TYPE,
                 payload=payload,
-                at=datetime.now(UTC),
+                at=clock.now(),
             )
         )
         client_row = await db.get(Client, application.client_id)

@@ -7,7 +7,7 @@ shape only.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,6 +42,15 @@ class Flag(Base):
     __tablename__ = "flags"
     __table_args__ = (
         Index("ix_flags_application_id_resolved_at", "application_id", "resolved_at"),
+        # CQ-028a review M1: at most one open flag per (application, field, rule).
+        Index(
+            "uq_flags_open_application_field_rule",
+            "application_id",
+            "field_key",
+            "rule",
+            unique=True,
+            postgresql_where=text("resolved_at IS NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -53,6 +62,9 @@ class Flag(Base):
     rule: Mapped[str] = mapped_column(String)
     """Rule id, e.g. `housing_history_24mo` or `ob_required_field`."""
     severity: Mapped[FlagSeverity] = mapped_column(pg_enum(FlagSeverity, "flag_severity"))
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """P5/P6 foundation (E8): human-readable text shown next to the field,
+    set by `verification.service.write_flag` (rule text from `rules.py`)."""
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

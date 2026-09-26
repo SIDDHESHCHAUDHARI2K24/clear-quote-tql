@@ -6,10 +6,13 @@ plan.md Decision 8 -- so this file only proves the positive case, matching
 what spec.md's AC3 actually exercises).
 """
 
+import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from typing import Any
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,8 +21,10 @@ from app.core.enums import Occupancy
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.pricing.engine.types import ScenarioInputs, StrategyType
+from app.features.pricing.enrichment import service as enrichment_service
 from app.features.pricing.scenarios.models import Scenario
 from app.features.quotes.builder.models import Quote
+from app.features.quotes.stale import service as stale_service
 from app.integrations.tax.models import ProviderTaxRate
 from conftest import StaffSession
 
@@ -215,3 +220,57 @@ async def test_override_with_no_quotes_yet_still_logs_the_change_with_no_quote_i
     assert isinstance(payload, dict)
     assert payload["quote_ids"] == []
     assert payload["new_value"] == "0.0250"
+    # U3 code review: nothing was flagged, so the timeline does not say so.
+    assert payload["message"] == "Property tax annual rate overridden"
+
+
+async def test_override_uses_the_shared_stale_path_with_one_messaged_event(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """U3 (merge plan M4): the override flags quotes through CQ-030's
+    `mark_application_quotes_stale` (the one stale path) and the call site
+    writes exactly one `quotes.marked_stale` event with a human-readable
+    `message` (the CQ-029 timeline shows `payload.message`)."""
+    await _seed_tax(db_session)
+    staff = await make_staff_session()
+    application = await make_application(occupancy=Occupancy.PRIMARY, lo=staff.user)
+    scenario = await _make_priced_scenario(db_session, application)
+    calls: list[uuid.UUID] = []
+
+    async def _spy(db: AsyncSession, application_id: uuid.UUID, *a: Any, **kw: Any) -> Any:
+        calls.append(application_id)
+        return await stale_service.mark_application_quotes_stale(db, application_id, *a, **kw)
+
+    monkeypatch.setattr(enrichment_service, "mark_application_quotes_stale", _spy)
+
+    response = await client.patch(
+        f"/api/v1/applications/{application.id}/field-values/property_tax_annual_rate",
+        json={"value": "0.0250"},
+    )
+    assert response.status_code == 200, response.text
+
+    assert calls == [application.id]
+    quote = (
+        await db_session.execute(select(Quote).where(Quote.scenario_id == scenario.id))
+    ).scalar_one()
+    await db_session.refresh(quote)
+    assert quote.stale is True
+    [event] = (
+        (
+            await db_session.execute(
+                select(ActivityEvent).where(
+                    ActivityEvent.application_id == application.id,
+                    ActivityEvent.type == "quotes.marked_stale",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert isinstance(event.payload, dict)
+    assert event.payload["message"] == "Quotes marked stale: property tax annual rate overridden"
+    assert event.payload["quote_ids"] == [str(quote.id)]

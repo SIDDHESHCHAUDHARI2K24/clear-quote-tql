@@ -281,3 +281,59 @@ def evaluate_rules(context: VerificationContext) -> list[RuleResult]:
     for rule in _RULES:
         results.extend(rule(context))
     return results
+
+
+# --- Flag messages (P5/P6 foundation, phase-p5-p6-plan.md E8) -------------
+#
+# Static, human-readable text per flag rule id, shown next to the field in
+# the verification tabs (CQ-028) and in lists (CQ-025/027). `write_flag`
+# stores `flag_message(rule, field_key)` when its caller passes no message
+# of its own; `run_and_persist` passes each `RuleResult.message` instead
+# (the dynamic text, e.g. "Only 14 months ..."). The foundation migration
+# backfills existing `flags` rows with a frozen copy of this table.
+#
+# `ob_required_field` and `dscr_bucket_unstable` are raised outside this
+# module (CQ-013's `pricing/enrichment/service.py` and `pricing/scenarios/
+# dscr_loop.py`) but share the same `flags` table, so their text lives here
+# too.
+
+OB_REQUIRED_FIELD_RULE = "ob_required_field"
+
+RULE_MESSAGES: dict[str, str] = {
+    "housing_history_24mo": (
+        "Less than 24 months of housing history on file; add a prior address."
+    ),
+    "ssn_format": "SSN must be exactly 9 digits.",
+    "dob_format": "Date of birth is missing or not in the past.",
+    "assets_vs_ctc_reserves": "Verified assets are below cash to close plus required reserves.",
+    "dti_primary": "DTI exceeds the 45% guideline.",
+    "dscr_bucket_unstable": (
+        "DSCR bucket changed between pricing passes; priced at the lower DSCR."
+    ),
+}
+
+# `flags.field_key` -> the label the LO sees in "Cannot price: missing
+# {label}" (persona 7, Aisha Coleman: "Cannot price: missing Occupancy").
+_OB_FIELD_LABELS: dict[str, str] = {
+    "occupancy_type": "Occupancy",
+    "RepresentativeFICO": "Representative FICO",
+}
+
+_CAMEL_BOUNDARY = re.compile(r"(?<=[a-z])(?=[A-Z])")
+
+
+def field_label(field_key: str) -> str:
+    """A readable label for a `flags.field_key` (`occupancy_type` ->
+    "Occupancy", `PurchasePrice` -> "Purchase Price", `LTV` -> "LTV")."""
+    if field_key in _OB_FIELD_LABELS:
+        return _OB_FIELD_LABELS[field_key]
+    if "_" in field_key:
+        return field_key.replace("_", " ").capitalize()
+    return _CAMEL_BOUNDARY.sub(" ", field_key)
+
+
+def flag_message(rule: str, field_key: str) -> str:
+    """The default human-readable message for a `flags` row."""
+    if rule == OB_REQUIRED_FIELD_RULE:
+        return f"Cannot price: missing {field_label(field_key)}"
+    return RULE_MESSAGES.get(rule, f"Check {field_label(field_key)}.")

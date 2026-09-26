@@ -18,6 +18,8 @@ import app.features.applications.timeline.models  # noqa: F401
 import app.features.applications.verification.models  # noqa: F401
 import app.features.auth.models  # noqa: F401
 import app.features.clients.models  # noqa: F401
+import app.features.portal.apply.models  # noqa: F401
+import app.features.portal.support.models  # noqa: F401
 import app.features.pricing.scenarios.models  # noqa: F401
 import app.features.quotes.builder.models  # noqa: F401
 import app.features.settings.models  # noqa: F401
@@ -30,6 +32,7 @@ import app.integrations.str.models  # noqa: F401
 import app.integrations.tax.models  # noqa: F401
 from app.core.db import Base
 from app.core.enums import (
+    ApplicationSource,
     ApplicationStatus,
     ApplicationTab,
     FieldSource,
@@ -42,7 +45,7 @@ from app.core.enums import (
 from app.features.applications.housing.models import HousingStatus
 from app.features.applications.models import BusinessVesting, MaritalStatus, PartyRole
 from app.features.applications.property.models import PropertyAddressStatus, PropertyType
-from app.features.borrower.consent.models import ConsentType
+from app.features.borrower.consent.models import ConsentStatus, ConsentType
 from app.features.notifications.outbox.models import EmailStatus
 from app.features.quotes.send.models import BorrowerAction
 from app.integrations.credit.models import CreditPullType
@@ -71,6 +74,8 @@ EXPECTED_TABLES = {
     "quote_packages",
     "quote_package_versions",
     "consents",
+    "support_requests",
+    "application_drafts",
     "outbox_emails",
     "settings",
     "provider_los_records",
@@ -140,7 +145,9 @@ ENUM_VALUES = {
     PropertyAddressStatus: {"specific_address", "tbd"},
     PropertyType: {"single_family", "two_to_four_unit", "condo", "townhome"},
     BorrowerAction: {"option_selected", "inquiry"},
-    ConsentType: {"hard_pull"},
+    ConsentType: {"hard_pull", "application"},  # CQ-032: apply-wizard consent
+    ConsentStatus: {"pending", "accepted", "declined", "expired"},
+    ApplicationSource: {"los", "portal"},
     EmailStatus: {"queued", "sent", "failed"},
     RateSheetProgram: {"conventional", "dscr"},
     DealGrade: {"great_buy", "good_buy"},

@@ -18,6 +18,7 @@ concurrent operations on one asyncpg connection fail.
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import AsyncIterator, Callable, Iterator, Sequence
 from contextlib import asynccontextmanager
@@ -34,6 +35,7 @@ from temporalio.worker import Worker
 
 from app.features.notifications.email import service as email_service
 from app.features.notifications.email.service import EmailAttachment
+from app.features.quotes.delivery import router as delivery_router
 from app.features.quotes.delivery import service as delivery_service
 from app.workflows import db as workflow_db
 from app.workflows.client import get_temporal_client
@@ -46,13 +48,31 @@ async def bind_activities_to_test_session(
     monkeypatch: pytest.MonkeyPatch, db_session: AsyncSession
 ) -> None:
     conn = db_session.bind
+    # U3: `start_send` starts the workflow and *then* commits its request
+    # session. In production the activity has its own connection and waits
+    # on the package lock; here it shares the test connection, so a Freeze
+    # that began inside that window nested its savepoint in the request's
+    # and the request's commit released it ("savepoint ... does not exist",
+    # a timing flake of `test_letter_pdf_contents`). One lock serializes the
+    # request and every activity session on the shared connection.
+    shared = asyncio.Lock()
 
-    def _factory() -> AsyncSession:
-        return AsyncSession(
-            bind=conn, join_transaction_mode="create_savepoint", expire_on_commit=False
-        )
+    @asynccontextmanager
+    async def _factory() -> AsyncIterator[AsyncSession]:
+        async with shared:
+            async with AsyncSession(
+                bind=conn, join_transaction_mode="create_savepoint", expire_on_commit=False
+            ) as session:
+                yield session
+
+    real_start_send = delivery_router.start_send
+
+    async def _serialized_start_send(*args: Any, **kwargs: Any) -> Any:
+        async with shared:
+            return await real_start_send(*args, **kwargs)
 
     monkeypatch.setattr(workflow_db, "session_factory", _factory)
+    monkeypatch.setattr(delivery_router, "start_send", _serialized_start_send)
 
 
 @pytest_asyncio.fixture(scope="session")

@@ -21,7 +21,10 @@ class ActivityEvent(Base):
         UUID(as_uuid=True), ForeignKey("applications.id", ondelete="CASCADE"), index=True
     )
     actor: Mapped[str] = mapped_column(String)
-    """A user id (as string) or the literal `"system"`."""
+    """A user id (as string), the literal `"system"`, or the literal
+    `"borrower"` (`portal/apply/service.py`'s `application.submitted` --
+    `timeline/service.py`'s `_resolve_actor` treats it as the borrower,
+    code review round 2)."""
     type: Mapped[str] = mapped_column(String)
     """e.g. `stage.completed`, `email.sent`, `flag.raised`."""
     payload: Mapped[dict | list | str | float | bool | None] = mapped_column(JSONB)

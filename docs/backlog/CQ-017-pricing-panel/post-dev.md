@@ -181,3 +181,13 @@ The real seeded `provider_tax_rates.annual_rate_pct` values (e.g. Hillsborough F
 - The two axe findings excluded from `pricing-panel.spec.ts`'s AC8 assertion (`StatusPill` colour contrast, `Card`'s h1→h3 heading jump) are real, pre-existing, cross-cutting `packages/ui`/workspace-shell issues — worth a dedicated a11y pass across the whole console, not scoped to this item.
 - The seed-data tax-rate-magnitude note above (not a CQ-017 defect, but worth CQ-010's owner knowing about).
 - CQ-018 should double check `_current_quote`'s Par-label/earliest-quote fallback once `recommended_quote_id` is actually being set — the code already prefers it, but this item couldn't exercise that path against real seed data (no seeded application has one yet).
+
+## U3 (P5/P6 merge): stale-path change (appended)
+
+Merge plan decision M4 (`docs/backlog/phase-p5-p6-main-merge-plan.md`, unit U3; details in `docs/backlog/phase-p5-p6-stale-clock.md`):
+
+- The private `_mark_application_quotes_stale` in `pricing/enrichment/service.py` was removed. Overrides and reverts now flag quotes through CQ-030's `quotes.stale.service.mark_application_quotes_stale`, the one stale path. That helper now returns the ids it changed, and still uses one conditional `UPDATE … WHERE stale = false RETURNING id`.
+- The call site (`_mark_quotes_stale_after_field_change`) still writes exactly one `quotes.marked_stale` event per override or revert. As before, it writes the event even when no quote changed. The payload keeps `field_key`, `action`, `old_value`, `new_value` and `quote_ids`, and adds `message`, for example "Quotes marked stale: property tax annual rate overridden", which the CQ-029 timeline shows.
+- `overridden_at` and the event `at` read `core/clock.now()` (M5).
+- The lock order is unchanged: quotes → application (U2).
+- Evidence: `pricing/enrichment/tests/test_stale_marking.py::test_override_uses_the_shared_stale_path_with_one_messaged_event`. It spies on the shared helper, checks for exactly one event with the message and quote ids, and the other stale-marking tests there still pass.

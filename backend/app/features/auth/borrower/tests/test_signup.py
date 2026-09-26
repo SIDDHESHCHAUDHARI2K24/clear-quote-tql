@@ -16,8 +16,9 @@ from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import UserRole
+from app.core.enums import ApplicationStatus, UserRole
 from app.core.security import hash_password
+from app.features.applications.models import Application
 from app.features.auth.models import BorrowerAccount, User
 from app.features.clients.models import Client
 from app.features.notifications.email import service as email_service
@@ -96,10 +97,15 @@ async def test_signup_unknown_email_creates_client_for_least_loaded_lo(
 ) -> None:
     busy_lo = await _make_lo(db_session)
     quiet_lo = await _make_lo(db_session)
-    # `busy_lo` has two clients already, `quiet_lo` has none — the new
-    # client must go to `quiet_lo`.
-    await _make_client(db_session, lo=busy_lo, email="busy1@clearquote.test")
-    await _make_client(db_session, lo=busy_lo, email="busy2@clearquote.test")
+    # `busy_lo` has two clients with active applications already,
+    # `quiet_lo` has none — the new client must go to `quiet_lo` (P5/P6
+    # E15: load = active applications, not clients).
+    for email in ("busy1@clearquote.test", "busy2@clearquote.test"):
+        busy_client = await _make_client(db_session, lo=busy_lo, email=email)
+        db_session.add(
+            Application(client_id=busy_client.id, lo_id=busy_lo.id, status=ApplicationStatus.PRICED)
+        )
+    await db_session.flush()
 
     signup_response = await client.post(
         "/api/v1/auth/borrower/signup",

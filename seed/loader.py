@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -35,6 +35,7 @@ import yaml
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.config import get_settings
 from app.core.enums import (
     ApplicationStatus,
@@ -44,6 +45,7 @@ from app.core.enums import (
 )
 from app.core.errors import AppError
 from app.core.security import hash_password
+from app.features.applications.assignment import least_loaded_lo_id
 from app.features.applications.models import Application, BusinessVesting
 from app.features.applications.property.models import Property, PropertyAddressStatus, PropertyType
 from app.features.applications.service import import_from_los
@@ -202,7 +204,7 @@ async def seed_borrower_accounts(
         return result
 
     password_hash = hash_password(password)
-    now = datetime.now(UTC)
+    now = clock.now()
     for client_id in client_ids:
         existing = (
             await db.execute(select(BorrowerAccount).where(BorrowerAccount.client_id == client_id))
@@ -225,6 +227,65 @@ async def seed_borrower_accounts(
 
     await db.commit()
     return result
+
+
+# --- Borrower with no application (P5/P6 foundation, E17) ------------------
+
+NO_APPLICATION_BORROWER_EMAIL = "noapp.borrower@clearquote-demo.test"
+NO_APPLICATION_BORROWER_NAME = "Nadia Noapp"
+
+
+class NoLoanOfficerError(RuntimeError):
+    """Raised when `least_loaded_lo_id` finds no LO to assign the
+    no-application borrower's client to -- review round 1: an `assert` is
+    stripped under `python -O`, so a missing precondition must raise
+    explicitly instead."""
+
+
+async def seed_no_application_borrower(db: AsyncSession) -> uuid.UUID | None:
+    """One signed-up borrower (client + verified borrower account) who has
+    never applied -- CQ-031 AC4 (home empty state) and CQ-034 AC5 (support
+    form with "No application yet") sign in as this account.
+
+    Like `seed_borrower_accounts`, only runs when `SEED_BORROWER_PASSWORD`
+    is set (returns `None` otherwise). The client goes to the least-loaded
+    LO (`applications.assignment.least_loaded_lo_id`, E15), the same rule a
+    real sign-up uses. Idempotent: an existing account with this email is
+    left untouched and its id returned. Returns the borrower account id.
+    """
+    password = get_settings().seed_borrower_password
+    if not password:
+        print(
+            "seed: SEED_BORROWER_PASSWORD is not set -- skipping the "
+            f"no-application borrower ({NO_APPLICATION_BORROWER_EMAIL})."
+        )
+        return None
+
+    email = normalize_email(NO_APPLICATION_BORROWER_EMAIL)
+    existing = (
+        await db.execute(select(BorrowerAccount).where(BorrowerAccount.email == email))
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing.id
+
+    lo_id = await least_loaded_lo_id(db)
+    if lo_id is None:
+        raise NoLoanOfficerError(
+            "seed_no_application_borrower: least_loaded_lo_id found no LO -- "
+            "seed_users must run first."
+        )
+    client = Client(full_name=NO_APPLICATION_BORROWER_NAME, email=email, assigned_lo_id=lo_id)
+    db.add(client)
+    await db.flush()
+    account = BorrowerAccount(
+        client_id=client.id,
+        email=email,
+        password_hash=hash_password(password),
+        email_verified_at=clock.now(),
+    )
+    db.add(account)
+    await db.commit()
+    return account.id
 
 
 # --- Providers -------------------------------------------------------------
@@ -353,7 +414,7 @@ async def _add_activity_event(
             actor="system",
             type=event_type,
             payload=payload,
-            at=datetime.now(UTC),
+            at=clock.now(),
         )
     )
     await db.flush()
@@ -554,7 +615,7 @@ async def apply_send_fixture(
     real pipeline in Phase B, or a test's own fixture) -- this function only
     authors status/timestamps, never a money figure.
     """
-    now = datetime.now(UTC)
+    now = clock.now()
     sent_at = now - timedelta(days=sent_days_ago)
     viewed_at = now - timedelta(days=viewed_days_ago) if viewed_days_ago is not None else None
 

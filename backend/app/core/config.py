@@ -48,7 +48,9 @@ class Settings(BaseSettings):
 
     # CQ-020: the borrower portal's public origin; the send workflow builds
     # the emailed report link `{portal_base_url}/report/{token}` from it (H2:
-    # no magic link). `scripts/worktree-env.sh` writes each slot's port.
+    # no magic link). CQ-028a also links the hard-pull consent request to
+    # `{portal_base_url}/tasks/credit-check/{id}`. `scripts/worktree-env.sh`
+    # writes each slot's port.
     portal_base_url: str = "http://localhost:3020"
 
     cors_origins: Annotated[list[str], NoDecode] = []
@@ -84,6 +86,21 @@ class Settings(BaseSettings):
     # borrower account. Unset -> no borrower accounts are seeded. Never
     # committed as a literal anywhere in the repo.
     seed_borrower_password: str | None = None
+
+    # P5/P6 foundation (docs/backlog/phase-p5-p6-foundation.md):
+    # - `support_inbox`: CQ-034's support email recipient (`SUPPORT_INBOX`).
+    # - `stale_check_interval_seconds`: CQ-030's Temporal Schedule interval.
+    # - `clock_now`: ISO-8601 override for `core/clock.now()` (`CLOCK_NOW`),
+    #   used by tests and demos to freeze "now" (E2). Unset -> real clock.
+    support_inbox: str = "support@tql.local"
+    stale_check_interval_seconds: int = 3600
+    clock_now: str | None = None
+
+    # CQ-034 (plan.md Decision #2): base URL of the LO console, used to
+    # build the `/applications/{id}` deep link in the support-inbox email.
+    # No such setting existed before this item; local dev's LO console runs
+    # on port 3010 (`make lo-console` / `pnpm --filter @cq/lo-console dev`).
+    lo_console_base_url: str = "http://localhost:3010"
 
     @field_validator("cors_origins", mode="before")
     @classmethod

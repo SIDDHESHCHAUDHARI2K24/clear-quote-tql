@@ -25,6 +25,7 @@ from temporalio import activity
 from temporalio.client import Client, WorkflowFailureError
 
 from app.core import storage
+from app.core.config import get_settings
 from app.core.enums import ApplicationStatus, UserRole
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
@@ -90,8 +91,8 @@ async def _versions(db: AsyncSession, package_id: str) -> list[QuotePackageVersi
 
 
 def _pdf_objects(package_id: str) -> list[str]:
-    listing = storage._client().list_objects_v2(
-        Bucket=storage._bucket(), Prefix=f"packages/{package_id}/"
+    listing = storage.get_client().list_objects_v2(
+        Bucket=get_settings().s3_bucket, Prefix=f"packages/{package_id}/"
     )
     return [item["Key"] for item in listing.get("Contents", [])]
 

@@ -12,8 +12,8 @@ export function formatSentAt(iso: string): string {
   return SENT_AT.format(new Date(iso));
 }
 
-/** The Outbox viewer is CQ-029 (P5/P6); until it lands this route 404s
- * (plan.md Decision 17). */
+/** Deep-links into the CQ-029 Outbox viewer, which reads `?email_id=`
+ * (apps/lo-console/src/app/(staff)/outbox/page.tsx). */
 export function outboxHref(outboxEmailId: string): string {
-  return `/outbox?email=${encodeURIComponent(outboxEmailId)}`;
+  return `/outbox?email_id=${encodeURIComponent(outboxEmailId)}`;
 }

@@ -18,11 +18,12 @@ pricing math of its own.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.security import generate_token
 from app.features.quotes.send.models import QuotePackage, QuotePackageVersion
 from app.features.quotes.send.view_model import build_package_view_model
@@ -61,7 +62,7 @@ async def freeze_package_version(
     if not package.quote_ids:
         raise ValueError(f"QuotePackage {package.id} has no quotes to freeze")
 
-    resolved_sent_at = sent_at or datetime.now(UTC)
+    resolved_sent_at = sent_at or clock.now()
     expires_at = resolved_sent_at + timedelta(days=REPORT_EXPIRY_DAYS)
 
     view_model = await build_package_view_model(
