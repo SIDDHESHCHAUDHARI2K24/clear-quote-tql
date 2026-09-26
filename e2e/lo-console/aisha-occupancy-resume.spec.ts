@@ -58,6 +58,15 @@ test.beforeEach(() => {
 // builder shows no quote cards (P56-merge). `activity_events` rows stay --
 // nothing asserts their absence.
 //
+// M11 (P56 U4 review, PR #34 nit): the same pipeline run also enriches her
+// -- `pricing/enrichment/service.py`'s `_FIELD_FETCHERS` writes one
+// `field_values` row per pricing field (`property_tax_annual_rate`,
+// `homeowners_ins_annual`, `hoa_fee_monthly`, `market_rent_ltr`,
+// `gross_annual_revenue_str`) with a plain (unprefixed) `field_key`, none
+// of which exist in her seed. Deleted here by exact key so this can't
+// touch an `orig:`/`row:`/`auto:` provenance row or a real LO override on
+// any other application.
+//
 // `updated_at` also needs resetting by hand: it's an ORM-level
 // `onupdate=func.now()` (applications/models.py), not a DB trigger, so
 // this raw SQL restore doesn't touch it, and it's left at the real
@@ -86,6 +95,11 @@ test.afterAll(() => {
       `(select id from scenarios where application_id = '${applicationId}');`,
   );
   execSql(`delete from scenarios where application_id = '${applicationId}';`);
+  execSql(
+    `delete from field_values where application_id = '${applicationId}' and field_key in ` +
+      `('property_tax_annual_rate', 'homeowners_ins_annual', 'hoa_fee_monthly', ` +
+      `'market_rent_ltr', 'gross_annual_revenue_str');`,
+  );
 });
 
 test("AC1: setting Aisha's occupancy resumes the pipeline to Priced and clears her from the dashboard", async ({

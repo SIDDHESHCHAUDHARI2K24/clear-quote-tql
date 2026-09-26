@@ -508,7 +508,7 @@ async def test_newer_quotes_outrank_an_old_recommended_quote(db_session: AsyncSe
     assert result.quotes_marked_stale == 1
 
 
-async def _send_marcus(db: AsyncSession, marcus: Application, quote_ids: list[uuid.UUID]) -> None:
+async def _send_marcus(db: AsyncSession, marcus: Application) -> None:
     await apply_send_fixture(
         db,
         application_id=marcus.id,
@@ -527,7 +527,7 @@ async def test_version_expired_flags_only_sent_or_old_quotes(db_session: AsyncSe
     quotes = await _quotes(db_session, marcus.id)
     assert len(quotes) >= 2
     sent_id = quotes[0].id
-    await _send_marcus(db_session, marcus, [sent_id])
+    await _send_marcus(db_session, marcus)
     # P56-merge: main's CQ-019 `apply_send_fixture` now picks the package's
     # quotes itself (`new_default_package`), so narrow the sent package and
     # its version to the one quote this test sends.
@@ -566,8 +566,7 @@ async def test_candidates_are_locked_and_from_status_read_from_the_row(
     NO KEY UPDATE`, U2), and the event's `from_status` comes from the
     locked row, not a stale ORM copy."""
     marcus = (await _seed(db_session, "marcus_hale"))["marcus_hale"]
-    quote_ids = [q.id for q in await _quotes(db_session, marcus.id)]
-    await _send_marcus(db_session, marcus, quote_ids)
+    await _send_marcus(db_session, marcus)
     assert marcus.status is ApplicationStatus.SENT
     # A concurrent Sent -> Viewed that this session's identity map missed.
     await db_session.execute(
