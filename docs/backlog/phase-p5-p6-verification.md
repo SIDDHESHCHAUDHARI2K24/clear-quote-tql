@@ -53,19 +53,20 @@ cleanly, no conflicts beyond `graphify-out/*`, taken theirs).
    opens his quote email in `/outbox`, asserts the HTML renders in the
    sandboxed iframe, downloads `preapproval-letter.pdf`
    (`content-type: application/pdf`, non-empty `%PDF-` bytes). Two real,
-   already-scoped-out bugs found while writing it (not fixed):
-   - `apps/lo-console/src/features/send/versions.ts:18` builds the Send
+   already-scoped-out bugs found while writing it (both fixed in P56,
+   see the follow-up backlog below):
+   - `apps/lo-console/src/features/send/versions.ts:18` built the Send
      tab's "Open in Outbox" link as `/outbox?email=<id>`, but
      `apps/lo-console/src/app/(staff)/outbox/page.tsx:18` only reads
-     `?email_id=` — that link's target drawer never auto-opens. Worked
-     around in the spec by navigating straight to
+     `?email_id=` — that link's target drawer never auto-opened. Worked
+     around in this spec by navigating straight to
      `/outbox?application_id=<id>` and clicking the row.
    - `backend/app/features/notifications/outbox/service.py:49`'s
-     `_TYPE_SUBJECT_RULES["quote_sent"]` only matches a subject containing
+     `_TYPE_SUBJECT_RULES["quote_sent"]` only matched a subject containing
      "pre-approval is ready", but CQ-020's real send subject ("Your
      pre-approval and numbers from Total Quality Lending",
-     `delivery/email_template.py`) doesn't match it — a real CQ-020 send
-     shows in the Outbox as Type "Other", not "Quote sent", even after the
+     `delivery/email_template.py`) didn't match it — a real CQ-020 send
+     showed in the Outbox as Type "Other", not "Quote sent", even after the
      merge. Already a logged follow-up (CQ-029 post-dev.md); the spec
      filters on subject text instead of the Type column for this reason.
    CQ-029 AC2 marked fully met in its own post-dev.md; the "pending
@@ -140,12 +141,15 @@ merged tree):
   CQ-030's canonical `applications.status='stale'`/`expired_at` fields
   (`dashboard/service.py::_build_stale`) — minor, cosmetic drift only
   (both currently agree at seed scale).
-- `outbox/service.py`'s `_TYPE_SUBJECT_RULES["quote_sent"]` doesn't match
+- ~~`outbox/service.py`'s `_TYPE_SUBJECT_RULES["quote_sent"]` doesn't match
   CQ-020's real send subject — confirmed still open this session (see
-  "Fixes landed" above); a real CQ-020 send shows as Type "Other".
-- The Send tab's "Open in Outbox" link (`versions.ts:18`) builds
+  "Fixes landed" above); a real CQ-020 send shows as Type "Other".~~ Fixed
+  (P56-fix): `_TYPE_SUBJECT_RULES["quote_sent"]` now also matches
+  `email_template.SUBJECT`, imported directly.
+- ~~The Send tab's "Open in Outbox" link (`versions.ts:18`) builds
   `?email=`, but `/outbox`'s page (`page.tsx:18`) reads `?email_id=` —
-  found this session, the link's target drawer never auto-opens.
+  found this session, the link's target drawer never auto-opens.~~ Fixed
+  (P56-fix): `outboxHref` now builds `?email_id=`.
 - `notifications/email/service.py::send_email` sends over SMTP before the
   caller's `db.commit()` — every caller (OTP, sends, actions, support)
   shares an "email sent, no record" gap if the process dies in between.
@@ -395,9 +399,10 @@ research surfaced.
   CQ-034's own follow-up: "worth a dedicated hardening item on
   `notifications/email/`, not a per-caller fix."
 - `outbox/service.py`'s subject-based `type` classifier only recognizes
-  today's OTP/borrower-action/quote-sent subjects — needs `_TYPE_SUBJECT_RULES`
-  extended once CQ-020 (real quote-send emails), CQ-024 (letter emails) and
-  CQ-034 (support emails) land, or those emails keep showing as `other` —
+  today's OTP/borrower-action/quote-sent subjects — CQ-020's real send
+  subject is now matched (fixed in P56, see the follow-up backlog above);
+  `_TYPE_SUBJECT_RULES` still needs extending once CQ-024 (letter emails)
+  and CQ-034 (support emails) land, or those emails keep showing as `other` —
   CQ-029 follow-up. (CQ-020/024 are now on `main` per the merge; worth
   re-checking whether their actual subjects were ever added.)
 

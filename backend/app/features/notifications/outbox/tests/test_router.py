@@ -60,6 +60,36 @@ async def test_outbox_list_and_detail(
     assert detail["attachments"] == [{"key": "outbox/fixture/quote.pdf", "filename": "quote.pdf"}]
 
 
+async def test_outbox_real_cq020_subject_is_quote_sent(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_application: Callable[..., Awaitable[Application]],
+    make_outbox_email: Callable[..., Awaitable[OutboxEmail]],
+    make_staff_session: Callable[..., Awaitable[StaffSession]],
+) -> None:
+    """A real CQ-020 send uses `email_template.SUBJECT`, not the seed
+    fixture's "...pre-approval is ready" -- it must still classify (and
+    filter) as `quote_sent`, not fall through to "other" (P5/P6
+    verification follow-up)."""
+    owner = await make_staff_session(role=UserRole.LO)
+    application = await make_application(lo=owner.user)
+    await make_outbox_email(
+        application=application,
+        subject="Your pre-approval and numbers from Total Quality Lending",
+        html="<p>Your numbers are ready.</p>",
+    )
+    await db_session.commit()
+
+    list_response = await client.get("/api/v1/outbox")
+    assert list_response.status_code == 200
+    row = list_response.json()["items"][0]
+    assert row["type"] == "quote_sent"
+
+    by_type = (await client.get("/api/v1/outbox", params={"type": "quote_sent"})).json()
+    assert by_type["total"] == 1
+    assert by_type["items"][0]["id"] == row["id"]
+
+
 async def test_outbox_filters(
     client: AsyncClient,
     db_session: AsyncSession,
