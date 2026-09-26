@@ -530,7 +530,11 @@ async def update_scenario(
                 user,
                 "scenario.updated",
                 {
-                    "message": "Quotes marked stale: scenario inputs changed",
+                    "message": (
+                        "Quotes marked stale: scenario inputs changed"
+                        if marked
+                        else "Scenario inputs changed"
+                    ),
                     "scenario_id": str(scenario.id),
                     "inputs": request.model_dump(mode="json"),
                     "quote_ids": [str(i) for i in marked],
@@ -718,6 +722,22 @@ async def _reprice_scenario(db: AsyncSession, scenario: Scenario, now: datetime)
     )
 
 
+async def _other_scenarios_have_stale_quotes(
+    db: AsyncSession, application_id: uuid.UUID, scenario_id: uuid.UUID
+) -> bool:
+    stmt = (
+        select(Quote.id)
+        .join(Scenario, Quote.scenario_id == Scenario.id)
+        .where(
+            Scenario.application_id == application_id,
+            Scenario.id != scenario_id,
+            Quote.stale.is_(True),
+        )
+        .limit(1)
+    )
+    return (await db.execute(stmt)).scalar_one_or_none() is not None
+
+
 def _fresh_ids(outcome: _RepriceOutcome) -> list[uuid.UUID]:
     """The quotes a re-price wrote or refreshed (Par/Buydown in place, plus
     every other quote it re-priced) -- never one it left stale."""
@@ -779,8 +799,12 @@ async def autoquote_replacing(
     outcome = await _reprice_scenario(db, scenario, clock.now())
     par_quote, buydown_quote = outcome.par, outcome.buydown
     # U3 (M4, CQ-030 AC5): the fresh picks move a Stale application back to
-    # Priced; the quotes -> packages -> application locks are already held.
-    await clear_stale(db, application.id, fresh_quote_ids=_fresh_ids(outcome))
+    # Priced -- but only when no *other* scenario still has stale quotes
+    # (U3 code review): re-pricing scenario A must not clear the status while
+    # B's (maybe recommended) quotes are still out of date. The quotes ->
+    # packages -> application locks are already held.
+    if not await _other_scenarios_have_stale_quotes(db, application.id, scenario.id):
+        await clear_stale(db, application.id, fresh_quote_ids=_fresh_ids(outcome))
     db.add(
         _event(
             application.id,

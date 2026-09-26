@@ -363,14 +363,15 @@ async def _mark_quotes_stale_after_field_change(
     quote_ids = await mark_application_quotes_stale(
         db, application_id, f"field_{action}:{field_key}"
     )
-    label = field_key.replace("_", " ")
+    change = f"{field_key.replace('_', ' ')} {_FIELD_ACTION_TEXT.get(action, action)}"
     db.add(
         ActivityEvent(
             application_id=application_id,
             actor=str(actor_id),
             type="quotes.marked_stale",
             payload={
-                "message": f"Quotes marked stale: {label} {_FIELD_ACTION_TEXT.get(action, action)}",
+                # U3 code review: say "marked stale" only when a quote was.
+                "message": (f"Quotes marked stale: {change}" if quote_ids else change.capitalize()),
                 "field_key": field_key,
                 "action": action,
                 "old_value": str(old_value) if old_value is not None else None,

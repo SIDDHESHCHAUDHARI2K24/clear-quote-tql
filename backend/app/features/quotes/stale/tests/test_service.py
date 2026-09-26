@@ -266,6 +266,57 @@ async def test_autoquote_clears_stale(
     assert await _repriced_events(db_session, grace.id) == 1
 
 
+async def test_autoquote_keeps_stale_while_another_scenario_is_stale(
+    db_session: AsyncSession,
+    client: AsyncClient,
+    make_staff_session: Callable[..., Awaitable[object]],
+) -> None:
+    """U3 code review: Save & AutoQuote on scenario A must not clear the
+    application's Stale status while scenario B's quotes are still stale;
+    once B is re-priced too, it moves to Priced."""
+    grace = (await _seed(db_session, "grace_kim"))["grace_kim"]
+    await make_staff_session(role=UserRole.MANAGER)
+    groups = (await client.get(f"/api/v1/applications/{grace.id}/scenarios")).json()["groups"]
+    group = groups[0]
+    first = uuid.UUID(group["id"])
+    created = await client.post(
+        f"/api/v1/applications/{grace.id}/scenarios",
+        json={
+            "purchase_price": group["inputs"]["purchase_price"],
+            "down_payment_pct": "0.30",
+            "strategy": group["inputs"]["strategy"],
+        },
+    )
+    assert created.status_code == 200, created.text
+    second = uuid.UUID(created.json()["id"])
+    # A new scenario has no quotes until its first Save & AutoQuote.
+    priced = await client.post(f"/api/v1/scenarios/{second}/autoquote")
+    assert priced.status_code == 200, priced.text
+    await db_session.execute(
+        update(Quote)
+        .where(Quote.scenario_id.in_([first, second]))
+        .values(stale=True)
+        .execution_options(synchronize_session=False)
+    )
+    await db_session.execute(
+        update(Application)
+        .where(Application.id == grace.id)
+        .values(status=ApplicationStatus.STALE)
+        .execution_options(synchronize_session=False)
+    )
+    await db_session.commit()
+
+    response = await client.post(f"/api/v1/scenarios/{first}/autoquote")
+    assert response.status_code == 200, response.text
+    assert await _status(db_session, grace) is ApplicationStatus.STALE
+    assert await _repriced_events(db_session, grace.id) == 0
+
+    response = await client.post(f"/api/v1/scenarios/{second}/autoquote")
+    assert response.status_code == 200, response.text
+    assert await _status(db_session, grace) is ApplicationStatus.PRICED
+    assert await _repriced_events(db_session, grace.id) == 1
+
+
 async def test_in_place_reprice_under_an_expired_version_is_not_reflagged(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:

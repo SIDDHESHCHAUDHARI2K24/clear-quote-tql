@@ -220,6 +220,8 @@ async def test_override_with_no_quotes_yet_still_logs_the_change_with_no_quote_i
     assert isinstance(payload, dict)
     assert payload["quote_ids"] == []
     assert payload["new_value"] == "0.0250"
+    # U3 code review: nothing was flagged, so the timeline does not say so.
+    assert payload["message"] == "Property tax annual rate overridden"
 
 
 async def test_override_uses_the_shared_stale_path_with_one_messaged_event(
