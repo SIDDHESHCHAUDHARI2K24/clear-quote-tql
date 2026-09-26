@@ -394,8 +394,9 @@ async def test_version_expired_flags_only_sent_or_old_quotes(db_session: AsyncSe
 async def test_candidates_are_locked_and_from_status_read_from_the_row(
     db_session: AsyncSession,
 ) -> None:
-    """Review m2: candidate applications are read `FOR UPDATE`, and the
-    event's `from_status` comes from the locked row, not a stale ORM copy."""
+    """Review m2: candidate applications are read under a row lock (`FOR
+    NO KEY UPDATE`, U2), and the event's `from_status` comes from the
+    locked row, not a stale ORM copy."""
     marcus = (await _seed(db_session, "marcus_hale"))["marcus_hale"]
     quote_ids = [q.id for q in await _quotes(db_session, marcus.id)]
     await _send_marcus(db_session, marcus, quote_ids)
@@ -425,13 +426,16 @@ async def test_candidates_are_locked_and_from_status_read_from_the_row(
     app_locks = [
         i
         for i, s in enumerate(statements)
-        if s.lstrip().startswith("SELECT applications.") and "FOR UPDATE" in s
+        if s.lstrip().startswith("SELECT applications.") and "FOR NO KEY UPDATE" in s
     ]
-    quote_locks = [i for i, s in enumerate(statements) if "FOR UPDATE OF quotes" in s]
+    quote_locks = [i for i, s in enumerate(statements) if "FOR NO KEY UPDATE OF quotes" in s]
+    quote_updates = [i for i, s in enumerate(statements) if s.lstrip().startswith("UPDATE quotes")]
     assert app_locks, statements
     # Review follow-up: candidates' quotes are locked before the
     # applications, so step 3's quote updates keep quotes -> applications.
+    # U2: step 1 locks (by id) before its own UPDATE.
     assert quote_locks and quote_locks[0] < app_locks[0], statements
+    assert quote_updates and quote_locks[0] < quote_updates[0], statements
     event = (
         await db_session.execute(
             select(ActivityEvent).where(

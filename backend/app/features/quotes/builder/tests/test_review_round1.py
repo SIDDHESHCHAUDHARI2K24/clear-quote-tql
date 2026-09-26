@@ -300,11 +300,28 @@ def _capture_sql() -> Iterator[list[str]]:
         event.remove(Engine, "before_cursor_execute", _listener)
 
 
-def _locks_application(statements: list[str]) -> bool:
-    return any(
-        "FROM applications" in s and "FOR UPDATE" in s and "quotes" not in s.split("FROM")[0]
-        for s in statements
+def _first(statements: list[str], predicate: Callable[[str], bool]) -> int | None:
+    return next((i for i, s in enumerate(statements) if predicate(s)), None)
+
+
+def _application_lock(statements: list[str]) -> int | None:
+    """The one application lock (applications/locking.py)."""
+    return _first(
+        statements,
+        lambda s: (
+            "FROM applications" in s
+            and "FOR NO KEY UPDATE" in s
+            and "quotes" not in s.split("FROM")[0]
+        ),
     )
+
+
+def _quotes_lock(statements: list[str]) -> int | None:
+    return _first(statements, lambda s: "FOR NO KEY UPDATE OF quotes" in s)
+
+
+def _packages_lock(statements: list[str]) -> int | None:
+    return _first(statements, lambda s: "FROM quote_packages" in s and "FOR UPDATE" in s)
 
 
 async def test_every_builder_write_locks_the_application_row(
@@ -344,11 +361,24 @@ async def test_every_builder_write_locks_the_application_row(
         ),
         ("DELETE", f"/api/v1/quotes/{buydown['id']}", None),
     ]
+    # U2 (applications/locking.py): a write that UPDATEs/DELETEs existing
+    # quotes locks them first; one that edits the draft package locks it
+    # next; the application lock comes last.
+    touches_quotes = {"reprice", "autoquote", "PUT", "field-values", "DELETE"}
+    touches_packages = {"reprice", "autoquote", "recommend", "DELETE"}
     for method, url, body in calls:
         with _capture_sql() as statements:
             response = await client.request(method, url, json=body)
         assert response.status_code in (200, 204), (url, response.text)
-        assert _locks_application(statements), url
+        app_lock = _application_lock(statements)
+        assert app_lock is not None, url
+        tags = {method, *url.split("/")}
+        if tags & touches_quotes:
+            quotes_lock = _quotes_lock(statements)
+            assert quotes_lock is not None and quotes_lock < app_lock, url
+        if tags & touches_packages:
+            packages_lock = _packages_lock(statements)
+            assert packages_lock is not None and packages_lock < app_lock, url
 
 
 # --- minor 5 ------------------------------------------------------------------

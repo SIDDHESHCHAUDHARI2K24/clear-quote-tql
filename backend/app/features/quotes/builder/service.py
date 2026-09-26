@@ -31,7 +31,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import scope_applications
 from app.core.enums import Occupancy, Strategy
 from app.core.errors import ConflictError, NotFoundError, ValidationAppError
-from app.features.applications.locks import lock_application
+from app.features.applications.locking import (
+    lock_application,
+    lock_application_packages,
+    lock_application_quotes,
+)
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
 from app.features.auth.models import User
@@ -475,6 +479,9 @@ async def update_scenario(
     `no_eligible_products`, M2) all leave the scenario and its quotes as
     they were."""
     scenario = await get_scenario(db, scenario_id)
+    # Lock order (applications/locking.py): quotes -> application; the
+    # stale marking below UPDATEs this scenario's quotes.
+    await lock_application_quotes(db, scenario.application_id)
     application = await lock_application(db, scenario.application_id)
     await ensure_priceable(db, application.id, request.down_payment_pct)
     is_primary = application_strategy(application) == "PRIMARY"
@@ -729,13 +736,23 @@ async def _delete_quote_row(db: AsyncSession, quote: Quote) -> bool:
     return cleared
 
 
+async def _lock_for_quote_writes(db: AsyncSession, application_id: uuid.UUID) -> Application:
+    """The locks of a write that UPDATEs or DELETEs the application's
+    existing quotes and may edit its unsent draft package (reprice, Save &
+    AutoQuote, quote delete), in the one lock order (applications/locking.
+    py): quotes -> packages -> application."""
+    await lock_application_quotes(db, application_id)
+    await lock_application_packages(db, application_id)
+    return await lock_application(db, application_id)
+
+
 async def autoquote_replacing(
     db: AsyncSession, scenario_id: uuid.UUID, user: User
 ) -> tuple[Quote, Quote | None]:
     """`POST /scenarios/{id}/autoquote` (Save & AutoQuote): replaces the
     scenario's Par/Buydown with a fresh pick (spec AC3)."""
     scenario = await get_scenario(db, scenario_id)
-    application = await lock_application(db, scenario.application_id)
+    application = await _lock_for_quote_writes(db, scenario.application_id)
     await ensure_priceable(db, application.id, scenario_inputs(scenario).down_payment_pct)
     outcome = await _reprice_scenario(db, scenario)
     par_quote, buydown_quote = outcome.par, outcome.buydown
@@ -765,7 +782,7 @@ async def reprice_application(
     """`POST /applications/{id}/reprice`: re-runs AutoQuote for every
     scenario (the stale banner's "Re-price"), clearing `stale` and bumping
     `priced_at` on every quote (AC8)."""
-    await lock_application(db, application.id)
+    await _lock_for_quote_writes(db, application.id)
     await ensure_priceable(db, application.id)
     groups = await _scenarios_with_quotes(db, application.id)
     quote_ids: list[uuid.UUID] = []
@@ -810,6 +827,9 @@ async def recommend_quote(db: AsyncSession, quote: Quote, user: User) -> Applica
     """`POST /quotes/{id}/recommend`: one recommended quote per application
     (a single column, so setting it un-stars any other)."""
     scenario = await get_scenario(db, quote.scenario_id)
+    # Lock order (applications/locking.py): the unsent draft follows the
+    # star, so its package is locked before the application.
+    await lock_application_packages(db, scenario.application_id)
     application = await lock_application(db, scenario.application_id)
     quote = await _refetch_after_lock(db, quote.id)
     previous = application.recommended_quote_id
@@ -842,7 +862,7 @@ async def delete_quote(db: AsyncSession, quote: Quote, user: User) -> None:
     unsent draft never blocks the delete (nit, post-merge review; code
     review #2): the quote just leaves the draft (`drop_quote_from_drafts`)."""
     scenario = await get_scenario(db, quote.scenario_id)
-    application = await lock_application(db, scenario.application_id)
+    application = await _lock_for_quote_writes(db, scenario.application_id)
     quote = await _refetch_after_lock(db, quote.id)
     if await _quote_in_package(db, quote.id):
         raise ConflictError("This quote is part of a quote package and can't be deleted.")

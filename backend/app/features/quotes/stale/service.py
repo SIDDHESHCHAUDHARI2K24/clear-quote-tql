@@ -15,7 +15,9 @@ Steps (spec.md):
    expired -> status Stale, one activity event, and their quotes flagged
    (those past the cutoff plus those the expired version showed).
    Inquiry/OptionSelected keep their status; the same quotes are flagged.
-   Candidate rows are locked `FOR UPDATE` and decided from the locked row.
+   Candidate rows are locked `FOR NO KEY UPDATE` and decided from the
+   locked row. Lock order: quotes (all of them, by id, first) -> versions
+   -> applications, the one order of `applications/locking.py`.
 4. A second run at the same `now` changes nothing and writes no events.
    Every write is conditional on the row not already being in the target
    state, and an event is written only when the conditional status UPDATE
@@ -217,7 +219,7 @@ async def _move_to_stale(
 ) -> bool:
     """Conditional status UPDATE; writes the one activity event only when it
     matched (so a concurrent or repeated run never writes a second one).
-    `application` is the row `mark_stale` locked `FOR UPDATE`, so its
+    `application` is the row `mark_stale` locked (`FOR NO KEY UPDATE`), so its
     status is the committed one and no concurrent writer can change it."""
     from_status = application.status
     moved = await db.execute(
@@ -252,14 +254,44 @@ async def mark_stale(db: AsyncSession, now: datetime) -> StaleResult:
     result = StaleResult()
 
     # Step 1: strict boundary -- stale only when age > stale_days.
-    marked = await db.execute(
-        update(Quote)
-        .where(Quote.priced_at < cutoff, Quote.stale.is_(False))
-        .values(stale=True)
-        .returning(Quote.id)
-        .execution_options(synchronize_session="fetch")
+    # Lock first (U2, applications/locking.py): every quote this run may
+    # update -- the ones past the cutoff and every quote of a step-3
+    # candidate -- in one statement ordered by id, so the job takes its
+    # quote locks in the same id order as every per-application writer
+    # (`lock_application_quotes`) and before any version or application.
+    # Then update only locked rows.
+    locked_ids = list(
+        (
+            await db.execute(
+                select(Quote.id)
+                .join(Scenario, Quote.scenario_id == Scenario.id)
+                .join(Application, Scenario.application_id == Application.id)
+                .where(
+                    or_(
+                        (Quote.priced_at < cutoff) & Quote.stale.is_(False),
+                        Application.status.in_((*_MOVES_TO_STALE, *_KEEPS_STATUS)),
+                    )
+                )
+                .order_by(Quote.id)
+                .with_for_update(of=Quote, key_share=True)
+            )
+        )
+        .scalars()
+        .all()
     )
-    result.quotes_marked_stale += len(marked.all())
+    if locked_ids:
+        marked = await db.execute(
+            update(Quote)
+            .where(
+                Quote.id.in_(locked_ids),
+                Quote.priced_at < cutoff,
+                Quote.stale.is_(False),
+            )
+            .values(stale=True)
+            .returning(Quote.id)
+            .execution_options(synchronize_session="fetch")
+        )
+        result.quotes_marked_stale += len(marked.all())
 
     # Step 2: sent versions past `expires_at` -> expired (stamped once).
     expired = await db.execute(
@@ -279,15 +311,18 @@ async def mark_stale(db: AsyncSession, now: datetime) -> StaleResult:
     # view: version then application; CQ-024 actions: package, version,
     # application) and `clear_stale`'s quotes-before-application. The job
     # never locks a package, so it cannot close a cycle with those paths.
-    # Step 3 updates candidates' quotes after locking the applications, so
-    # those quotes are locked first here to keep quotes -> applications.
+    # Step 3 updates candidates' quotes after locking the applications;
+    # step 1 already locked them. This re-lock only picks up a candidate
+    # whose status changed since step 1 (quotes -> applications still).
+    # `FOR NO KEY UPDATE` throughout (applications/locking.py): an insert
+    # referencing a locked row (an activity event, say) is not blocked.
     await db.execute(
         select(Quote.id)
         .join(Scenario, Quote.scenario_id == Scenario.id)
         .join(Application, Scenario.application_id == Application.id)
         .where(Application.status.in_((*_MOVES_TO_STALE, *_KEEPS_STATUS)))
         .order_by(Quote.id)
-        .with_for_update(of=Quote)
+        .with_for_update(of=Quote, key_share=True)
     )
     candidates = list(
         (
@@ -295,7 +330,7 @@ async def mark_stale(db: AsyncSession, now: datetime) -> StaleResult:
                 select(Application)
                 .where(Application.status.in_((*_MOVES_TO_STALE, *_KEEPS_STATUS)))
                 .order_by(Application.id)
-                .with_for_update()
+                .with_for_update(key_share=True)
                 .execution_options(populate_existing=True)
             )
         )
