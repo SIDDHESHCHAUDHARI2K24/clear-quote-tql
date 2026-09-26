@@ -50,7 +50,7 @@ from app.features.quotes.builder.models import Quote
 from app.features.quotes.builder.tests.test_router import _seed
 from app.features.quotes.delivery import steps
 from app.features.quotes.delivery.tests.test_send_review_fixes import _committed_data
-from app.features.quotes.send.models import QuotePackageVersion
+from app.features.quotes.send.models import QuotePackage, QuotePackageVersion
 from app.features.quotes.send.service import get_or_create_package
 from app.features.quotes.stale import service as stale_service
 from app.integrations.credit.models import CreditPullType, ProviderCreditReport
@@ -374,6 +374,82 @@ async def test_send_record_holding_its_lock_then_hard_pull_does_not_deadlock(
         timeout=RACE_TIMEOUT,
     )
     await _assert_sent_and_pulled(factory, app_id, package_id)
+
+
+async def test_send_record_holding_its_locks_then_a_star_does_not_deadlock(
+    factory: Factory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review finding (U2 code review): `record` UPDATEs the package at its
+    end, so it must lock the package before the application like the Quote
+    Builder's star (packages -> application) -- otherwise a star during
+    `record` deadlocks."""
+    app_id, package_id, _consent_id = await _prepare_send_and_consent(factory)
+    async with factory() as db:
+        version_id = await steps.freeze(db, package_id, WORKFLOW_ID)
+    async with factory() as db:
+        stars_before = await _events(db, app_id, "quote.recommended")
+    holding = asyncio.Event()
+    monkeypatch.setattr(
+        steps.MockCrmClient, "log_event", _paused(steps.MockCrmClient.log_event, holding)
+    )
+
+    async def _record() -> None:
+        async with factory() as db:
+            await steps.record(db, version_id, WORKFLOW_ID)
+
+    async def _star_after_record_locks() -> None:
+        await holding.wait()
+        async with factory() as db:
+            quote = (await _quotes(db, app_id))[-1]
+            application = await db.get(Application, app_id)
+            assert application is not None
+            user = await db.get(User, application.lo_id)
+            assert user is not None
+            await builder_service.recommend_quote(db, quote, user)
+
+    await asyncio.wait_for(
+        asyncio.gather(_record(), _star_after_record_locks()), timeout=RACE_TIMEOUT
+    )
+    async with factory() as db:
+        application = await db.get(Application, app_id)
+        assert application is not None
+        assert application.status is ApplicationStatus.SENT
+        assert await _events(db, app_id, "quote.recommended") == stars_before + 1
+
+
+async def test_first_load_rereads_the_draft_under_the_lock(factory: Factory) -> None:
+    """Review finding (U2 code review): after taking the locks the Send
+    tab's first load re-reads the draft, so a concurrent PUT's committed
+    selection is not overwritten by the default selection."""
+    app_id = await _seed_marcus(factory)
+    async with factory() as db:
+        db.add(
+            QuotePackage(
+                application_id=app_id, quote_ids=[], lo_edited=False, report_token="u2-draft"
+            )
+        )
+        await db.commit()
+    async with factory() as loader, factory() as editor:
+        application = await loader.get(Application, app_id)
+        assert application is not None
+        # The loader's session already holds the untouched empty draft.
+        before = (
+            await loader.execute(select(QuotePackage).where(QuotePackage.application_id == app_id))
+        ).scalar_one()
+        assert before.quote_ids == [] and not before.lo_edited
+        picked = (await _quotes(editor, app_id))[0].id
+        edited = (
+            await editor.execute(select(QuotePackage).where(QuotePackage.application_id == app_id))
+        ).scalar_one()
+        edited.quote_ids = [picked]
+        edited.recommended_quote_id = picked
+        edited.lo_edited = True
+        await editor.commit()
+
+        package = await get_or_create_package(loader, application)
+
+        assert package.quote_ids == [picked]
+        assert package.lo_edited
 
 
 # --- lock_application vs FK inserts -------------------------------------------

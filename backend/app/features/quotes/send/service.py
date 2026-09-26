@@ -57,15 +57,21 @@ _ACTOR_SYSTEM = "system"
 """`ActivityEvent.actor`: "a user id (as string) or the literal `system`"."""
 
 
-async def _newest_package(db: AsyncSession, application_id: uuid.UUID) -> QuotePackage | None:
-    return (
-        await db.execute(
-            select(QuotePackage)
-            .where(QuotePackage.application_id == application_id)
-            .order_by(QuotePackage.created_at.desc(), QuotePackage.id.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
+async def _newest_package(
+    db: AsyncSession, application_id: uuid.UUID, *, fresh: bool = False
+) -> QuotePackage | None:
+    """`fresh=True` re-reads the row (`populate_existing`): use it after
+    taking the package lock, so a concurrent writer's committed edit is
+    seen instead of this session's older copy."""
+    stmt = (
+        select(QuotePackage)
+        .where(QuotePackage.application_id == application_id)
+        .order_by(QuotePackage.created_at.desc(), QuotePackage.id.desc())
+        .limit(1)
+    )
+    if fresh:
+        stmt = stmt.execution_options(populate_existing=True)
+    return (await db.execute(stmt)).scalar_one_or_none()
 
 
 async def recommendation_text_for(
@@ -229,7 +235,7 @@ async def get_or_create_package(db: AsyncSession, application: Application) -> Q
     # untouched draft below is re-selected in place.
     await lock_application_packages(db, application.id)
     application = await lock_application(db, application.id)
-    package = await _newest_package(db, application.id)
+    package = await _newest_package(db, application.id, fresh=True)
     if package is None:
         package = await new_default_package(db, application)
     elif package.sent_at is None and _is_untouched_empty_draft(package):
