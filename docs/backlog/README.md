@@ -22,10 +22,10 @@ Status here is updated by the agent at stage 8 and by the human at merge.
 | [CQ-014](CQ-014-staff-auth/spec.md) | Staff auth | P2 | CQ-004, CQ-007 | In Review |
 | [CQ-015](CQ-015-borrower-auth/spec.md) | Borrower auth | P2 | CQ-014 | In Review |
 | [CQ-016](CQ-016-application-workspace/spec.md) | Application workspace shell | P3 | CQ-014, CQ-011 | In Review |
-| [CQ-017](CQ-017-pricing-panel/spec.md) | Pricing panel | P3 | CQ-016, CQ-013 | To Do |
-| [CQ-018](CQ-018-quote-builder/spec.md) | Quote builder | P3 | CQ-017 | To Do |
-| [CQ-019](CQ-019-send-tab/spec.md) | Send tab & preview | P3 | CQ-018, CQ-021 | To Do |
-| [CQ-020](CQ-020-letter-and-send/spec.md) | Letter PDF & send workflow | P3 | CQ-019, CQ-015 | To Do |
+| [CQ-017](CQ-017-pricing-panel/spec.md) | Pricing panel | P3 | CQ-016, CQ-013 | In Review |
+| [CQ-018](CQ-018-quote-builder/spec.md) | Quote builder | P3 | CQ-017 | In Review |
+| [CQ-019](CQ-019-send-tab/spec.md) | Send tab & preview | P3 | CQ-018, CQ-021 | In Review |
+| [CQ-020](CQ-020-letter-and-send/spec.md) | Letter PDF & send workflow | P3 | CQ-019, CQ-015 | In Review |
 | [CQ-021](CQ-021-report-components/spec.md) | Shared report components | P4 | CQ-005, CQ-008 | In Review |
 | [CQ-022](CQ-022-borrower-report/spec.md) | Borrower report page | P4 | CQ-021, CQ-015 | In Review |
 | [CQ-023](CQ-023-property-matches/spec.md) | Property matches | P4 | CQ-022, CQ-013 | In Review |

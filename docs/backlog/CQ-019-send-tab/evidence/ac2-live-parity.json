@@ -1,0 +1,611 @@
+{
+  "identical_except_send_time_fields": true,
+  "send_time_differences": {},
+  "report_token": "qfzlqpv1hBfQJfdxG4bU3bfsTkK4e5bvD8LdnBboIwE",
+  "lo": {
+    "header": {
+      "first_name": "Marcus",
+      "property_label": "4412 W Gray St, Tampa, FL 33602",
+      "purchase_price": "342000.00",
+      "prepared_at": "2026-09-25",
+      "rates_as_of": "2026-09-25",
+      "expires_at": "2026-10-16",
+      "expired": false,
+      "superseded": false
+    },
+    "strategy": "str",
+    "options": [
+      {
+        "quote_id": "0c13b26c-fe6d-42c4-b050-135f3306155a",
+        "label": "Par",
+        "recommended": true,
+        "rate": "762.500",
+        "points_pct": "-0.400",
+        "points_amount": "-1026.00",
+        "down_payment_pct": "20.00",
+        "prepay_label": "5-year prepayment penalty",
+        "hero": {
+          "monthly_payment": "2332.67",
+          "cash_to_close": "75282.21",
+          "loan_amount": null,
+          "monthly_cashflow": "-732.67",
+          "year1_tax_savings": "24275.78",
+          "year1_tax_savings_monthly": "2023"
+        },
+        "breakdown": {
+          "payment_lines": [
+            {
+              "label": "Principal & interest",
+              "amount": "1936.52"
+            },
+            {
+              "label": "Property taxes",
+              "amount": "253.65"
+            },
+            {
+              "label": "Homeowners insurance",
+              "amount": "142.50"
+            }
+          ],
+          "payment_total": "2332.67",
+          "cash_to_close_lines": [
+            {
+              "label": "Down payment",
+              "amount": "68400.00"
+            },
+            {
+              "label": "Lender fees",
+              "amount": "1790.00"
+            },
+            {
+              "label": "Points credit",
+              "amount": "-1026.00"
+            },
+            {
+              "label": "Title & escrow",
+              "amount": "2394.00"
+            },
+            {
+              "label": "Prepaid interest",
+              "amount": "968.26"
+            },
+            {
+              "label": "Prepaid insurance",
+              "amount": "1995.00"
+            },
+            {
+              "label": "Prepaid taxes",
+              "amount": "760.95"
+            }
+          ],
+          "cash_to_close_total": "75282.21"
+        },
+        "cashflow": {
+          "rent_label": "Gross STR revenue",
+          "gross_amount": "2000.00",
+          "expense_ratio": "20.00",
+          "qualifying_rent": "1600.00",
+          "pitia": "2332.67",
+          "monthly_cashflow": "-732.67",
+          "annual_cashflow": "-8792.08",
+          "dscr": "0.69",
+          "cap_rate_pct": "4.21",
+          "monthly_cashflow_incl_tax": "1290.31"
+        },
+        "cost_seg": {
+          "purchase_price": "342000.00",
+          "land_allocation_pct": "20.00",
+          "land_value_allocation": "68400.00",
+          "depreciable_building_basis": "273600.00",
+          "accelerated_property_pct": "25.00",
+          "accelerated_basis_amount": "68400.00",
+          "bonus_depreciation_pct": "100.00",
+          "year_one_tax_deduction": "75861.82",
+          "investor_marginal_tax_rate": "32.00",
+          "year_one_tax_savings": "24275.78"
+        }
+      },
+      {
+        "quote_id": "6cf011b0-b6f3-4f1e-bad5-486138cd3c80",
+        "label": "Buydown",
+        "recommended": false,
+        "rate": "737.500",
+        "points_pct": "1.000",
+        "points_amount": "2736.00",
+        "down_payment_pct": "20.00",
+        "prepay_label": "5-year prepayment penalty",
+        "hero": {
+          "monthly_payment": "2285.84",
+          "cash_to_close": "79020.79",
+          "loan_amount": null,
+          "monthly_cashflow": "-685.84",
+          "year1_tax_savings": "24275.78",
+          "year1_tax_savings_monthly": "2023"
+        },
+        "breakdown": {
+          "payment_lines": [
+            {
+              "label": "Principal & interest",
+              "amount": "1889.69"
+            },
+            {
+              "label": "Property taxes",
+              "amount": "253.65"
+            },
+            {
+              "label": "Homeowners insurance",
+              "amount": "142.50"
+            }
+          ],
+          "payment_total": "2285.84",
+          "cash_to_close_lines": [
+            {
+              "label": "Down payment",
+              "amount": "68400.00"
+            },
+            {
+              "label": "Lender fees",
+              "amount": "1790.00"
+            },
+            {
+              "label": "Discount points",
+              "amount": "2736.00"
+            },
+            {
+              "label": "Title & escrow",
+              "amount": "2394.00"
+            },
+            {
+              "label": "Prepaid interest",
+              "amount": "944.84"
+            },
+            {
+              "label": "Prepaid insurance",
+              "amount": "1995.00"
+            },
+            {
+              "label": "Prepaid taxes",
+              "amount": "760.95"
+            }
+          ],
+          "cash_to_close_total": "79020.79"
+        },
+        "cashflow": {
+          "rent_label": "Gross STR revenue",
+          "gross_amount": "2000.00",
+          "expense_ratio": "20.00",
+          "qualifying_rent": "1600.00",
+          "pitia": "2285.84",
+          "monthly_cashflow": "-685.84",
+          "annual_cashflow": "-8230.05",
+          "dscr": "0.70",
+          "cap_rate_pct": "4.21",
+          "monthly_cashflow_incl_tax": "1337.14"
+        },
+        "cost_seg": {
+          "purchase_price": "342000.00",
+          "land_allocation_pct": "20.00",
+          "land_value_allocation": "68400.00",
+          "depreciable_building_basis": "273600.00",
+          "accelerated_property_pct": "25.00",
+          "accelerated_basis_amount": "68400.00",
+          "bonus_depreciation_pct": "100.00",
+          "year_one_tax_deduction": "75861.82",
+          "investor_marginal_tax_rate": "32.00",
+          "year_one_tax_savings": "24275.78"
+        }
+      },
+      {
+        "quote_id": "66c0d6ad-3f5e-4c97-9243-f96eecf0ad2d",
+        "label": "Par",
+        "recommended": false,
+        "rate": "762.500",
+        "points_pct": "-0.400",
+        "points_amount": "-961.88",
+        "down_payment_pct": "25.00",
+        "prepay_label": "5-year prepayment penalty",
+        "hero": {
+          "monthly_payment": "2211.64",
+          "cash_to_close": "92385.82",
+          "loan_amount": null,
+          "monthly_cashflow": "-611.64",
+          "year1_tax_savings": "24275.78",
+          "year1_tax_savings_monthly": "2023"
+        },
+        "breakdown": {
+          "payment_lines": [
+            {
+              "label": "Principal & interest",
+              "amount": "1815.49"
+            },
+            {
+              "label": "Property taxes",
+              "amount": "253.65"
+            },
+            {
+              "label": "Homeowners insurance",
+              "amount": "142.50"
+            }
+          ],
+          "payment_total": "2211.64",
+          "cash_to_close_lines": [
+            {
+              "label": "Down payment",
+              "amount": "85500.00"
+            },
+            {
+              "label": "Lender fees",
+              "amount": "1790.00"
+            },
+            {
+              "label": "Points credit",
+              "amount": "-961.88"
+            },
+            {
+              "label": "Title & escrow",
+              "amount": "2394.00"
+            },
+            {
+              "label": "Prepaid interest",
+              "amount": "907.75"
+            },
+            {
+              "label": "Prepaid insurance",
+              "amount": "1995.00"
+            },
+            {
+              "label": "Prepaid taxes",
+              "amount": "760.95"
+            }
+          ],
+          "cash_to_close_total": "92385.82"
+        },
+        "cashflow": {
+          "rent_label": "Gross STR revenue",
+          "gross_amount": "2000.00",
+          "expense_ratio": "20.00",
+          "qualifying_rent": "1600.00",
+          "pitia": "2211.64",
+          "monthly_cashflow": "-611.64",
+          "annual_cashflow": "-7339.69",
+          "dscr": "0.72",
+          "cap_rate_pct": "4.21",
+          "monthly_cashflow_incl_tax": "1411.34"
+        },
+        "cost_seg": {
+          "purchase_price": "342000.00",
+          "land_allocation_pct": "20.00",
+          "land_value_allocation": "68400.00",
+          "depreciable_building_basis": "273600.00",
+          "accelerated_property_pct": "25.00",
+          "accelerated_basis_amount": "68400.00",
+          "bonus_depreciation_pct": "100.00",
+          "year_one_tax_deduction": "75861.82",
+          "investor_marginal_tax_rate": "32.00",
+          "year_one_tax_savings": "24275.78"
+        }
+      }
+    ],
+    "recommendation": {
+      "text": "20% down \u00b7 Par pricing at 7.625%, 5-year prepay. It balances your monthly payment and cash needed at closing.",
+      "lo_note": "AC2 live check note."
+    },
+    "matches": [],
+    "disclosures": {
+      "core": "This is not a commitment to lend. Rates, payments and closing costs are estimates based on the information available today and are subject to change once your file is fully underwritten. This is not a Loan Estimate.",
+      "investment": "Rental income and cashflow figures are estimates based on third-party market data (RentCast/AirDNA) and are not a guarantee of actual performance.",
+      "tax": "Estimate only, not tax advice. Consult your tax professional."
+    },
+    "lo": {
+      "name": "Jordan Lee",
+      "title": "Loan Officer",
+      "nmls": "1234567",
+      "phone": "8135550101",
+      "email": "jordan.lee@clearquote-demo.test"
+    }
+  },
+  "portal": {
+    "header": {
+      "first_name": "Marcus",
+      "property_label": "4412 W Gray St, Tampa, FL 33602",
+      "purchase_price": "342000.00",
+      "prepared_at": "2026-09-25",
+      "rates_as_of": "2026-09-25",
+      "expires_at": "2026-10-16",
+      "expired": false,
+      "superseded": false
+    },
+    "strategy": "str",
+    "options": [
+      {
+        "quote_id": "0c13b26c-fe6d-42c4-b050-135f3306155a",
+        "label": "Par",
+        "recommended": true,
+        "rate": "762.500",
+        "points_pct": "-0.400",
+        "points_amount": "-1026.00",
+        "down_payment_pct": "20.00",
+        "prepay_label": "5-year prepayment penalty",
+        "hero": {
+          "monthly_payment": "2332.67",
+          "cash_to_close": "75282.21",
+          "loan_amount": null,
+          "monthly_cashflow": "-732.67",
+          "year1_tax_savings": "24275.78",
+          "year1_tax_savings_monthly": "2023"
+        },
+        "breakdown": {
+          "payment_lines": [
+            {
+              "label": "Principal & interest",
+              "amount": "1936.52"
+            },
+            {
+              "label": "Property taxes",
+              "amount": "253.65"
+            },
+            {
+              "label": "Homeowners insurance",
+              "amount": "142.50"
+            }
+          ],
+          "payment_total": "2332.67",
+          "cash_to_close_lines": [
+            {
+              "label": "Down payment",
+              "amount": "68400.00"
+            },
+            {
+              "label": "Lender fees",
+              "amount": "1790.00"
+            },
+            {
+              "label": "Points credit",
+              "amount": "-1026.00"
+            },
+            {
+              "label": "Title & escrow",
+              "amount": "2394.00"
+            },
+            {
+              "label": "Prepaid interest",
+              "amount": "968.26"
+            },
+            {
+              "label": "Prepaid insurance",
+              "amount": "1995.00"
+            },
+            {
+              "label": "Prepaid taxes",
+              "amount": "760.95"
+            }
+          ],
+          "cash_to_close_total": "75282.21"
+        },
+        "cashflow": {
+          "rent_label": "Gross STR revenue",
+          "gross_amount": "2000.00",
+          "expense_ratio": "20.00",
+          "qualifying_rent": "1600.00",
+          "pitia": "2332.67",
+          "monthly_cashflow": "-732.67",
+          "annual_cashflow": "-8792.08",
+          "dscr": "0.69",
+          "cap_rate_pct": "4.21",
+          "monthly_cashflow_incl_tax": "1290.31"
+        },
+        "cost_seg": {
+          "purchase_price": "342000.00",
+          "land_allocation_pct": "20.00",
+          "land_value_allocation": "68400.00",
+          "depreciable_building_basis": "273600.00",
+          "accelerated_property_pct": "25.00",
+          "accelerated_basis_amount": "68400.00",
+          "bonus_depreciation_pct": "100.00",
+          "year_one_tax_deduction": "75861.82",
+          "investor_marginal_tax_rate": "32.00",
+          "year_one_tax_savings": "24275.78"
+        }
+      },
+      {
+        "quote_id": "6cf011b0-b6f3-4f1e-bad5-486138cd3c80",
+        "label": "Buydown",
+        "recommended": false,
+        "rate": "737.500",
+        "points_pct": "1.000",
+        "points_amount": "2736.00",
+        "down_payment_pct": "20.00",
+        "prepay_label": "5-year prepayment penalty",
+        "hero": {
+          "monthly_payment": "2285.84",
+          "cash_to_close": "79020.79",
+          "loan_amount": null,
+          "monthly_cashflow": "-685.84",
+          "year1_tax_savings": "24275.78",
+          "year1_tax_savings_monthly": "2023"
+        },
+        "breakdown": {
+          "payment_lines": [
+            {
+              "label": "Principal & interest",
+              "amount": "1889.69"
+            },
+            {
+              "label": "Property taxes",
+              "amount": "253.65"
+            },
+            {
+              "label": "Homeowners insurance",
+              "amount": "142.50"
+            }
+          ],
+          "payment_total": "2285.84",
+          "cash_to_close_lines": [
+            {
+              "label": "Down payment",
+              "amount": "68400.00"
+            },
+            {
+              "label": "Lender fees",
+              "amount": "1790.00"
+            },
+            {
+              "label": "Discount points",
+              "amount": "2736.00"
+            },
+            {
+              "label": "Title & escrow",
+              "amount": "2394.00"
+            },
+            {
+              "label": "Prepaid interest",
+              "amount": "944.84"
+            },
+            {
+              "label": "Prepaid insurance",
+              "amount": "1995.00"
+            },
+            {
+              "label": "Prepaid taxes",
+              "amount": "760.95"
+            }
+          ],
+          "cash_to_close_total": "79020.79"
+        },
+        "cashflow": {
+          "rent_label": "Gross STR revenue",
+          "gross_amount": "2000.00",
+          "expense_ratio": "20.00",
+          "qualifying_rent": "1600.00",
+          "pitia": "2285.84",
+          "monthly_cashflow": "-685.84",
+          "annual_cashflow": "-8230.05",
+          "dscr": "0.70",
+          "cap_rate_pct": "4.21",
+          "monthly_cashflow_incl_tax": "1337.14"
+        },
+        "cost_seg": {
+          "purchase_price": "342000.00",
+          "land_allocation_pct": "20.00",
+          "land_value_allocation": "68400.00",
+          "depreciable_building_basis": "273600.00",
+          "accelerated_property_pct": "25.00",
+          "accelerated_basis_amount": "68400.00",
+          "bonus_depreciation_pct": "100.00",
+          "year_one_tax_deduction": "75861.82",
+          "investor_marginal_tax_rate": "32.00",
+          "year_one_tax_savings": "24275.78"
+        }
+      },
+      {
+        "quote_id": "66c0d6ad-3f5e-4c97-9243-f96eecf0ad2d",
+        "label": "Par",
+        "recommended": false,
+        "rate": "762.500",
+        "points_pct": "-0.400",
+        "points_amount": "-961.88",
+        "down_payment_pct": "25.00",
+        "prepay_label": "5-year prepayment penalty",
+        "hero": {
+          "monthly_payment": "2211.64",
+          "cash_to_close": "92385.82",
+          "loan_amount": null,
+          "monthly_cashflow": "-611.64",
+          "year1_tax_savings": "24275.78",
+          "year1_tax_savings_monthly": "2023"
+        },
+        "breakdown": {
+          "payment_lines": [
+            {
+              "label": "Principal & interest",
+              "amount": "1815.49"
+            },
+            {
+              "label": "Property taxes",
+              "amount": "253.65"
+            },
+            {
+              "label": "Homeowners insurance",
+              "amount": "142.50"
+            }
+          ],
+          "payment_total": "2211.64",
+          "cash_to_close_lines": [
+            {
+              "label": "Down payment",
+              "amount": "85500.00"
+            },
+            {
+              "label": "Lender fees",
+              "amount": "1790.00"
+            },
+            {
+              "label": "Points credit",
+              "amount": "-961.88"
+            },
+            {
+              "label": "Title & escrow",
+              "amount": "2394.00"
+            },
+            {
+              "label": "Prepaid interest",
+              "amount": "907.75"
+            },
+            {
+              "label": "Prepaid insurance",
+              "amount": "1995.00"
+            },
+            {
+              "label": "Prepaid taxes",
+              "amount": "760.95"
+            }
+          ],
+          "cash_to_close_total": "92385.82"
+        },
+        "cashflow": {
+          "rent_label": "Gross STR revenue",
+          "gross_amount": "2000.00",
+          "expense_ratio": "20.00",
+          "qualifying_rent": "1600.00",
+          "pitia": "2211.64",
+          "monthly_cashflow": "-611.64",
+          "annual_cashflow": "-7339.69",
+          "dscr": "0.72",
+          "cap_rate_pct": "4.21",
+          "monthly_cashflow_incl_tax": "1411.34"
+        },
+        "cost_seg": {
+          "purchase_price": "342000.00",
+          "land_allocation_pct": "20.00",
+          "land_value_allocation": "68400.00",
+          "depreciable_building_basis": "273600.00",
+          "accelerated_property_pct": "25.00",
+          "accelerated_basis_amount": "68400.00",
+          "bonus_depreciation_pct": "100.00",
+          "year_one_tax_deduction": "75861.82",
+          "investor_marginal_tax_rate": "32.00",
+          "year_one_tax_savings": "24275.78"
+        }
+      }
+    ],
+    "recommendation": {
+      "text": "20% down \u00b7 Par pricing at 7.625%, 5-year prepay. It balances your monthly payment and cash needed at closing.",
+      "lo_note": "AC2 live check note."
+    },
+    "matches": [],
+    "disclosures": {
+      "core": "This is not a commitment to lend. Rates, payments and closing costs are estimates based on the information available today and are subject to change once your file is fully underwritten. This is not a Loan Estimate.",
+      "investment": "Rental income and cashflow figures are estimates based on third-party market data (RentCast/AirDNA) and are not a guarantee of actual performance.",
+      "tax": "Estimate only, not tax advice. Consult your tax professional."
+    },
+    "lo": {
+      "name": "Jordan Lee",
+      "title": "Loan Officer",
+      "nmls": "1234567",
+      "phone": "8135550101",
+      "email": "jordan.lee@clearquote-demo.test"
+    },
+    "borrower_action": null,
+    "newest_report_token": null
+  }
+}

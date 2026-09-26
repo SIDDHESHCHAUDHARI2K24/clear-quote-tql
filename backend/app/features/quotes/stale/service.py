@@ -15,7 +15,9 @@ Steps (spec.md):
    expired -> status Stale, one activity event, and their quotes flagged
    (those past the cutoff plus those the expired version showed).
    Inquiry/OptionSelected keep their status; the same quotes are flagged.
-   Candidate rows are locked `FOR UPDATE` and decided from the locked row.
+   Candidate rows are locked `FOR NO KEY UPDATE` and decided from the
+   locked row. Lock order: quotes (all of them, by id, first) -> versions
+   -> applications, the one order of `applications/locking.py`.
 4. A second run at the same `now` changes nothing and writes no events.
    Every write is conditional on the row not already being in the target
    state, and an event is written only when the conditional status UPDATE
@@ -92,18 +94,26 @@ async def mark_application_quotes_stale(
     *,
     older_than: datetime | None = None,
     quote_ids: Sequence[uuid.UUID] | None = None,
-) -> int:
-    """Shared helper (E12): flags not-yet-stale quotes of one application
-    `stale = true` and returns how many changed. It writes no activity
-    event and never changes the application's status -- callers
-    (`mark_stale`, CQ-033's FICO-bucket re-run) decide both. `reason` is
-    logged for traceability.
+    priced_by: datetime | None = None,
+) -> list[uuid.UUID]:
+    """The one stale path (E12, merge plan M4): flags not-yet-stale quotes of
+    one application `stale = true` and returns the ids it changed (sorted).
+    It writes no activity event and never changes the application's status
+    -- every caller decides both and writes exactly one event of its own:
+    `mark_stale` (`application.stale`), CQ-033's FICO-bucket re-run
+    (`credit.hard_pull_completed`), CQ-017's override/revert
+    (`quotes.marked_stale`) and CQ-018's scenario PUT (`scenario.updated`).
+    `reason` is logged for traceability.
 
     With neither `older_than` nor `quote_ids` every quote is flagged (the
-    CQ-033 case). With either, only quotes with `priced_at < older_than`
-    OR `id` in `quote_ids` are flagged (review m5: an expired sent version
-    flags the quotes it showed plus genuinely old ones, never a fresh
-    quote the LO priced since)."""
+    CQ-033 and CQ-017 case). With either, only quotes with `priced_at <
+    older_than` OR `id` in `quote_ids` are flagged (review m5: an expired
+    sent version flags the quotes it showed plus genuinely old ones, never
+    a fresh quote the LO priced since). `priced_by` narrows the `quote_ids`
+    arm to quotes priced at or before that instant -- `mark_stale` passes
+    the expired version's `sent_at`, so a quote a re-price refreshed in
+    place after the send (same id, still in the old snapshot) is not
+    flagged again (CQ-030 plan.md #17a, resolved in U3)."""
     conditions: list[ColumnElement[bool]] = [
         Quote.id.in_(_application_quote_ids(application_id)),
         Quote.stale.is_(False),
@@ -113,9 +123,12 @@ async def mark_application_quotes_stale(
         if older_than is not None:
             restrict.append(Quote.priced_at < older_than)
         if quote_ids:
-            restrict.append(Quote.id.in_(list(quote_ids)))
+            listed = Quote.id.in_(list(quote_ids))
+            restrict.append(
+                listed if priced_by is None else listed & (Quote.priced_at <= priced_by)
+            )
         if not restrict:
-            return 0
+            return []
         conditions.append(or_(*restrict))
     result = await db.execute(
         update(Quote)
@@ -124,10 +137,10 @@ async def mark_application_quotes_stale(
         .returning(Quote.id)
         .execution_options(synchronize_session="fetch")
     )
-    changed = len(result.all())
+    changed = sorted(result.scalars().all())
     if changed:
         logger.info(
-            "Marked %d quote(s) stale for application %s (%s)", changed, application_id, reason
+            "Marked %d quote(s) stale for application %s (%s)", len(changed), application_id, reason
         )
     return changed
 
@@ -155,6 +168,7 @@ async def _deciding_quote_priced_at(
 @dataclass(frozen=True)
 class _LatestVersion:
     expires_at: datetime
+    sent_at: datetime
     quote_ids: tuple[uuid.UUID, ...]
 
 
@@ -189,6 +203,7 @@ async def _latest_versions(
         select(
             QuotePackage.application_id,
             QuotePackageVersion.expires_at,
+            QuotePackageVersion.sent_at,
             QuotePackageVersion.snapshot,
             QuotePackage.quote_ids,
         )
@@ -202,8 +217,8 @@ async def _latest_versions(
         )
     )
     return {
-        app_id: _LatestVersion(expires_at, _version_quote_ids(snapshot, package_quote_ids))
-        for app_id, expires_at, snapshot, package_quote_ids in rows.all()
+        app_id: _LatestVersion(expires_at, sent_at, _version_quote_ids(snapshot, package_quote_ids))
+        for app_id, expires_at, sent_at, snapshot, package_quote_ids in rows.all()
     }
 
 
@@ -217,7 +232,7 @@ async def _move_to_stale(
 ) -> bool:
     """Conditional status UPDATE; writes the one activity event only when it
     matched (so a concurrent or repeated run never writes a second one).
-    `application` is the row `mark_stale` locked `FOR UPDATE`, so its
+    `application` is the row `mark_stale` locked (`FOR NO KEY UPDATE`), so its
     status is the committed one and no concurrent writer can change it."""
     from_status = application.status
     moved = await db.execute(
@@ -252,14 +267,46 @@ async def mark_stale(db: AsyncSession, now: datetime) -> StaleResult:
     result = StaleResult()
 
     # Step 1: strict boundary -- stale only when age > stale_days.
-    marked = await db.execute(
-        update(Quote)
-        .where(Quote.priced_at < cutoff, Quote.stale.is_(False))
-        .values(stale=True)
-        .returning(Quote.id)
-        .execution_options(synchronize_session="fetch")
-    )
-    result.quotes_marked_stale += len(marked.all())
+    # Lock first (U2, applications/locking.py): every quote this run may
+    # update -- the ones past the cutoff and every quote of a step-3
+    # candidate -- in one statement ordered by id, so the job takes its
+    # quote locks in the same id order as every per-application writer
+    # (`lock_application_quotes`) and before any version or application.
+    # Then update only locked rows.
+    candidate_statuses = (*_MOVES_TO_STALE, *_KEEPS_STATUS)
+    locked_rows = (
+        await db.execute(
+            select(Quote.id, Scenario.application_id, Application.status)
+            .join(Scenario, Quote.scenario_id == Scenario.id)
+            .join(Application, Scenario.application_id == Application.id)
+            .where(
+                or_(
+                    (Quote.priced_at < cutoff) & Quote.stale.is_(False),
+                    Application.status.in_(candidate_statuses),
+                )
+            )
+            .order_by(Quote.id)
+            .with_for_update(of=Quote, key_share=True)
+        )
+    ).all()
+    locked_ids = [quote_id for quote_id, _app_id, _status in locked_rows]
+    # Applications whose quotes step 1 already holds (review minor a, U3).
+    locked_candidates = {
+        app_id for _quote_id, app_id, status in locked_rows if status in candidate_statuses
+    }
+    if locked_ids:
+        marked = await db.execute(
+            update(Quote)
+            .where(
+                Quote.id.in_(locked_ids),
+                Quote.priced_at < cutoff,
+                Quote.stale.is_(False),
+            )
+            .values(stale=True)
+            .returning(Quote.id)
+            .execution_options(synchronize_session="fetch")
+        )
+        result.quotes_marked_stale += len(marked.all())
 
     # Step 2: sent versions past `expires_at` -> expired (stamped once).
     expired = await db.execute(
@@ -279,23 +326,32 @@ async def mark_stale(db: AsyncSession, now: datetime) -> StaleResult:
     # view: version then application; CQ-024 actions: package, version,
     # application) and `clear_stale`'s quotes-before-application. The job
     # never locks a package, so it cannot close a cycle with those paths.
-    # Step 3 updates candidates' quotes after locking the applications, so
-    # those quotes are locked first here to keep quotes -> applications.
-    await db.execute(
+    # Step 3 updates candidates' quotes after locking the applications;
+    # step 1 already locked them. This re-lock only covers applications that
+    # were *not* candidates at step 1 (their status changed since), so it
+    # never waits on a quote a writer inserted mid-job into an application
+    # step 1 already holds (U3, review minor a): such a quote is fresh, so
+    # step 3's conditional UPDATE skips it without locking it.
+    # `FOR NO KEY UPDATE` throughout (applications/locking.py): an insert
+    # referencing a locked row (an activity event, say) is not blocked.
+    relock = (
         select(Quote.id)
         .join(Scenario, Quote.scenario_id == Scenario.id)
         .join(Application, Scenario.application_id == Application.id)
-        .where(Application.status.in_((*_MOVES_TO_STALE, *_KEEPS_STATUS)))
+        .where(Application.status.in_(candidate_statuses))
         .order_by(Quote.id)
-        .with_for_update(of=Quote)
+        .with_for_update(of=Quote, key_share=True)
     )
+    if locked_candidates:
+        relock = relock.where(Scenario.application_id.not_in(locked_candidates))
+    await db.execute(relock)
     candidates = list(
         (
             await db.execute(
                 select(Application)
-                .where(Application.status.in_((*_MOVES_TO_STALE, *_KEEPS_STATUS)))
+                .where(Application.status.in_(candidate_statuses))
                 .order_by(Application.id)
-                .with_for_update()
+                .with_for_update(key_share=True)
                 .execution_options(populate_existing=True)
             )
         )
@@ -315,16 +371,21 @@ async def mark_stale(db: AsyncSession, now: datetime) -> StaleResult:
         # Review m5: flag only the quotes the expired version showed plus
         # quotes already past the cutoff -- never a fresh quote priced since.
         sent_quote_ids = latest.quote_ids if latest is not None and version_expired else ()
+        # #17a (U3): a sent quote re-priced in place since the send keeps its
+        # fresh flag -- only quotes priced by the version's `sent_at` count.
+        sent_by = latest.sent_at if latest is not None else None
 
         if application.status in _KEEPS_STATUS:
             if version_expired:
-                result.quotes_marked_stale += await mark_application_quotes_stale(
+                flagged = await mark_application_quotes_stale(
                     db,
                     application.id,
                     REASON_VERSION_EXPIRED,
                     older_than=cutoff,
                     quote_ids=sent_quote_ids,
+                    priced_by=sent_by,
                 )
+                result.quotes_marked_stale += len(flagged)
             continue
 
         priced_at = deciding.get(application.id)
@@ -337,9 +398,15 @@ async def mark_stale(db: AsyncSession, now: datetime) -> StaleResult:
         if await _move_to_stale(db, application, now=now, stale_days=stale_days, reason=reason):
             result.applications_marked_stale += 1
             result.application_ids.append(str(application.id))
-            result.quotes_marked_stale += await mark_application_quotes_stale(
-                db, application.id, reason, older_than=cutoff, quote_ids=sent_quote_ids
+            flagged = await mark_application_quotes_stale(
+                db,
+                application.id,
+                reason,
+                older_than=cutoff,
+                quote_ids=sent_quote_ids,
+                priced_by=sent_by,
             )
+            result.quotes_marked_stale += len(flagged)
 
     await db.flush()
     logger.info(
@@ -376,11 +443,10 @@ async def clear_stale(
       returning False.
     - Flushes; the caller commits (in the same transaction as the re-price).
 
-    Until pricing's `priced_at` and send's `sent_at` read `core/clock.now()`
-    (E2 follow-up on CQ-017/018/020), a demo with `CLOCK_NOW` far ahead of
-    the real clock sees the next `mark_stale` run re-flag the re-priced
-    quotes, because their real-clock `priced_at` is older than the frozen
-    cutoff."""
+    Callers (U3): CQ-018's `reprice_application` and `autoquote_replacing`,
+    under their quotes -> packages -> application locks. Pricing's
+    `priced_at` and send's `sent_at` read `core/clock.now()` too (M5), so a
+    `CLOCK_NOW` demo re-prices cleanly."""
     ids = list(dict.fromkeys(fresh_quote_ids))
     if not ids:
         return False

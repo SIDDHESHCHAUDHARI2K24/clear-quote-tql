@@ -100,3 +100,37 @@ export async function waitForEmails(
     `Fewer than ${minCount} email(s) to ${to} matching "${subjectContains}" arrived within ${timeoutMs}ms`,
   );
 }
+
+export interface MailpitEmail {
+  ID: string;
+  Subject: string;
+  Text: string;
+  HTML: string;
+  Attachments: { FileName: string; ContentType: string; Size: number }[];
+}
+
+// CQ-020: polls for emails to `email` with `subject` that Mailpit received
+// after `since` (so a rerun never reads an earlier send's email), newest
+// first. Resolves once `count` of them exist.
+export async function readEmailsSince(
+  email: string,
+  subject: string,
+  since: Date,
+  { count = 1, timeoutMs = 20_000 }: { count?: number; timeoutMs?: number } = {},
+): Promise<MailpitEmail[]> {
+  const deadline = Date.now() + timeoutMs;
+  const query = encodeURIComponent(`to:"${email.toLowerCase()}" subject:"${subject}"`);
+  while (Date.now() < deadline) {
+    const { messages } = await fetchJson<MailpitMessagesResponse>(
+      `/api/v1/search?query=${query}&limit=20`,
+    );
+    const fresh = messages
+      .filter((m) => new Date(m.Created).getTime() >= since.getTime())
+      .sort((a, b) => new Date(b.Created).getTime() - new Date(a.Created).getTime());
+    if (fresh.length >= count) {
+      return Promise.all(fresh.map((m) => fetchJson<MailpitEmail>(`/api/v1/message/${m.ID}`)));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`Fewer than ${count} "${subject}" email(s) for ${email} within ${timeoutMs}ms`);
+}

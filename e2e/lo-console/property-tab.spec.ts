@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { applicationIdByClientEmail, flushLoginRateLimit } from "../helpers/db";
+import { applicationIdByClientEmail, execSql, flushLoginRateLimit } from "../helpers/db";
 import { staffLogin } from "../helpers/staffLogin";
 
 // CQ-028 spec.md AC6: "Picking FL then Tampa and Orlando in the buy-box
@@ -33,6 +33,19 @@ test.describe.configure({ mode: "serial" });
 
 test.beforeEach(() => {
   flushLoginRateLimit();
+});
+
+// P56-merge: restore Kathleen's seeded property (TBD, buy-box FL/[Davenport,
+// Orlando], recommend matches on). Main's CQ-019 `send-tab-draft.spec.ts`
+// AC3 previews her letter with "- TBD -" and runs after this file in a
+// full-suite run. City/state/zip/county are the seeded values already.
+test.afterAll(() => {
+  const applicationId = applicationIdByClientEmail("kathleen.mcreynolds@clearquote-demo.test");
+  execSql(
+    `update properties set address_status = 'tbd', street_address = null, ` +
+      `buy_box_states = '{FL}', buy_box_metros = '{Davenport,Orlando}', ` +
+      `recommend_matches = true where application_id = '${applicationId}';`,
+  );
 });
 
 test("AC6: buy-box states -> metros, then TBD -> address turns recommend matches off and removes the TBD label", async ({

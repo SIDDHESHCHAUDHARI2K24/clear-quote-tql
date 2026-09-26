@@ -25,6 +25,12 @@ describe("categoryForEventType (M2)", () => {
     ["application.submitted", "borrower_action"],
     ["pipeline.resume_requested", "pricing"],
     ["pipeline.resume_failed", "pricing"],
+    ["quotes.marked_stale", "flag"],
+    ["quotes.repriced", "pricing"],
+    ["quote.recommended", "pricing"],
+    ["quote.deleted", "pricing"],
+    ["scenario.updated", "pricing"],
+    ["scenario.autoquoted", "pricing"],
   ])("maps %s to the %s category, not 'other'", (type, expected) => {
     expect(categoryForEventType(type)).toBe(expected);
   });

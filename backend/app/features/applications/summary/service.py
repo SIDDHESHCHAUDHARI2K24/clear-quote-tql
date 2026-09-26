@@ -20,15 +20,16 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from decimal import Decimal
 
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.enums import ApplicationStatus, ApplicationTab
 from app.core.errors import ConflictError
+from app.features.applications.locking import lock_application
 from app.features.applications.models import Application
 from app.features.applications.property.models import Property
 from app.features.applications.summary.schemas import (
@@ -233,7 +234,8 @@ async def patch_application_status(
     terminal). 409s if the application is already `withdrawn`/`closed`
     (plan.md decision #8 -- "from any non-terminal status").
 
-    `SELECT ... FOR UPDATE` (with `populate_existing` so the in-memory
+    `lock_application` (`FOR NO KEY UPDATE`, applications/locking.py; with
+    `populate_existing` so the in-memory
     `application.status` reflects whatever this locked, committed row
     actually holds, not a possibly-stale value from the `get_scoped_
     application` dependency's earlier read) closes a race: two concurrent
@@ -241,14 +243,7 @@ async def patch_application_status(
     terminal-status check and both commit, instead of the second one
     409ing as "from any non-terminal status" intends.
     """
-    application = (
-        await db.execute(
-            select(Application)
-            .where(Application.id == application.id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-    ).scalar_one()
+    application = await lock_application(db, application.id)
 
     if application.status in _TERMINAL_APPLICATION_STATUSES:
         raise ConflictError(f"Application {application.id} is already {application.status.value}.")
@@ -260,7 +255,7 @@ async def patch_application_status(
             actor=str(actor_id),
             type=_STATUS_EVENT_TYPE[request.status],
             payload={"reason": request.reason},
-            at=datetime.now(UTC),
+            at=clock.now(),
         )
     )
     await db.commit()

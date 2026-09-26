@@ -217,3 +217,21 @@ async def delete_object(key: str, *, bucket: str | None = None, client: Any | No
     """Deletes `key` (S3 semantics: deleting a missing key is not an error)."""
     name, s3 = _resolve(bucket, client)
     await asyncio.to_thread(s3.delete_object, Bucket=name, Key=key)
+
+
+def _object_exists_sync(bucket: str, key: str, client: Any) -> bool:
+    try:
+        client.head_object(Bucket=bucket, Key=key)
+    except ClientError as exc:
+        if _is_missing(exc):
+            return False
+        raise
+    return True
+
+
+async def object_exists(key: str, *, bucket: str | None = None, client: Any | None = None) -> bool:
+    """Whether `key` exists (a HEAD request; missing -> `False`). CQ-020's
+    send workflow uses it to skip re-rendering a letter PDF on retry
+    (P56-merge: added to the P5/P6 module for main's CQ-020 callers)."""
+    name, s3 = _resolve(bucket, client)
+    return await asyncio.to_thread(_object_exists_sync, name, key, s3)

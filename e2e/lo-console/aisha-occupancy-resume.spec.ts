@@ -53,9 +53,10 @@ test.beforeEach(() => {
 // triggers ever raises-then-resolves a flag for some other field along
 // the way, a blanket "any resolved flag" restore would incorrectly reopen
 // that one too.
-// Leftover `scenarios`/`quotes`/`activity_events` rows from the real
-// pipeline run stay in place -- nothing else in the suite asserts their
-// absence for Aisha.
+// The real pipeline run's `scenarios`/`quotes` are deleted too (her seed
+// has none): main's CQ-018 `quote-builder.spec.ts` AC6 asserts Aisha's
+// builder shows no quote cards (P56-merge). `activity_events` rows stay --
+// nothing asserts their absence.
 //
 // `updated_at` also needs resetting by hand: it's an ORM-level
 // `onupdate=func.now()` (applications/models.py), not a DB trigger, so
@@ -80,6 +81,11 @@ test.afterAll(() => {
       `and field_key = 'occupancy_type' and rule = 'ob_required_field' ` +
       `and resolved_at is not null;`,
   );
+  execSql(
+    `delete from quotes where scenario_id in ` +
+      `(select id from scenarios where application_id = '${applicationId}');`,
+  );
+  execSql(`delete from scenarios where application_id = '${applicationId}';`);
 });
 
 test("AC1: setting Aisha's occupancy resumes the pipeline to Priced and clears her from the dashboard", async ({

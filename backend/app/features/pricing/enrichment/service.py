@@ -15,19 +15,21 @@ from __future__ import annotations
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.enums import ApplicationTab, FieldSource, FlagSeverity, Occupancy, Strategy
-from app.core.errors import NotFoundError, ValidationAppError
+from app.core.errors import IntegrationError, NotFoundError, ValidationAppError
 from app.features.applications.models import Application
 from app.features.applications.property.models import Property
+from app.features.applications.timeline.models import ActivityEvent
 from app.features.applications.verification.models import FieldValue
 from app.features.applications.verification.service import resolve_flag, write_flag
 from app.features.pricing.scenarios.ob_request import build_ob_search_request
+from app.features.quotes.stale.service import mark_application_quotes_stale
 from app.integrations.common.errors import PricingValidationError
 from app.integrations.insurance.mock import MockInsuranceClient
 from app.integrations.pricing.mock import (
@@ -130,9 +132,12 @@ def _property_state_and_county(property_: Property) -> tuple[str, str | None]:
     return state, property_.county
 
 
-async def _enrich_tax(
+_FieldFetchResult = tuple[Decimal | str, FieldSource, str | None]
+
+
+async def _fetch_tax(
     db: AsyncSession, application: Application, property_: Property
-) -> FieldValue:
+) -> _FieldFetchResult:
     state, county = _property_state_and_county(property_)
     tax = await MockTaxClient(db).get_tax_rate(state, county or "")
     # `TaxRateDTO.annual_rate_pct` is a percent-scale number (e.g. `0.601`
@@ -141,14 +146,12 @@ async def _enrich_tax(
     # `*_pct` field, so it's divided by 100 here, once, at the enrichment
     # boundary.
     fraction = tax.annual_rate_pct / Decimal("100")
-    return await _upsert_field_value(
-        db, application.id, "property_tax_annual_rate", fraction, FieldSource.SMARTASSET
-    )
+    return fraction, FieldSource.SMARTASSET, None
 
 
-async def _enrich_insurance(
+async def _fetch_insurance(
     db: AsyncSession, application: Application, property_: Property
-) -> FieldValue:
+) -> _FieldFetchResult:
     if application.requested_price is None:
         raise ValidationAppError(
             "Cannot enrich pricing fields: application has no requested_price."
@@ -159,55 +162,95 @@ async def _enrich_insurance(
     )
     # `homeowners_ins_annual` is the dollar premium itself (catalog: Currency),
     # unlike `property_tax_annual_rate` which is a rate.
-    return await _upsert_field_value(
-        db, application.id, "homeowners_ins_annual", insurance.annual_premium, FieldSource.STEADILY
-    )
+    return insurance.annual_premium, FieldSource.STEADILY, None
 
 
-async def _enrich_hoa(
+async def _fetch_hoa(
     db: AsyncSession, application: Application, property_: Property
-) -> FieldValue:
+) -> _FieldFetchResult:
     # Decision 5 (plan.md): no adapter or seeded table models a real HOA fee
     # yet (catalog: "Redfin / Zillow / listing"). Always $0 / DEFAULT.
-    return await _upsert_field_value(
-        db, application.id, "hoa_fee_monthly", Decimal("0.00"), FieldSource.DEFAULT
-    )
+    return Decimal("0.00"), FieldSource.DEFAULT, None
 
 
-async def _enrich_market_rent_ltr(
+async def _fetch_market_rent_ltr(
     db: AsyncSession, application: Application, property_: Property
-) -> FieldValue:
+) -> _FieldFetchResult:
     if property_.zip is None:
         raise ValidationAppError("Cannot enrich market rent: property has no zip code.")
     rent = await MockRentClient(db).get_market_rent(property_.zip, property_.number_of_units)
-    return await _upsert_field_value(
-        db, application.id, "market_rent_ltr", rent.market_rent, FieldSource.RENTCAST
-    )
+    return rent.market_rent, FieldSource.RENTCAST, None
 
 
-async def _enrich_str_revenue(
+async def _fetch_str_revenue(
     db: AsyncSession, application: Application, property_: Property
-) -> FieldValue:
+) -> _FieldFetchResult:
     if property_.zip is None:
         raise ValidationAppError("Cannot enrich STR revenue: property has no zip code.")
     revenue = await MockStrClient(db).get_str_revenue(property_.zip, property_.number_of_units)
-    return await _upsert_field_value(
-        db, application.id, "gross_annual_revenue_str", revenue.annual_revenue, FieldSource.AIRDNA
-    )
+    return revenue.annual_revenue, FieldSource.AIRDNA, None
+
+
+_FieldFetcher = Callable[[AsyncSession, Application, Property], Awaitable[_FieldFetchResult]]
+
+# `field_key` -> the pure fetch function (adapter call only, no DB write)
+# that both `_FIELD_HANDLERS` (persist) and `peek_source_value` (read-only,
+# `pricing.panel`'s `original_value`) build on. Also doubles as the pinned
+# list of override-able field keys (spec.md).
+_FIELD_FETCHERS: dict[str, _FieldFetcher] = {
+    "property_tax_annual_rate": _fetch_tax,
+    "homeowners_ins_annual": _fetch_insurance,
+    "hoa_fee_monthly": _fetch_hoa,
+    "market_rent_ltr": _fetch_market_rent_ltr,
+    "gross_annual_revenue_str": _fetch_str_revenue,
+}
+
+
+def _make_handler(field_key: str, fetcher: _FieldFetcher) -> _FieldHandler:
+    async def _handler(
+        db: AsyncSession, application: Application, property_: Property
+    ) -> FieldValue:
+        value, source, source_ref = await fetcher(db, application, property_)
+        return await _upsert_field_value(db, application.id, field_key, value, source, source_ref)
+
+    return _handler
 
 
 _FieldHandler = Callable[[AsyncSession, Application, Property], Awaitable[FieldValue]]
 
 # `field_key` -> the handler `revert_field_value` re-runs to restore the
-# source value. Also doubles as the pinned list of override-able field keys
-# (spec.md).
+# source value (fetch, then persist via `_upsert_field_value`).
 _FIELD_HANDLERS: dict[str, _FieldHandler] = {
-    "property_tax_annual_rate": _enrich_tax,
-    "homeowners_ins_annual": _enrich_insurance,
-    "hoa_fee_monthly": _enrich_hoa,
-    "market_rent_ltr": _enrich_market_rent_ltr,
-    "gross_annual_revenue_str": _enrich_str_revenue,
+    field_key: _make_handler(field_key, fetcher) for field_key, fetcher in _FIELD_FETCHERS.items()
 }
+
+OVERRIDABLE_FIELD_KEYS: tuple[str, ...] = tuple(_FIELD_FETCHERS)
+"""Public alias of the fixed 5-key override-able field list, for
+cross-module readers (`pricing.panel`) that need it without reaching into
+this module's private tables."""
+
+
+async def peek_source_value(
+    db: AsyncSession, application: Application, property_: Property, field_key: str
+) -> Decimal | str | None:
+    """Read-only "what would the source say right now" for `field_key` --
+    calls the same adapter its own enrichment handler would (via the
+    shared `_FIELD_FETCHERS` fetch function), but never writes to the DB.
+    `pricing.panel`'s `original_value` for a currently-overridden field;
+    there is no stored pre-override snapshot (plan.md Decision 7). Returns
+    `None` if `field_key` isn't overridable, or the fetch itself fails for
+    a reason unrelated to the override (e.g. a missing zip, a forced
+    adapter failure) -- the panel shows no "original value" rather than
+    500ing the whole pricing view over a peek.
+    """
+    fetcher = _FIELD_FETCHERS.get(field_key)
+    if fetcher is None:
+        return None
+    try:
+        value, _source, _source_ref = await fetcher(db, application, property_)
+    except (ValidationAppError, IntegrationError):
+        return None
+    return value
 
 
 async def enrich_pricing_fields(db: AsyncSession, application_id: uuid.UUID) -> EnrichmentResult:
@@ -228,15 +271,15 @@ async def enrich_pricing_fields(db: AsyncSession, application_id: uuid.UUID) -> 
         await handler(db, application, property_)
         written.append(field_key)
 
-    await _run("property_tax_annual_rate", _enrich_tax)
-    await _run("homeowners_ins_annual", _enrich_insurance)
-    await _run("hoa_fee_monthly", _enrich_hoa)
+    await _run("property_tax_annual_rate", _FIELD_HANDLERS["property_tax_annual_rate"])
+    await _run("homeowners_ins_annual", _FIELD_HANDLERS["homeowners_ins_annual"])
+    await _run("hoa_fee_monthly", _FIELD_HANDLERS["hoa_fee_monthly"])
 
     if application.occupancy is Occupancy.INVESTMENT:
         if application.strategy is Strategy.LTR:
-            await _run("market_rent_ltr", _enrich_market_rent_ltr)
+            await _run("market_rent_ltr", _FIELD_HANDLERS["market_rent_ltr"])
         elif application.strategy is Strategy.STR:
-            await _run("gross_annual_revenue_str", _enrich_str_revenue)
+            await _run("gross_annual_revenue_str", _FIELD_HANDLERS["gross_annual_revenue_str"])
 
     await db.commit()
     return EnrichmentResult(field_keys_written=written)
@@ -280,25 +323,103 @@ async def validate_ob_required_fields(db: AsyncSession, application_id: uuid.UUI
     return True
 
 
+_PRICING_AFFECTING_FIELDS = frozenset(_FIELD_HANDLERS.keys())
+"""Every overridable pricing field (spec.md's fixed 5-key list) feeds
+`compute_quote` directly (tax/insurance/HOA/rent/STR-revenue), so every one
+of them is pricing-affecting by definition -- there is no narrower
+allow-list (plan.md Decision 8)."""
+
+
+_FIELD_ACTION_TEXT = {"override": "overridden", "revert": "reverted"}
+
+
+async def _mark_quotes_stale_after_field_change(
+    db: AsyncSession,
+    application_id: uuid.UUID,
+    field_key: str,
+    actor_id: uuid.UUID,
+    action: str,
+    old_value: dict | list | str | float | bool | None,
+    new_value: dict | list | str | float | bool | None,
+) -> None:
+    """CQ-017 spec.md AC3: an override/revert on a pricing-affecting field
+    marks every one of that application's quotes stale (across every
+    scenario/strategy group -- tax/insurance/HOA are scenario-independent,
+    so a narrower "just the current scenario" scope would under-mark) and
+    always writes one activity event, so the audit trail shows every
+    pricing-affecting change even when every quote was already stale
+    (only `quote_ids` may then be empty -- review finding). CQ-018 clears
+    `stale` on reprice.
+
+    U3 (merge plan M4): the flagging goes through the one stale path,
+    `quotes.stale.service.mark_application_quotes_stale` (a single
+    conditional `UPDATE ... WHERE stale = false RETURNING id`, so two
+    concurrent overrides can't both flag the same rows); this call site
+    writes the one `quotes.marked_stale` event, with a `message` for the
+    CQ-029 timeline. The caller holds quotes -> application
+    (applications/locking.py)."""
+    if field_key not in _PRICING_AFFECTING_FIELDS:
+        return
+    quote_ids = await mark_application_quotes_stale(
+        db, application_id, f"field_{action}:{field_key}"
+    )
+    change = f"{field_key.replace('_', ' ')} {_FIELD_ACTION_TEXT.get(action, action)}"
+    db.add(
+        ActivityEvent(
+            application_id=application_id,
+            actor=str(actor_id),
+            type="quotes.marked_stale",
+            payload={
+                # U3 code review: say "marked stale" only when a quote was.
+                "message": (f"Quotes marked stale: {change}" if quote_ids else change.capitalize()),
+                "field_key": field_key,
+                "action": action,
+                "old_value": str(old_value) if old_value is not None else None,
+                "new_value": str(new_value) if new_value is not None else None,
+                "quote_ids": [str(q) for q in quote_ids],
+            },
+            at=clock.now(),
+        )
+    )
+
+
+async def _commit_or_flush(db: AsyncSession, commit: bool) -> None:
+    if commit:
+        await db.commit()
+    else:
+        await db.flush()
+
+
 async def override_field_value(
     db: AsyncSession,
     application_id: uuid.UUID,
     field_key: str,
     value: Decimal | str,
     lo_id: uuid.UUID,
+    *,
+    commit: bool = True,
 ) -> FieldValue:
+    """Overrides `field_key` and marks the application's quotes stale.
+
+    `commit=False` (the `/field-values` route, PR #34 review m2) flushes
+    instead, so the caller writes its own activity event under the same
+    lock and commits the override and the event together."""
     if field_key not in _FIELD_HANDLERS:
         raise ValidationAppError(f"Not an overridable pricing field: {field_key}")
     json_value = str(value) if isinstance(value, Decimal) else value
     existing = await _existing_field_value(db, application_id, field_key)
-    now = datetime.now(UTC)
+    now = clock.now()
     if existing is not None:
+        old_value = existing.value
         existing.value = json_value
         existing.source = FieldSource.LO_OVERRIDE
         existing.source_ref = None
         existing.overridden_by = lo_id
         existing.overridden_at = now
-        await db.commit()
+        await _mark_quotes_stale_after_field_change(
+            db, application_id, field_key, lo_id, "override", old_value, json_value
+        )
+        await _commit_or_flush(db, commit)
         return existing
     row = FieldValue(
         application_id=application_id,
@@ -309,16 +430,25 @@ async def override_field_value(
         overridden_at=now,
     )
     db.add(row)
-    await db.commit()
+    await _mark_quotes_stale_after_field_change(
+        db, application_id, field_key, lo_id, "override", None, json_value
+    )
+    await _commit_or_flush(db, commit)
     return row
 
 
 async def revert_field_value(
-    db: AsyncSession, application_id: uuid.UUID, field_key: str
+    db: AsyncSession,
+    application_id: uuid.UUID,
+    field_key: str,
+    actor_id: uuid.UUID,
+    *,
+    commit: bool = True,
 ) -> FieldValue:
     """Clears the override and re-runs that field's own enrichment fetch to
     restore the source value (there is no separate "pre-override value"
-    column on `field_values` -- see plan.md Decision under AC3)."""
+    column on `field_values` -- see plan.md Decision under AC3).
+    `commit=False`: see `override_field_value`."""
     handler = _FIELD_HANDLERS.get(field_key)
     if handler is None:
         raise ValidationAppError(f"Not an overridable pricing field: {field_key}")
@@ -326,6 +456,7 @@ async def revert_field_value(
     existing = await _existing_field_value(db, application_id, field_key)
     if existing is None:
         raise NotFoundError(f"No field_values row for {field_key} on application {application_id}")
+    old_value = existing.value
     existing.overridden_by = None
     existing.overridden_at = None
     await db.flush()
@@ -333,5 +464,8 @@ async def revert_field_value(
     application = await _get_application(db, application_id)
     property_ = await _get_property(db, application_id)
     row = await handler(db, application, property_)
-    await db.commit()
+    await _mark_quotes_stale_after_field_change(
+        db, application_id, field_key, actor_id, "revert", old_value, row.value
+    )
+    await _commit_or_flush(db, commit)
     return row

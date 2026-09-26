@@ -12,6 +12,8 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
+from app.core.config import get_settings
 from app.core.enums import ApplicationStatus, Occupancy
 from app.features.applications.models import Application
 from app.features.applications.timeline.models import ActivityEvent
@@ -19,6 +21,11 @@ from app.features.clients.models import Client
 from app.features.notifications.outbox.models import OutboxEmail
 from app.features.portal.reports.versions import freeze_package_version
 from app.features.pricing.scenarios.service import auto_price
+from app.features.quotes.builder.tests.test_review_round1 import (
+    _application_lock,
+    _capture_sql,
+    _first,
+)
 from app.features.quotes.send.models import QuotePackage, QuotePackageVersion
 from app.integrations.crm.models import CrmEvent
 from conftest import BorrowerSession
@@ -455,3 +462,63 @@ async def test_report_not_found_message_matches_for_missing_and_foreign_token(
     assert missing.status_code == 404
 
     assert foreign.json()["error"]["message"] == missing.json()["error"]["message"]
+
+
+async def test_action_locks_package_then_version_then_application(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: MakeBorrowerSession,
+    make_application: Callable[..., Awaitable[Application]],
+    set_field_value: Callable[..., Awaitable[object]],
+) -> None:
+    """U3 (PR #35 review minor d): the one lock order
+    (applications/locking.py) on the portal side is package -> version ->
+    application, asserted on the SQL the action actually runs."""
+    application, _package, version = await _sent_package(
+        db_session, make_application, set_field_value
+    )
+    await _sign_in(db_session, make_borrower_session, application)
+    quote_id = _options(version)[0]["quote_id"]
+
+    with _capture_sql() as statements:
+        response = await client.post(
+            f"/api/v1/portal/reports/{version.report_token}/actions",
+            json={"type": "move_forward", "quote_id": quote_id},
+        )
+    assert response.status_code == 200, response.text
+
+    package_lock = _first(statements, lambda s: "FROM quote_packages " in s and "FOR UPDATE" in s)
+    version_lock = _first(
+        statements, lambda s: "FROM quote_package_versions" in s and "FOR UPDATE" in s
+    )
+    app_lock = _application_lock(statements)
+    assert package_lock is not None and version_lock is not None and app_lock is not None
+    assert package_lock < version_lock < app_lock, statements
+
+
+async def test_expiry_reads_the_injected_clock(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    make_borrower_session: MakeBorrowerSession,
+    make_application: Callable[..., Awaitable[Application]],
+    set_field_value: Callable[..., Awaitable[object]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """U3 (merge plan M5): a report sent today counts as expired when
+    `CLOCK_NOW` is 22 days on, the same instant CQ-030's job and the report
+    view use."""
+    application, _package, version = await _sent_package(
+        db_session, make_application, set_field_value
+    )
+    await _sign_in(db_session, make_borrower_session, application)
+    frozen = get_settings().model_copy(
+        update={"clock_now": (version.sent_at + timedelta(days=22)).isoformat()}
+    )
+    monkeypatch.setattr(clock, "get_settings", lambda: frozen)
+
+    response = await client.post(
+        f"/api/v1/portal/reports/{version.report_token}/actions",
+        json={"type": "move_forward", "quote_id": _options(version)[0]["quote_id"]},
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["error"]["message"] == "This report has expired."

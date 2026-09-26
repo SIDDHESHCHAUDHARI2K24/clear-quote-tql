@@ -249,6 +249,20 @@ async def import_from_los(application_id: uuid.UUID, db: AsyncSession) -> Import
             )
         )
 
+    # CQ-018 (plan.md Decision 3): the LOS file's requested down payment is
+    # the "chosen down payment" system-design's default quote groups price
+    # at (Daniel Ortiz's 5% -> the 20% MI-removal group). `auto_price` reads
+    # it back; absent, it falls back to the 20%/25% defaults as before.
+    if loan_file.down_payment_pct is not None:
+        db.add(
+            FieldValue(
+                application_id=application_id,
+                field_key="down_payment_pct",
+                value=str(loan_file.down_payment_pct),
+                source=FieldSource.ENCOMPASS,
+            )
+        )
+
     parties: list[ApplicationParty] = [_build_borrower_party(loan_file)]
     co_borrower = _build_co_borrower_party(loan_file)
     if co_borrower is not None:

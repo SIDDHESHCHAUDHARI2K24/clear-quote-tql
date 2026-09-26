@@ -105,7 +105,7 @@ async def test_accept_locks_quotes_before_the_application(
     )
 
     assert accepted.status_code == 200, accepted.text
-    quotes_lock = _index(statements, lambda s: "FOR UPDATE OF quotes" in s)
+    quotes_lock = _index(statements, lambda s: "FOR NO KEY UPDATE OF quotes" in s)
     app_lock = _index(statements, lambda s: "FROM applications" in s and "FOR NO KEY UPDATE" in s)
     quotes_update = _index(statements, lambda s: s.startswith("UPDATE quotes"))
     assert quotes_lock < app_lock < quotes_update

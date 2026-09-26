@@ -40,6 +40,12 @@ const TYPE_PREFIX_CATEGORY: Array<[string, string]> = [
   ["quote.ask_updated", "borrower_action"],
   ["quote.option_selected", "borrower_action"],
   ["application.stale", "flag"],
+  // U3 (P5/P6 merge): the CQ-017/018 quote-builder events.
+  ["quotes.marked_stale", "flag"],
+  ["quotes.repriced", "pricing"],
+  ["quote.recommended", "pricing"],
+  ["quote.deleted", "pricing"],
+  ["scenario.", "pricing"],
   ["application.repriced_from_stale", "pricing"],
   ["application.submitted", "borrower_action"],
   ["application.", "flag"],
