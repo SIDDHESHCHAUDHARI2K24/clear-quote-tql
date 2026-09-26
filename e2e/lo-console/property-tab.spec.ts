@@ -39,12 +39,25 @@ test.beforeEach(() => {
 // Orlando], recommend matches on). Main's CQ-019 `send-tab-draft.spec.ts`
 // AC3 previews her letter with "- TBD -" and runs after this file in a
 // full-suite run. City/state/zip/county are the seeded values already.
+//
+// M11 (P56 U4 review, PR #34 nit): every buy-box/property-type/units edit
+// above also marks the property a manual row (provenance.row_marker_key
+// ("property", prop.id) -> a `field_values` row keyed `row:property:
+// <property id>`, backend/app/features/applications/sections/property.py's
+// `apply_property_updates`) so "Import" won't clobber an LO's hand entry.
+// The `properties` table reset above doesn't touch `field_values`, so
+// without this delete, Kathleen's property is left permanently marked
+// "manually entered" after every run.
 test.afterAll(() => {
   const applicationId = applicationIdByClientEmail("kathleen.mcreynolds@clearquote-demo.test");
   execSql(
     `update properties set address_status = 'tbd', street_address = null, ` +
       `buy_box_states = '{FL}', buy_box_metros = '{Davenport,Orlando}', ` +
       `recommend_matches = true where application_id = '${applicationId}';`,
+  );
+  execSql(
+    `delete from field_values where application_id = '${applicationId}' ` +
+      `and field_key like 'row:property:%';`,
   );
 });
 

@@ -91,27 +91,34 @@ test("AC8: the header stays visible while scrolling, at 1280px and 1440px", asyn
 
 // Withdrawn is terminal (`patch_application_status` 409s on any further
 // PATCH from a non-terminal status), and only `applications.status` itself
-// changes (plus one activity event) -- but leaving Sam Reed withdrawn
-// leaks into `portal-home.spec.ts`'s later "pending credit-check consent"
-// test, which needs his application still active (a `stage is
-// PortalStage.CLOSED` application always gets `next_action = NONE`, so the
-// pending consent it inserts for him would never render a banner).
-// Restore his original seeded status (seed/personas/p05_sam_reed.yaml:
-// `pipeline_end_status: priced`) directly -- there's no "un-withdraw"
-// endpoint, since that's not a real product flow. In `afterAll`, not
-// inline at the end of the test body (review finding): a failed/timed-out
-// assertion between the withdraw click and the end of the test would
-// otherwise skip this restore and leave Sam Reed withdrawn for every
-// later run until a fresh `make demo-reset`.
+// changes (plus one activity event) -- but leaving a named persona
+// withdrawn can leak into other specs that need that persona's
+// application still active. This used Sam Reed until the M11 (P56 U4)
+// review: `send-tab-draft.spec.ts` also edits Sam Reed's live package
+// (PUT /package + restore in its own `afterAll`), and the two files'
+// `afterAll`s aren't ordered against each other, so a full-suite run
+// could see either file observe the other's in-flight, not-yet-restored
+// state. `bg-0016-sawyer.rodriguez@clearquote-demo.test` is one of
+// Jordan's seeded background-filler applications (seed_end_status:
+// priced, same as Sam Reed's) that no other spec in this repo references
+// by email or id, so withdrawing and restoring it here can't race with
+// anything else. Restore its original seeded status directly -- there's
+// no "un-withdraw" endpoint, since that's not a real product flow. In
+// `afterAll`, not inline at the end of the test body (review finding): a
+// failed/timed-out assertion between the withdraw click and the end of
+// the test would otherwise skip this restore and leave it withdrawn for
+// every later run until a fresh `make demo-reset`.
+const AC6_EMAIL = "bg-0016-sawyer.rodriguez@clearquote-demo.test";
+
 test.afterAll(() => {
-  const applicationId = applicationIdByClientEmail("sam.reed@clearquote-demo.test");
+  const applicationId = applicationIdByClientEmail(AC6_EMAIL);
   execSql(`update applications set status = 'priced' where id = '${applicationId}';`);
 });
 
 test("AC6: withdrawing an application sets status Withdrawn and hides the actions menu", async ({
   page,
 }) => {
-  const applicationId = applicationIdByClientEmail("sam.reed@clearquote-demo.test"); // Jordan's
+  const applicationId = applicationIdByClientEmail(AC6_EMAIL); // Jordan's
   await staffLogin(page, JORDAN_EMAIL, staffPassword!);
   await page.goto(`/applications/${applicationId}`);
   await page.waitForURL(new RegExp(`applications/${applicationId}/\\w+`));

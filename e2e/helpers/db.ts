@@ -182,6 +182,23 @@ function getPool(): Pool {
 }
 
 /**
+ * Runs a read query directly against this worktree's Postgres and returns
+ * its rows -- for spec-time assertions that need to compute an expected
+ * value independently of the endpoint under test (e.g. a milestone spec
+ * recomputing dashboard tile counts from the seed via SQL rather than
+ * re-reading `GET /dashboard`'s own answer). Unlike `execSql` (fire-and-
+ * forget, `psql -tAc`, for writes), this goes through the same `pg` pool
+ * as `latestReportTokenForBorrower` so typed rows come back.
+ */
+export async function queryRows<T extends Record<string, unknown> = Record<string, unknown>>(
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  const { rows } = await getPool().query<T>(sql, params);
+  return rows;
+}
+
+/**
  * The most recently sent, non-superseded `quote_package_versions.
  * report_token` for the client whose email matches `borrowerEmail`
  * (case-insensitive) -- e.g. a seeded persona like

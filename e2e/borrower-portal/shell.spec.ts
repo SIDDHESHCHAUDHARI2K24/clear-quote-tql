@@ -54,6 +54,9 @@ test("header, nav and footer disclosures render; no horizontal scroll at 375 px"
   await page.waitForURL("/support");
   // The shell-era stubs are now the real CQ-034/032/033 pages (P56-merge:
   // assert their real headings instead of the "Built in CQ-0xx" stub text).
+  // /apply renders its own "Apply" heading, and an unknown credit-check id
+  // (this all-zero UUID matches no request) 404s to CreditConsent's
+  // "Request not found" state (ConsentStates.tsx) rather than a per-page title.
   await expect(page.getByRole("heading", { level: 1, name: "Get in touch" })).toBeVisible();
   await expectNoHorizontalScroll(page);
 

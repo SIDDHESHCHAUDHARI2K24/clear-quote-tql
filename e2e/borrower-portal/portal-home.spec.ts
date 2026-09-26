@@ -130,7 +130,7 @@ test("AC4: a borrower with no applications sees the empty state and starts an ap
   await expect(page.getByRole("heading", { level: 1, name: "Apply" })).toBeVisible();
 });
 
-test("pending credit-check consent shows a task banner linking to the CQ-033 stub", async ({
+test("pending credit-check consent shows a task banner linking to the CQ-033 page", async ({
   page,
 }) => {
   // CQ-028a (parallel unit) owns the "request a hard pull" endpoint that
@@ -164,7 +164,10 @@ test("pending credit-check consent shows a task banner linking to the CQ-033 stu
   await expect(bannerLink).toHaveAttribute("href", `/tasks/credit-check/${consentId}`);
   await bannerLink.click();
   await page.waitForURL(`/tasks/credit-check/${consentId}`);
-  await expect(page.getByRole("heading", { level: 1, name: "Credit check" })).toBeVisible();
+  // Real CQ-033 page (ConsentForm.tsx), not the CQ-033 stub's old title.
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Authorize a credit check" }),
+  ).toBeVisible();
 });
 
 test("AC6: 375 px, no horizontal scroll, with real application cards", async ({ page }) => {
