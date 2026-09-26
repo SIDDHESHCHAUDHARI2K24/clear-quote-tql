@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -35,6 +35,7 @@ import yaml
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.config import get_settings
 from app.core.enums import (
     ApplicationStatus,
@@ -203,7 +204,7 @@ async def seed_borrower_accounts(
         return result
 
     password_hash = hash_password(password)
-    now = datetime.now(UTC)
+    now = clock.now()
     for client_id in client_ids:
         existing = (
             await db.execute(select(BorrowerAccount).where(BorrowerAccount.client_id == client_id))
@@ -280,7 +281,7 @@ async def seed_no_application_borrower(db: AsyncSession) -> uuid.UUID | None:
         client_id=client.id,
         email=email,
         password_hash=hash_password(password),
-        email_verified_at=datetime.now(UTC),
+        email_verified_at=clock.now(),
     )
     db.add(account)
     await db.commit()
@@ -413,7 +414,7 @@ async def _add_activity_event(
             actor="system",
             type=event_type,
             payload=payload,
-            at=datetime.now(UTC),
+            at=clock.now(),
         )
     )
     await db.flush()
@@ -614,7 +615,7 @@ async def apply_send_fixture(
     real pipeline in Phase B, or a test's own fixture) -- this function only
     authors status/timestamps, never a money figure.
     """
-    now = datetime.now(UTC)
+    now = clock.now()
     sent_at = now - timedelta(days=sent_days_ago)
     viewed_at = now - timedelta(days=viewed_days_ago) if viewed_days_ago is not None else None
 

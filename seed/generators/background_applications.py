@@ -18,11 +18,12 @@ import random
 import uuid
 from collections import Counter
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import clock
 from app.core.enums import ApplicationStatus, Occupancy, Strategy
 from app.features.applications.models import Application
 from app.features.clients.models import Client
@@ -124,7 +125,7 @@ async def seed_background_applications(
     (Decision D4); `lo_ids` is the 2 seeded LO users' ids, in a fixed order
     so `i % len(lo_ids)` alternation is itself deterministic."""
     rng = random.Random(rng_seed)
-    now = datetime.now(UTC)
+    now = clock.now()
 
     status_counts: Counter[str] = Counter()
     lo_counts: Counter[str] = Counter()
