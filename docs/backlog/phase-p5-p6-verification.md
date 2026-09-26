@@ -1,17 +1,194 @@
 # Phase P5/P6 verification
 
-Status: **superseded by the main→phase-p5-p6 merge** (see
-`docs/backlog/phase-p5-p6-main-merge-plan.md` on `origin/phase-p5-p6`). P3/P4
-landed on `main` (PR #33) after this branch was cut from `phase-p5-p6`, so
-this doc's (c) section — written when this branch could only see
-`phase-p5-p6` in isolation — is out of date: it is kept below as a record of
-what was actually found and how, with a note pointing at the merge plan's
-U1–U3 reconciliation units, which re-verify each item against the merged
-code. Everything else below ((a), (b), (d), (e)) is this session's real,
-final result and does not need to be redone; U4 (post-merge phase
-verification) picks up from here.
+Status: **U4 (post-merge phase verification) complete.** `main`'s P3/P4
+merged into `phase-p5-p6` (U1), the lock modules were unified (U2), and
+stale-marking/clock/reprice were reconciled (U3) — head `800890a` (PR #37,
+merged in mid-session, see "## U4" below). Everything under "## U4" is this
+session's real, final result against that merged tree: two fresh, fully
+green full-suite runs, the phase milestones with e2e evidence, the (c)
+"pending P3" list with each item now resolved with the unit that fixed it,
+and the compacted follow-up backlog. Sections (a)-(e) below "## U4" are the
+prior sessions' record (U0, then the first U4 attempt before the U1-U3
+merge landed) and are kept for the audit trail; where they duplicate work
+this session redid, "## U4" is the current source of truth.
 
-## (a) Suite results
+## U4 — Post-merge verification (this session)
+
+Setup: slot 1 (API 8101, LO 3101, portal 3201, queue `cq-s1`), branch
+`p56-verify-3` off `origin/p56-phase-verification` (`426865a`) merged with
+`origin/phase-p5-p6` twice — first at `dfb345d` (U1+U2+U3 head at task
+start), then again at `800890a` (PR #37, U3 minors: timeline tiebreak,
+reprice status guard, seed clock — landed mid-session, both auto-merged
+cleanly, no conflicts beyond `graphify-out/*`, taken theirs).
+
+### Fixes landed this session
+
+1. **Sam Reed shared-state race** (`e2e/lo-console/workspace.spec.ts` AC6
+   vs. `e2e/lo-console/send-tab-draft.spec.ts`): both edited/restored Sam
+   Reed's live state via their own `afterAll`, with no ordering guarantee
+   between the two files. Fixed by switching AC6 to a Jordan-owned
+   background persona (`bg-0016-sawyer.rodriguez@clearquote-demo.test`,
+   confirmed unreferenced by any other spec) instead of Sam Reed.
+2. **PR #34 review nits**:
+   - `property-tab.spec.ts`'s `afterAll` now also deletes Kathleen's
+     `row:property:%` `field_values` row (the buy-box/type/units edits
+     mark the property a manual row — `sections/property.py`'s
+     `apply_property_updates` — which the prior reset of the `properties`
+     table columns never cleared).
+   - `aisha-occupancy-resume.spec.ts`'s `afterAll` now also deletes the 5
+     enrichment-sourced `field_values` rows the real pipeline run writes
+     for her (`property_tax_annual_rate`, `homeowners_ins_annual`,
+     `hoa_fee_monthly`, `market_rent_ltr`, `gross_annual_revenue_str`).
+   - `test_service.py`'s `_send_marcus` no longer takes the unused
+     `quote_ids` parameter.
+   - `core/storage.py` treats `NoSuchBucket` the same as `NoSuchKey`/
+     `NotFound` (`_MISSING_CODES`, line 46) — left as is per the prompt;
+     behavior recorded here: a missing *bucket* (e.g. MinIO
+     mis-provisioned) reads identically to a missing *key* as
+     `ObjectNotFoundError` → 404, not a 5xx. Acceptable for this
+     single-bucket deployment; would hide a real infra misconfiguration
+     as "not found" in a multi-bucket one.
+3. **`e2e/cross-app/outbox-pdf.spec.ts`** (new, CQ-029 AC2's PDF-download
+   half): sends Marcus Hale's package from the Send tab (worker running),
+   opens his quote email in `/outbox`, asserts the HTML renders in the
+   sandboxed iframe, downloads `preapproval-letter.pdf`
+   (`content-type: application/pdf`, non-empty `%PDF-` bytes). Two real,
+   already-scoped-out bugs found while writing it (not fixed):
+   - `apps/lo-console/src/features/send/versions.ts:18` builds the Send
+     tab's "Open in Outbox" link as `/outbox?email=<id>`, but
+     `apps/lo-console/src/app/(staff)/outbox/page.tsx:18` only reads
+     `?email_id=` — that link's target drawer never auto-opens. Worked
+     around in the spec by navigating straight to
+     `/outbox?application_id=<id>` and clicking the row.
+   - `backend/app/features/notifications/outbox/service.py:49`'s
+     `_TYPE_SUBJECT_RULES["quote_sent"]` only matches a subject containing
+     "pre-approval is ready", but CQ-020's real send subject ("Your
+     pre-approval and numbers from Total Quality Lending",
+     `delivery/email_template.py`) doesn't match it — a real CQ-020 send
+     shows in the Outbox as Type "Other", not "Quote sent", even after the
+     merge. Already a logged follow-up (CQ-029 post-dev.md); the spec
+     filters on subject text instead of the Type column for this reason.
+   CQ-029 AC2 marked fully met in its own post-dev.md; the "pending
+   CQ-020" note removed.
+
+### Suite results
+
+Both runs: fresh `make demo-reset`, API + worker restarted after each
+reset, both Next.js apps left running throughout,
+`pnpm exec playwright test --workers=1 --reporter=line` with
+`LO_BASE_URL=http://localhost:3101 PORTAL_BASE_URL=http://localhost:3201
+SEED_STAFF_PASSWORD=<from .env> SEED_BORROWER_PASSWORD=<from .env>
+DATABASE_URL=postgresql+asyncpg://cq:cq@localhost:5432/cq_dev_s1` exported
+exactly as they appear in `.env` (the `+asyncpg` scheme matters —
+`e2e/global-setup.ts`'s `uv run` subprocesses inherit the same env var).
+
+| Run | Scope | Result | Duration |
+| --- | --- | --- | --- |
+| 1 | Full suite (`--workers=1`, all 3 projects: lo-console, borrower-portal, cross-app), fresh `make demo-reset` | **91 passed, 0 failed, 0 skipped** | 3.0 min |
+| 2 | Same, second fresh `make demo-reset` + API/worker restart | **91 passed, 0 failed, 0 skipped** | 2.9 min |
+
+A first, unofficial pass at run 1 (before these two official runs) caught
+one test-only issue, fixed and not re-litigated as an app bug: the new
+`outbox-pdf.spec.ts` filtered its Outbox row on the Type column ("Quote
+sent"), which doesn't match today given the `_TYPE_SUBJECT_RULES` gap noted
+above — fixed to filter on subject text instead. Both official runs above
+already include that fix.
+
+Evidence: `docs/backlog/CQ-029-timeline-outbox-panel/evidence/outbox-marcus-quote-email.png`
+(new, this session). All other evidence screenshots the two runs
+regenerated (54 files across CQ-016/017/018/019/020/024/026/027/029/031/
+032/034 and `docs/backlog/evidence/{p56-foundation,p56-phase,CQ-025-dashboard}/`)
+were reverted to their committed versions — they don't belong to U4.
+
+### `make demo-reset` timing (this session)
+
+Four resets, slot 1: **1.6s, 1.2s, 1.2s, 1.2s** (`=== done in ===` line).
+All well under the 60s budget.
+
+### Phase milestones (with e2e/test evidence)
+
+| Phase | Milestone | Evidence |
+| --- | --- | --- |
+| P3 | Marcus Hale: import → verify → enrich → price → send with a real PDF attachment → borrower signs in and sees the report | `e2e/p3-milestone-send-to-report.spec.ts` (both tests: full send→email→portal-report round trip, and the LO console's own send/progress/Sent-versions/PDF-link/re-send-supersedes flow) |
+| P4 | Report gallery + option switch + move forward | `e2e/borrower-portal/report-gallery.spec.ts`, `e2e/borrower-portal/report-option-switch.spec.ts`, `e2e/borrower-portal/move-forward.spec.ts` |
+| P5 | Dashboard tile/SQL count parity, Aisha Coleman's missing-occupancy flag resume to Priced; Grace Kim Stale → reprice → Priced | `e2e/cross-app/p5-milestone.spec.ts` (dashboard + Aisha); Grace Kim's Stale→reprice→Priced is U3's own fix, evidenced in `docs/backlog/CQ-030-stale-quote-job/post-dev.md` AC5 by `test_reprice_clears_stale` and `test_lock_order.py::test_mark_stale_holding_its_locks_then_reprice_does_not_deadlock` (real `POST /reprice` clears her stale flags and takes her to Priced under the unified lock order) |
+| P6 | A new borrower signs up, completes the apply wizard, auto-prices to Priced with no LO action; hard-pull consent; the support form | `e2e/cross-app/p6-milestone.spec.ts` (apply → auto-priced, LO console shows it); `e2e/borrower-portal/credit-consent.spec.ts`; `e2e/borrower-portal/support.spec.ts` |
+
+### (c) "pending P3" list — resolved
+
+Every item this branch previously found "pending P3" (when it could only
+see `phase-p5-p6` in isolation) is now checked against the actual merged
+code on `phase-p5-p6` @ `800890a`, not just the merge plan's prose:
+
+| Item / AC | Resolved by | Evidence |
+| --- | --- | --- |
+| CQ-030 AC5: reprice must call `clear_stale(fresh_quote_ids=…)` | U3 (M4) | `builder/service.py`'s `reprice_application`/`autoquote_replacing` call `clear_stale` before commit, under the unified quotes→packages→application lock order. `docs/backlog/CQ-030-stale-quote-job/post-dev.md` AC5: "Met (U3, P5/P6 merge)". |
+| CQ-029 AC2: PDF-download half, "re-check after CQ-020" | U1 (merge) + U4 (this session) | `e2e/cross-app/outbox-pdf.spec.ts` (new) sends Marcus Hale for real and downloads the PDF from `/outbox`; both official suite runs green. |
+| Stale marking shared with CQ-017/CQ-018 (two parallel implementations) | U3 (M4) | `enrichment/service.py` and `builder/service.py` both route through CQ-030's shared `mark_application_quotes_stale` now (confirmed via `docs/backlog/CQ-030-stale-quote-job/post-dev.md`'s own AC5 evidence line). |
+| E2 clock: `priced_at`/`sent_at`/`expires_at` must use `core/clock.now()` | U3 (M5) | `docs/backlog/phase-p5-p6-stale-clock.md` (U3's own record); confirmed the `seed/loader.py` clock change landed in the PR #37 merge this session. |
+| `/field-values/{field_key}` vs `/fields/{field_key}` — possible orphaned endpoint | Resolved by the merge (not a gap) | Confirmed both are live and distinct: `apps/lo-console/src/features/pricing/api.ts` calls `/field-values/{field_key}` (CQ-017 pricing-panel overrides: tax/insurance/HOA/rent/STR revenue); `apps/lo-console/src/features/verification/shared/api.ts` calls `/fields/{field_key}` (verification-tab 1003 field overrides). Two endpoints, two real call sites, not a duplicate. |
+| `lock_application_quotes` should use `FOR NO KEY UPDATE`; two lock modules | U2 | Only one lock module remains: `backend/app/features/applications/locking.py` (no `applications/locks.py` on the merged tree). |
+| CQ-029: un-hide admin "Run stale check now" button | Already resolved pre-merge | `IntegrationsPanel.tsx` renders it unconditionally; `e2e/lo-console/integration-panel.spec.ts`'s "the admin can run the stale check now and see the returned counts" passed in both official runs. |
+| CQ-025: stale list should query `quote_package_versions.expired_at`/`applications.status='stale'` | **Still open** | Not in U1-U3's scope; `dashboard/service.py::_build_stale` still uses its own time-window heuristic. Carried into (d) below, not a U4 fix (out of this item's scope). |
+| CQ-027 AC2/AC3 | Already resolved (CQ-025 merged) | Unaffected by this merge; still resolved per CQ-027's own post-dev.md. |
+
+#### (d) Consolidated follow-up backlog (prior session) — superseded by "## U4"'s compacted version above (compacted)
+
+**Open, real gaps** (not fixed by U1-U3, confirmed still present on the
+merged tree):
+- CQ-025's stale list uses its own time-window heuristic instead of
+  CQ-030's canonical `applications.status='stale'`/`expired_at` fields
+  (`dashboard/service.py::_build_stale`) — minor, cosmetic drift only
+  (both currently agree at seed scale).
+- `outbox/service.py`'s `_TYPE_SUBJECT_RULES["quote_sent"]` doesn't match
+  CQ-020's real send subject — confirmed still open this session (see
+  "Fixes landed" above); a real CQ-020 send shows as Type "Other".
+- The Send tab's "Open in Outbox" link (`versions.ts:18`) builds
+  `?email=`, but `/outbox`'s page (`page.tsx:18`) reads `?email_id=` —
+  found this session, the link's target drawer never auto-opens.
+- `notifications/email/service.py::send_email` sends over SMTP before the
+  caller's `db.commit()` — every caller (OTP, sends, actions, support)
+  shares an "email sent, no record" gap if the process dies in between.
+  Cross-cutting, accepted; needs a dedicated hardening item.
+- `auth.common.client_ip` uses the socket peer, not
+  `X-Forwarded-For`/Railway's real client IP — blocked on CQ-035.
+- Resend path can silently revert the attention-list reason to the
+  generic fallback text once a resend can happen after
+  OPTION_SELECTED/INQUIRY — not yet triggered by anything the app can do
+  today.
+- `apps/borrower-portal/src/features/auth/applicationStatus.ts`'s
+  `applicationStatusLabel` export is dead code after CQ-031.
+- `_build_application_out`-style N+1 (up to 4 sequential DB round-trips
+  per application) — fine at seed scale, logged as a scaling follow-up.
+- No LO-authenticated report-preview route for "Quotes sent" links yet —
+  future item.
+- Optional Temporal `Replayer` test for the load-application-source patch
+  — skipped for budget; approach already logged in
+  `phase-p5-p6-foundation.md`.
+- Duplicated metros endpoints, metro names not state-qualified — accepted
+  minors.
+
+**Resolved by U1-U3** (see (c) table above for detail): reprice/clear_stale
+sharing, the two lock modules, the clock bypasses, the `/field-values`
+endpoint question.
+
+### `make lint` / `make test` / `graphify update .` (this session)
+
+See "(e), this session" below for the full log — summary: both fully
+green against the merged tree (`make lint`: ruff/mypy/eslint/tsc/prettier
+clean; `make test`: backend + seed + frontend all passed), and
+`graphify update .` run in AST-only mode.
+
+---
+
+## Prior sessions' record (U0, then the pre-merge U4 attempt)
+
+Kept below for the audit trail. "## U4" above supersedes anything here
+that overlaps; sections not redone this session (the original (a) suite
+results against `phase-p5-p6` alone, the original (b)/(d)/(e)) are still
+useful evidence of what that branch looked like before the `main` merge.
+
+### (a) Suite results (prior session, pre-U1-U3-merge)
 
 Setup used: slot 28 (API 8128, LO 3128, portal 3228), branch
 `p56-phase-verification` (local `p56-verify-2`) off `origin/phase-p5-p6`
@@ -138,14 +315,14 @@ refreshed from this session's run 2: `p5-milestone-dashboard.png`,
 `p6-milestone-borrower-intake.png`, `p6-milestone-borrower-priced.png`,
 `p6-milestone-lo-console-priced.png`.
 
-## (b) `make demo-reset` timing
+### (b) `make demo-reset` timing (prior session)
 
 Prior session, slot 28: **1.9s**, **1.3s**, **1.2s**. This session, slot 28:
 **1.5s** (before run 1), **1.2s** (before run 2). All well under the 60s
 budget (`=== done in ===` line; wall time including `uv run` startup was
 ~2–9s).
 
-## (c) H2 "pending P3 re-check" list — SUPERSEDED, see `phase-p5-p6-main-merge-plan.md`
+### (c) H2 "pending P3 re-check" list (prior session) — SUPERSEDED, see "## U4" above
 
 **This section's finding is out of date.** It was produced by checking this
 branch's `phase-p5-p6` code (P3 was not yet on `main`), and reads as "P3 was
@@ -181,7 +358,7 @@ call sites, and the LO console route tree.
 | CQ-025: stale list should query `quote_package_versions.expired_at`/`applications.status = 'stale'` | CQ-030 | Confirmed still using its own time-window heuristic (`dashboard/service.py::_build_stale`, ~lines 266-300) instead of the canonical fields CQ-030 writes. | Not mentioned in the merge plan's research; likely still open post-merge since nothing in U1-U3's scope touches `dashboard/service.py`. Flag for U4. |
 | CQ-027 AC2/AC3 | CQ-030, CQ-025 | **Resolved** per CQ-027's own post-dev.md "Orchestrator note (after CQ-025 merged)." | Unaffected by the merge; still resolved. |
 
-## (d) Consolidated follow-up backlog
+### (d) Consolidated follow-up backlog (prior session) — superseded by "## U4"'s compacted version above
 
 Collected via `grep -A` over the "Follow-ups" sections of all 10 CQ-025..034
 `post-dev.md` files, plus `phase-p5-p6-e2e-cleanup.md` and
@@ -263,61 +440,41 @@ research surfaced.
   `X-Forwarded-For`/Railway's real client IP — CQ-032 and CQ-033 follow-ups
   both point at the same fix landing once CQ-035 exists.
 
-## (e) `make lint` / `make test` / `graphify update .`
+### (e) `make lint` / `make test` / `graphify update .` (this session's actual run)
 
-**`make lint`**: found and fixed one real issue —
-`e2e/cross-app/p5-milestone.spec.ts` (written by the prior session) had a
-prettier formatting violation. Fixed with `pnpm exec prettier --write`
-(whitespace/wrapping only, no logic change). Re-ran: **fully green** — ruff
-check, ruff format --check, mypy (481 files), eslint ×4 workspaces
-(api-client, ui, lo-console, borrower-portal), tsc ×4, prettier --check.
+**`make lint`** (against the merged tree, `800890a` + U4's own changes):
+**fully green first try** — ruff check, ruff format --check, mypy (525
+files), eslint ×4 workspaces (api-client, ui, lo-console, borrower-portal),
+tsc ×4 (`pnpm -r run typecheck`), plus a top-level `tsc --noEmit`/eslint/
+prettier pass over the touched `e2e/**` files as they were written.
+`pnpm exec prettier --check .` clean.
 
-**`make test`**: **fully green** — 846 backend pytest tests, 32 seed tests,
-156 borrower-portal + 220 lo-console + 163 packages/ui + 2 packages/api-client
-frontend tests (Vitest), all passed, 1 intentionally-skipped stub test.
+**`make test`**: **fully green** — 995 backend pytest tests, 35 seed
+tests, 2 packages/api-client + 163 packages/ui + 156 borrower-portal + 343
+lo-console frontend tests (Vitest) = 664 frontend, all passed, 1
+intentionally-skipped stub test (`stub-pages.test.tsx`).
 
-**`graphify update .`**: ran, with one scoped deviation, logged here rather
-than silently deviating from AGENTS.md's framing of the command as
-"AST-only, no API cost":
-
-`detect_incremental` found 737 changed files since whoever last committed
-`graphify-out/`: 471 code (free, AST-only) + 199 docs + 66 images + 1 paper
-(the latter three categories all require LLM semantic extraction — no
-`GEMINI_API_KEY`/`GOOGLE_API_KEY` is set in this environment, so semantic
-extraction means dispatching subagents as the host LLM: roughly 15-20
-batches for the 199 docs + 1 paper, plus 66 *individual* per-image subagent
-calls since each image needs its own chunk — on the order of 80+ subagent
-dispatches total). That volume reflects the whole repo's drift across many
-phases of work since `graphify-out/` was last committed, not anything from
-this session, and would have blown well past the context budget on a
-rebuild unrelated to phase verification.
-
-**Decision: ran AST-only.** Extracted the 471 code files via `graphify.extract`,
-merged into the existing graph via `build_merge`, health-checked clean (0
-dangling/missing/collapsed edges via `graphify.diagnostics`), regenerated
-`GRAPH_REPORT.md` + `graph.html` (8003 nodes, 19291 edges, 540 communities),
-**0 tokens spent**. Did not hand-label the 540 communities (kept the
-default `Community N` placeholders — no budget to write ~540 2-5-word
-names by hand). **Known gap left for a dedicated follow-up**: the 199
-changed docs (including the 18 spec.md files this phase touched) + 66
-images + 1 paper are not yet reflected in the graph's semantic layer; their
-nodes/edges still reflect content from before those edits. A dedicated
-`graphify update .` pass — ideally with a Gemini key configured, or
-explicitly budgeted for ~80 subagent dispatches — should be run as its own
-maintenance task, not bundled into a verification pass again.
-
-One incidental fix during this: the skill's standard Step 9 cleanup
-(`rm -f graphify-out/.graphify_analysis.json`) registered as a git deletion,
-because this repo (unusually) has that file committed rather than treated
-as pure scratch. Restored it with `git checkout --
-graphify-out/.graphify_analysis.json` before it could be committed as a
-deletion.
+**`graphify update .`** (this session): ran the CLI's own `update <path>`
+command, which is explicitly "re-extract code files and update the graph
+(no LLM needed)" — AST-only by construction, no Gemini key needed or used.
+Re-extracted 1242 uncached code files (this session's `phase-p5-p6` merges
+plus every prior session's drift), rebuilt the graph (9282 nodes, 25196
+edges, 583 communities), regenerated `GRAPH_REPORT.md` + `graph.html`
+(aggregated community view, above the 5000-node single-view threshold),
+**0 tokens spent**. 28 files (fixture JSON/settings with no extractable
+code symbols, e.g. `pricing-view-*.json`) produced zero AST nodes and are
+correctly absent from the graph — expected, not an error. Community labels
+weren't refreshed (kept existing labels where the hub still matches;
+`graphify label` would refresh names for the LLM, out of scope here). Same
+known gap as before: doc/spec/image semantic re-extraction needs a
+dedicated pass with a Gemini key or a large subagent-dispatch budget, not
+bundled into a verification pass.
 
 ---
 
 ## Handoff
 
-### Handoff 1 — 2026-09-25 (time not tracked) — Claude (Opus 5.5, P56-verify)
+### Handoff 1 — 2026-09-25 (time not tracked) — Claude (Opus 5.5, P56-verify) — **RESOLVED** (its next steps were completed by Handoff 2's session, then superseded by the U1-U3 merge; see "## U4" above)
 
 - **Branch / last commit:** `p56-phase-verification` @ `dd974bc`
 - **Stage:** 5 Test (mid full-suite verification, tasks 1–2 done, task 3
@@ -331,7 +488,7 @@ deletion.
   happened instead):** re-run the full suite twice, do the 5c/5d grep
   passes, run lint/test, open the PR.
 
-### Handoff 2 — 2026-09-25 — Claude (Opus/Sonnet 5, P56-verify session 2)
+### Handoff 2 — 2026-09-25 — Claude (Opus/Sonnet 5, P56-verify session 2) — **RESOLVED** (U1-U3 landed, this session's U4 re-ran the suites against the merged tree and rewrote (c)/(d) with real evidence; see "## U4" above)
 
 - **Branch / last commit:** `p56-verify-2` (local name for
   `p56-phase-verification`) @ this doc's own commit, prefixed
@@ -406,3 +563,24 @@ deletion.
     DATABASE_URL=postgresql+asyncpg://cq:cq@localhost:5432/cq_dev_s28 \
     pnpm exec playwright test --workers=1 --reporter=line
   ```
+
+### Handoff 3 — 2026-09-25 — Claude (Sonnet 5, P56-verify session 3, U4)
+
+- **Branch / last commit:** `p56-verify-3` (local name for
+  `p56-phase-verification`), pushed to `origin/p56-phase-verification`.
+- **Stage:** 8 Commit, complete. This item is done: both official suite
+  runs green, the doc's "## U4" section written, `make lint`/`make test`
+  green, PR opened against `phase-p5-p6`.
+- **Done:** all of U4's tasks — see "## U4" above for the full detail
+  (Sam Reed race fix, PR #34's four review nits, the new
+  `outbox-pdf.spec.ts` plus two real app-bug findings recorded — not
+  fixed, two fresh full-suite runs at 91/91 each, the milestones table,
+  the (c) resolved table, the compacted (d) follow-up backlog, Handoffs
+  1-2 marked resolved, `make lint`/`make test` green, `graphify update .`
+  AST-only).
+- **In progress:** nothing. Slot 1's processes (API, worker, both Next.js
+  apps) were killed by PID at the end of this session.
+- **Next steps:** none for this item — the human reviews and merges the
+  PR. The open, real (not U4-scope) follow-ups are in (d) above; the
+  largest is CQ-025's stale-list heuristic vs. CQ-030's canonical fields.
+- **Open questions / blockers:** none.
