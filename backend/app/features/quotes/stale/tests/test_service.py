@@ -241,6 +241,49 @@ async def test_reprice_clears_stale(
     assert await _status(db_session, grace) is ApplicationStatus.PRICED
 
 
+async def test_reprice_application_keeps_stale_when_a_quote_stays_stale(
+    db_session: AsyncSession,
+    client: AsyncClient,
+    make_staff_session: Callable[..., Awaitable[object]],
+) -> None:
+    """Review minor (U3): a whole-application reprice must not clear Stale
+    when one of its own quotes is left stale by `_reprice_scenario` (a
+    manual pick whose product left the grid) -- the guard has to check
+    every quote on the application, not just other scenarios."""
+    marcus = (await _seed(db_session, "marcus_hale"))["marcus_hale"]
+    await make_staff_session(role=UserRole.MANAGER)
+    group = (await client.get(f"/api/v1/applications/{marcus.id}/scenarios")).json()["groups"][0]
+    products = (await client.get(f"/api/v1/scenarios/{group['id']}/products")).json()
+    pick = next(p for p in products if not p["is_par_rate"] and not p["is_buydown_rate"])
+    created = await client.post(
+        f"/api/v1/scenarios/{group['id']}/quotes", json={"product": pick, "label": "Manual"}
+    )
+    assert created.status_code == 200, created.text
+    manual_id = uuid.UUID(created.json()["id"])
+    manual_quote = await db_session.get(Quote, manual_id)
+    assert manual_quote is not None
+    manual_quote.product = "Discontinued Product"
+    await db_session.flush()
+
+    await db_session.execute(
+        update(Application)
+        .where(Application.id == marcus.id)
+        .values(status=ApplicationStatus.STALE)
+        .execution_options(synchronize_session=False)
+    )
+    await db_session.commit()
+
+    response = await client.post(f"/api/v1/applications/{marcus.id}/reprice")
+    assert response.status_code == 200, response.text
+    assert manual_id not in {uuid.UUID(i) for i in response.json()["quote_ids"]}
+
+    assert await _status(db_session, marcus) is ApplicationStatus.STALE
+    quotes = {q.id: q for q in await _quotes(db_session, marcus.id)}
+    assert quotes[manual_id].stale is True
+    assert not any(q.stale for qid, q in quotes.items() if qid != manual_id)
+    assert await _repriced_events(db_session, marcus.id) == 0
+
+
 async def test_autoquote_clears_stale(
     db_session: AsyncSession,
     client: AsyncClient,
